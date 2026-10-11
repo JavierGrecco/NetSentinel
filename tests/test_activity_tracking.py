@@ -53,11 +53,15 @@ def test_session_accepts_valid_metadata_only_during_active_window(client):
     session = session_response.json()
     assert session["status"] == "active"
     assert session["device_id"] == selected
+    assert len(session["collector_token"]) >= 32
+    public_sessions = client.get("/api/activity").json()["sessions"]
+    assert "collector_token_hash" not in public_sessions[0]
 
     event_response = client.post(
         "/api/activity/ingest",
         json={
             "session_id": session["id"],
+            "collector_token": session["collector_token"],
             "device_id": selected,
             "event_type": "dns_query",
             "source": "router_dns",
@@ -75,12 +79,22 @@ def test_session_accepts_valid_metadata_only_during_active_window(client):
     leaked = client.post(
         "/api/activity/ingest",
         json={
-            "session_id": session["id"], "device_id": selected,
-            "event_type": "dns_query", "source": "router_dns", "domain": "example.com",
-            "password": "must-not-be-accepted",
+            "session_id": session["id"], "collector_token": session["collector_token"],
+            "device_id": selected, "event_type": "dns_query", "source": "router_dns",
+            "domain": "example.com", "password": "must-not-be-accepted",
         },
     )
     assert leaked.status_code == 422
+
+    bad_token = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"], "collector_token": "x" * 40,
+            "device_id": selected, "event_type": "dns_query",
+            "source": "router_dns", "domain": "example.com",
+        },
+    )
+    assert bad_token.status_code == 403
 
 
 def test_ingest_rejects_wrong_source_unknown_session_and_inactive_session(client):
@@ -90,8 +104,8 @@ def test_ingest_rejects_wrong_source_unknown_session_and_inactive_session(client
         json={"device_id": selected, "duration_minutes": 15, "source_mode": "router_dns"},
     ).json()
     event = {
-        "session_id": session["id"], "device_id": selected,
-        "event_type": "dns_query", "source": "device_agent", "domain": "example.com",
+        "session_id": session["id"], "collector_token": session["collector_token"],
+        "device_id": selected, "event_type": "dns_query", "source": "device_agent", "domain": "example.com",
     }
     assert client.post("/api/activity/ingest", json=event).status_code == 422
 
@@ -119,8 +133,8 @@ def test_dns_event_rejects_urls_paths_addresses_and_userinfo(client, domain):
     response = client.post(
         "/api/activity/ingest",
         json={
-            "session_id": session["id"], "device_id": selected,
-            "event_type": "dns_query", "source": "router_dns", "domain": domain,
+            "session_id": session["id"], "collector_token": session["collector_token"],
+            "device_id": selected, "event_type": "dns_query", "source": "router_dns", "domain": domain,
         },
     )
     assert response.status_code == 422
