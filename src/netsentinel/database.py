@@ -204,6 +204,7 @@ def initialize(path: Path | None = None) -> None:
         activity_session_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_sessions)")}
         if "collector_token_hash" not in activity_session_columns:
             db.execute("ALTER TABLE activity_sessions ADD COLUMN collector_token_hash TEXT NOT NULL DEFAULT ''")
+            db.execute("UPDATE activity_sessions SET status = 'expired' WHERE status = 'active'")
         # Compatibility for existing v0.1 installations.
         existing_columns = {row[1] for row in db.execute("PRAGMA table_info(devices)")}
         if "manufacturer" not in existing_columns:
