@@ -42,9 +42,40 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
 <div id="ptr-status" class="status" role="status" aria-live="polite"></div>
 <p class="warning">Un PTR puede faltar o estar desactualizado. El nombre devuelto no confirma quién controla la dirección ni que el equipo sea confiable.</p>
 </section>
+<section class="panel" aria-labelledby="config-title">
+<h2 id="config-title">DNS configurado en esta computadora</h2>
+<p>Vista de solo lectura de los servidores DNS que el sistema expone a NetSentinel. No se cambia ninguna configuración.</p>
+<div id="config-status" class="status" role="status" aria-live="polite">Leyendo configuración local…</div>
+<div id="config-servers" class="results"></div>
+<p class="warning">La configuración puede variar por interfaz, VPN o DNS dividido. Esta vista es orientativa y no necesariamente refleja todas las reglas activas del sistema.</p>
+</section>
 </main>
 <script>
 (() => {
+  const configStatus = document.getElementById("config-status");
+  const configServers = document.getElementById("config-servers");
+  fetch("/api/tools/dns/configuration", { headers: { "Accept": "application/json" }, cache: "no-store" })
+    .then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo leer la configuración DNS.");
+      configStatus.textContent = data.detected
+        ? data.count + " servidor(es) detectado(s) · Fuente: " + data.source + " · Sistema: " + data.platform
+        : "No se detectaron servidores DNS en la fuente consultada. Sistema: " + data.platform;
+      for (const server of data.servers) {
+        const row = document.createElement("div");
+        row.className = "address";
+        const value = document.createElement("strong");
+        value.textContent = server;
+        row.append(value);
+        configServers.append(row);
+      }
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = data.note;
+      configServers.append(note);
+    })
+    .catch(error => { configStatus.textContent = error instanceof Error ? error.message : "No se pudo leer la configuración DNS."; });
+
   const form = document.getElementById("dns-form");
   const input = document.getElementById("hostname");
   const button = document.getElementById("submit");
