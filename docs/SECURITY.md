@@ -24,7 +24,7 @@ Estas medidas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no co
 - Usá NetSentinel únicamente en redes y sobre objetivos que administrás o tenés autorización para revisar.
 - Los webhooks externos están deshabilitados por defecto. Si configurás uno, protegé su URL como un secreto y usá HTTPS.
 
-## Funciones que exigen revisión específica
+## Seguimiento de actividad por dispositivo\n\nEl historial inicial contiene únicamente observaciones de inventario. No captura paquetes ni inspecciona navegación. Cualquier futura fuente de flujos o captura debe activarse explícitamente, limitarse a un dispositivo y un intervalo, registrar solo metadatos necesarios, no almacenar cargas útiles, credenciales ni cookies, e informar los límites de visibilidad de la interfaz/red. En redes conmutadas o Wi-Fi, un equipo ordinario no suele ver todo el tráfico unicast de otros clientes; puede requerirse telemetría del router/AP o un puerto espejo autorizado.\n\n## Funciones que exigen revisión específica
 
 Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloqueo de dispositivos y la interceptación de proxy requieren una revisión de autorización, alcance, límites de tasa, auditoría, almacenamiento de secretos, reversión de cambios y tratamiento de datos sensibles antes de implementarse.
 
