@@ -117,3 +117,13 @@ def test_device_dns_reverse_returns_404_when_device_has_no_addresses(monkeypatch
         response = client.get("/api/devices/7/dns-reverse")
     assert response.status_code == 404
     assert "direcciones" in response.json()["detail"].lower()
+
+
+def test_inventory_page_exposes_on_demand_ptr_action(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/")
+    assert response.status_code == 200
+    assert 'data-ptr="${d.id}"' in response.text
+    assert "/dns-reverse" in response.text
+    assert "nombre DNS no verificado" in response.text
