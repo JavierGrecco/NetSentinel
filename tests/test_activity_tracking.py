@@ -193,6 +193,61 @@ def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):
     assert sum(event["domain"] == "duplicate.example" for event in events) == 1
 
 
+def test_csv_preview_is_read_only_and_reports_deduplicated_rows(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = f"""observed_at,event_type,domain
+{stamp},dns_query,preview.example
+{stamp},dns_query,preview.example
+"""
+
+    preview = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert preview.status_code == 200, preview.text
+    result = preview.json()
+    assert result["valid_rows"] == 2
+    assert result["would_import"] == 1
+    assert result["skipped_duplicates"] == 1
+    assert [row["disposition"] for row in result["preview_rows"]] == ["new", "duplicate"]
+    assert "no se guardó" in result["note"].lower()
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 1
+    assert imported.json()["skipped_duplicates"] == 1
+
+    second_preview = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert second_preview.status_code == 200, second_preview.text
+    assert second_preview.json()["would_import"] == 0
+    assert second_preview.json()["skipped_duplicates"] == 2
+    assert all(row["disposition"] == "duplicate" for row in second_preview.json()["preview_rows"])
+
+
+def test_csv_preview_rejects_message_content_and_unknown_columns(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    unsafe = (
+        "observed_at,event_type,domain,email_body\\n"
+        f"{stamp},email_metadata,example.com,PRIVATE BODY\\n"
+    )
+    response = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": unsafe},
+    )
+    assert response.status_code == 422
+    assert "privacidad" in response.json()["detail"].lower()
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+
 def test_browser_csv_import_captures_page_urls_and_search_queries_safely(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
