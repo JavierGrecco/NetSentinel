@@ -7,7 +7,7 @@
 - Importación manual desde CSV de metadatos de correo de registros de auditoría autorizados: proveedor, emisor, destinatarios, fecha y asunto opcional.
 - Validación estricta del CSV y rechazo de campos de cuerpo de mensaje, contenido y adjuntos.
 - Importación idempotente: se omiten y contabilizan filas normalizadas idénticas ya importadas para el mismo dispositivo, incluso si se repite el archivo completo.
-- Vista previa local de CSV antes de guardar: comprueba las filas completas, muestra hasta 10 ejemplos saneados y estima cuántos eventos se agregarían o se omitirían sin escribir datos.
+- Vista previa local de CSV antes de guardar: comprueba las filas completas, muestra hasta 10 ejemplos normalizados y estima cuántos eventos se agregarían o se omitirían sin escribir datos.
 
 ## Páginas y búsquedas del navegador
 
