@@ -6,6 +6,7 @@
 - Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
 - Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.
 - Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.
+- Clasifica fallos DNS en nombre no encontrado, error temporal y error general; la API responde con códigos HTTP diferenciados (404, 503 y 502).
 - Aclara en la interfaz y la documentación que los nombres DNS no son prueba de identidad.
 - Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.
 
