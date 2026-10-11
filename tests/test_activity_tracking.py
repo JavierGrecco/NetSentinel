@@ -32,7 +32,7 @@ def test_activity_page_and_empty_state_are_available(client):
     page = client.get("/activity")
     assert page.status_code == 200
     assert "Actividad familiar" in page.text
-    assert "No captura tráfico por sí mismo" in page.text
+    assert "no captura tráfico por sí mismo" in page.text
 
     response = client.get("/api/activity")
     assert response.status_code == 200
