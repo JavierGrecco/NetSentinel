@@ -156,6 +156,35 @@ class MonitorUpdate(BaseModel):
     timeout_seconds: int | None = Field(default=None, ge=1, le=10)
 
 
+class ActivitySessionCreate(BaseModel):
+    device_id: int = Field(ge=1)
+    duration_minutes: int = Field(default=60, ge=5, le=720)
+    source_mode: str = Field(min_length=1, max_length=32)
+
+
+class ActivityEventIngest(BaseModel):
+    session_id: int = Field(ge=1)
+    device_id: int = Field(ge=1)
+    event_type: str = Field(min_length=1, max_length=32)
+    source: str = Field(min_length=1, max_length=32)
+    observed_at: str | None = Field(default=None, max_length=64)
+    domain: str | None = Field(default=None, max_length=253)
+    destination_ip: str | None = Field(default=None, max_length=64)
+    destination_port: int | None = Field(default=None, ge=1, le=65535)
+    protocol: str | None = Field(default=None, max_length=16)
+    app_name: str | None = Field(default=None, max_length=100)
+    blocked: bool = False
+
+
+class ActivityCSVImport(BaseModel):
+    device_id: int = Field(ge=1)
+    csv_data: str = Field(min_length=1, max_length=1_000_000)
+
+
+class ActivityRetentionUpdate(BaseModel):
+    retention_days: int = Field(ge=1, le=90)
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -250,6 +279,69 @@ def device_addresses(device_id: int) -> list[dict]:
     if addresses is None:
         raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
     return addresses
+
+
+@app.get("/api/activity")
+def get_family_activity(
+    device_id: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict:
+    """Devuelve sesiones y metadatos recopilados por una fuente compatible."""
+    try:
+        return activity_tracking.get_activity(device_id=device_id, limit=limit)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/sessions")
+def start_family_activity(body: ActivitySessionCreate) -> dict:
+    """Abre una ventana temporal explícita para la fuente de metadatos elegida."""
+    try:
+        return activity_tracking.start_session(body.device_id, body.duration_minutes, body.source_mode)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/sessions/{session_id}/stop")
+def stop_family_activity(session_id: int) -> dict:
+    result = activity_tracking.stop_session(session_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontró la sesión.")
+    return result
+
+
+@app.post("/api/activity/ingest")
+def ingest_family_activity(body: ActivityEventIngest) -> dict:
+    """Guarda metadatos limitados solo durante una sesión activa."""
+    try:
+        return activity_tracking.ingest_event(body.session_id, body.device_id, body.dict())
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/import")
+def import_family_activity(body: ActivityCSVImport) -> dict:
+    """Importa explícitamente un CSV de metadatos desde el equipo local."""
+    try:
+        return activity_tracking.import_csv(body.device_id, body.csv_data)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.put("/api/activity/retention")
+def set_family_activity_retention(body: ActivityRetentionUpdate) -> dict:
+    try:
+        return activity_tracking.update_retention(body.retention_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/scan")
