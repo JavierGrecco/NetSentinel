@@ -57,3 +57,32 @@ def test_cached_ptr_lookup_evicts_oldest_entry(monkeypatch):
     assert len(dns_tools._ptr_cache) == 2
     assert "192.0.2.1" not in dns_tools._ptr_cache
     dns_tools.clear_ptr_cache()
+
+
+def test_cached_ptr_lookup_expires_after_ttl(monkeypatch):
+    dns_tools.clear_ptr_cache()
+    clock = {"now": 100.0}
+    calls = []
+
+    monkeypatch.setattr(dns_tools.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(
+        dns_tools,
+        "reverse_lookup_ip",
+        lambda address: calls.append(address) or {
+            "ip": address,
+            "hostname": "host-" + str(len(calls)) + ".example.test",
+            "source": "system-resolver",
+        },
+    )
+    first = dns_tools.cached_reverse_lookup_ip("192.0.2.4")
+    clock["now"] += dns_tools._PTR_CACHE_TTL_SECONDS - 1
+    second = dns_tools.cached_reverse_lookup_ip("192.0.2.4")
+    clock["now"] += 2
+    third = dns_tools.cached_reverse_lookup_ip("192.0.2.4")
+
+    assert first["cache_hit"] is False
+    assert second["cache_hit"] is True
+    assert third["cache_hit"] is False
+    assert len(calls) == 2
+    assert third["hostname"] == "host-2.example.test"
+    dns_tools.clear_ptr_cache()
