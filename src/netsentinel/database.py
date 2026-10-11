@@ -164,7 +164,8 @@ def initialize(path: Path | None = None) -> None:
                 started_at TEXT NOT NULL,
                 ends_at TEXT NOT NULL,
                 stopped_at TEXT,
-                status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'stopped', 'expired'))
+                status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'stopped', 'expired')),
+                collector_token_hash TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS activity_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -199,6 +200,10 @@ def initialize(path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC);
             """
         )
+        # Adicionar el hash del token sin romper bases creadas en iteraciones previas de la rama.
+        activity_session_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_sessions)")}
+        if "collector_token_hash" not in activity_session_columns:
+            db.execute("ALTER TABLE activity_sessions ADD COLUMN collector_token_hash TEXT NOT NULL DEFAULT ''")
         # Compatibility for existing v0.1 installations.
         existing_columns = {row[1] for row in db.execute("PRAGMA table_info(devices)")}
         if "manufacturer" not in existing_columns:
@@ -606,7 +611,9 @@ def export_json(path: Path | None = None) -> str:
         monitor_checks = [dict(row) for row in db.execute("SELECT * FROM monitor_checks ORDER BY id").fetchall()]
         incidents = [dict(row) for row in db.execute("SELECT * FROM incidents ORDER BY id").fetchall()]
         notifications = [dict(row) for row in db.execute("SELECT * FROM notification_log ORDER BY id").fetchall()]
-        activity_sessions = [dict(row) for row in db.execute("SELECT * FROM activity_sessions ORDER BY id").fetchall()]
+        activity_sessions = [dict(row) for row in db.execute(
+            "SELECT id, device_id, source_mode, started_at, ends_at, stopped_at, status FROM activity_sessions ORDER BY id"
+        ).fetchall()]
         activity_events = [dict(row) for row in db.execute("SELECT * FROM activity_events ORDER BY id").fetchall()]
         activity_settings = [dict(row) for row in db.execute("SELECT * FROM activity_settings ORDER BY id").fetchall()]
     payload = {
