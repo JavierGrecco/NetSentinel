@@ -18,5 +18,7 @@ def test_windows_launcher_uses_local_virtual_environment():
     assert r".venv\Scripts\python.exe" in script
     assert "%PYTHON_CMD% -m venv .venv" in script
     assert "-m pip install -e ." in script
+    assert ".netsentinel-install-hash" in script
+    assert "pyproject.toml" in script
     assert "-m netsentinel" in script
     assert "3,10" in script

@@ -28,9 +28,23 @@ if ! ".venv/bin/python" -c 'import sys; raise SystemExit(0 if sys.version_info >
     exit 1
 fi
 
-if ! ".venv/bin/python" -m pip install -e .; then
-    echo "No pude instalar las dependencias. Revisá tu conexión a Internet e intentá de nuevo." >&2
-    exit 1
+PROJECT_HASH=$(".venv/bin/python" -c 'import hashlib,pathlib; print(hashlib.sha256(pathlib.Path("pyproject.toml").read_bytes()).hexdigest())')
+INSTALLED_HASH=$(cat ".venv/.netsentinel-install-hash" 2>/dev/null || true)
+NEEDS_INSTALL=0
+
+if [ "$PROJECT_HASH" != "$INSTALLED_HASH" ]; then
+    NEEDS_INSTALL=1
+fi
+if ! ".venv/bin/python" -c 'import fastapi, psutil, uvicorn, netsentinel, pathlib; raise SystemExit(0 if pathlib.Path(netsentinel.__file__).resolve() == pathlib.Path("src/netsentinel/__init__.py").resolve() else 1)' >/dev/null 2>&1; then
+    NEEDS_INSTALL=1
+fi
+
+if [ "$NEEDS_INSTALL" -eq 1 ]; then
+    if ! ".venv/bin/python" -m pip install -e .; then
+        echo "No pude instalar las dependencias. Revisá tu conexión a Internet e intentá de nuevo." >&2
+        exit 1
+    fi
+    printf '%s\n' "$PROJECT_HASH" > ".venv/.netsentinel-install-hash"
 fi
 
 exec ".venv/bin/python" -m netsentinel

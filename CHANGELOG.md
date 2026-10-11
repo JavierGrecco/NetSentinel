@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.7.2 — 11 de octubre de 2026
+
+- Los lanzadores recuerdan una huella de `pyproject.toml` y verifican las dependencias y la ruta editable del paquete antes de instalar.
+- Las aperturas normales no vuelven a ejecutar `pip install`; la instalación se repite solo si cambian dependencias/metadatos o falta un módulo.
+- Agrega pruebas para la comprobación de instalación incremental en Windows, macOS y Linux.
+
 ## 0.7.1 — 11 de octubre de 2026
 
 - Añade protección de Host para bloquear nombres no autorizados y reducir el riesgo de DNS rebinding hacia la interfaz local.

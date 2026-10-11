@@ -17,9 +17,20 @@ if not exist ".venv\Scripts\python.exe" (
 ".venv\Scripts\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info >= (3,10) else 1)" >nul 2>&1
 if errorlevel 1 goto old_venv_error
 
+".venv\Scripts\python.exe" -c "import hashlib,pathlib,sys; marker=pathlib.Path('.venv/.netsentinel-install-hash'); expected=hashlib.sha256(pathlib.Path('pyproject.toml').read_bytes()).hexdigest(); raise SystemExit(0 if marker.is_file() and marker.read_text(encoding='ascii').strip()==expected else 1)" >nul 2>&1
+if errorlevel 1 goto install_deps
+
+".venv\Scripts\python.exe" -c "import fastapi,psutil,uvicorn,netsentinel,pathlib; raise SystemExit(0 if pathlib.Path(netsentinel.__file__).resolve()==pathlib.Path('src/netsentinel/__init__.py').resolve() else 1)" >nul 2>&1
+if errorlevel 1 goto install_deps
+goto run_app
+
+:install_deps
 ".venv\Scripts\python.exe" -m pip install -e .
 if errorlevel 1 goto install_error
+".venv\Scripts\python.exe" -c "import hashlib,pathlib; pathlib.Path('.venv/.netsentinel-install-hash').write_text(hashlib.sha256(pathlib.Path('pyproject.toml').read_bytes()).hexdigest(), encoding='ascii')"
+if errorlevel 1 goto install_error
 
+:run_app
 echo.
 echo NetSentinel se abrira en http://127.0.0.1:8765
 ".venv\Scripts\python.exe" -m netsentinel

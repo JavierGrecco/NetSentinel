@@ -33,7 +33,7 @@ Descargá el ZIP desde **Code → Download ZIP** y descomprimilo.
 - **macOS:** abrí `run-macos.command`. Si macOS muestra una advertencia, usá clic derecho → **Abrir**.
 - **Linux o terminal de macOS:** ejecutá `./run.sh`.
 
-El primer inicio crea un entorno virtual local `.venv` e instala las dependencias del proyecto; necesitás conexión a Internet para descargar las dependencias si todavía no están disponibles. La aplicación se inicia en `http://127.0.0.1:8765`. La base de datos y la configuración no se borran al volver a abrir el programa. Por seguridad, la interfaz rechaza nombres de host no autorizados y solicitudes de modificación iniciadas desde otro sitio web.
+El primer inicio crea un entorno virtual local `.venv` e instala las dependencias del proyecto; necesitás conexión a Internet para descargar las dependencias si todavía no están disponibles. En los siguientes inicios, el lanzador comprueba el estado local y solo reinstala si cambió `pyproject.toml` o faltan dependencias; por eso no necesita consultar Internet en cada apertura. La aplicación se inicia en `http://127.0.0.1:8765`. La base de datos y la configuración no se borran al volver a abrir el programa. Por seguridad, la interfaz rechaza nombres de host no autorizados y solicitudes de modificación iniciadas desde otro sitio web.
 
 ### Instalación manual (alternativa)
 
