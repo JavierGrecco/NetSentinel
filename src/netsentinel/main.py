@@ -20,6 +20,7 @@ from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
+from .dns_tools import lookup_hostname
 
 
 _supervisor = MonitorSupervisor()
@@ -160,6 +161,17 @@ def index() -> FileResponse:
 @app.get("/monitors", include_in_schema=False)
 def monitors_page() -> FileResponse:
     return FileResponse(_MONITORS_STATIC)
+
+
+@app.get("/api/tools/dns/lookup")
+def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
+    """Resuelve registros A/AAAA mediante el resolvedor del sistema, a pedido del usuario."""
+    try:
+        return lookup_hostname(hostname)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo resolver el nombre con el DNS configurado en el sistema.") from exc
 
 
 @app.get("/api/health")
