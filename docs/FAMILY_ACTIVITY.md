@@ -1,65 +1,44 @@
-# Seguimiento familiar: páginas, búsquedas y metadatos
+# Seguimiento familiar: páginas, búsquedas y metadatos de correo
 
 ## Implementado en esta rama
 
-- `/activity`: sesiones temporales por dispositivo, eventos de metadatos, resumen de dominios, importación CSV y retención de 1 a 90 días.
-- La API valida eventos, requiere un token temporal para ingestión de sesiones, almacena solo su hash y rechaza campos JSON no admitidos.
-- El importador acepta hasta 1 MB y 1.000 filas por CSV; admite destinos de red, visitas a páginas y búsquedas, con validación adicional de las URLs.
-- `browser-extension/`: extensión Chromium visible, desactivada por defecto, que captura navegación web futura en el dispositivo donde se instala y exporta registros CSV para importarlos en NetSentinel.
+- `/activity`: sesiones de metadatos temporales, resumen de dominios, importación CSV y retención de 1 a 90 días.
+- `browser-extension/`: extensión Chromium visible, apagada por defecto, que registra navegación futura y búsquedas compatibles en el dispositivo donde se instala.
+- Importación manual desde CSV de metadatos de correo de registros de auditoría autorizados: proveedor, emisor, destinatarios, fecha y asunto opcional.
+- Validación estricta del CSV y rechazo de campos de cuerpo de mensaje, contenido y adjuntos.
 
-La extensión es el primer mecanismo del proyecto que registra realmente páginas visitadas y búsquedas. Usa eventos de navegación que el propio navegador expone a una extensión con permisos explícitos; no rompe HTTPS.
+## Páginas y búsquedas del navegador
 
-## Captura real de páginas y búsquedas
+Instalá la [extensión Chromium](../browser-extension/README.md) en cada dispositivo/navegador a supervisar y activala desde su panel. Registra navegación de nivel superior y URLs de motores conocidos como Google, Bing, DuckDuckGo, Yahoo, Ecosia, Brave Search, Yandex, Baidu, YouTube, Wikipedia, Amazon, Reddit y TikTok. Está apagada por defecto, conserva hasta 1.000 eventos localmente y permite exportar CSV para importarlo manualmente en `/activity`.
 
-Seguí la [guía de instalación de la extensión](../browser-extension/README.md). Debe instalarse y activarse en cada navegador que se quiera supervisar. La extensión comienza vacía y apagada al instalarse; el registro se activa manualmente desde su panel.
+No lee el historial previo, contenido de páginas, formularios, pulsaciones, contraseñas ni cookies. No puede reconocer necesariamente búsquedas que ocurren dentro de aplicaciones nativas o en motores desconocidos. Antes de guardar una URL se eliminan fragmentos y parámetros conocidos de sesión, autenticación, búsqueda y seguimiento. Ningún saneador genérico puede reconocer todos los datos personales que un sitio podría incluir en rutas o parámetros atípicos.
 
-Registra páginas HTTP(S) de nivel superior y cambios de URL que notifica la API de navegación. Cuando la URL coincide con un motor reconocido, guarda un evento de búsqueda separado. La versión inicial reconoce Google, Bing, DuckDuckGo, Yahoo, Ecosia, Brave Search, Yandex, Baidu, YouTube, Wikipedia, Amazon, Reddit y TikTok.
+## Correo electrónico: solo metadatos de auditoría
 
-No lee el historial previo, contenido visible de páginas, campos de formularios, pulsaciones de teclado ni contraseñas. No puede ver búsquedas que ocurren solo dentro de una app nativa o que no aparecen en una URL compatible. La navegación privada queda fuera si no se habilita expresamente el uso de la extensión en modo privado desde el navegador; el valor predeterminado no lo habilita.
+NetSentinel **no abre bandejas de entrada, no inicia sesión en cuentas de correo y no intercepta sesiones HTTPS**. En una conexión webmail normal, el tráfico cifrado no permite que el monitor de red vea emisor, destinatarios, asunto ni contenido. DNS o una conexión al dominio de un proveedor solo indican contacto con el servicio, no que se haya leído o enviado un correo.
+
+Sí se pueden importar metadatos de una exportación explícita de auditoría/seguimiento que el operador esté autorizado a consultar. El formato normalizado es:
+
+```csv
+observed_at,event_type,email_provider,email_from,email_to,email_subject
+2026-10-11T18:30:00Z,email_metadata,Gmail,parent@example.com,child@example.com,"Pedido de ayuda"
+```
+
+El emisor y al menos un destinatario son obligatorios; se aceptan hasta diez destinatarios. El asunto es opcional y se limita a 200 caracteres. La importación se etiqueta como `manual_import`. Las columnas `message`, `email_body`, `body_text`, `body_html`, `content`, `attachments` y equivalentes se rechazan.
+
+No hay aún un adaptador nativo para Google Workspace, Microsoft 365 ni cuentas personales: primero hay que elegir proveedor, revisar qué registros brinda el tipo de cuenta y verificar los permisos necesarios. No todos los planes familiares exponen los mismos logs. No se guardan cuerpos de mensajes ni archivos adjuntos; para una preocupación concreta sobre contenido, es preferible utilizar las herramientas oficiales de seguridad y controles parentales de la cuenta de forma transparente, no extraer comunicaciones desde el navegador.
 
 ## Flujo de uso actual
 
-1. Activá la extensión en el dispositivo supervisado; configurá registro de páginas, búsquedas, exclusiones y retención.
-2. Exportá `netsentinel-browser-activity.csv` desde el panel de la extensión.
-3. En NetSentinel, abrí `/activity`, seleccioná el dispositivo inventariado e importá ese archivo.
-4. Revisá eventos `page_visit` y `search_query`. La importación queda etiquetada como `manual_import`.
+1. Activá la extensión en el navegador supervisado, si querés registro de navegación.
+2. Exportá el CSV desde la extensión.
+3. En NetSentinel, abrí `/activity`, elegí el dispositivo e importá el archivo.
+4. Para correo, prepará/importá el CSV a partir de un registro de auditoría autorizado. Asociá el registro con el dispositivo correspondiente solo si la fuente realmente lo permite; no inferir identidad por el mero destinatario.
 
-La transferencia CSV es manual. No existe sincronización central en vivo entre equipos; no expongas el panel local en la red doméstica como atajo.
+La transferencia de los datos de la extensión a NetSentinel es manual. No hay sincronización central en vivo ni un conector de correo automático. Las sesiones de red del backend tampoco capturan tráfico por sí solas: necesitan una fuente compatible; aún no hay adaptador de router/AP ni agente de uso de aplicaciones.
 
-## Fuentes de metadatos del router
+## Retención y alcance
 
-Las sesiones `router_dns`, `router_flow` y `device_agent` permiten recibir eventos normalizados durante una ventana temporal. Aún no hay un adaptador nativo para un modelo concreto de router/AP ni un agente de actividad de aplicaciones para Windows/macOS/Linux. Abrir una sesión no genera tráfico ni instala componentes.
+NetSentinel usa siete días por defecto y permite retención de 1 a 90 días. La extensión también tiene retención local de 1 a 90 días y un máximo de 1.000 eventos. Los CSV y respaldos SQLite pueden revelar hábitos, intereses y relaciones; protegé los archivos y borrá los datos cuando ya no hagan falta.
 
-## Esquema CSV
-
-```csv
-observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked,page_url,search_engine,search_terms
-```
-
-Tipos disponibles: `dns_query`, `connection`, `tls_sni`, `app_usage`, `blocked`, `page_visit`, `search_query`.
-
-Ejemplo de visita:
-
-```csv
-2026-10-11T18:30:00Z,page_visit,example.com,,,,browser-extension,false,https://example.com/guide,,,
-```
-
-Ejemplo de búsqueda:
-
-```csv
-2026-10-11T18:31:00Z,search_query,www.google.com,,,,browser-extension,false,https://www.google.com/search,Google,"cómo configurar controles parentales"
-```
-
-No se admiten campos como usuario, contraseña, token, cookie, cuerpos HTTP ni cargas útiles. Las páginas se guardan sin fragmento y quitando parámetros conocidos de autenticación/sesión, búsquedas e identificadores comunes de seguimiento. Los términos buscados quedan en un campo explícito separado; son datos sensibles y deben conservarse solo el tiempo necesario.
-
-## Retención
-
-- Retención predeterminada: 7 días en NetSentinel y en la extensión Chromium.
-- En ambas ubicaciones se puede ajustar de 1 a 90 días.
-- La extensión conserva como máximo 1.000 eventos; los más antiguos se descartan al alcanzar el límite.
-- NetSentinel elimina eventos vencidos cuando se consulta/actualiza la vista o se cambian los ajustes.
-- Los CSV y las copias SQLite pueden revelar intereses y hábitos de navegación; protegé los archivos y borrá los registros cuando ya no hagan falta.
-
-## Interpretación
-
-Una visita o consulta describe actividad reportada por el navegador, no prueba quién estaba frente a la pantalla, identidad, intención ni qué acciones realizó dentro de una cuenta. Esta herramienta no captura contraseñas, cookies, formularios ni contenido de mensajes.
+Una visita o una fila de auditoría describe el evento reportado por su fuente, pero no prueba por sí sola quién estaba frente a la pantalla ni qué hizo dentro de una cuenta.
