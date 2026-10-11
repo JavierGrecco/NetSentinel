@@ -8,7 +8,7 @@
 - Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.\n- Muestra los servidores DNS locales detectables en modo de solo lectura, con fuente y advertencias sobre VPN, split DNS y diferencias entre sistemas.
 - Clasifica fallos DNS en nombre no encontrado, error temporal y error general; la API responde con códigos HTTP diferenciados (404, 503 y 502).
 - Aclara en la interfaz y la documentación que los nombres DNS no son prueba de identidad.
-- Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.\n- Agrega pruebas simuladas para el parser de resolv.conf, la detección por plataforma y el endpoint de configuración.
+- Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.\n- Agrega pruebas simuladas para el parser de resolv.conf, la detección por plataforma y el endpoint de configuración.\n- Añade caché PTR en memoria, acotada por TTL y cantidad de entradas, con fecha de resolución y señalización de resultados cacheados; los fallos no se almacenan.
 
 ## 0.9.0 — 11 de octubre de 2026
 
