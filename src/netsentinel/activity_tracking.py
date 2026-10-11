@@ -14,6 +14,7 @@ import ipaddress
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from email.utils import getaddresses
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -25,11 +26,12 @@ class InvalidCollectorToken(PermissionError):
 
 SESSION_SOURCES = {"router_dns", "router_flow", "device_agent"}
 EVENT_SOURCES = SESSION_SOURCES
-EVENT_TYPES = {"dns_query", "connection", "tls_sni", "app_usage", "blocked", "page_visit", "search_query"}
+EVENT_TYPES = {"dns_query", "connection", "tls_sni", "app_usage", "blocked", "page_visit", "search_query", "email_metadata"}
 PROTOCOLS = {"tcp", "udp", "quic", "icmp", "other"}
 CSV_FIELDS = {
     "observed_at", "event_type", "domain", "destination_ip", "destination_port",
     "protocol", "app_name", "blocked", "page_url", "search_engine", "search_terms",
+    "email_provider", "email_from", "email_to", "email_subject",
 }
 SENSITIVE_QUERY_KEY = re.compile(
     r"(?:access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|"
@@ -42,7 +44,9 @@ TRACKING_QUERY_KEYS = {"fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid"
 SENSITIVE_HEADERS = {
     "url", "full_url", "path", "query_string", "username", "user",
     "password", "passwd", "token", "cookie", "authorization", "payload",
-    "body", "request_body", "response_body",
+    "body", "message", "email_body", "message_body", "body_text", "body_html",
+    "content", "email_message", "request_body", "response_body", "attachment",
+    "attachments", "attachment_content", "message_content",
 }
 
 
@@ -142,6 +146,39 @@ def _safe_page_url(value: str | None) -> str | None:
     return safe
 
 
+def _email_address_list(value: str | None, *, field: str, required: bool) -> list[str]:
+    if value is None or not str(value).strip():
+        if required:
+            raise ValueError(f"{field} es obligatorio para el evento de correo.")
+        return []
+    raw = str(value).strip()
+    if len(raw) > 1500 or any(ord(ch) < 32 and ch not in "\\t\\r\\n" for ch in raw):
+        raise ValueError(f"{field} supera el límite o contiene caracteres de control.")
+    addresses = getaddresses([raw.replace(";", ",")])
+    normalized: list[str] = []
+    for _display, address in addresses:
+        address = address.strip()
+        if not address or "@" not in address:
+            continue
+        local, domain = address.rsplit("@", 1)
+        if not local or len(local) > 64 or not domain or "." not in domain or len(address) > 254:
+            continue
+        try:
+            domain = domain.encode("idna").decode("ascii").lower()
+        except UnicodeError:
+            continue
+        if any(ch.isspace() for ch in local) or any(ch in local for ch in "<>,;"):
+            continue
+        address = f"{local}@{domain}"
+        if address not in normalized:
+            normalized.append(address)
+    if not normalized and required:
+        raise ValueError(f"{field} no contiene una dirección de correo válida.")
+    if len(normalized) > 10:
+        raise ValueError(f"{field} admite como máximo 10 direcciones por evento.")
+    return normalized
+
+
 def normalize_event(payload: dict[str, Any], *, source_override: str | None = None) -> dict[str, Any]:
     """Valida un evento de metadatos; rechaza silenciosamente no es una opción."""
     event_type = str(payload.get("event_type", "")).strip().lower()
@@ -158,6 +195,19 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         raise ValueError("search_engine no puede contener caracteres de control.")
     search_terms = payload.get("search_terms")
     search_terms = " ".join(str(search_terms).split())[:500] if search_terms not in (None, "") else None
+    email_provider = payload.get("email_provider")
+    email_provider = " ".join(str(email_provider).split())[:60] if email_provider not in (None, "") else None
+    if email_provider and any(ord(ch) < 32 for ch in email_provider):
+        raise ValueError("email_provider no puede contener caracteres de control.")
+    email_from_list = _email_address_list(payload.get("email_from"), field="email_from", required=event_type == "email_metadata")
+    email_to_list = _email_address_list(payload.get("email_to"), field="email_to", required=event_type == "email_metadata")
+    email_subject = payload.get("email_subject")
+    email_subject = " ".join(str(email_subject).replace("\\r", " ").replace("\\n", " ").split())[:200] if email_subject not in (None, "") else None
+    if event_type == "email_metadata":
+        if source_override != "manual_import":
+            raise ValueError("Los metadatos de correo solo se admiten mediante importación explícita de registros autorizados.")
+        if len(email_from_list) != 1 or not email_to_list:
+            raise ValueError("El evento email_metadata requiere un emisor y al menos un destinatario.")
     if event_type == "page_visit" and not page_url:
         raise ValueError("El evento page_visit requiere page_url.")
     if event_type == "search_query" and (not search_engine or not search_terms):
@@ -205,6 +255,8 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         raise ValueError("Una conexión requiere destination_ip o domain.")
     if event_type == "app_usage" and not app_name:
         raise ValueError("El evento app_usage requiere app_name.")
+    if event_type == "email_metadata" and source != "manual_import":
+        raise ValueError("La actividad de correo no se admite desde fuentes de red en tiempo real.")
     blocked_value = payload.get("blocked", False)
     if isinstance(blocked_value, str):
         normalized_blocked = blocked_value.strip().lower()
@@ -225,6 +277,10 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         "page_url": page_url,
         "search_engine": search_engine,
         "search_terms": search_terms,
+        "email_provider": email_provider,
+        "email_from": "; ".join(email_from_list) if email_from_list else None,
+        "email_to": "; ".join(email_to_list) if email_to_list else None,
+        "email_subject": email_subject,
         "blocked": int(blocked or event_type == "blocked"),
     }
 
@@ -328,12 +384,14 @@ def ingest_event(
         cursor = db.execute(
             """INSERT INTO activity_events
                (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms, blocked)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
+                email_provider, email_from, email_to, email_subject, blocked)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 session_id, device_id, event["observed_at"], now, event["event_type"], event["source"],
                 event["domain"], event["destination_ip"], event["destination_port"], event["protocol"],
-                event["app_name"], event["page_url"], event["search_engine"], event["search_terms"], event["blocked"],
+                event["app_name"], event["page_url"], event["search_engine"], event["search_terms"],
+                event["email_provider"], event["email_from"], event["email_to"], event["email_subject"], event["blocked"],
             ),
         )
         return dict(db.execute("SELECT * FROM activity_events WHERE id=?", (cursor.lastrowid,)).fetchone())
@@ -386,12 +444,14 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
             db.execute(
                 """INSERT INTO activity_events
                    (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                    destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms, blocked)
-                   VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
+                    email_provider, email_from, email_to, email_subject, blocked)
+                   VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     device_id, item["observed_at"], _iso(_now()), item["event_type"], item["domain"],
                     item["destination_ip"], item["destination_port"], item["protocol"], item["app_name"],
-                    item["page_url"], item["search_engine"], item["search_terms"], item["blocked"],
+                    item["page_url"], item["search_engine"], item["search_terms"],
+                    item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
                 ),
             )
     return {
@@ -465,7 +525,8 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
         "sources": sorted(SESSION_SOURCES),
         "event_types": sorted(EVENT_TYPES),
         "note": (
-            "La aplicación no captura tráfico por sí misma. Las sesiones habilitan una ventana para que un adaptador "
+            "La aplicación no captura tráfico por sí misma. El correo solo se incorpora como metadatos importados "
+            "de registros autorizados, sin cuerpos ni adjuntos. Las sesiones habilitan una ventana para que un adaptador "
             "autorizado envíe metadatos; la importación CSV añade registros históricos. No se guardan credenciales, "
             "cookies, cargas útiles, rutas ni URLs completas. DNS/SNI/conexiones son indicios de tráfico, no prueba "
             "de que una persona haya usado una cuenta o visto una página concreta."
