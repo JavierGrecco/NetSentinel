@@ -31,6 +31,17 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
 <div id="results" class="results"></div>
 <p class="warning">La consulta es de solo lectura y se realiza al enviarla. Una resolución correcta no demuestra que un dispositivo sea legítimo ni confiable. No ingreses datos privados.</p>
 </section>
+<section class="panel" aria-labelledby="ptr-title">
+<h2 id="ptr-title">DNS inverso (PTR)</h2>
+<p>Consulta si el resolvedor del sistema publica un nombre asociado a una dirección IP concreta.</p>
+<form id="ptr-form">
+<label for="address">Dirección IPv4 o IPv6</label>
+<input id="address" name="address" maxlength="64" autocomplete="off" inputmode="url" placeholder="192.0.2.10" required>
+<button id="ptr-submit" type="submit">Consultar PTR</button>
+</form>
+<div id="ptr-status" class="status" role="status" aria-live="polite"></div>
+<p class="warning">Un PTR puede faltar o estar desactualizado. El nombre devuelto no confirma quién controla la dirección ni que el equipo sea confiable.</p>
+</section>
 </main>
 <script>
 (() => {
@@ -71,6 +82,31 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
       status.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta.";
     } finally {
       button.disabled = false;
+    }
+  });
+
+  const ptrForm = document.getElementById("ptr-form");
+  const addressInput = document.getElementById("address");
+  const ptrButton = document.getElementById("ptr-submit");
+  const ptrStatus = document.getElementById("ptr-status");
+  ptrForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const address = addressInput.value.trim();
+    if (!address) return;
+    ptrButton.disabled = true;
+    ptrStatus.textContent = "Consultando DNS inverso…";
+    try {
+      const response = await fetch("/api/tools/dns/reverse?address=" + encodeURIComponent(address), {
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta PTR.");
+      ptrStatus.textContent = data.ip + " → " + data.hostname + " (registro PTR)";
+    } catch (error) {
+      ptrStatus.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta PTR.";
+    } finally {
+      ptrButton.disabled = false;
     }
   });
 })();
