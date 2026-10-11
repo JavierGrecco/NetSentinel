@@ -55,10 +55,12 @@ Este documento resume qué está implementado y qué falta.
 - [x] Exportar el informe del período a CSV, con mitigación de fórmulas y cabeceras sin caché.
 - [x] Visualizar la secuencia cronológica de las últimas 15 comprobaciones por monitor.
 - [x] Añadir un índice SQLite por fecha para acelerar consultas por período.
+- [x] Mostrar duración estimada desde la detección y tiempos de recuperación de incidentes.
+- [x] Graficar la latencia de hasta 15 comprobaciones recientes sin generar tráfico extra.
 
 ## Próximas mejoras
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
-- [ ] Mejor visualización de tendencias e informes exportables.
+- [ ] Agregados exportables de duración de incidentes y latencia histórica más allá de las últimas 15 comprobaciones.
 
 ## Más adelante
 - [ ] Mapa de topología respaldado por datos.

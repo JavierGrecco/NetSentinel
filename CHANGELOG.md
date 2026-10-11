@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.8.4 — 11 de octubre de 2026
+
+- Añade duración desde la detección y tiempo hasta la recuperación a los incidentes, señalando que son estimaciones basadas en la cadencia de comprobaciones.
+- Muestra la recuperación media de incidentes resueltos en el período seleccionado de 24 horas o 7 días.
+- Incorpora un gráfico de la latencia en las últimas 15 comprobaciones por monitor, con media, mínimo y máximo de las mediciones disponibles.
+- Amplía las pruebas de duraciones, agregados de recuperación y visualización accesible; no genera tráfico de red adicional.
+
 ## 0.8.3 — 11 de octubre de 2026
 
 - Añade una secuencia visual de las 15 comprobaciones más recientes por monitor, ordenada cronológicamente y con distinción accesible entre éxitos y fallos.

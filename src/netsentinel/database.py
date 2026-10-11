@@ -23,6 +23,22 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _elapsed_seconds(start: str | None, end: str | None = None) -> int | None:
+    """Calcula segundos entre marcas ISO; si falta el final usa el instante actual."""
+    if not start:
+        return None
+    try:
+        start_at = datetime.fromisoformat(start)
+        end_at = datetime.fromisoformat(end) if end else datetime.now(timezone.utc)
+        if start_at.tzinfo is None:
+            start_at = start_at.replace(tzinfo=timezone.utc)
+        if end_at.tzinfo is None:
+            end_at = end_at.replace(tzinfo=timezone.utc)
+        return max(0, int((end_at - start_at).total_seconds()))
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 @contextmanager
 def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
@@ -683,6 +699,17 @@ def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> d
         monitors_total = db.execute("SELECT COUNT(*) FROM monitors").fetchone()[0]
         monitors_enabled = db.execute("SELECT COUNT(*) FROM monitors WHERE enabled = 1").fetchone()[0]
         incidents_open = db.execute("SELECT COUNT(*) FROM incidents WHERE status = 'open'").fetchone()[0]
+        recovery_rows = db.execute(
+            """SELECT opened_at, resolved_at FROM incidents
+               WHERE status = 'resolved' AND resolved_at IS NOT NULL AND resolved_at >= ?""",
+            (since,),
+        ).fetchall()
+
+    recovery_durations = []
+    for incident in recovery_rows:
+        elapsed = _elapsed_seconds(incident["opened_at"], incident["resolved_at"])
+        if elapsed is not None:
+            recovery_durations.append(elapsed)
 
     checks_total = int(totals["checks_total"] or 0)
     checks_up = int(totals["checks_up"] or 0)
@@ -697,6 +724,10 @@ def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> d
         "monitors_total": int(monitors_total),
         "monitors_enabled": int(monitors_enabled),
         "incidents_open": int(incidents_open),
+        "incidents_resolved": len(recovery_durations),
+        "average_recovery_seconds": int(round(sum(recovery_durations) / len(recovery_durations)))
+        if recovery_durations else None,
+        "max_recovery_seconds": max(recovery_durations) if recovery_durations else None,
     }
     monitor_stats = []
     for row in monitor_rows:
@@ -800,7 +831,20 @@ def get_incidents(path: Path | None = None, limit: int = 50, status: str | None 
                 {where} ORDER BY CASE WHEN i.status = 'open' THEN 0 ELSE 1 END, i.updated_at DESC, i.id DESC LIMIT ?""",
             params,
         ).fetchall()
-    return [dict(row) for row in rows]
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        resolved = item["status"] == "resolved" and item.get("resolved_at") is not None
+        end_at = item.get("resolved_at") if resolved else None
+        duration = _elapsed_seconds(item.get("opened_at"), end_at)
+        item["duration_seconds"] = duration
+        item["time_to_recovery_seconds"] = duration if resolved else None
+        item["duration_is_estimated"] = True
+        item["duration_basis"] = (
+            "first_failure_to_recovery_check" if resolved else "elapsed_since_first_failed_check"
+        )
+        items.append(item)
+    return items
 
 
 def record_monitor_check(monitor_id: int, status: str, latency_ms: float | None,

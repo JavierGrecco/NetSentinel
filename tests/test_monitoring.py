@@ -177,3 +177,77 @@ def test_monitor_analytics_has_time_index_for_growing_history(tmp_path):
     with database.connect(path) as db:
         indexes = {row["name"] for row in db.execute("PRAGMA index_list(monitor_checks)")}
     assert "idx_monitor_checks_checked_at" in indexes
+
+
+def test_incident_api_reports_estimated_detection_and_recovery_duration(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    monitor = database.create_monitor("Servicio", "tcp", "127.0.0.1:443", 60, 3)
+    database.record_monitor_check(monitor["id"], "down", None, "No responde")
+    database.record_monitor_check(monitor["id"], "up", 3.0, "Recuperado")
+    incident = database.get_incidents(limit=10)[0]
+    with database.connect() as db:
+        db.execute(
+            "UPDATE incidents SET opened_at = ?, resolved_at = ?, updated_at = ? WHERE id = ?",
+            ("2026-10-11T10:00:00+00:00", "2026-10-11T10:12:34+00:00",
+             "2026-10-11T10:12:34+00:00", incident["id"]),
+        )
+    data = database.get_incidents(limit=10)[0]
+    assert data["duration_seconds"] == 754
+    assert data["time_to_recovery_seconds"] == 754
+    assert data["duration_is_estimated"] is True
+    assert data["duration_basis"] == "first_failure_to_recovery_check"
+
+
+def test_open_incident_reports_elapsed_detection_time_not_recovery(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    monitor = database.create_monitor("Servicio activo", "tcp", "127.0.0.1:443", 60, 3)
+    database.record_monitor_check(monitor["id"], "down", None, "No responde")
+    with database.connect() as db:
+        db.execute(
+            "UPDATE incidents SET opened_at = ? WHERE monitor_id = ? AND status = 'open'",
+            ("2026-10-11T10:00:00+00:00", monitor["id"]),
+        )
+    incident = database.get_incidents(limit=10)[0]
+    assert incident["duration_seconds"] >= 0
+    assert incident["time_to_recovery_seconds"] is None
+    assert incident["duration_basis"] == "elapsed_since_first_failed_check"
+
+
+def test_monitor_analytics_includes_average_recovery_time(tmp_path):
+    path = tmp_path / "recovery-analytics.sqlite3"
+    database.initialize(path)
+    monitor = database.create_monitor("Servicio", "tcp", "127.0.0.1:443", 60, 3, path=path)
+    failed = database.record_monitor_check(monitor["id"], "down", None, "Falló", path=path)
+    database.record_monitor_check(monitor["id"], "up", 3.0, "Recuperado", path=path)
+    from datetime import datetime, timedelta, timezone
+
+    recovered_at = datetime.now(timezone.utc).replace(microsecond=0)
+    opened_at = recovered_at - timedelta(seconds=120)
+    with database.connect(path) as db:
+        db.execute(
+            "UPDATE incidents SET opened_at = ?, resolved_at = ?, updated_at = ? WHERE id = ?",
+            (opened_at.isoformat(), recovered_at.isoformat(), recovered_at.isoformat(),
+             failed["transition"]["incident_id"]),
+        )
+    summary = database.get_monitor_analytics(window_hours=168, path=path)["summary"]
+    assert summary["incidents_resolved"] >= 1
+    assert summary["average_recovery_seconds"] == 120
+    assert summary["max_recovery_seconds"] == 120
+
+
+def test_latency_trend_ui_has_accessible_chart_and_recovery_metrics(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        page = client.get("/monitors")
+        css = client.get("/static/monitors.css")
+        summary = client.get("/api/monitoring/summary?hours=168")
+    assert page.status_code == 200
+    assert "appendLatencyTrend" in page.text
+    assert "latency-chart" in page.text
+    assert "Recuperación media" in page.text
+    assert ".latency-bar.up" in css.text
+    assert summary.status_code == 200
+    assert "average_recovery_seconds" in summary.json()["summary"]

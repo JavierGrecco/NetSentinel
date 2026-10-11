@@ -16,7 +16,17 @@ En cada monitor, el botón **Historial** muestra también una secuencia de hasta
 
 En la página de monitorización podés cambiar entre las últimas 24 horas y los últimos 7 días. El resumen muestra cantidad de comprobaciones, fallos, tasa de resultados correctos, latencia media registrada y los incidentes que siguen abiertos.
 
-La tasa se calcula como comprobaciones correctas divididas por el total de comprobaciones registradas en la ventana seleccionada. No es una garantía de disponibilidad continua: depende de los intervalos configurados, de que NetSentinel permanezca abierto y de las respuestas guardadas. La latencia media se calcula solo con comprobaciones correctas que hayan registrado latencia.\n\nEl botón **Descargar informe CSV** exporta la ventana seleccionada con estado del monitor, cantidad de comprobaciones, tasa de éxito y latencias mínima/media/máxima. El archivo incluye codificación UTF-8 para Excel y antepone un apóstrofo a campos de texto que podrían interpretarse como fórmulas.
+La tasa se calcula como comprobaciones correctas divididas por el total de comprobaciones registradas en la ventana seleccionada. No es una garantía de disponibilidad continua: depende de los intervalos configurados, de que NetSentinel permanezca abierto y de las respuestas guardadas. La latencia media se calcula solo con comprobaciones correctas que hayan registrado latencia.
+
+El botón **Descargar informe CSV** exporta la ventana seleccionada con estado del monitor, cantidad de comprobaciones, tasa de éxito y latencias mínima/media/máxima. El archivo incluye codificación UTF-8 para Excel y antepone un apóstrofo a campos de texto que podrían interpretarse como fórmulas.
+
+## Duración de incidentes y latencia
+
+Cada incidente muestra el tiempo desde el primer chequeo fallido. Si ya se recuperó, también muestra el tiempo transcurrido entre esa primera detección y el primer chequeo correcto; el resumen del período presenta la media de recuperación y el máximo.
+
+Estos tiempos son **estimaciones de observación**, no la duración exacta de una interrupción: el fallo real puede haber comenzado después del chequeo correcto anterior y la recuperación puede haber ocurrido antes del siguiente chequeo correcto. Un incidente abierto muestra el tiempo transcurrido desde su detección hasta ahora, y no incluye un tiempo de recuperación.
+
+Al expandir el historial de un monitor, el gráfico de latencia presenta las mediciones registradas en hasta 15 comprobaciones recientes. Solo las respuestas correctas con latencia medida contribuyen a los valores mínimo, medio y máximo; un fallo se indica por separado y no se convierte en una latencia ficticia. El gráfico usa datos ya guardados y no realiza chequeos adicionales.
 
 ## Webhook opcional
 
