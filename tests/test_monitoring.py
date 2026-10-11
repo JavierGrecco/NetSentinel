@@ -127,3 +127,39 @@ def test_monitor_analytics_api_accepts_24_hours_or_week(monkeypatch, tmp_path):
     assert weekly.status_code == 200
     assert weekly.json()["window_hours"] == 168
     assert invalid.status_code == 422
+
+
+def test_monitor_analytics_csv_export_contains_metrics_and_safe_text(tmp_path):
+    import csv
+    import io
+
+    path = tmp_path / "report.sqlite3"
+    database.initialize(path)
+    monitor = database.create_monitor("=SUM(A1:A2)", "tcp", "127.0.0.1:443", 60, 3, path=path)
+    database.record_monitor_check(monitor["id"], "up", 4.5, "Correcto", path=path)
+    database.record_monitor_check(monitor["id"], "down", None, "Fallo", path=path)
+
+    export = database.export_monitoring_csv(window_hours=24, path=path)
+    assert export.startswith("\\ufeff")
+    rows = list(csv.DictReader(io.StringIO(export.lstrip("\\ufeff"))))
+    assert len(rows) == 1
+    assert rows[0]["nombre"] == "'=SUM(A1:A2)"
+    assert rows[0]["comprobaciones"] == "2"
+    assert rows[0]["correctas"] == "1"
+    assert rows[0]["fallidas"] == "1"
+    assert rows[0]["tasa_exito_pct"] == "50.0"
+    assert rows[0]["latencia_media_ms"] == "4.5"
+
+
+def test_monitoring_csv_api_sets_download_and_privacy_headers(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.create_monitor("Servicio", "ping", "127.0.0.1", 60, 3)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/export/monitoring.csv?hours=168")
+        invalid = client.get("/api/export/monitoring.csv?hours=169")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "netsentinel-monitoring-report.csv" in response.headers["content-disposition"]
+    assert response.text.lstrip("\\ufeff").splitlines()[1].startswith("168,")
+    assert invalid.status_code == 422

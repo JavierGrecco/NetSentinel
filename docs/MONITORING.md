@@ -14,7 +14,7 @@ Para evitar conexiones inesperadas, el monitor HTTP no sigue redirecciones y rec
 
 En la página de monitorización podés cambiar entre las últimas 24 horas y los últimos 7 días. El resumen muestra cantidad de comprobaciones, fallos, tasa de resultados correctos, latencia media registrada y los incidentes que siguen abiertos.
 
-La tasa se calcula como comprobaciones correctas divididas por el total de comprobaciones registradas en la ventana seleccionada. No es una garantía de disponibilidad continua: depende de los intervalos configurados, de que NetSentinel permanezca abierto y de las respuestas guardadas. La latencia media se calcula solo con comprobaciones correctas que hayan registrado latencia.
+La tasa se calcula como comprobaciones correctas divididas por el total de comprobaciones registradas en la ventana seleccionada. No es una garantía de disponibilidad continua: depende de los intervalos configurados, de que NetSentinel permanezca abierto y de las respuestas guardadas. La latencia media se calcula solo con comprobaciones correctas que hayan registrado latencia.\n\nEl botón **Descargar informe CSV** exporta la ventana seleccionada con estado del monitor, cantidad de comprobaciones, tasa de éxito y latencias mínima/media/máxima. El archivo incluye codificación UTF-8 para Excel y antepone un apóstrofo a campos de texto que podrían interpretarse como fórmulas.
 
 ## Webhook opcional
 

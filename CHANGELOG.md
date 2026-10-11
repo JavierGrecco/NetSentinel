@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.8.1 — 11 de octubre de 2026
+
+- Agrega la exportación CSV de informes de monitorización para el período seleccionado (24 horas o 7 días), con estado actual, resultados, tasa de éxito y métricas de latencia.
+- Protege el CSV contra la interpretación de nombres con fórmulas por parte de hojas de cálculo y evita caché del navegador.
+- Añade pruebas para contenido, fórmula CSV y cabeceras del endpoint.
+
 ## 0.8.0 — 11 de octubre de 2026
 
 - Agrega un resumen de monitorización para las últimas 24 horas o los últimos 7 días, con comprobaciones correctas/fallidas, tasa de éxito basada en muestras, latencia media y número de incidentes abiertos.

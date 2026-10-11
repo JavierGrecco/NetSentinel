@@ -663,7 +663,9 @@ def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> d
             (since,),
         ).fetchone()
         monitor_rows = db.execute(
-            """SELECT m.id AS monitor_id, m.name, m.enabled,
+            """SELECT m.id AS monitor_id, m.name, m.kind, m.target, m.enabled,
+                      m.interval_seconds, m.timeout_seconds, m.last_status, m.last_checked_at,
+                      EXISTS (SELECT 1 FROM incidents i WHERE i.monitor_id = m.id AND i.status = 'open') AS incident_open,
                       COUNT(c.id) AS checks_total,
                       COALESCE(SUM(CASE WHEN c.status = 'up' THEN 1 ELSE 0 END), 0) AS checks_up,
                       COALESCE(SUM(CASE WHEN c.status = 'down' THEN 1 ELSE 0 END), 0) AS checks_down,
@@ -712,6 +714,45 @@ def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> d
         "summary": summary,
         "monitors": monitor_stats,
     }
+
+
+def export_monitoring_csv(window_hours: int = 24, path: Path | None = None) -> str:
+    """Exporta el resumen de monitorización por período en CSV seguro para hojas de cálculo."""
+    report = get_monitor_analytics(window_hours=window_hours, path=path)
+    buffer = io.StringIO(newline="")
+    fields = [
+        "periodo_horas", "desde_utc", "id_monitor", "nombre", "tipo", "objetivo",
+        "habilitado", "ultimo_estado", "ultima_comprobacion_utc", "incidente_abierto",
+        "comprobaciones", "correctas", "fallidas", "tasa_exito_pct",
+        "latencia_media_ms", "latencia_minima_ms", "latencia_maxima_ms",
+    ]
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for monitor in report["monitors"]:
+        row = {
+            "periodo_horas": report["window_hours"],
+            "desde_utc": report["since"],
+            "id_monitor": monitor["monitor_id"],
+            "nombre": monitor["name"],
+            "tipo": monitor["kind"],
+            "objetivo": monitor["target"],
+            "habilitado": "sí" if monitor["enabled"] else "no",
+            "ultimo_estado": monitor["last_status"] or "sin_comprobar",
+            "ultima_comprobacion_utc": monitor["last_checked_at"] or "",
+            "incidente_abierto": "sí" if monitor["incident_open"] else "no",
+            "comprobaciones": monitor["checks_total"],
+            "correctas": monitor["checks_up"],
+            "fallidas": monitor["checks_down"],
+            "tasa_exito_pct": monitor["success_rate_percent"] if monitor["success_rate_percent"] is not None else "",
+            "latencia_media_ms": monitor["average_latency_ms"] if monitor["average_latency_ms"] is not None else "",
+            "latencia_minima_ms": monitor["min_latency_ms"] if monitor["min_latency_ms"] is not None else "",
+            "latencia_maxima_ms": monitor["max_latency_ms"] if monitor["max_latency_ms"] is not None else "",
+        }
+        for key, value in row.items():
+            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+                row[key] = "'" + value
+        writer.writerow(row)
+    return "\ufeff" + buffer.getvalue()
 
 
 def update_monitor(monitor_id: int, *, enabled: bool | None = None, name: str | None = None,

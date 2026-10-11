@@ -256,6 +256,18 @@ def monitoring_summary(hours: int = Query(default=24, ge=1, le=168)) -> dict:
     return database.get_monitor_analytics(window_hours=hours)
 
 
+@app.get("/api/export/monitoring.csv")
+def export_monitoring_csv(hours: int = Query(default=24, ge=1, le=168)) -> Response:
+    return Response(
+        content=database.export_monitoring_csv(window_hours=hours),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="netsentinel-monitoring-report.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @app.post("/api/monitors", status_code=201)
 def add_monitor(body: MonitorCreate) -> dict:
     try:
