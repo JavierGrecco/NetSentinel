@@ -157,6 +157,35 @@ def initialize(path: Path | None = None) -> None:
                 success INTEGER NOT NULL CHECK (success IN (0, 1)),
                 detail TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS activity_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                source_mode TEXT NOT NULL CHECK (source_mode IN ('router_dns', 'router_flow', 'device_agent')),
+                started_at TEXT NOT NULL,
+                ends_at TEXT NOT NULL,
+                stopped_at TEXT,
+                status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'stopped', 'expired'))
+            );
+            CREATE TABLE IF NOT EXISTS activity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER REFERENCES activity_sessions(id) ON DELETE SET NULL,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                observed_at TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked')),
+                source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                domain TEXT,
+                destination_ip TEXT,
+                destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
+                protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                app_name TEXT,
+                blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
+            );
+            CREATE TABLE IF NOT EXISTS activity_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                retention_days INTEGER NOT NULL DEFAULT 7 CHECK (retention_days BETWEEN 1 AND 90)
+            );
+            INSERT OR IGNORE INTO activity_settings(id, retention_days) VALUES (1, 7);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_time ON monitor_checks(monitor_id, checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_checked_at ON monitor_checks(checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status, updated_at DESC);
@@ -165,6 +194,9 @@ def initialize(path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_observations_device_time ON observations(device_id, observed_at DESC);
             CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_addresses_ip ON device_addresses(ip_address);
+            CREATE INDEX IF NOT EXISTS idx_activity_sessions_device_status ON activity_sessions(device_id, status, started_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC);
             """
         )
         # Compatibility for existing v0.1 installations.
@@ -574,9 +606,12 @@ def export_json(path: Path | None = None) -> str:
         monitor_checks = [dict(row) for row in db.execute("SELECT * FROM monitor_checks ORDER BY id").fetchall()]
         incidents = [dict(row) for row in db.execute("SELECT * FROM incidents ORDER BY id").fetchall()]
         notifications = [dict(row) for row in db.execute("SELECT * FROM notification_log ORDER BY id").fetchall()]
+        activity_sessions = [dict(row) for row in db.execute("SELECT * FROM activity_sessions ORDER BY id").fetchall()]
+        activity_events = [dict(row) for row in db.execute("SELECT * FROM activity_events ORDER BY id").fetchall()]
+        activity_settings = [dict(row) for row in db.execute("SELECT * FROM activity_settings ORDER BY id").fetchall()]
     payload = {
         "generated_at": utc_now(),
-        "format": "netsentinel-data-export-v3",
+        "format": "netsentinel-data-export-v4",
         "restorable_backup": False,
         "devices": devices,
         "addresses": addresses,
@@ -587,6 +622,9 @@ def export_json(path: Path | None = None) -> str:
         "monitor_checks": monitor_checks,
         "incidents": incidents,
         "notification_log": notifications,
+        "activity_sessions": activity_sessions,
+        "activity_events": activity_events,
+        "activity_settings": activity_settings,
     }
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
