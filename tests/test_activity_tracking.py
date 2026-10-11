@@ -245,8 +245,8 @@ def test_email_metadata_import_stores_only_sender_recipient_subject(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
     csv_data = (
-        "observed_at,event_type,email_provider,email_from,email_to,email_subject\\n"
-        f'{stamp},email_metadata,Gmail,"Parent <parent@example.com>","Child <child@example.com>","Pedido de ayuda"\\n'
+        "observed_at,event_type,email_provider,email_from,email_to,email_subject\n"
+        f'{stamp},email_metadata,Gmail,"Parent <parent@example.com>","Child <child@example.com>","Pedido de ayuda"\n'
     )
     response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
     assert response.status_code == 200, response.text
@@ -263,7 +263,7 @@ def test_email_metadata_import_stores_only_sender_recipient_subject(client):
 def test_email_message_body_or_attachment_columns_are_rejected(client, header):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
-    csv_data = f"observed_at,event_type,email_provider,email_from,email_to,{header}\\n{stamp},email_metadata,Gmail,a@example.com,b@example.com,PRIVATE\\n"
+    csv_data = f"observed_at,event_type,email_provider,email_from,email_to,{header}\n{stamp},email_metadata,Gmail,a@example.com,b@example.com,PRIVATE\n"
     response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
     assert response.status_code == 422
     assert "privacidad" in response.json()["detail"].lower()
