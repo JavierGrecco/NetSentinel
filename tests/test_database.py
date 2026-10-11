@@ -48,8 +48,8 @@ def test_trust_update_and_exports(tmp_path: Path):
     export = __import__("json").loads(database.export_json(db))
     assert export["restorable_backup"] is False
     assert export["devices"][0]["display_name"] == "Mi portátil"
-    assert len(export["scans"]) == 1
-    assert len(export["observations"]) == 1
+    assert len(export["scans"]) == 2
+    assert len(export["observations"]) == 3
 
 
 def test_scan_discovery_report_is_persisted(tmp_path: Path):
