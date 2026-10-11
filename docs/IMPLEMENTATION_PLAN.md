@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La versión 0.7.3 reúne inventario local, monitorización, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918, lanzadores de inicio sencillos y copias de seguridad SQLite consistentes.
+La versión 0.8.0 reúne inventario local, monitorización con informes de 24 horas/7 días, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918, lanzadores de inicio sencillos y copias de seguridad SQLite consistentes.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
@@ -13,6 +13,7 @@ La versión 0.7.3 reúne inventario local, monitorización, diagnóstico guiado,
 - Métricas de alcance, respuestas ping y duración guardadas en el historial.
 - Controles de ping, TCP y HTTP/HTTPS.
 - Historial de resultados e incidentes que se deduplican.
+- Resúmenes de comprobaciones correctas/fallidas y latencia por ventana temporal, tanto globales como por monitor.
 - Notificaciones opcionales por webhook HTTPS.
 - Protección de host/origen y cabeceras HTTP defensivas.
 - Pruebas automatizadas y CI multiplataforma para Python 3.10–3.14 en Windows, macOS y Linux.

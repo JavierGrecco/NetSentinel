@@ -75,3 +75,55 @@ def test_monitor_api_rejects_unsafe_targets(monkeypatch, tmp_path):
             "interval_seconds": 60, "timeout_seconds": 3,
         })
         assert bad.status_code == 422
+
+
+def test_monitor_analytics_calculates_window_summary_and_per_monitor_stats(tmp_path):
+    path = tmp_path / "analytics.sqlite3"
+    database.initialize(path)
+    first = database.create_monitor("Servicio A", "tcp", "127.0.0.1:80", 60, 2, path=path)
+    second = database.create_monitor("Servicio B", "ping", "127.0.0.1", 60, 2, path=path)
+    database.record_monitor_check(first["id"], "up", 20.0, "Correcto", path=path)
+    database.record_monitor_check(first["id"], "up", 10.0, "Correcto", path=path)
+    database.record_monitor_check(first["id"], "down", None, "Sin respuesta", path=path)
+    database.record_monitor_check(second["id"], "up", 5.0, "Correcto", path=path)
+
+    data = database.get_monitor_analytics(window_hours=24, path=path)
+    assert data["window_hours"] == 24
+    assert data["summary"]["checks_total"] == 4
+    assert data["summary"]["checks_up"] == 3
+    assert data["summary"]["checks_down"] == 1
+    assert data["summary"]["success_rate_percent"] == 75.0
+    assert data["summary"]["average_latency_ms"] == pytest.approx(11.67)
+    by_id = {item["monitor_id"]: item for item in data["monitors"]}
+    assert by_id[first["id"]]["success_rate_percent"] == pytest.approx(66.67)
+    assert by_id[first["id"]]["average_latency_ms"] == 15.0
+    assert by_id[first["id"]]["min_latency_ms"] == 10.0
+    assert by_id[first["id"]]["max_latency_ms"] == 20.0
+    assert by_id[second["id"]]["success_rate_percent"] == 100.0
+
+
+def test_monitor_analytics_empty_window_and_hour_clamp(tmp_path):
+    path = tmp_path / "analytics-empty.sqlite3"
+    database.initialize(path)
+    database.create_monitor("Sin datos", "ping", "127.0.0.1", 60, 2, path=path)
+    data = database.get_monitor_analytics(window_hours=999, path=path)
+    assert data["window_hours"] == 168
+    assert data["summary"]["checks_total"] == 0
+    assert data["summary"]["success_rate_percent"] is None
+    assert data["summary"]["average_latency_ms"] is None
+    assert data["monitors"][0]["success_rate_percent"] is None
+
+
+def test_monitor_analytics_api_accepts_24_hours_or_week(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        default = client.get("/api/monitoring/summary")
+        weekly = client.get("/api/monitoring/summary?hours=168")
+        invalid = client.get("/api/monitoring/summary?hours=169")
+    assert default.status_code == 200
+    assert default.json()["window_hours"] == 24
+    assert default.json()["summary"]["checks_total"] == 0
+    assert weekly.status_code == 200
+    assert weekly.json()["window_hours"] == 168
+    assert invalid.status_code == 422

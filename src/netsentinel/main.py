@@ -250,6 +250,12 @@ def monitors() -> list[dict]:
     return database.list_monitors()
 
 
+@app.get("/api/monitoring/summary")
+def monitoring_summary(hours: int = Query(default=24, ge=1, le=168)) -> dict:
+    """Resume los resultados medidos en las últimas horas (máximo siete días)."""
+    return database.get_monitor_analytics(window_hours=hours)
+
+
 @app.post("/api/monitors", status_code=201)
 def add_monitor(body: MonitorCreate) -> dict:
     try:

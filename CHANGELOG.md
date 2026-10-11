@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.8.0 — 11 de octubre de 2026
+
+- Agrega un resumen de monitorización para las últimas 24 horas o los últimos 7 días, con comprobaciones correctas/fallidas, tasa de éxito basada en muestras, latencia media y número de incidentes abiertos.
+- Añade métricas por monitor: cantidad de comprobaciones, fallos, tasa de éxito y latencia media/mínima/máxima.
+- Presenta las tendencias directamente en el panel y actualiza el resumen al cambiar de período.
+- Agrega pruebas sobre agregados, ventanas vacías, límites de período y el endpoint.
+
 ## 0.7.3 — 11 de octubre de 2026
 
 - Añade una descarga SQLite consistente y comprobable, apta para conservar el inventario, los eventos, lecturas y monitorización en una copia real.

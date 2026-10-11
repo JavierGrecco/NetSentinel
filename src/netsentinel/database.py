@@ -9,7 +9,7 @@ import os
 import sqlite3
 import tempfile
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any, Iterator
@@ -647,6 +647,71 @@ def get_monitor_checks(monitor_id: int, limit: int = 30, path: Path | None = Non
             (monitor_id, max(1, min(int(limit), 200))),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> dict[str, Any]:
+    """Resume comprobaciones por monitor en una ventana reciente sin alterar el historial."""
+    hours = max(1, min(int(window_hours), 168))
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds")
+    with connect(path) as db:
+        totals = db.execute(
+            """SELECT COUNT(*) AS checks_total,
+                      COALESCE(SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END), 0) AS checks_up,
+                      COALESCE(SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END), 0) AS checks_down,
+                      AVG(CASE WHEN status = 'up' THEN latency_ms END) AS average_latency_ms
+               FROM monitor_checks WHERE checked_at >= ?""",
+            (since,),
+        ).fetchone()
+        monitor_rows = db.execute(
+            """SELECT m.id AS monitor_id, m.name, m.enabled,
+                      COUNT(c.id) AS checks_total,
+                      COALESCE(SUM(CASE WHEN c.status = 'up' THEN 1 ELSE 0 END), 0) AS checks_up,
+                      COALESCE(SUM(CASE WHEN c.status = 'down' THEN 1 ELSE 0 END), 0) AS checks_down,
+                      AVG(CASE WHEN c.status = 'up' THEN c.latency_ms END) AS average_latency_ms,
+                      MIN(CASE WHEN c.status = 'up' THEN c.latency_ms END) AS min_latency_ms,
+                      MAX(CASE WHEN c.status = 'up' THEN c.latency_ms END) AS max_latency_ms
+               FROM monitors m
+               LEFT JOIN monitor_checks c
+                 ON c.monitor_id = m.id AND c.checked_at >= ?
+               GROUP BY m.id
+               ORDER BY m.enabled DESC, m.name COLLATE NOCASE""",
+            (since,),
+        ).fetchall()
+        monitors_total = db.execute("SELECT COUNT(*) FROM monitors").fetchone()[0]
+        monitors_enabled = db.execute("SELECT COUNT(*) FROM monitors WHERE enabled = 1").fetchone()[0]
+        incidents_open = db.execute("SELECT COUNT(*) FROM incidents WHERE status = 'open'").fetchone()[0]
+
+    checks_total = int(totals["checks_total"] or 0)
+    checks_up = int(totals["checks_up"] or 0)
+    checks_down = int(totals["checks_down"] or 0)
+    summary = {
+        "checks_total": checks_total,
+        "checks_up": checks_up,
+        "checks_down": checks_down,
+        "success_rate_percent": round(checks_up / checks_total * 100, 2) if checks_total else None,
+        "average_latency_ms": round(float(totals["average_latency_ms"]), 2)
+        if totals["average_latency_ms"] is not None else None,
+        "monitors_total": int(monitors_total),
+        "monitors_enabled": int(monitors_enabled),
+        "incidents_open": int(incidents_open),
+    }
+    monitor_stats = []
+    for row in monitor_rows:
+        item = dict(row)
+        total = int(item["checks_total"] or 0)
+        up = int(item["checks_up"] or 0)
+        item["enabled"] = bool(item["enabled"])
+        item["success_rate_percent"] = round(up / total * 100, 2) if total else None
+        for field in ("average_latency_ms", "min_latency_ms", "max_latency_ms"):
+            item[field] = round(float(item[field]), 2) if item[field] is not None else None
+        monitor_stats.append(item)
+
+    return {
+        "window_hours": hours,
+        "since": since,
+        "summary": summary,
+        "monitors": monitor_stats,
+    }
 
 
 def update_monitor(monitor_id: int, *, enabled: bool | None = None, name: str | None = None,
