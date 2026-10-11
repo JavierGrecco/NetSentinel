@@ -4,7 +4,9 @@
 
 - Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
 - Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
-- Añade una ruta API bajo demanda y pruebas unitarias sin consultas DNS reales.
+- Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.
+- Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.
+- Aclara en la interfaz y la documentación que los nombres DNS no son prueba de identidad.
 - Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.
 
 ## 0.9.0 — 11 de octubre de 2026
