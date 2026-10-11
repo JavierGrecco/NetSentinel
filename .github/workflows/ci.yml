@@ -52,9 +52,9 @@ jobs:
           from pathlib import Path
 
           html = Path("src/netsentinel/static/activity.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
           assert scripts, "No embedded script found in activity.html"
-          Path("activity-inline-check.js").write_text("\\n;\\n".join(scripts), encoding="utf-8")
+          Path("activity-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
           PY
           node --check activity-inline-check.js
       - name: Verify extension source files
