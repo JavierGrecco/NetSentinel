@@ -57,15 +57,17 @@ def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path)
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     monkeypatch.setattr(
-        "netsentinel.main.read_neighbor_table",
-        lambda: ([Neighbor("192.168.5.3", "00:11:22:33:44:55", "en0", "fixture")], []),
+        "netsentinel.main.discover_local_network",
+        lambda: ([Neighbor("192.168.5.3", "00:11:22:33:44:55", "en0", "fixture")], [], {"networks": [{"network": "192.168.5.0/24", "interface": "en0", "local_address": "192.168.5.20", "range_limited": False}], "addresses_checked": 254, "ping_responses": 1, "scope": "fixture"}),
     )
     with TestClient(app) as client:
         response = client.post("/api/scan")
         assert response.status_code == 200
         assert response.json()["devices_found"] == 1
         assert response.json()["addresses_found"] == 1
-        assert client.get("/api/scans").json()[0]["source"] == "fixture"
+        assert response.json()["discovery"]["networks"][0]["network"] == "192.168.5.0/24"
+        assert response.json()["discovery"]["addresses_checked"] == 254
+        assert client.get("/api/scans").json()[0]["source"] == "automatic-local-network"
         assert client.get("/api/health").json()["version"] == __version__
 
 

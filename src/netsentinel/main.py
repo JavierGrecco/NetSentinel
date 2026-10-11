@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from . import __version__
 from . import database
 from .diagnostics import run_diagnostics
-from .discovery import read_neighbor_table
+from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
 
 
@@ -117,12 +117,13 @@ def device_addresses(device_id: int) -> list[dict]:
 
 @app.post("/api/scan")
 def scan() -> dict:
-    neighbors, errors = read_neighbor_table()
+    neighbors, errors, discovery = discover_local_network()
     result = database.record_scan(neighbors, errors)
+    result["discovery"] = discovery
     result["message"] = (
-        "Se combinaron las fuentes locales disponibles."
-        if neighbors
-        else "No se encontraron entradas reconocibles; esta versión no hace un barrido activo."
+        "Se completó el descubrimiento automático de las subredes locales indicadas."
+        if discovery["networks"]
+        else "No se pudo identificar una subred privada adecuada para buscar dispositivos."
     )
     return result
 
