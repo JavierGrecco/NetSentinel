@@ -24,7 +24,7 @@ def main() -> None:
 
     url = f"http://{args.host if args.host != '0.0.0.0' else '127.0.0.1'}:{args.port}"
     print(f"NetSentinel iniciará en {url}")
-    print("Modo inicial: descubrimiento pasivo; no se envían exploraciones a la red.")
+    print("Al iniciar no se sondea la red. El descubrimiento de la red local solo empieza cuando lo solicitás desde el panel.")
     if not args.no_browser:
         Timer(1.0, lambda: webbrowser.open(url)).start()
     uvicorn.run("netsentinel.main:app", host=args.host, port=args.port, reload=False, log_level="info")

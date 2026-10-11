@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.5.1 — 11 de octubre de 2026
+
+- Corrige el mensaje de inicio para aclarar que NetSentinel no sondea la red al arrancar y que el descubrimiento activo se inicia solo desde el panel.
+- Agrega una prueba de regresión para el mensaje de inicio de la CLI.
+
 ## 0.5.0 — 11 de octubre de 2026
 
 - Añade descubrimiento de red local sin configuración manual de subredes.
