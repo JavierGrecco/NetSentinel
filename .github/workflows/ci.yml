@@ -46,7 +46,20 @@ jobs:
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
       - name: Verify extension source files
-        run: python -c "from pathlib import Path; required=['browser-extension/manifest.json','browser-extension/service-worker.js','browser-extension/popup.html','browser-extension/popup.js','browser-extension/README.md']; missing=[p for p in required if not Path(p).is_file()]; assert not missing, f'Missing browser extension files: {missing}'"
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = [
+              "browser-extension/manifest.json",
+              "browser-extension/service-worker.js",
+              "browser-extension/popup.html",
+              "browser-extension/popup.js",
+              "browser-extension/README.md",
+          ]
+          missing = [path for path in required if not Path(path).is_file()]
+          assert not missing, f"Missing browser extension files: {missing}"
+          PY
       - name: Build wheel
         run: python -m pip wheel . --no-deps --wheel-dir dist
       - name: Verify wheel version and interface files
