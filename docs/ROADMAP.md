@@ -21,7 +21,7 @@ Este documento resume qué está implementado y qué falta.
 - [x] CSS separado del HTML y documentación más clara.
 
 ## 0.4 — Diagnóstico e integraciones
-- [ ] Asistente guiado para distinguir problemas de puerta de enlace, DNS e Internet.
+- [x] Asistente guiado que resume los resultados y propone próximos pasos sin confundir ICMP bloqueado con una caída confirmada.
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
 - [ ] Mejor visualización de tendencias e informes exportables.
 

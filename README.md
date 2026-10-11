@@ -10,11 +10,12 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
+- Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar incidentes y ver cuándo se recupera un servicio.
 - Exportar el inventario y los datos a CSV o JSON.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
 
-> **Importante:** el inventario inicial no garantiza descubrir todos los equipos de la red. Los monitores generan conexiones hacia los objetivos que configures; usalos solo con sistemas que administrás o estás autorizado a comprobar.
+> **Importante:** el inventario inicial no garantiza descubrir todos los equipos de la red. El diagnóstico es orientativo: una prueba de ping fallida no demuestra por sí sola que Internet esté caído. Los monitores generan conexiones hacia los objetivos que configures; usalos solo con sistemas que administrás o estás autorizado a comprobar.
 
 ## Requisitos
 

@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.4.0 — 11 de octubre de 2026
+
+- Agrega un resumen orientativo al diagnóstico de conectividad, con pasos sugeridos según los resultados.
+- Distingue posibles problemas de DNS de pruebas de ping sin respuesta y aclara que ICMP puede estar filtrado.
+- Muestra en el panel la versión real de la aplicación para evitar números desactualizados en la interfaz.
+
 ## 0.3.1 — 11 de octubre de 2026
 
 - Unifica la versión del paquete y la aplicación para evitar metadatos desactualizados.

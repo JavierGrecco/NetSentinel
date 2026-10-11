@@ -3,3 +3,8 @@
     @media(max-width:950px){.layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.wrap{padding:18px 12px 35px}.metrics{gap:8px}.metric{padding:13px}.metric-value{font-size:26px}.panel{padding:13px}.actions{width:100%}.actions button{flex:1}.search{width:100%;min-width:0}.panel-head{align-items:stretch}.panel-head>div:first-child{width:100%}}
 
 .monitor-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--text);background:var(--surface)}.monitor-link:hover{border-color:var(--accent);color:var(--accent)}
+
+.diagnosis-summary{border-color:#375b7b;background:linear-gradient(150deg,#13263c,#101b2c)}
+.diagnosis-summary .check-top strong{font-size:13px;line-height:1.45}
+.diagnosis-steps{padding-left:24px;margin:10px 0 0;color:#c4d0e0;font-size:11px;line-height:1.6}
+.diagnosis-steps li+li{margin-top:4px}
