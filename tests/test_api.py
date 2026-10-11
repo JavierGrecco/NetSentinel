@@ -39,11 +39,11 @@ def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
     database.record_scan([Neighbor("192.168.5.2", "AA:BB:CC:DD:EE:FF", "en0")])
     with TestClient(app, base_url='http://127.0.0.1') as client:
         device = client.get("/api/devices").json()[0]
-        response = client.patch(f"/api/devices/{device['id']}", json={"trusted": True, "display_name": "Router de prueba"})
+        response = client.patch(f"/api/devices/{device['id']}", json={"trusted": True, "display_name": "Router de prueba"}, headers={"Origin": "http://127.0.0.1"})
         assert response.status_code == 200
         assert response.json()["trusted"] is True
         event = client.get("/api/events").json()[0]
-        response = client.patch(f"/api/events/{event['id']}", json={"acknowledged": True})
+        response = client.patch(f"/api/events/{event['id']}", json={"acknowledged": True}, headers={"Origin": "http://127.0.0.1"})
         assert response.status_code == 200
 
 
