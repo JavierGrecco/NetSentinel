@@ -97,6 +97,51 @@ def initialize(path: Path | None = None) -> None:
                 message TEXT NOT NULL,
                 acknowledged INTEGER NOT NULL DEFAULT 0 CHECK (acknowledged IN (0, 1))
             );
+            CREATE TABLE IF NOT EXISTS monitors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                kind TEXT NOT NULL CHECK (kind IN ('ping', 'tcp', 'http')),
+                target TEXT NOT NULL,
+                interval_seconds INTEGER NOT NULL CHECK (interval_seconds BETWEEN 15 AND 86400),
+                timeout_seconds INTEGER NOT NULL CHECK (timeout_seconds BETWEEN 1 AND 10),
+                enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_checked_at TEXT,
+                last_status TEXT CHECK (last_status IN ('up', 'down') OR last_status IS NULL)
+            );
+            CREATE TABLE IF NOT EXISTS monitor_checks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+                checked_at TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('up', 'down')),
+                latency_ms REAL,
+                detail TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS incidents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+                status TEXT NOT NULL CHECK (status IN ('open', 'resolved')),
+                opened_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                resolved_at TEXT,
+                failure_count INTEGER NOT NULL DEFAULT 1,
+                last_detail TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_incidents_one_open_per_monitor
+                ON incidents(monitor_id) WHERE status = 'open';
+            CREATE TABLE IF NOT EXISTS notification_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monitor_id INTEGER NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+                incident_id INTEGER REFERENCES incidents(id) ON DELETE SET NULL,
+                event_type TEXT NOT NULL,
+                attempted_at TEXT NOT NULL,
+                success INTEGER NOT NULL CHECK (success IN (0, 1)),
+                detail TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_monitor_checks_time ON monitor_checks(monitor_id, checked_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status, updated_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_notification_time ON notification_log(attempted_at DESC);
             CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen DESC);
             CREATE INDEX IF NOT EXISTS idx_observations_device_time ON observations(device_id, observed_at DESC);
             CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
@@ -214,6 +259,9 @@ def get_summary(path: Path | None = None) -> dict[str, int | str | None]:
         last_scan = db.execute("SELECT MAX(finished_at) FROM scans").fetchone()[0]
         pending = db.execute("SELECT COUNT(*) FROM events WHERE acknowledged = 0").fetchone()[0]
         addresses = db.execute("SELECT COUNT(*) FROM device_addresses").fetchone()[0]
+        monitors_total = db.execute("SELECT COUNT(*) FROM monitors").fetchone()[0]
+        monitors_enabled = db.execute("SELECT COUNT(*) FROM monitors WHERE enabled = 1").fetchone()[0]
+        incidents_open = db.execute("SELECT COUNT(*) FROM incidents WHERE status = 'open'").fetchone()[0]
     return {
         "devices_total": total,
         "devices_trusted": trusted,
@@ -222,6 +270,9 @@ def get_summary(path: Path | None = None) -> dict[str, int | str | None]:
         "scans_total": scans,
         "events_pending": pending,
         "last_scan": last_scan,
+        "monitors_total": monitors_total,
+        "monitors_enabled": monitors_enabled,
+        "incidents_open": incidents_open,
     }
 
 
@@ -405,7 +456,7 @@ def acknowledge_event(event_id: int, path: Path | None = None) -> bool:
 
 
 def export_json(path: Path | None = None) -> str:
-    """Exporta inventario, direcciones e historial (no es un backup restaurable)."""
+    """Exporta inventario e historial, incluida la monitorización (no es backup restaurable)."""
     with connect(path) as db:
         devices = [_device_dict(row) for row in db.execute("SELECT * FROM devices ORDER BY id").fetchall()]
         events = [dict(row) for row in db.execute(
@@ -423,15 +474,23 @@ def export_json(path: Path | None = None) -> str:
             scans.append(item)
         observations = [dict(row) for row in db.execute("SELECT * FROM observations ORDER BY id").fetchall()]
         addresses = [dict(row) for row in db.execute("SELECT * FROM device_addresses ORDER BY device_id, ip_address").fetchall()]
+        monitors = [dict(row) for row in db.execute("SELECT * FROM monitors ORDER BY id").fetchall()]
+        monitor_checks = [dict(row) for row in db.execute("SELECT * FROM monitor_checks ORDER BY id").fetchall()]
+        incidents = [dict(row) for row in db.execute("SELECT * FROM incidents ORDER BY id").fetchall()]
+        notifications = [dict(row) for row in db.execute("SELECT * FROM notification_log ORDER BY id").fetchall()]
     payload = {
         "generated_at": utc_now(),
-        "format": "netsentinel-data-export-v2",
+        "format": "netsentinel-data-export-v3",
         "restorable_backup": False,
         "devices": devices,
         "addresses": addresses,
         "events": events,
         "scans": scans,
         "observations": observations,
+        "monitors": monitors,
+        "monitor_checks": monitor_checks,
+        "incidents": incidents,
+        "notification_log": notifications,
     }
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
@@ -447,3 +506,182 @@ def export_csv(path: Path | None = None) -> str:
     writer.writeheader()
     writer.writerows(rows)
     return buffer.getvalue()
+
+
+
+# --- Monitorización periódica e incidentes (v0.3) ---------------------------
+
+def create_monitor(
+    name: str, kind: str, target: str, interval_seconds: int = 60,
+    timeout_seconds: int = 3, path: Path | None = None,
+) -> dict[str, Any]:
+    now = utc_now()
+    name = name.strip()[:120]
+    if not name:
+        raise ValueError("El nombre del monitor no puede estar vacío.")
+    if kind not in {"ping", "tcp", "http"}:
+        raise ValueError("Tipo de monitor no admitido.")
+    if not 15 <= int(interval_seconds) <= 86400:
+        raise ValueError("El intervalo debe estar entre 15 y 86400 segundos.")
+    if not 1 <= int(timeout_seconds) <= 10:
+        raise ValueError("El tiempo límite debe estar entre 1 y 10 segundos.")
+    with connect(path) as db:
+        cursor = db.execute(
+            """INSERT INTO monitors(name, kind, target, interval_seconds, timeout_seconds, enabled, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, 1, ?, ?)""",
+            (name, kind, target.strip(), int(interval_seconds), int(timeout_seconds), now, now),
+        )
+        monitor_id = int(cursor.lastrowid)
+    result = next((item for item in list_monitors(path) if item["id"] == monitor_id), None)
+    if result is None:
+        raise RuntimeError("No se pudo recuperar el monitor recién creado.")
+    return result
+
+
+def list_monitors(path: Path | None = None) -> list[dict[str, Any]]:
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT m.*,
+                      (SELECT c.latency_ms FROM monitor_checks c WHERE c.monitor_id = m.id ORDER BY c.id DESC LIMIT 1) AS last_latency_ms,
+                      (SELECT c.detail FROM monitor_checks c WHERE c.monitor_id = m.id ORDER BY c.id DESC LIMIT 1) AS last_detail,
+                      (SELECT i.id FROM incidents i WHERE i.monitor_id = m.id AND i.status = 'open' ORDER BY i.id DESC LIMIT 1) AS open_incident_id,
+                      (SELECT COUNT(*) FROM monitor_checks c WHERE c.monitor_id = m.id) AS checks_count
+               FROM monitors m ORDER BY m.enabled DESC, m.name COLLATE NOCASE"""
+        ).fetchall()
+    items = [dict(row) for row in rows]
+    for item in items:
+        item["enabled"] = bool(item["enabled"])
+        item["incident_open"] = item["open_incident_id"] is not None
+    return items
+
+
+def get_monitor_checks(monitor_id: int, limit: int = 30, path: Path | None = None) -> list[dict[str, Any]] | None:
+    with connect(path) as db:
+        if db.execute("SELECT 1 FROM monitors WHERE id = ?", (monitor_id,)).fetchone() is None:
+            return None
+        rows = db.execute(
+            "SELECT * FROM monitor_checks WHERE monitor_id = ? ORDER BY id DESC LIMIT ?",
+            (monitor_id, max(1, min(int(limit), 200))),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_monitor(monitor_id: int, *, enabled: bool | None = None, name: str | None = None,
+                   interval_seconds: int | None = None, timeout_seconds: int | None = None,
+                   path: Path | None = None) -> dict[str, Any] | None:
+    with connect(path) as db:
+        row = db.execute("SELECT * FROM monitors WHERE id = ?", (monitor_id,)).fetchone()
+        if row is None:
+            return None
+        new_enabled = int(enabled) if enabled is not None else row["enabled"]
+        new_name = name.strip()[:120] if name is not None else row["name"]
+        new_interval = int(interval_seconds) if interval_seconds is not None else row["interval_seconds"]
+        new_timeout = int(timeout_seconds) if timeout_seconds is not None else row["timeout_seconds"]
+        if not new_name:
+            raise ValueError("El nombre del monitor no puede estar vacío.")
+        if not 15 <= new_interval <= 86400:
+            raise ValueError("El intervalo debe estar entre 15 y 86400 segundos.")
+        if not 1 <= new_timeout <= 10:
+            raise ValueError("El tiempo límite debe estar entre 1 y 10 segundos.")
+        db.execute(
+            "UPDATE monitors SET name = ?, enabled = ?, interval_seconds = ?, timeout_seconds = ?, updated_at = ? WHERE id = ?",
+            (new_name, new_enabled, new_interval, new_timeout, utc_now(), monitor_id),
+        )
+    return next((item for item in list_monitors(path) if item["id"] == monitor_id), None)
+
+
+def delete_monitor(monitor_id: int, path: Path | None = None) -> bool:
+    with connect(path) as db:
+        cursor = db.execute("DELETE FROM monitors WHERE id = ?", (monitor_id,))
+        return cursor.rowcount > 0
+
+
+def get_incidents(path: Path | None = None, limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
+    params: list[Any] = []
+    where = ""
+    if status in {"open", "resolved"}:
+        where = "WHERE i.status = ?"
+        params.append(status)
+    params.append(max(1, min(int(limit), 200)))
+    with connect(path) as db:
+        rows = db.execute(
+            f"""SELECT i.*, m.name AS monitor_name, m.kind, m.target
+                FROM incidents i JOIN monitors m ON m.id = i.monitor_id
+                {where} ORDER BY CASE WHEN i.status = 'open' THEN 0 ELSE 1 END, i.updated_at DESC, i.id DESC LIMIT ?""",
+            params,
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def record_monitor_check(monitor_id: int, status: str, latency_ms: float | None,
+                         detail: str, path: Path | None = None) -> dict[str, Any]:
+    if status not in {"up", "down"}:
+        raise ValueError("El estado del control debe ser up o down.")
+    now = utc_now()
+    transition: dict[str, Any] | None = None
+    with connect(path) as db:
+        monitor = db.execute("SELECT * FROM monitors WHERE id = ?", (monitor_id,)).fetchone()
+        if monitor is None:
+            raise ValueError("El monitor ya no existe.")
+        db.execute(
+            "INSERT INTO monitor_checks(monitor_id, checked_at, status, latency_ms, detail) VALUES (?, ?, ?, ?, ?)",
+            (monitor_id, now, status, latency_ms, detail[:1000]),
+        )
+        db.execute(
+            "UPDATE monitors SET last_checked_at = ?, last_status = ?, updated_at = ? WHERE id = ?",
+            (now, status, now, monitor_id),
+        )
+        open_incident = db.execute(
+            "SELECT * FROM incidents WHERE monitor_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
+            (monitor_id,),
+        ).fetchone()
+        if status == "down":
+            if open_incident is None:
+                cursor = db.execute(
+                    """INSERT INTO incidents(monitor_id, status, opened_at, updated_at, failure_count, last_detail)
+                       VALUES (?, 'open', ?, ?, 1, ?)""",
+                    (monitor_id, now, now, detail[:1000]),
+                )
+                incident_id = int(cursor.lastrowid)
+                message = f"El monitor '{monitor['name']}' no responde: {detail[:500]}"
+                _insert_event(db, "monitor_down", "warning", None, message, now)
+                transition = {"transition": "down", "incident_id": incident_id, "monitor_name": monitor["name"],
+                              "target": monitor["target"], "message": message, "at": now}
+            else:
+                incident_id = int(open_incident["id"])
+                db.execute(
+                    "UPDATE incidents SET updated_at = ?, failure_count = failure_count + 1, last_detail = ? WHERE id = ?",
+                    (now, detail[:1000], incident_id),
+                )
+        elif open_incident is not None:
+            incident_id = int(open_incident["id"])
+            db.execute(
+                "UPDATE incidents SET status = 'resolved', updated_at = ?, resolved_at = ?, last_detail = ? WHERE id = ?",
+                (now, now, detail[:1000], incident_id),
+            )
+            message = f"El monitor '{monitor['name']}' se recuperó. {detail[:500]}"
+            _insert_event(db, "monitor_recovered", "info", None, message, now)
+            transition = {"transition": "recovered", "incident_id": incident_id, "monitor_name": monitor["name"],
+                          "target": monitor["target"], "message": message, "at": now}
+        check = db.execute("SELECT * FROM monitor_checks WHERE monitor_id = ? ORDER BY id DESC LIMIT 1", (monitor_id,)).fetchone()
+    return {"check": dict(check), "transition": transition}
+
+
+def record_notification(monitor_id: int, incident_id: int | None, event_type: str,
+                        success: bool, detail: str, path: Path | None = None) -> None:
+    with connect(path) as db:
+        db.execute(
+            """INSERT INTO notification_log(monitor_id, incident_id, event_type, attempted_at, success, detail)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (monitor_id, incident_id, event_type, utc_now(), int(success), detail[:500]),
+        )
+
+
+def get_notification_log(path: Path | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT n.*, m.name AS monitor_name FROM notification_log n
+               JOIN monitors m ON m.id = n.monitor_id ORDER BY n.id DESC LIMIT ?""",
+            (max(1, min(int(limit), 200)),),
+        ).fetchall()
+    return [dict(row) for row in rows]

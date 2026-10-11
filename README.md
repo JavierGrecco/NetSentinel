@@ -1,126 +1,94 @@
 # NetSentinel
 
-**NetSentinel** es una aplicación local para observar y diagnosticar una red desde un panel web en español. Su objetivo es registrar dispositivos y cambios con suficiente contexto para que el usuario pueda investigarlos, sin convertir automáticamente indicios en conclusiones de seguridad.
+**Una herramienta local para conocer tu red, registrar cambios y comprobar si tus servicios responden.**
 
-> **Estado:** v0.2.0 — inventario pasivo, múltiples fuentes del sistema, historial de direcciones, consulta OUI local opcional y exportación. No bloquea dispositivos ni realiza barridos activos.
+NetSentinel reúne inventario de dispositivos, historial y monitorización en un panel web. Se ejecuta en tu computadora; no necesita una cuenta ni un servidor externo.
 
-## Funciones incluidas
+## Qué podés hacer
 
-- Panel web local y API documentada con FastAPI.
-- Lectura de tablas de vecinos con proveedores intercambiables: `ip neigh`, fallback `arp` y `ndp` donde estén disponibles.
-- Combinación de resultados sin duplicar la misma pareja IP/MAC; un fallo de un proveedor no detiene las demás fuentes.
-- Inventario SQLite, múltiples direcciones IPv4/IPv6 asociadas a una MAC y marcas de primera/última observación.
-- Evento inicial para una MAC nueva y evento de revisión cuando cambia la IPv4 principal en lecturas consecutivas. Los cambios se presentan como observaciones a verificar, no como prueba de suplantación.
-- Resolución opcional de fabricantes desde `oui.csv` local. No se envían MAC a servicios externos.
-- Indicador de MAC localmente administrada, que puede corresponder a aleatorización o a una MAC configurada manualmente.
-- Lista de confianza manual, nombres y notas por dispositivo, historial de lecturas y exportación CSV/JSON.
-- Diagnóstico manual de gateway, DNS y conectividad IP, con aviso de que las pruebas generan tráfico.
-- CI con pruebas automáticas en Windows, macOS y Linux.
+- Consultar dispositivos que el sistema operativo ya conoce, con sus direcciones IP y MAC.
+- Marcar dispositivos de confianza y agregarles un nombre o una nota.
+- Guardar un historial de lecturas y cambios observados.
+- Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
+- Consultar incidentes y ver cuándo se recupera un servicio.
+- Exportar el inventario y los datos a CSV o JSON.
+- Enviar avisos externos opcionales mediante un webhook HTTPS.
+
+> **Importante:** el inventario inicial no garantiza descubrir todos los equipos de la red. Los monitores generan conexiones hacia los objetivos que configures; usalos solo con sistemas que administrás o estás autorizado a comprobar.
 
 ## Requisitos
 
 - Python 3.10 o posterior.
-- Para el inventario básico no hace falta una base de datos externa ni privilegios de administrador.
-- Las herramientas disponibles para leer vecinos dependen del sistema operativo; NetSentinel usa las que encuentre.
+- Windows, macOS o Linux.
 
-## Instalación y uso
+## Instalación y primer inicio
+
+Descargá el ZIP desde **Code → Download ZIP** y descomprimilo. Abrí una terminal dentro de la carpeta del proyecto.
 
 ### Windows (PowerShell)
 
 ```powershell
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[test]"
+python -m pip install -e .
 netsentinel
 ```
 
-Si PowerShell bloquea la activación del entorno, se puede ejecutar directamente `\.venv\Scripts\python.exe -m pip install -e ".[test]"` y luego `\.venv\Scripts\netsentinel.exe`.
+Si PowerShell no permite activar el entorno, después de instalar podés ejecutar `.venv\Scripts\python.exe -m netsentinel.cli`.
 
-### macOS / Linux
+### macOS o Linux
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[test]'
+python -m pip install -e .
 netsentinel
 ```
 
-El navegador abre `http://127.0.0.1:8765`. También se puede ejecutar `netsentinel --no-browser`, elegir otro puerto mediante `--port 8766` o cambiar el directorio de datos con la variable `NETSENTINEL_DATA_DIR`.
+Se abrirá el panel en **http://127.0.0.1:8765**. Si no se abre automáticamente, copiá esa dirección en el navegador.
 
-Por defecto, el servidor escucha solo en `127.0.0.1`. No lo expongas a una red compartida sin añadir autenticación, protección de origen y una configuración de despliegue revisada.
+## Monitorización
 
-### Ejecutar las pruebas
+En el panel, elegí **Monitorización** y agregá un control:
+
+- **Ping:** comprueba si responde un host.
+- **TCP:** comprueba si se puede conectar a un puerto, por ejemplo `192.168.1.1:443`.
+- **HTTP/HTTPS:** consulta una URL de estado, por ejemplo `https://example.com/health`.
+
+Los intervalos permitidos van de 15 segundos a 24 horas. Al detectar una caída se abre un incidente; los fallos siguientes actualizan ese mismo incidente y el primer resultado correcto lo cierra.
+
+### Avisos opcionales
+
+NetSentinel funciona sin notificaciones externas. Para enviar avisos de caída y recuperación, configurá la variable `NETSENTINEL_WEBHOOK_URL` con la URL HTTPS de tu webhook antes de iniciar el programa. Tratá esa URL como una contraseña y no la subas al repositorio.
+
+La [guía de monitorización](docs/MONITORING.md) explica los límites y la configuración.
+
+## Datos y privacidad
+
+Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
+
+Leé la [política de seguridad](docs/SECURITY.md) antes de habilitar integraciones o supervisar sistemas compartidos.
+
+## Pruebas
+
+Para ejecutar las pruebas automatizadas:
 
 ```bash
-python -m pytest
+python -m pip install -e ".[test]"
+pytest
 ```
 
-## Identificación local de fabricantes (OUI)
+## Documentación
 
-La función es opcional y no consulta Internet. Si disponés de un registro de asignaciones OUI autorizado, guardalo como:
-
-- Windows: `%USERPROFILE%\.netsentinel\oui.csv`
-- macOS / Linux: `~/.netsentinel/oui.csv`
-
-Se admiten dos formatos CSV:
-
-```csv
-prefix,vendor
-AABBCC,Ejemplo de fabricante
-```
-
-O el formato de registro IEEE con columnas `Assignment` y `Organization Name`. Se aceptan prefijos MA-L (6 dígitos hexadecimales), MA-M (7) y MA-S (9), con o sin separadores. La aplicación muestra la fuente local y cuándo consultó la base. **La base OUI no se incluye**: su distribución, licencia y fecha de actualización dependen del registro que elijas utilizar.
-
-## API
-
-- `GET /api/health` — estado y versión.
-- `GET /api/summary` — métricas generales.
-- `GET /api/devices?q=...` — inventario (incluye fabricante, indicador de MAC local y direcciones conocidas).
-- `GET /api/devices/{id}/addresses` — historial agregado de direcciones de un dispositivo.
-- `GET /api/events?limit=50` — eventos revisables.
-- `GET /api/scans?limit=30` — historial de lecturas y fuentes.
-- `POST /api/scan` — leer las tablas locales de vecinos.
-- `POST /api/diagnostics` — ejecutar diagnóstico manual.
-- `PATCH /api/devices/{id}` — modificar confianza, nombre y notas.
-- `PATCH /api/events/{id}` — marcar evento revisado.
-- `GET /api/export/devices.csv` y `GET /api/export/data.json` — exportaciones.
-- `GET /api/docs` — documentación interactiva de la API.
-
-## Privacidad y límites
-
-- La información se guarda localmente en SQLite dentro de `~/.netsentinel` (o en `NETSENTINEL_DATA_DIR`). En sistemas POSIX el directorio y el archivo se restringen al usuario cuando el sistema de archivos lo permite.
-- NetSentinel no hace solicitudes externas durante el inventario pasivo. El diagnóstico opcional consulta DNS y prueba conectividad IP, algo que se explica en el panel antes de ejecutarse.
-- Una tabla de vecinos es una caché parcial. La ausencia de un dispositivo no demuestra que esté desconectado.
-- Un fabricante identificado por prefijo OUI no verifica la identidad de un dispositivo. Una MAC localmente administrada puede ser aleatoria, personalizada o pertenecer a un entorno virtual.
-- Un cambio de IP puede tener causas legítimas (DHCP, IPv6, movilidad). Los eventos son pistas para revisar.
-- En v0.2 no se bloquean equipos, no se escribe en routers, no se inspeccionan contenidos HTTPS y no se realiza escaneo activo de puertos.
-
-## Estructura del proyecto
-
-```text
-src/netsentinel/
-├── cli.py                 # Inicio y opciones de ejecución
-├── config.py              # Directorio de datos
-├── database.py            # SQLite, historial y exportaciones
-├── diagnostics.py         # Pruebas de conectividad explícitas
-├── discovery.py           # Proveedores del sistema y parsers de vecinos
-├── vendor.py              # Base OUI local opcional y bits de la MAC
-├── main.py                # API FastAPI
-└── static/index.html      # Panel web local
-```
-
-## Plan de versiones
-
-Consultar [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) y [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). La próxima etapa prioriza diagnóstico con evidencias, alertas sin duplicados y exportación de informes.
-
-## Contribuir y seguridad
-
-- [Guía de contribución](CONTRIBUTING.md)
-- [Política de seguridad](SECURITY.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
-
-Las pruebas no necesitan una red real. No adjuntes a issues datos reales de direcciones, MAC, dominios internos, credenciales ni exportaciones de inventario.
+- [Plan de versiones](docs/ROADMAP.md)
+- [Detalles de monitorización](docs/MONITORING.md)
+- [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.
+- [Plan de implementación](docs/IMPLEMENTATION_PLAN.md)
+- [Base local de fabricantes OUI](docs/OUI_DATABASE.md)
+- [Mantenimiento del repositorio](docs/GITHUB_SETUP.md)
+- [Historial de cambios](CHANGELOG.md)
 
 ## Licencia
 
-Este proyecto se distribuye bajo la licencia MIT. Revisá las condiciones de los registros OUI y cualquier dependencia opcional por separado.
+MIT. Las condiciones de las bases OUI y de cualquier herramienta externa opcional se revisan por separado.

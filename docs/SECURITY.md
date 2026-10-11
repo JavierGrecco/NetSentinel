@@ -20,3 +20,7 @@ El escaneo activo, las consultas SNMP, las modificaciones de routers/DNS y la in
 ## Reporte de vulnerabilidades
 
 Hasta configurar un canal dedicado, no publiques credenciales, tokens ni detalles explotables en issues públicos. Abrí un issue con una descripción mínima y sin secretos; se definirá un proceso privado de reporte antes de distribuir versiones estables.
+
+## Monitorización de disponibilidad
+
+Los monitores contactan con los objetivos que configura quien administra la aplicación. Los intervalos están limitados a 15 segundos como mínimo y los tiempos de espera a 10 segundos como máximo. El monitor HTTP no sigue redirecciones y rechaza credenciales, parámetros y fragmentos en las URL. Los webhooks deben usar HTTPS; su URL se configura mediante una variable de entorno y no se almacena en la base de datos. No supervises sistemas sin autorización ni publiques secretos en incidencias.

@@ -28,7 +28,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-netsentinel = ["static/*.html"]
+netsentinel = ["static/*.html", "static/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

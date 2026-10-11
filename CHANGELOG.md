@@ -1,6 +1,15 @@
-# Cambios
+# Historial de cambios
 
-## [0.2.0] — 2026-10-11
+## 0.3.0 — 11 de octubre de 2026
+
+- Agrega monitorización periódica de hosts, puertos TCP y endpoints HTTP/HTTPS.
+- Guarda el resultado y la latencia de cada comprobación.
+- Agrupa una caída en un único incidente y lo resuelve al volver a responder el servicio.
+- Permite enviar avisos de caída y recuperación a un webhook HTTPS opcional.
+- Separa los estilos CSS de la estructura HTML.
+- Simplifica la instalación y mueve las instrucciones para desarrolladores a su propio documento.
+
+## 0.2.0 — 2026-10-11
 
 Mejora de inventario y procedencia de datos.
 

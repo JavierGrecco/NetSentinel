@@ -1,8 +1,14 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from netsentinel import database
 from netsentinel.main import app
 from netsentinel.discovery import Neighbor
+
+
+@pytest.fixture(autouse=True)
+def disable_scheduler(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
 
 
 def test_api_health_and_dashboard(monkeypatch, tmp_path):
@@ -17,7 +23,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "NetSentinel" in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
-        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v2"
+        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v3"
 
 
 def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
@@ -58,4 +64,4 @@ def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path)
         assert response.json()["devices_found"] == 1
         assert response.json()["addresses_found"] == 1
         assert client.get("/api/scans").json()[0]["source"] == "fixture"
-        assert client.get("/api/health").json()["version"] == "0.2.0"
+        assert client.get("/api/health").json()["version"] == "0.3.0"
