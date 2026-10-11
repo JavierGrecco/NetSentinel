@@ -173,7 +173,7 @@ def initialize(path: Path | None = None) -> None:
                 device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
                 observed_at TEXT NOT NULL,
                 received_at TEXT NOT NULL,
-                event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query')),
+                event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                 source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
                 domain TEXT,
                 destination_ip TEXT,
@@ -183,6 +183,10 @@ def initialize(path: Path | None = None) -> None:
                 page_url TEXT,
                 search_engine TEXT,
                 search_terms TEXT,
+                email_provider TEXT,
+                email_from TEXT,
+                email_to TEXT,
+                email_subject TEXT,
                 blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
             );
             CREATE TABLE IF NOT EXISTS activity_settings (
@@ -213,7 +217,7 @@ def initialize(path: Path | None = None) -> None:
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='activity_events'"
         ).fetchone()
         activity_event_sql = (activity_event_sql_row["sql"] or "") if activity_event_sql_row else ""
-        if "page_visit" not in activity_event_sql or "search_query" not in activity_event_sql:
+        if any(event_type not in activity_event_sql for event_type in ("page_visit", "search_query", "email_metadata")):
             db.execute("DROP TABLE IF EXISTS activity_events_migrated")
             old_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
             db.execute("""
@@ -223,7 +227,7 @@ def initialize(path: Path | None = None) -> None:
                     device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
                     observed_at TEXT NOT NULL,
                     received_at TEXT NOT NULL,
-                    event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query')),
+                    event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                     source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
                     domain TEXT,
                     destination_ip TEXT,
@@ -241,9 +245,10 @@ def initialize(path: Path | None = None) -> None:
                 "source", "domain", "destination_ip", "destination_port", "protocol", "app_name",
             ]
             select_columns = [name if name in old_columns else "NULL" for name in core_columns]
-            select_columns.extend(name if name in old_columns else "NULL" for name in ("page_url", "search_engine", "search_terms"))
+            extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
+            select_columns.extend(name if name in old_columns else "NULL" for name in extra_columns)
             select_columns.append("blocked" if "blocked" in old_columns else "0")
-            target_columns = core_columns + ["page_url", "search_engine", "search_terms", "blocked"]
+            target_columns = core_columns + list(extra_columns) + ["blocked"]
             db.execute(
                 "INSERT INTO activity_events_migrated (" + ", ".join(target_columns) + ") "
                 "SELECT " + ", ".join(select_columns) + " FROM activity_events"
@@ -252,7 +257,7 @@ def initialize(path: Path | None = None) -> None:
             db.execute("ALTER TABLE activity_events_migrated RENAME TO activity_events")
         else:
             activity_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
-            for column in ("page_url", "search_engine", "search_terms"):
+            for column in ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject"):
                 if column not in activity_columns:
                     db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} TEXT")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC)")
