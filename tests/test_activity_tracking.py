@@ -236,7 +236,7 @@ def test_legacy_activity_event_schema_migrates_without_losing_events(monkeypatch
     with connect() as db:
         columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
         event = db.execute("SELECT * FROM activity_events WHERE domain='legacy.example'").fetchone()
-    assert {"page_url", "search_engine", "search_terms"}.issubset(columns)
+    assert {"page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject"}.issubset(columns)
     assert event is not None
     assert event["event_type"] == "dns_query"
 
