@@ -71,7 +71,7 @@ jobs:
                   "netsentinel/static/monitors.html",
                   "netsentinel/static/styles.css",
                   "netsentinel/static/monitors.css",
-                  "netsentinel/static/tools.html",
+                  "netsentinel/static/tools.html",\n                  "netsentinel/static/activity.html",
               }
               missing = required - names
               assert not missing, f"Missing UI assets in wheel: {sorted(missing)}"
