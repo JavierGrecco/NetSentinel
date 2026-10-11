@@ -15,7 +15,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
 - Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
-- **En desarrollo (rama 0.10):** consultar registros A/AAAA por nombre y resolución inversa PTR por IP mediante el resolvedor DNS del sistema. La pantalla independiente `/tools` ejecuta ambas consultas solo cuando las solicitás. Los nombres devueltos por DNS no verifican la identidad de un dispositivo.
+- **En desarrollo (rama 0.10):** consultar registros A/AAAA por nombre y resolución inversa PTR por IP mediante el resolvedor DNS del sistema. La pantalla independiente `/tools` ejecuta las consultas de nombre/PTR solo cuando las solicitás y muestra una lectura orientativa de los servidores DNS detectables localmente, sin modificar la configuración. En macOS/Linux puede omitir DNS por interfaz, VPN o split DNS; en Windows lee valores del registro. Los nombres devueltos por DNS no verifican la identidad de un dispositivo.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
@@ -70,7 +70,7 @@ Algunos equipos no responderán al ping, las redes aisladas de invitados pueden 
 
 ## Herramientas DNS (módulo en desarrollo)
 
-La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`.
+La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`. La configuración DNS se obtiene mediante lectura local y puede ser parcial según el sistema operativo y las interfaces activas.
 
 ## Monitorización
 
