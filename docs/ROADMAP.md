@@ -18,6 +18,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Importación manual de CSV de navegación y búsquedas; validación y saneamiento de URLs.
 - [x] Importación manual de metadatos de correo autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional.
 - [x] Rechazo de columnas de cuerpo de mensaje, contenido o adjuntos; no hay extracción de bandejas.
+- [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
 - [ ] CI verde en toda la matriz y pruebas manuales de importación en Chrome/Edge y Windows/macOS/Linux.
 - [ ] Revisar sanitización de URL con OAuth, tokens, tracking, rutas con PII y codificación percent.
 - [ ] Previsualización y deduplicación idempotente antes de importar CSV.
