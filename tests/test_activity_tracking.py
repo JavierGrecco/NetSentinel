@@ -165,6 +165,35 @@ def test_csv_import_and_rejects_sensitive_columns(client):
     assert "privacidad" in rejected.json()["detail"].lower()
 
 
+def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "observed_at,event_type,domain\\n"
+        f"{stamp},dns_query,duplicate.example\\n"
+        f"{stamp},dns_query,duplicate.example\\n"
+    )
+
+    first = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["imported"] == 1
+    assert first.json()["skipped_duplicates"] == 1
+
+    second = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["imported"] == 0
+    assert second.json()["skipped_duplicates"] == 2
+
+    events = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    assert sum(event["domain"] == "duplicate.example" for event in events) == 1
+
+
 def test_browser_csv_import_captures_page_urls_and_search_queries_safely(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
