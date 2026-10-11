@@ -49,6 +49,65 @@ SENSITIVE_HEADERS = {
     "attachments", "attachment_content", "message_content",
 }
 
+CSV_IGNORED_METADATA_HEADERS = {
+    "id", "message_id", "messageid", "message_trace_id", "messagetraceid",
+    "status", "delivery_status", "direction", "size", "message_size",
+    "from_ip", "fromip", "to_ip", "toip", "sender_ip", "senderip",
+    "recipient_ip", "recipientip", "delivery_step", "event", "route",
+    "internet_message_id", "internetmessageid", "network_message_id",
+    "networkmessageid", "trace_id", "traceid",
+}
+CSV_HEADER_ALIASES = {
+    "observed_at": {
+        "date", "datetime", "timestamp", "date_time", "date_and_time",
+        "received_datetime", "received_date_time", "sent_datetime", "sent_date_time",
+        "received_time", "sent_time", "time",
+    },
+    "event_type": {"eventtype"},
+    "email_provider": {"provider", "mail_provider", "email_service", "service"},
+    "email_from": {
+        "from", "from_address", "from_email", "sender", "sender_address",
+        "senderaddress", "sender_email", "sender_email_address",
+    },
+    "email_to": {
+        "to", "to_address", "to_email", "recipient", "recipient_address",
+        "recipientaddress", "recipient_email", "recipients",
+    },
+    "email_subject": {
+        "subject", "subject_line", "message_subject", "subject_or_message_id",
+    },
+}
+
+
+def _normalized_csv_header(value: str | None) -> str:
+    return re.sub(
+        r"[^a-z0-9]+", "_", str(value or "").strip().lstrip("\\ufeff").lower()
+    ).strip("_")
+
+
+def _is_sensitive_csv_header(value: str | None) -> bool:
+    normalized = _normalized_csv_header(value)
+    if normalized in SENSITIVE_HEADERS:
+        return True
+    parts = set(normalized.split("_"))
+    if parts.intersection({"body", "content", "payload", "attachment", "attachments"}):
+        return True
+    # A message identifier is harmless metadata; a message/body/content column is not.
+    return "message" in parts and "id" not in parts and "subject" not in parts
+
+
+def _canonical_csv_header(value: str | None) -> str | None:
+    normalized = _normalized_csv_header(value)
+    if normalized in CSV_IGNORED_METADATA_HEADERS:
+        return None
+    if normalized in CSV_FIELDS:
+        return normalized
+    for canonical, aliases in CSV_HEADER_ALIASES.items():
+        if normalized in aliases:
+            return canonical
+    return normalized
+
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -408,19 +467,31 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
     if len(csv_data.encode("utf-8")) > 1_000_000:
         raise ValueError("El archivo CSV supera el máximo de 1 MB.")
     reader = csv.DictReader(io.StringIO(csv_data))
-    headers = [str(name or "").strip().lstrip("\ufeff").lower() for name in (reader.fieldnames or [])]
-    if not headers:
+    raw_headers = list(reader.fieldnames or [])
+    if not raw_headers:
         raise ValueError("El CSV está vacío o no contiene cabeceras.")
-    forbidden = SENSITIVE_HEADERS.intersection(headers)
+    forbidden = [name for name in raw_headers if _is_sensitive_csv_header(name)]
     if forbidden:
-        raise ValueError("El CSV incluye campos que no se importan por privacidad: " + ", ".join(sorted(forbidden)) + ".")
-    if len(set(headers)) != len(headers) or not {"observed_at", "event_type"}.issubset(headers):
-        raise ValueError("El CSV requiere cabeceras únicas observed_at y event_type.")
-    unknown = set(headers) - CSV_FIELDS
+        raise ValueError(
+            "El CSV incluye campos que no se importan por privacidad: "
+            + ", ".join(sorted(str(name) for name in forbidden)) + "."
+        )
+    normalized_headers = [_normalized_csv_header(name) for name in raw_headers]
+    headers = [_canonical_csv_header(name) for name in raw_headers]
+    effective_headers = [name for name in headers if name is not None]
+    if len(set(effective_headers)) != len(effective_headers):
+        raise ValueError("El CSV repite una cabecera tras normalizar los nombres de columna.")
+    email_audit_csv = {"email_from", "email_to"}.issubset(set(effective_headers))
+    if "observed_at" not in effective_headers or (
+        "event_type" not in effective_headers and not email_audit_csv
+    ):
+        raise ValueError(
+            "El CSV requiere fecha y tipo de evento, o fecha más emisor/destinatario "
+            "para una exportación de auditoría de correo."
+        )
+    unknown = set(effective_headers) - CSV_FIELDS
     if unknown:
         raise ValueError("Cabeceras CSV no admitidas: " + ", ".join(sorted(unknown)) + ".")
-    if set(headers) - {"observed_at", "event_type"} - CSV_FIELDS:
-        raise ValueError("El CSV contiene columnas no compatibles.")
     raw_rows = list(reader)
     if len(raw_rows) > 1000:
         raise ValueError("Se permiten hasta 1000 eventos por importación.")
@@ -432,12 +503,28 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
     for line, row in enumerate(raw_rows, start=2):
         if row.get(None):
             raise ValueError(f"Fila {line}: contiene más columnas que las cabeceras del CSV.")
-        mapped = {
-            str(key or "").strip().lstrip("\ufeff").lower(): value
-            for key, value in row.items() if key is not None
-        }
-        if not mapped.get("observed_at") or not mapped.get("event_type"):
-            raise ValueError(f"Fila {line}: observed_at y event_type son obligatorios.")
+        mapped: dict[str, Any] = {}
+        for raw_name, value in row.items():
+            if raw_name is None:
+                continue
+            canonical = _canonical_csv_header(raw_name)
+            if canonical is None:
+                continue
+            if canonical in mapped:
+                raise ValueError(f"Fila {line}: hay varias columnas que representan {canonical}.")
+            mapped[canonical] = value
+        if not mapped.get("observed_at"):
+            raise ValueError(f"Fila {line}: falta una fecha/hora.")
+        if not mapped.get("event_type") and email_audit_csv:
+            mapped["event_type"] = "email_metadata"
+            raw_header_set = set(normalized_headers)
+            if not mapped.get("email_provider"):
+                if {"received_datetime", "received_date_time", "sender_address", "recipient_address"}.issubset(raw_header_set) or {"received_date_time", "sender_address", "recipient_address"}.issubset(raw_header_set):
+                    mapped["email_provider"] = "Microsoft 365"
+                elif "subject_or_message_id" in raw_header_set:
+                    mapped["email_provider"] = "Google Workspace"
+        if not mapped.get("event_type"):
+            raise ValueError(f"Fila {line}: event_type es obligatorio para eventos no relacionados con correo.")
         try:
             normalized.append(normalize_event(mapped, source_override="manual_import"))
         except ValueError as exc:
