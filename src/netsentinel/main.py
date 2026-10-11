@@ -180,6 +180,9 @@ class ActivityEventIngest(BaseModel):
     destination_port: int | None = Field(default=None, ge=1, le=65535)
     protocol: str | None = Field(default=None, max_length=16)
     app_name: str | None = Field(default=None, max_length=100)
+    page_url: str | None = Field(default=None, max_length=4096)
+    search_engine: str | None = Field(default=None, max_length=40)
+    search_terms: str | None = Field(default=None, max_length=500)
     blocked: bool = False
 
 

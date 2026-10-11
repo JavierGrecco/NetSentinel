@@ -1,74 +1,65 @@
-# Seguimiento familiar de actividad
+# Seguimiento familiar: páginas, búsquedas y metadatos
 
-La ruta `/activity` permite revisar metadatos que ya estén disponibles para NetSentinel, abrir ventanas temporales para recibirlos e importar logs normalizados. Esta etapa no captura paquetes ni inspecciona aplicaciones por sí sola; no instala un agente y no convierte una sesión en una fuente de tráfico.
+## Implementado en esta rama
 
-## Fuentes disponibles
+- `/activity`: sesiones temporales por dispositivo, eventos de metadatos, resumen de dominios, importación CSV y retención de 1 a 90 días.
+- La API valida eventos, requiere un token temporal para ingestión de sesiones, almacena solo su hash y rechaza campos JSON no admitidos.
+- El importador acepta hasta 1 MB y 1.000 filas por CSV; admite destinos de red, visitas a páginas y búsquedas, con validación adicional de las URLs.
+- `browser-extension/`: extensión Chromium visible, desactivada por defecto, que captura navegación web futura en el dispositivo donde se instala y exporta registros CSV para importarlos en NetSentinel.
 
-- `router_dns`: consultas DNS registradas por un router, punto de acceso o resolvedor local.
-- `router_flow`: metadatos de flujos/conexiones que proporcione una fuente que tenga visibilidad suficiente.
-- `device_agent`: metadatos explícitos comunicados por un agente local del dispositivo. NetSentinel todavía no instala ni distribuye tal agente.
-- `manual_import`: registros históricos incorporados desde un CSV con el esquema de abajo.
+La extensión es el primer mecanismo del proyecto que registra realmente páginas visitadas y búsquedas. Usa eventos de navegación que el propio navegador expone a una extensión con permisos explícitos; no rompe HTTPS.
 
-Todavía no hay un adaptador nativo para una marca/modelo de router. El primer paso es exportar sus registros y normalizarlos; la API de ingestión permite incorporar un adaptador local después. En redes Wi-Fi o conmutadas, la computadora que ejecuta el panel no necesariamente ve el tráfico unicast de los demás dispositivos.
+## Captura real de páginas y búsquedas
 
-## Límites de recopilación y privacidad
+Seguí la [guía de instalación de la extensión](../browser-extension/README.md). Debe instalarse y activarse en cada navegador que se quiera supervisar. La extensión comienza vacía y apagada al instalarse; el registro se activa manualmente desde su panel.
 
-NetSentinel admite solo los metadatos que esta versión modela:
+Registra páginas HTTP(S) de nivel superior y cambios de URL que notifica la API de navegación. Cuando la URL coincide con un motor reconocido, guarda un evento de búsqueda separado. La versión inicial reconoce Google, Bing, DuckDuckGo, Yahoo, Ecosia, Brave Search, Yandex, Baidu, YouTube, Wikipedia, Amazon, Reddit y TikTok.
 
-- Nombre DNS consultado o SNI TLS visible, cuando la fuente lo reporte.
-- Dirección IP de destino, puerto y protocolo, cuando estén disponibles.
-- Nombre de aplicación y eventos de bloqueo si la fuente los proporciona.
-- Fecha/hora observada, fuente y dispositivo al que se asoció el evento.
+No lee el historial previo, contenido visible de páginas, campos de formularios, pulsaciones de teclado ni contraseñas. No puede ver búsquedas que ocurren solo dentro de una app nativa o que no aparecen en una URL compatible. La navegación privada queda fuera si no se habilita expresamente el uso de la extensión en modo privado desde el navegador; el valor predeterminado no lo habilita.
 
-No se almacenan contraseñas, usuarios de inicio de sesión, cookies, tokens, cuerpos HTTP, contenido de paquetes, rutas ni URLs completas. La API de eventos rechaza campos extra. Un nombre DNS consultado no demuestra que alguien haya abierto una página, y una conexión no demuestra que una persona haya iniciado sesión. DNS cifrado, VPN, caché DNS, ECH y limitaciones de la fuente pueden ocultar parte de la actividad.
+## Flujo de uso actual
 
-NetSentinel no instala certificados raíz, no intercepta TLS, no intenta degradar conexiones cifradas y no intenta descifrar o recuperar credenciales. Para saber qué aplicaciones usa un menor y cuánto tiempo pasa en ellas, combiná estos metadatos con los controles parentales nativos del sistema operativo, con conocimiento y supervisión apropiados.
+1. Activá la extensión en el dispositivo supervisado; configurá registro de páginas, búsquedas, exclusiones y retención.
+2. Exportá `netsentinel-browser-activity.csv` desde el panel de la extensión.
+3. En NetSentinel, abrí `/activity`, seleccioná el dispositivo inventariado e importá ese archivo.
+4. Revisá eventos `page_visit` y `search_query`. La importación queda etiquetada como `manual_import`.
 
-## Ventanas de seguimiento
+La transferencia CSV es manual. No existe sincronización central en vivo entre equipos; no expongas el panel local en la red doméstica como atajo.
 
-1. Abrí `/activity` y elegí el dispositivo del inventario.
-2. Seleccioná la fuente que realmente vas a integrar y una duración entre 5 minutos y 12 horas.
-3. NetSentinel abre la sesión y muestra un token de recopilación una única vez. El token es un secreto portador: no lo guardes en el repositorio, no lo publiques y guardalo solo en la configuración privada del adaptador local. La base almacena el hash del token, no el token en claro.
-4. Un adaptador debe enviar eventos a `POST /api/activity/ingest` e incluir `session_id`, `collector_token`, `device_id`, `event_type`, `source` y los metadatos opcionales. La sesión debe estar activa y la fuente debe coincidir.
-5. Detené la sesión cuando termines o dejá que venza. Solo se aceptan eventos mientras está activa.
+## Fuentes de metadatos del router
 
-La API está pensada para usarse en el contexto local de NetSentinel. No expongas el panel ni la API en la LAN o Internet sin añadir autenticación, transporte seguro y una evaluación de seguridad independiente.
+Las sesiones `router_dns`, `router_flow` y `device_agent` permiten recibir eventos normalizados durante una ventana temporal. Aún no hay un adaptador nativo para un modelo concreto de router/AP ni un agente de actividad de aplicaciones para Windows/macOS/Linux. Abrir una sesión no genera tráfico ni instala componentes.
 
-### Ejemplo de evento DNS
-
-```json
-{
-  "session_id": 12,
-  "collector_token": "TOKEN_DE_LA_SESION",
-  "device_id": 4,
-  "event_type": "dns_query",
-  "source": "router_dns",
-  "observed_at": "2026-10-11T18:30:00Z",
-  "domain": "example.com"
-}
-```
-
-Los tipos admitidos son `dns_query`, `connection`, `tls_sni`, `app_usage` y `blocked`. Los protocolos admitidos son `tcp`, `udp`, `quic`, `icmp` y `other`. Para los eventos `dns_query` y `tls_sni` se exige un nombre DNS; para `connection` debe haber un dominio o una IP de destino; para `app_usage` se exige `app_name`.
-
-## Importación CSV local
-
-En la misma página podés cargar como máximo 1 MB y 1.000 eventos por importación. Cada evento se asocia al dispositivo seleccionado y se etiqueta `manual_import`.
-
-Cabeceras admitidas (se pueden omitir las columnas opcionales):
+## Esquema CSV
 
 ```csv
-observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked
-2026-10-11T18:30:00Z,dns_query,example.com,,,,,false
-2026-10-11T18:31:00Z,connection,,203.0.113.10,443,tcp,,false
-2026-10-11T18:32:00Z,blocked,adult.example,,,,,true
+observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked,page_url,search_engine,search_terms
 ```
 
-No se admiten columnas desconocidas ni campos como `url`, `path`, `username`, `password`, `token`, `cookie`, `payload` o cuerpos HTTP. Para importar logs nativos del router, convertí primero su fecha, evento, dominio o destino a este esquema; no se debe asumir que todos los modelos entregan los mismos datos.
+Tipos disponibles: `dns_query`, `connection`, `tls_sni`, `app_usage`, `blocked`, `page_visit`, `search_query`.
 
-## Conservación
+Ejemplo de visita:
 
-- Retención predeterminada: 7 días.
-- Configurable entre 1 y 90 días desde `/activity`.
-- Eventos anteriores a la retención se eliminan en la próxima consulta o actualización de actividad.
-- Las sesiones cerradas se depuran después de 90 días.
-- Las exportaciones JSON y la copia SQLite incluyen el historial de metadatos. Protegé los respaldos porque revelan información sobre la red familiar.
+```csv
+2026-10-11T18:30:00Z,page_visit,example.com,,,,browser-extension,false,https://example.com/guide,,,
+```
+
+Ejemplo de búsqueda:
+
+```csv
+2026-10-11T18:31:00Z,search_query,www.google.com,,,,browser-extension,false,https://www.google.com/search,Google,"cómo configurar controles parentales"
+```
+
+No se admiten campos como usuario, contraseña, token, cookie, cuerpos HTTP ni cargas útiles. Las páginas se guardan sin fragmento y quitando parámetros conocidos de autenticación/sesión, búsquedas e identificadores comunes de seguimiento. Los términos buscados quedan en un campo explícito separado; son datos sensibles y deben conservarse solo el tiempo necesario.
+
+## Retención
+
+- Retención predeterminada: 7 días en NetSentinel y en la extensión Chromium.
+- En ambas ubicaciones se puede ajustar de 1 a 90 días.
+- La extensión conserva como máximo 1.000 eventos; los más antiguos se descartan al alcanzar el límite.
+- NetSentinel elimina eventos vencidos cuando se consulta/actualiza la vista o se cambian los ajustes.
+- Los CSV y las copias SQLite pueden revelar intereses y hábitos de navegación; protegé los archivos y borrá los registros cuando ya no hagan falta.
+
+## Interpretación
+
+Una visita o consulta describe actividad reportada por el navegador, no prueba quién estaba frente a la pantalla, identidad, intención ni qué acciones realizó dentro de una cuenta. Esta herramienta no captura contraseñas, cookies, formularios ni contenido de mensajes.

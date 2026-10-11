@@ -1,0 +1,127 @@
+const SETTINGS_KEY = "netsentinelSettings";
+const EVENTS_KEY = "netsentinelEvents";
+const MAX_EVENTS = 1000;
+const DEFAULTS = { enabled: false, capturePages: true, captureSearches: true, retentionDays: 7, excludeDomains: [] };
+const SEARCH_QUERY_KEYS = new Set(["q", "query", "text", "wd", "word", "search_query", "search"]);
+const TRACKING_QUERY_KEYS = new Set(["fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid"]);
+const SENSITIVE_KEY = /access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|username|email|phone|session|sid|csrf|nonce|signature|(^|_)(token|auth|code|state|otp|jwt|key|user|account|customer)(_|$)/i;
+
+function normalizedDomain(value) {
+  return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
+}
+function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
+function privateOrLocalHost(hostname) {
+  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
+  if (host.includes(":")) return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:");
+  const parts = host.split(".");
+  if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return false;
+  const [a, b] = parts.map(Number);
+  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+function isExcluded(hostname, excludeDomains) {
+  const host = String(hostname || "").toLowerCase();
+  if (privateOrLocalHost(host)) return true;
+  return (excludeDomains || []).some(entry => {
+    const rule = normalizedDomain(entry);
+    return rule && hostMatches(host, rule);
+  });
+}
+function cleanUrl(rawUrl) {
+  let url;
+  try { url = new URL(rawUrl); } catch { return null; }
+  if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+  url.hash = "";
+  for (const key of [...url.searchParams.keys()]) {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (SENSITIVE_KEY.test(normalized) || normalized.startsWith("utm_") ||
+        TRACKING_QUERY_KEYS.has(normalized) || SEARCH_QUERY_KEYS.has(normalized)) url.searchParams.delete(key);
+  }
+  const result = url.toString();
+  return result.length <= 2048 ? result : null;
+}
+function googleHost(host) {
+  return host === "google.com" || host.endsWith(".google.com") ||
+    /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host);
+}
+function searchInfo(url) {
+  const host = url.hostname.toLowerCase();
+  let engine = null, key = null;
+  if (googleHost(host)) { engine = "Google"; key = "q"; }
+  else if (hostMatches(host, "bing.com")) { engine = "Bing"; key = "q"; }
+  else if (hostMatches(host, "duckduckgo.com")) { engine = "DuckDuckGo"; key = "q"; }
+  else if (host === "search.yahoo.com") { engine = "Yahoo"; key = "p"; }
+  else if (hostMatches(host, "ecosia.org")) { engine = "Ecosia"; key = "q"; }
+  else if (host === "search.brave.com") { engine = "Brave Search"; key = "q"; }
+  else if (hostMatches(host, "yandex.com") || hostMatches(host, "yandex.ru")) { engine = "Yandex"; key = "text"; }
+  else if (hostMatches(host, "baidu.com")) { engine = "Baidu"; key = "wd"; }
+  else if (hostMatches(host, "youtube.com") && url.pathname === "/results") { engine = "YouTube"; key = "search_query"; }
+  else if (hostMatches(host, "wikipedia.org") && url.pathname === "/w/index.php") { engine = "Wikipedia"; key = "search"; }
+  else if (/\.amazon\.[a-z.]+$/.test(host) && url.pathname === "/s") { engine = "Amazon"; key = "k"; }
+  else if (hostMatches(host, "reddit.com") && url.pathname.startsWith("/search")) { engine = "Reddit"; key = "q"; }
+  else if (hostMatches(host, "tiktok.com") && url.pathname.startsWith("/search")) { engine = "TikTok"; key = "q"; }
+  if (!engine || !key) return null;
+  const terms = String(url.searchParams.get(key) || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
+  return terms ? { search_engine: engine, search_terms: terms } : null;
+}
+async function loadState() {
+  const stored = await chrome.storage.local.get([SETTINGS_KEY, EVENTS_KEY]);
+  const raw = stored[SETTINGS_KEY] || {};
+  const settings = {
+    ...DEFAULTS, ...raw,
+    retentionDays: Math.max(1, Math.min(90, Number(raw.retentionDays || DEFAULTS.retentionDays))),
+    excludeDomains: Array.isArray(raw.excludeDomains) ? raw.excludeDomains.map(normalizedDomain).filter(Boolean).slice(0, 100) : []
+  };
+  const cutoff = Date.now() - settings.retentionDays * 86400000;
+  const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
+    .filter(event => Date.parse(event.observed_at) >= cutoff).slice(-MAX_EVENTS);
+  return { settings, events };
+}
+async function captureNavigation(details) {
+  if (details.frameId !== 0 || (chrome.extension && chrome.extension.inIncognitoContext)) return;
+  const state = await loadState();
+  const { settings } = state;
+  if (!settings.enabled || (!settings.capturePages && !settings.captureSearches)) return;
+  let url;
+  try { url = new URL(details.url); } catch { return; }
+  if (!["http:", "https:"].includes(url.protocol) || isExcluded(url.hostname, settings.excludeDomains)) return;
+  const pageUrl = cleanUrl(details.url);
+  if (!pageUrl) return;
+  const domain = url.hostname.toLowerCase().replace(/\.$/, "");
+  const timestamp = new Date(Number(details.timeStamp) || Date.now()).toISOString();
+  const created = [];
+  if (settings.capturePages) created.push({
+    observed_at: timestamp, event_type: "page_visit", domain,
+    app_name: "NetSentinel Browser Extension (Chromium)", blocked: false, page_url: pageUrl,
+    _dedupeKey: "page_visit:" + details.tabId + ":" + pageUrl
+  });
+  if (settings.captureSearches) {
+    const search = searchInfo(url);
+    if (search) created.push({
+      observed_at: timestamp, event_type: "search_query", domain,
+      app_name: "NetSentinel Browser Extension (Chromium)", blocked: false, page_url: pageUrl,
+      ...search, _dedupeKey: "search_query:" + details.tabId + ":" + search.search_engine + ":" + search.search_terms
+    });
+  }
+  if (!created.length) return;
+  const now = Date.now();
+  let events = state.events;
+  for (const event of created) {
+    const duplicate = events.some(old => old._dedupeKey === event._dedupeKey &&
+      Math.abs(now - Date.parse(old.observed_at)) < 4000);
+    if (!duplicate) events.push(event);
+  }
+  events = events.filter(event => Date.parse(event.observed_at) >= now - settings.retentionDays * 86400000).slice(-MAX_EVENTS);
+  await chrome.storage.local.set({ [EVENTS_KEY]: events });
+}
+chrome.webNavigation.onCompleted.addListener(details => { void captureNavigation(details); });
+chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void captureNavigation(details); });
+chrome.runtime.onStartup.addListener(async () => {
+  const state = await loadState();
+  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+});
+chrome.runtime.onInstalled.addListener(async () => {
+  const state = await loadState();
+  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+});

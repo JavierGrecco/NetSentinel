@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NetSentinel · Actividad familiar</title>
+<style>
+:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{width:360px;margin:0;padding:16px;box-sizing:border-box;line-height:1.4;background:Canvas;color:CanvasText}h1{font-size:19px;margin:0 0 2px}.sub,.muted{font-size:12px;opacity:.75}.section{border:1px solid color-mix(in srgb,CanvasText 18%,Canvas);border-radius:10px;padding:12px;margin-top:12px}.status{display:flex;gap:10px;align-items:flex-start}.status input{margin-top:4px}label{display:flex;gap:8px;align-items:flex-start;margin:9px 0;font-size:13px}input[type=checkbox]{flex:0 0 auto}select,textarea{font:inherit;width:100%;box-sizing:border-box;padding:7px;border-radius:6px;border:1px solid color-mix(in srgb,CanvasText 28%,Canvas);background:Canvas;color:CanvasText}textarea{height:60px;resize:vertical}.field-label{display:block;font-size:12px;margin:8px 0 4px}.btn{display:block;width:100%;padding:9px 10px;border-radius:7px;border:1px solid color-mix(in srgb,CanvasText 25%,Canvas);background:ButtonFace;color:ButtonText;font:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}.primary{background:#155eef;color:white;border-color:#155eef}.danger{color:#b42318}.count{font-size:24px;font-weight:750}.recent{max-height:130px;overflow:auto}.entry{border-top:1px solid color-mix(in srgb,CanvasText 13%,Canvas);padding:7px 0;overflow-wrap:anywhere}.entry strong{font-size:12px;display:block}.entry span{font-size:11px;opacity:.78;display:block}.warning{font-size:12px;color:#9a6700}.foot{font-size:11px;opacity:.7;margin-top:12px}
+</style>
+</head>
+<body>
+<header><h1>NetSentinel</h1><div class="sub">Registro local de páginas y búsquedas</div></header>
+<section class="section">
+<div class="status"><input id="enabled" type="checkbox"><div><strong>Activar seguimiento</strong><div id="statusText" class="muted">Detenido. No se registra navegación.</div></div></div>
+<p class="warning">Este seguimiento queda visible en esta extensión. Al activarlo registra URLs y consultas de búsqueda compatibles en este navegador. No captura contraseñas, campos de formularios ni contenido de páginas.</p>
+</section>
+<section class="section">
+<strong>Qué registrar</strong>
+<label><input id="capturePages" type="checkbox">Visitas y rutas de páginas web</label>
+<label><input id="captureSearches" type="checkbox">Consultas en motores de búsqueda compatibles</label>
+<label class="field-label" for="retention">Conservar registros en este navegador</label>
+<select id="retention"><option value="1">1 día</option><option value="3">3 días</option><option value="7">7 días</option><option value="14">14 días</option><option value="30">30 días</option><option value="90">90 días</option></select>
+<label class="field-label" for="excludeDomains">Dominios excluidos (uno por línea)</label>
+<textarea id="excludeDomains" spellcheck="false" placeholder="ejemplo.com&#10;red-social.example"></textarea>
+<button id="saveSettings" class="btn" type="button">Guardar configuración</button>
+</section>
+<section class="section">
+<div class="count" id="count">0</div><div class="muted">eventos guardados localmente (máximo 1.000)</div>
+<div id="recent" class="recent"></div>
+<button id="export" class="btn primary" type="button">Exportar CSV para NetSentinel</button>
+<button id="clear" class="btn danger" type="button">Borrar historial de esta extensión</button>
+</section>
+<div class="foot">Solo registra navegación futura después de activar la opción. No lee el historial anterior. La navegación privada queda fuera mientras la extensión no esté habilitada allí en el navegador.</div>
+<script src="popup.js"></script>
+</body>
+</html>

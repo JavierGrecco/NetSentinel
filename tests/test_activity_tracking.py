@@ -165,6 +165,82 @@ def test_csv_import_and_rejects_sensitive_columns(client):
     assert "privacidad" in rejected.json()["detail"].lower()
 
 
+def test_browser_csv_import_captures_page_urls_and_search_queries_safely(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "observed_at,event_type,domain,app_name,blocked,page_url,search_engine,search_terms\n"
+        f'{stamp},page_visit,example.com,browser-extension,false,"https://example.com/docs?lang=es&access_token=secret#private",,\n'
+        f'{stamp},search_query,www.google.com,browser-extension,false,https://www.google.com/search,Google,"cómo ayudar a menores"\n'
+    )
+    result = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert result.status_code == 200, result.text
+    events = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    page = next(event for event in events if event["event_type"] == "page_visit")
+    search = next(event for event in events if event["event_type"] == "search_query")
+    assert page["page_url"] == "https://example.com/docs?lang=es"
+    assert "secret" not in page["page_url"]
+    assert "private" not in page["page_url"]
+    assert search["search_engine"] == "Google"
+    assert search["search_terms"] == "cómo ayudar a menores"
+
+
+def test_browser_event_url_validation_and_search_required_fields(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    invalid_url_csv = (
+        "observed_at,event_type,page_url\n"
+        f'{stamp},page_visit,"javascript:alert(1)"\n'
+    )
+    bad = client.post("/api/activity/import", json={"device_id": selected, "csv_data": invalid_url_csv})
+    assert bad.status_code == 422
+
+    missing_terms_csv = (
+        "observed_at,event_type,search_engine,search_terms\n"
+        f"{stamp},search_query,Google,\n"
+    )
+    missing = client.post("/api/activity/import", json={"device_id": selected, "csv_data": missing_terms_csv})
+    assert missing.status_code == 422
+
+
+def test_legacy_activity_event_schema_migrates_without_losing_events(monkeypatch, tmp_path):
+    from netsentinel.database import connect
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.5.90", "AA:BB:CC:DD:EE:90", "en0")])
+    device = database.list_devices()[0]
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as db:
+        db.execute("DROP TABLE activity_events")
+        db.execute("""
+            CREATE TABLE activity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER REFERENCES activity_sessions(id) ON DELETE SET NULL,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                observed_at TEXT NOT NULL, received_at TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK (event_type IN ('dns_query','connection','tls_sni','app_usage','blocked')),
+                source TEXT NOT NULL CHECK (source IN ('router_dns','router_flow','device_agent','manual_import')),
+                domain TEXT, destination_ip TEXT,
+                destination_port INTEGER, protocol TEXT, app_name TEXT,
+                blocked INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        db.execute(
+            """INSERT INTO activity_events
+               (device_id, observed_at, received_at, event_type, source, domain)
+               VALUES (?, ?, ?, 'dns_query', 'manual_import', 'legacy.example')""",
+            (device["id"], stamp, stamp),
+        )
+    database.initialize()
+    with connect() as db:
+        columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
+        event = db.execute("SELECT * FROM activity_events WHERE domain='legacy.example'").fetchone()
+    assert {"page_url", "search_engine", "search_terms"}.issubset(columns)
+    assert event is not None
+    assert event["event_type"] == "dns_query"
+
+
 def test_retention_is_configurable_and_deletes_expired_events(client):
     selected = device_id(client)
     old = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()

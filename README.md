@@ -95,11 +95,11 @@ Desde el pie del inventario podés descargar una copia completa SQLite con el hi
 
 ## Historial y actividad familiar
 
-Desde la tabla de inventario, la acción **Historial** permite revisar observaciones de presencia: fecha, IP y fuente. En **Actividad familiar** (`/activity`) podés abrir una ventana temporal de seguimiento, revisar dominios y conexiones reportados por una fuente disponible, importar logs normalizados de router/DNS desde CSV y definir una retención entre 1 y 90 días. La base conserva como máximo los metadatos incluidos en el esquema.
+Desde la tabla de inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad familiar** (`/activity`) permite importar registros DNS/flows normalizados, administrar sesiones temporales y consultar páginas y búsquedas que se hayan recogido desde una fuente compatible.
 
-**Importante:** esta versión no instala agentes ni captura automáticamente tráfico de otros dispositivos. Las sesiones habilitan una ventana para que una fuente local compatible envíe eventos; todavía no hay adaptador nativo para una marca/modelo de router. En Wi-Fi/redes conmutadas, esta computadora normalmente no ve todo el tráfico unicast de otros clientes. Un nombre DNS, SNI o destino IP es un indicio y no demuestra que una persona haya visitado una página ni usado una cuenta.
+Para registrar **páginas y búsquedas de navegador**, ya se incluye la extensión Chromium en [`browser-extension/`](browser-extension/README.md). Debe instalarse en cada dispositivo/navegador a supervisar y activarse explícitamente. Guarda localmente visitas y consultas de motores compatibles y exporta un CSV, que luego se importa en `/activity` asociándolo al dispositivo correcto. Solo registra navegación futura, está apagada por defecto y no lee formularios ni contraseñas. La sincronización automática entre dispositivos todavía no está implementada.
 
-NetSentinel no recolecta contraseñas, tokens, cookies, cuerpos HTTP, payloads, rutas ni URLs completas, y no intenta interceptar TLS ni descifrar credenciales. Para actividad por aplicación y tiempo de pantalla, combiná los metadatos con controles parentales nativos del sistema operativo. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) antes de integrar una fuente.
+El backend por sí solo no ve todas las conexiones de otros equipos en una LAN/Wi-Fi ni conoce las páginas que se abren. Los eventos de DNS, IP y SNI son indicios, no prueba de quién usó una cuenta. No recolectamos contraseñas, cookies, tokens ni contenido de páginas, y no intentamos interceptar TLS ni descifrar credenciales. La captura de búsquedas solo cubre motores con un formato de URL reconocido por la extensión; las aplicaciones nativas y búsquedas internas no visibles para la API de navegación quedan fuera. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
 
 ## Datos y privacidad
 
@@ -120,6 +120,7 @@ python -m pytest
 
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Seguimiento familiar de actividad](docs/FAMILY_ACTIVITY.md)
+- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
 - [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.

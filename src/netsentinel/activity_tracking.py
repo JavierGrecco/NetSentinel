@@ -15,6 +15,7 @@ import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from . import database
 
@@ -24,12 +25,20 @@ class InvalidCollectorToken(PermissionError):
 
 SESSION_SOURCES = {"router_dns", "router_flow", "device_agent"}
 EVENT_SOURCES = SESSION_SOURCES
-EVENT_TYPES = {"dns_query", "connection", "tls_sni", "app_usage", "blocked"}
+EVENT_TYPES = {"dns_query", "connection", "tls_sni", "app_usage", "blocked", "page_visit", "search_query"}
 PROTOCOLS = {"tcp", "udp", "quic", "icmp", "other"}
 CSV_FIELDS = {
-    "observed_at", "event_type", "domain", "destination_ip",
-    "destination_port", "protocol", "app_name", "blocked",
+    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
+    "protocol", "app_name", "blocked", "page_url", "search_engine", "search_terms",
 }
+SENSITIVE_QUERY_KEY = re.compile(
+    r"(?:access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|"
+    r"username|email|phone|session|sid|csrf|nonce|signature|"
+    r"(^|_)(?:token|auth|code|state|otp|jwt|key|user|account|customer)(_|$))",
+    re.IGNORECASE,
+)
+SEARCH_QUERY_KEYS = {"q", "query", "text", "wd", "word", "search_query", "search"}
+TRACKING_QUERY_KEYS = {"fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid"}
 SENSITIVE_HEADERS = {
     "url", "full_url", "path", "query_string", "username", "user",
     "password", "passwd", "token", "cookie", "authorization", "payload",
@@ -89,6 +98,50 @@ def _domain(value: str | None) -> str | None:
     return normalized
 
 
+def _safe_page_url(value: str | None) -> str | None:
+    """Normalize an HTTP(S) URL; remove fragments, search terms and secret-like parameters."""
+    if value is None or not str(value).strip():
+        return None
+    raw = str(value).strip()
+    if len(raw) > 4096 or any(ord(ch) < 32 for ch in raw):
+        raise ValueError("page_url supera el límite o contiene caracteres de control.")
+    try:
+        parsed = urlsplit(raw)
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("page_url no es una URL válida.") from exc
+    if scheme not in {"http", "https"} or not hostname or parsed.username is not None or parsed.password is not None:
+        raise ValueError("page_url debe ser una URL HTTP(S) sin credenciales embebidas.")
+    try:
+        ipaddress.ip_address(hostname)
+        normalized_host = hostname.lower()
+    except ValueError:
+        try:
+            normalized_host = hostname.encode("idna").decode("ascii").lower()
+        except UnicodeError as exc:
+            raise ValueError("El host de page_url no es válido.") from exc
+    if len(normalized_host) > 253:
+        raise ValueError("El host de page_url es demasiado largo.")
+    netloc = f"[{normalized_host}]" if ":" in normalized_host else normalized_host
+    if port is not None and port != (443 if scheme == "https" else 80):
+        netloc += f":{port}"
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True, max_num_fields=200)
+    safe_pairs = []
+    for key, item_value in query_pairs:
+        normalized_key = re.sub(r"[^a-z0-9_]", "", key.lower())
+        if SENSITIVE_QUERY_KEY.search(normalized_key) or normalized_key in TRACKING_QUERY_KEYS or normalized_key.startswith("utm_"):
+            continue
+        if normalized_key in SEARCH_QUERY_KEYS:
+            continue
+        safe_pairs.append((key, item_value))
+    safe = urlunsplit((scheme, netloc, parsed.path or "/", urlencode(safe_pairs, doseq=True), ""))
+    if len(safe) > 2048:
+        raise ValueError("page_url supera los 2048 caracteres permitidos.")
+    return safe
+
+
 def normalize_event(payload: dict[str, Any], *, source_override: str | None = None) -> dict[str, Any]:
     """Valida un evento de metadatos; rechaza silenciosamente no es una opción."""
     event_type = str(payload.get("event_type", "")).strip().lower()
@@ -98,6 +151,28 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
     if source not in EVENT_SOURCES and source != "manual_import":
         raise ValueError("Fuente no admitida.")
     domain = _domain(payload.get("domain"))
+    page_url = _safe_page_url(payload.get("page_url"))
+    search_engine = payload.get("search_engine")
+    search_engine = str(search_engine).strip()[:40] if search_engine not in (None, "") else None
+    if search_engine and any(ord(ch) < 32 for ch in search_engine):
+        raise ValueError("search_engine no puede contener caracteres de control.")
+    search_terms = payload.get("search_terms")
+    search_terms = " ".join(str(search_terms).split())[:500] if search_terms not in (None, "") else None
+    if event_type == "page_visit" and not page_url:
+        raise ValueError("El evento page_visit requiere page_url.")
+    if event_type == "search_query" and (not search_engine or not search_terms):
+        raise ValueError("El evento search_query requiere search_engine y search_terms.")
+    if page_url and not domain:
+        page_host = urlsplit(page_url).hostname
+        if page_host:
+            try:
+                domain = _domain(page_host)
+            except ValueError:
+                try:
+                    ipaddress.ip_address(page_host)
+                    domain = None
+                except ValueError:
+                    raise
     destination_ip = payload.get("destination_ip")
     if destination_ip is not None and str(destination_ip).strip():
         try:
@@ -147,6 +222,9 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         "destination_port": port,
         "protocol": protocol,
         "app_name": app_name,
+        "page_url": page_url,
+        "search_engine": search_engine,
+        "search_terms": search_terms,
         "blocked": int(blocked or event_type == "blocked"),
     }
 
@@ -250,12 +328,12 @@ def ingest_event(
         cursor = db.execute(
             """INSERT INTO activity_events
                (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                destination_ip, destination_port, protocol, app_name, blocked)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms, blocked)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 session_id, device_id, event["observed_at"], now, event["event_type"], event["source"],
                 event["domain"], event["destination_ip"], event["destination_port"], event["protocol"],
-                event["app_name"], event["blocked"],
+                event["app_name"], event["page_url"], event["search_engine"], event["search_terms"], event["blocked"],
             ),
         )
         return dict(db.execute("SELECT * FROM activity_events WHERE id=?", (cursor.lastrowid,)).fetchone())
@@ -308,12 +386,12 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
             db.execute(
                 """INSERT INTO activity_events
                    (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                    destination_ip, destination_port, protocol, app_name, blocked)
-                   VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?)""",
+                    destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms, blocked)
+                   VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     device_id, item["observed_at"], _iso(_now()), item["event_type"], item["domain"],
                     item["destination_ip"], item["destination_port"], item["protocol"], item["app_name"],
-                    item["blocked"],
+                    item["page_url"], item["search_engine"], item["search_terms"], item["blocked"],
                 ),
             )
     return {

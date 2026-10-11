@@ -4,6 +4,9 @@
 
 - Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
 - Agrega una vista local de actividad familiar en `/activity`, con sesiones limitadas por dispositivo, token de ingestión de un solo uso, validación estricta de metadatos e importación CSV local.
+- Añade una extensión Chromium visible y desactivada por defecto para registrar páginas navegadas y búsquedas de motores compatibles en el dispositivo donde se instala; exporta un CSV para importación manual en NetSentinel.
+- Amplía el modelo de actividad con `page_visit` y `search_query`; las URLs se normalizan para quitar fragmentos y parámetros sensibles/de seguimiento conocidos, mientras los términos de búsqueda se guardan separados.
+- Extiende la CI para comprobar la sintaxis JavaScript de la extensión y la presencia de sus archivos.
 - Persiste eventos DNS, conexiones, SNI visible, uso de aplicaciones reportado por una fuente compatible y bloqueos reportados; no instala un capturador automático ni un agente.
 - Añade retención configurable entre 1 y 90 días, un resumen de dominios observados y límites de 1.000 eventos/1 MB por importación CSV.
 - Rechaza URLs/rutas y campos no admitidos, incluidos usuario, contraseña, tokens, cookies y payloads; el token de ingestión se almacena como hash.

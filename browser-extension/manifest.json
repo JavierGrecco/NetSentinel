@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "NetSentinel — Actividad familiar",
+  "version": "0.1.0",
+  "description": "Registro local y visible de navegación y búsquedas, exportable a NetSentinel.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "webNavigation"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {"service_worker": "service-worker.js"},
+  "action": {"default_popup": "popup.html", "default_title": "NetSentinel · Actividad familiar"}
+}
