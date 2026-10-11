@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Incorpora vista previa CSV de solo lectura: valida el archivo completo, marca duplicados, estima altas y muestra hasta 10 filas normalizadas antes de confirmar la importación.
 - Hace idempotente la importación CSV de metadatos: las filas idénticas ya importadas para el mismo dispositivo se omiten y se muestran en el recuento; no se deduplican eventos de fuentes en vivo.
 - Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
 - Agrega una vista local de actividad familiar en `/activity`, con sesiones limitadas por dispositivo, token de ingestión de un solo uso, validación estricta de metadatos e importación CSV local.
