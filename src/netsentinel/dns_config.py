@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import platform
 import re
 from pathlib import Path
@@ -69,29 +68,33 @@ def _windows_dns_servers() -> list[str]:
         except OSError:
             pass
 
-    # Las interfaces suelen tener servidores DHCP específicos; leerlos evita
-    # depender exclusivamente de los valores globales.
-    interfaces = r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces"
-    try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, interfaces) as root_key:
-            count = winreg.QueryInfoKey(root_key)[0]
-            for index in range(count):
-                try:
-                    interface = winreg.EnumKey(root_key, index)
-                    with winreg.OpenKey(root_key, interface) as key:
-                        for name in ("NameServer", "DhcpNameServer"):
-                            try:
-                                value, _kind = winreg.QueryValueEx(key, name)
-                            except OSError:
-                                continue
-                            if isinstance(value, str):
-                                for address in _clean_servers(value):
-                                    if address not in result:
-                                        result.append(address)
-                except OSError:
-                    continue
-    except OSError:
-        pass
+    # Revisar interfaces IPv4 e IPv6: los valores globales no siempre reflejan
+    # la configuración específica asignada por DHCP o establecida por adaptador.
+    interface_roots = (
+        r"SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces",
+        r"SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\Interfaces",
+    )
+    for interfaces in interface_roots:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, interfaces) as root_key:
+                count = winreg.QueryInfoKey(root_key)[0]
+                for index in range(count):
+                    try:
+                        interface = winreg.EnumKey(root_key, index)
+                        with winreg.OpenKey(root_key, interface) as key:
+                            for name in ("NameServer", "DhcpNameServer"):
+                                try:
+                                    value, _kind = winreg.QueryValueEx(key, name)
+                                except OSError:
+                                    continue
+                                if isinstance(value, str):
+                                    for address in _clean_servers(value):
+                                        if address not in result:
+                                            result.append(address)
+                    except OSError:
+                        continue
+        except OSError:
+            pass
     return result
 
 
