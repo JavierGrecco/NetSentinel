@@ -48,7 +48,7 @@ def test_monitor_api_and_static_css(monkeypatch, tmp_path):
     monkeypatch.setattr("netsentinel.monitoring.probe", lambda kind, target, timeout: {
         "status": "up", "latency_ms": 1.5, "detail": "Prueba simulada"
     })
-    with TestClient(app) as client:
+    with TestClient(app, base_url='http://127.0.0.1') as client:
         assert client.get("/monitors").status_code == 200
         assert client.get("/static/styles.css").status_code == 200
         assert client.get("/static/monitors.css").status_code == 200
@@ -69,7 +69,7 @@ def test_monitor_api_and_static_css(monkeypatch, tmp_path):
 def test_monitor_api_rejects_unsafe_targets(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
-    with TestClient(app) as client:
+    with TestClient(app, base_url='http://127.0.0.1') as client:
         bad = client.post("/api/monitors", json={
             "name": "Bad", "kind": "http", "target": "https://example.com/path?secret=value",
             "interval_seconds": 60, "timeout_seconds": 3,

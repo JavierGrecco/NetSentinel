@@ -8,6 +8,12 @@ El descubrimiento activo solo examina subredes IPv4 privadas RFC 1918: `10.0.0.0
 
 Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas. Los registros históricos se conservan automáticamente; las observaciones antiguas de AWDL/LLW se etiquetan como interfaces locales virtuales sin borrarlas. Una MAC puede aleatorizarse o suplantarse, y un dispositivo desconocido no demuestra una intrusión.
 
+## Protección de la interfaz local
+
+El servidor valida `Host` para bloquear nombres arbitrarios, acepta loopback y direcciones privadas de LAN, y permite hostnames propios solo si se declaran en `NETSENTINEL_ALLOWED_HOSTS` (lista separada por comas). Las operaciones de modificación rechazan peticiones con origen diferente o marcadas como `cross-site`, y se agregan cabeceras HTTP defensivas.
+
+Estas medidas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no constituyen autenticación para acceso desde otros equipos. No expongas el panel sin controles adicionales. Si accedés por un hostname propio, configurá explícitamente `NETSENTINEL_ALLOWED_HOSTS`.
+
 ## Operación segura
 
 - Mantener el host en `127.0.0.1`. No exponer el servidor a otras interfaces sin autenticación, protección CSRF/origen, HTTPS y una revisión de seguridad específica.

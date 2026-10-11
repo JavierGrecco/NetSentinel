@@ -8,6 +8,12 @@ El descubrimiento activo detecta interfaces compatibles y se limita a subredes p
 
 Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión. Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas; las alertas históricas se etiquetan visualmente sin borrar eventos ni datos. El historial del descubrimiento conserva también la duración de cada ejecución.
 
+## Protección de la interfaz local
+
+NetSentinel valida el encabezado `Host` para aceptar loopback y direcciones privadas de LAN, más hostnames adicionales configurados explícitamente en `NETSENTINEL_ALLOWED_HOSTS` (lista separada por comas). Las operaciones de modificación bloquean solicitudes del navegador con origen distinto y peticiones marcadas como `cross-site`. También se envían cabeceras anti-framing y anti-MIME-sniffing.
+
+Estas defensas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no reemplazan la autenticación si se expone el panel a otros equipos. No uses `--host 0.0.0.0` en redes compartidas sin controles de acceso adicionales. Si usás un hostname propio, agregalo explícitamente a `NETSENTINEL_ALLOWED_HOSTS`.
+
 ## Operación segura
 
 - Mantener el host de escucha en `127.0.0.1`. No exponer el panel a otras interfaces sin autenticación, protección CSRF/origen, HTTPS y una revisión de seguridad específica.

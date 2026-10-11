@@ -1,5 +1,13 @@
 # Historial de cambios
 
+## 0.7.1 — 11 de octubre de 2026
+
+- Añade protección de Host para bloquear nombres no autorizados y reducir el riesgo de DNS rebinding hacia la interfaz local.
+- Bloquea mutaciones de navegador que provengan de otro origen o se identifiquen como `cross-site`; los clientes no navegador sin cabecera Origin siguen funcionando.
+- Añade cabeceras HTTP defensivas contra MIME sniffing, framing y lectura de recursos desde otros orígenes.
+- Permite configurar hostnames adicionales explícitamente mediante `NETSENTINEL_ALLOWED_HOSTS`.
+- Agrega pruebas para hosts no autorizados, CSRF, hostnames explícitos y cabeceras de seguridad.
+
 ## 0.7.0 — 11 de octubre de 2026
 
 - Agrega lanzadores para iniciar NetSentinel con un clic en Windows y macOS, además de un script común para macOS/Linux.

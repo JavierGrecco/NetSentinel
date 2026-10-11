@@ -23,6 +23,7 @@ pytest
 - Usá datos sintéticos; las pruebas no deben depender de una red real ni de privilegios elevados.
 - No agregues secretos, direcciones privadas reales ni capturas con información sensible.
 - Describí el tráfico de cualquier control activo.
+- Para probar la API con TestClient, usá `base_url="http://127.0.0.1"` y cubrí tanto peticiones same-origin como orígenes/hosts rechazados.
 - Escribí la documentación en lenguaje sencillo y actualizá el historial de cambios.
 
 GitHub Actions comprueba el proyecto en Windows, macOS y Ubuntu con varias versiones de Python.

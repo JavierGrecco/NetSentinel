@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import ipaddress
 from pathlib import Path
 from threading import Lock
+from urllib.parse import urlsplit
 from typing import AsyncIterator
 import os
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -36,6 +38,56 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         _supervisor.stop()
 
 
+_RFC1918_HOST_NETWORKS = tuple(
+    ipaddress.IPv4Network(value)
+    for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
+_IPV6_UNIQUE_LOCAL = ipaddress.IPv6Network("fc00::/7")
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _host_is_allowed(host: str | None) -> bool:
+    """Allow loopback/private LAN IPs and explicit extra hostnames only."""
+    if not host:
+        return False
+    normalized = host.rstrip(".").lower()
+    if normalized in {"localhost", "localhost.localdomain"}:
+        return True
+    try:
+        address = ipaddress.ip_address(normalized)
+    except ValueError:
+        extras = {
+            item.strip().rstrip(".").lower()
+            for item in os.environ.get("NETSENTINEL_ALLOWED_HOSTS", "").split(",")
+            if item.strip()
+        }
+        return normalized in extras
+    if address.is_loopback:
+        return True
+    if isinstance(address, ipaddress.IPv4Address):
+        return any(address in network for network in _RFC1918_HOST_NETWORKS)
+    return address in _IPV6_UNIQUE_LOCAL
+
+
+def _same_origin(origin: str, request: Request) -> bool:
+    """Compare scheme, normalized host and effective port without trusting Origin."""
+    parsed = urlsplit(origin)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return False
+    request_host = (request.url.hostname or "").rstrip(".").lower()
+    origin_host = parsed.hostname.rstrip(".").lower()
+    request_scheme = request.url.scheme.lower()
+    origin_scheme = parsed.scheme.lower()
+    if request_host != origin_host or request_scheme != origin_scheme:
+        return False
+    try:
+        request_port = request.url.port or (443 if request_scheme == "https" else 80)
+        origin_port = parsed.port or (443 if origin_scheme == "https" else 80)
+    except ValueError:
+        return False
+    return request_port == origin_port
+
+
 app = FastAPI(
     title="NetSentinel",
     description="Inventario local, descubrimiento bajo demanda, lista de confianza, eventos y diagnóstico de red.",
@@ -47,6 +99,28 @@ app = FastAPI(
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
 _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
+
+
+@app.middleware("http")
+async def protect_local_app(request: Request, call_next):
+    """Mitigate DNS-rebinding and browser CSRF attempts against the local control panel."""
+    if not _host_is_allowed(request.url.hostname):
+        return JSONResponse(status_code=400, content={"detail": "Host no permitido para NetSentinel."})
+
+    if request.method.upper() in _MUTATING_METHODS:
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site == "cross-site":
+            return JSONResponse(status_code=403, content={"detail": "Solicitud entre sitios bloqueada."})
+        origin = request.headers.get("origin")
+        if origin and not _same_origin(origin, request):
+            return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    return response
 
 
 class DeviceUpdate(BaseModel):
