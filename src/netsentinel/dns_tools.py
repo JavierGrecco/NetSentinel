@@ -49,3 +49,31 @@ def lookup_hostname(hostname: str) -> dict:
         "source": "system-resolver",
         "note": "La resolución DNS no verifica la identidad ni la confiabilidad del equipo.",
     }
+
+
+def reverse_lookup_ip(address: str) -> dict:
+    """Consulta PTR para una IP literal; no verifica la identidad del dispositivo."""
+    try:
+        parsed = ipaddress.ip_address(address.strip())
+    except ValueError as exc:
+        raise ValueError("Ingresá una dirección IPv4 o IPv6 válida.") from exc
+
+    normalized_ip = str(parsed)
+    try:
+        hostname, _service = socket.getnameinfo(
+            (normalized_ip, 0),
+            socket.NI_NAMEREQD,
+        )
+    except (socket.gaierror, OSError) as exc:
+        raise OSError("El resolvedor no devolvió un nombre PTR para esa dirección.") from exc
+
+    hostname = hostname.rstrip(".").lower()
+    if not hostname:
+        raise OSError("El resolvedor devolvió un nombre PTR vacío.")
+    return {
+        "ip": normalized_ip,
+        "hostname": hostname,
+        "source": "system-resolver",
+        "record_type": "PTR",
+        "note": "Un registro PTR es información declarada por DNS; no verifica la identidad ni la confiabilidad del equipo.",
+    }
