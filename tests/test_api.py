@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
+import netsentinel.main as main_module
+
 from importlib.metadata import version as installed_version
 
 from netsentinel import __version__, database
@@ -51,6 +53,19 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         device = client.get("/api/devices").json()[0]
         assert client.get(f"/api/devices/{device['id']}/addresses").json()[0]["ip_address"] == "192.168.5.2"
         assert client.get("/api/devices/999/addresses").status_code == 404
+
+
+def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    assert main_module._scan_lock.acquire(blocking=False)
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/scan")
+    finally:
+        main_module._scan_lock.release()
+    assert response.status_code == 409
+    assert "Ya hay un descubrimiento de red en curso" in response.json()["detail"]
 
 
 def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path):

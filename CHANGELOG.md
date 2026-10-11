@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.2 — 11 de octubre de 2026
+
+- Evita que solicitudes simultáneas inicien más de un descubrimiento local; devuelve HTTP 409 con un mensaje claro mientras hay una lectura en curso.
+- Agrega una prueba de concurrencia para comprobar que una segunda solicitud no dispara otro descubrimiento.
+
 ## 0.6.1 — 11 de octubre de 2026
 
 - Hace que la búsqueda del inventario encuentre también direcciones IPv4/IPv6 secundarias e interfaces.

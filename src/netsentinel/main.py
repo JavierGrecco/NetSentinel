@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import Lock
 from typing import AsyncIterator
 import os
 
@@ -20,6 +21,7 @@ from .monitoring import MonitorSupervisor, check_once, validate_spec
 
 
 _supervisor = MonitorSupervisor()
+_scan_lock = Lock()
 
 
 @asynccontextmanager
@@ -117,15 +119,24 @@ def device_addresses(device_id: int) -> list[dict]:
 
 @app.post("/api/scan")
 def scan() -> dict:
-    neighbors, errors, discovery = discover_local_network()
-    result = database.record_scan(neighbors, errors, discovery=discovery)
-    result["discovery"] = discovery
-    result["message"] = (
-        "Se completó el descubrimiento automático de las subredes locales indicadas."
-        if discovery["networks"]
-        else "No se pudo identificar una subred privada adecuada para buscar dispositivos."
-    )
-    return result
+    """Ejecuta un único descubrimiento local a la vez para evitar tráfico duplicado."""
+    if not _scan_lock.acquire(blocking=False):
+        raise HTTPException(
+            status_code=409,
+            detail="Ya hay un descubrimiento de red en curso. Esperá a que termine antes de iniciar otro.",
+        )
+    try:
+        neighbors, errors, discovery = discover_local_network()
+        result = database.record_scan(neighbors, errors, discovery=discovery)
+        result["discovery"] = discovery
+        result["message"] = (
+            "Se completó el descubrimiento automático de las subredes locales indicadas."
+            if discovery["networks"]
+            else "No se pudo identificar una subred privada adecuada para buscar dispositivos."
+        )
+        return result
+    finally:
+        _scan_lock.release()
 
 
 @app.patch("/api/devices/{device_id}")
