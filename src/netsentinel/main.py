@@ -167,6 +167,7 @@ class ActivityEventIngest(BaseModel):
         extra = "forbid"
 
     session_id: int = Field(ge=1)
+    collector_token: str = Field(min_length=32, max_length=128)
     device_id: int = Field(ge=1)
     event_type: str = Field(min_length=1, max_length=32)
     source: str = Field(min_length=1, max_length=32)
@@ -319,9 +320,13 @@ def stop_family_activity(session_id: int) -> dict:
 def ingest_family_activity(body: ActivityEventIngest) -> dict:
     """Guarda metadatos limitados solo durante una sesión activa."""
     try:
-        return activity_tracking.ingest_event(body.session_id, body.device_id, body.dict())
+        return activity_tracking.ingest_event(
+            body.session_id, body.device_id, body.collector_token, body.dict(exclude={"collector_token"})
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except activity_tracking.InvalidCollectorToken as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
