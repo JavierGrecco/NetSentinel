@@ -2,7 +2,13 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.\n- Añade una ruta PTR por dispositivo bajo demanda y una acción en la tabla de inventario; no modifica los datos guardados y maneja dispositivos inexistentes o sin direcciones. La interfaz aclara que el nombre DNS no verifica identidad.
+- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.\n- Agrega una vista local de actividad familiar en `/activity`, con sesiones limitadas por dispositivo, token de ingestión de un solo uso, validación estricta de metadatos e importación CSV local.
+- Persiste eventos DNS, conexiones, SNI visible, uso de aplicaciones reportado por una fuente compatible y bloqueos reportados; no instala un capturador automático ni un agente.
+- Añade retención configurable entre 1 y 90 días, un resumen de dominios observados y límites de 1.000 eventos/1 MB por importación CSV.
+- Rechaza URLs/rutas y campos no admitidos, incluidos usuario, contraseña, tokens, cookies y payloads; el token de ingestión se almacena como hash.
+- Amplía la exportación JSON a `netsentinel-data-export-v4` para incluir sesiones y eventos de actividad sin exportar el hash del token.
+- Añade pruebas de API, fuente, sesión, importación, retención y redacción de credenciales; la CI todavía debe confirmar la ejecución de la suite.
+- Añade una ruta PTR por dispositivo bajo demanda y una acción en la tabla de inventario; no modifica los datos guardados y maneja dispositivos inexistentes o sin direcciones. La interfaz aclara que el nombre DNS no verifica identidad.
 - Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
 - Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.
 - Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.\n- Muestra los servidores DNS locales detectables en modo de solo lectura, con fuente y advertencias sobre VPN, split DNS y diferencias entre sistemas.
