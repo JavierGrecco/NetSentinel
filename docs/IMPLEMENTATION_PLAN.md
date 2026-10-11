@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La versión 0.6.9 reúne inventario local, monitorización, diagnóstico guiado y búsqueda automática acotada a redes RFC 1918, con alcance, respuestas y duración de cada descubrimiento guardados en el historial.
+La versión 0.7.0 reúne inventario local, monitorización, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918 y lanzadores de inicio sencillos para Windows y macOS/Linux, con métricas de cada descubrimiento guardadas en el historial.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual y exportación.

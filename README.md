@@ -25,7 +25,19 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 
 ## Instalación y primer inicio
 
-Descargá el ZIP desde **Code → Download ZIP** y descomprimilo. Abrí una terminal dentro de la carpeta del proyecto.
+Descargá el ZIP desde **Code → Download ZIP** y descomprimilo.
+
+### Inicio con un clic
+
+- **Windows:** ejecutá `run-windows.bat`.
+- **macOS:** abrí `run-macos.command`. Si macOS muestra una advertencia, usá clic derecho → **Abrir**.
+- **Linux o terminal de macOS:** ejecutá `./run.sh`.
+
+El primer inicio crea un entorno virtual local `.venv` e instala las dependencias del proyecto; necesitás conexión a Internet para descargar las dependencias si todavía no están disponibles. La aplicación se inicia en `http://127.0.0.1:8765`. La base de datos y la configuración no se borran al volver a abrir el programa.
+
+### Instalación manual (alternativa)
+
+Abrí una terminal dentro de la carpeta del proyecto.
 
 ### Windows (PowerShell)
 

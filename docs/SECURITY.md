@@ -1,6 +1,6 @@
 # Seguridad y límites
 
-## Alcance de la versión 0.6.9
+## Alcance de la versión 0.7.0
 
 NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y la base SQLite permanece en la computadora del usuario. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo comienza únicamente cuando se solicita desde el panel.
 

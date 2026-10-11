@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.7.0 — 11 de octubre de 2026
+
+- Agrega lanzadores para iniciar NetSentinel con un clic en Windows y macOS, además de un script común para macOS/Linux.
+- Los lanzadores crean un entorno virtual local, verifican Python 3.10 o posterior e instalan el proyecto sin modificar el Python global.
+- Mejora los mensajes ante Python no compatible, instalación fallida o entornos virtuales antiguos.
+
 ## 0.6.9 — 11 de octubre de 2026
 
 - Reinterpreta visualmente alertas históricas de interfaces Apple AWDL/LLW como observaciones de enlace local, no como evidencia de un dispositivo de la LAN.
