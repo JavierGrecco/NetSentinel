@@ -26,7 +26,9 @@ Estas medidas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no co
 
 ## Seguimiento de actividad por dispositivo
 
-El historial inicial contiene únicamente observaciones de inventario. No captura paquetes ni inspecciona navegación. Cualquier futura fuente de flujos o captura debe activarse explícitamente, limitarse a un dispositivo y un intervalo, registrar solo metadatos necesarios, no almacenar cargas útiles, credenciales ni cookies, e informar los límites de visibilidad de la interfaz/red. En redes conmutadas o Wi-Fi, un equipo ordinario no suele ver todo el tráfico unicast de otros clientes; puede requerirse telemetría del router/AP o un puerto espejo autorizado.
+La vista de actividad familiar registra únicamente metadatos explícitos recibidos de una fuente compatible o importados desde un CSV local normalizado. Las sesiones son opt-in, se limitan a un dispositivo y un máximo de 12 horas, y la ingestión requiere un token aleatorio de la sesión; en SQLite solo se conserva su hash. La retención es configurable entre 1 y 90 días. El módulo no captura paquetes por sí mismo ni instala agentes. No acepta URLs completas, rutas, credenciales, cookies, tokens, payloads ni cuerpos HTTP. El token de sesión se muestra una sola vez y nunca se incluye en listados o exportaciones.
+
+En redes conmutadas o Wi-Fi, un equipo ordinario no suele ver todo el tráfico unicast de otros clientes; puede requerirse telemetría del router/AP o un puerto espejo administrado y autorizado. DNS/SNI/conexiones son indicios de actividad, no prueba de identidad ni de páginas vistas. No se debe intentar interceptar/deshacer TLS para obtener credenciales. La API está prevista para uso local: no expongas el panel en la LAN o Internet sin autenticación, TLS y revisión de seguridad adicionales.
 
 ## Funciones que exigen revisión específica
 
