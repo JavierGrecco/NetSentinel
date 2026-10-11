@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.8.2 — 11 de octubre de 2026
+
+- Añade un índice SQLite por fecha de comprobación para acelerar los resúmenes de 24 horas y 7 días cuando crezca el historial.
+- La creación del índice es idempotente y no modifica ni elimina chequeos existentes.
+- Agrega una prueba que verifica el índice requerido para consultas por período.
+
 ## 0.8.1 — 11 de octubre de 2026
 
 - Agrega la exportación CSV de informes de monitorización para el período seleccionado (24 horas o 7 días), con estado actual, resultados, tasa de éxito y métricas de latencia.

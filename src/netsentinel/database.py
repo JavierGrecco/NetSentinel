@@ -142,6 +142,7 @@ def initialize(path: Path | None = None) -> None:
                 detail TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_time ON monitor_checks(monitor_id, checked_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_monitor_checks_checked_at ON monitor_checks(checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status, updated_at DESC);
             CREATE INDEX IF NOT EXISTS idx_notification_time ON notification_log(attempted_at DESC);
             CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen DESC);

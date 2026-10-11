@@ -163,3 +163,11 @@ def test_monitoring_csv_api_sets_download_and_privacy_headers(monkeypatch, tmp_p
     assert "netsentinel-monitoring-report.csv" in response.headers["content-disposition"]
     assert response.text.lstrip("\ufeff").splitlines()[1].startswith("168,")
     assert invalid.status_code == 422
+
+
+def test_monitor_analytics_has_time_index_for_growing_history(tmp_path):
+    path = tmp_path / "indexed-analytics.sqlite3"
+    database.initialize(path)
+    with database.connect(path) as db:
+        indexes = {row["name"] for row in db.execute("PRAGMA index_list(monitor_checks)")}
+    assert "idx_monitor_checks_checked_at" in indexes

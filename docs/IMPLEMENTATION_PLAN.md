@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La versión 0.8.0 reúne inventario local, monitorización con informes de 24 horas/7 días, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918, lanzadores de inicio sencillos y copias de seguridad SQLite consistentes.
+La versión 0.8.2 reúne inventario local, monitorización con informes de 24 horas/7 días exportables a CSV, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918, lanzadores sencillos y copias de seguridad SQLite consistentes.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
