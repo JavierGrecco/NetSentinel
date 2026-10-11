@@ -75,6 +75,9 @@ def test_tracks_multiple_addresses_for_same_mac_without_duplicate_device(tmp_pat
     devices = database.list_devices(db)
     assert len(devices) == 1
     assert {address["ip_address"] for address in devices[0]["addresses"]} == {"192.168.10.10", "fe80::10"}
+    matching = database.list_devices(path=db, query="fe80::10")
+    assert len(matching) == 1
+    assert matching[0]["mac_address"] == mac
     assert len(database.get_events(db)) == 1
 
 

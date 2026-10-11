@@ -7,7 +7,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 ## Qué podés hacer
 
 - Detectar automáticamente subredes IPv4 privadas RFC 1918 activas (10/8, 172.16/12 y 192.168/16) y buscar dispositivos en ellas, sin que tengas que conocer el rango de IPs.
-- Consultar dispositivos con sus direcciones IP y MAC, según lo que la red permita observar.
+- Consultar dispositivos con sus direcciones IP y MAC, buscar por cualquiera de sus direcciones IPv4/IPv6 y revisar la procedencia de cada observación.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.

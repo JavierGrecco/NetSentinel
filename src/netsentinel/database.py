@@ -189,29 +189,60 @@ def _device_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def list_devices(path: Path | None = None, query: str = "") -> list[dict[str, Any]]:
+    """Lista dispositivos con búsqueda sobre todas sus direcciones observadas.
+
+    El JOIN carga el inventario y sus direcciones en una sola consulta, sin una
+    consulta SQLite adicional por cada dispositivo.
+    """
+    select = """SELECT d.*,
+                       a.ip_address AS _address_ip_address,
+                       a.first_seen AS _address_first_seen,
+                       a.last_seen AS _address_last_seen,
+                       a.interface AS _address_interface,
+                       a.source AS _address_source
+                FROM devices d
+                LEFT JOIN device_addresses a ON a.device_id = d.id"""
+    order = """ ORDER BY d.trusted ASC, d.last_seen DESC, d.id ASC,
+                        CASE WHEN instr(COALESCE(a.ip_address, ''), ':') = 0 THEN 0 ELSE 1 END,
+                        a.ip_address"""
     with connect(path) as db:
         if query.strip():
             value = f"%{query.strip()}%"
             rows = db.execute(
-                """SELECT * FROM devices
-                   WHERE mac_address LIKE ? OR ip_address LIKE ? OR display_name LIKE ?
-                     OR notes LIKE ? OR COALESCE(manufacturer, '') LIKE ?
-                   ORDER BY trusted ASC, last_seen DESC""",
-                (value, value, value, value, value),
+                select + """ WHERE d.mac_address LIKE ? OR d.ip_address LIKE ?
+                    OR d.display_name LIKE ? OR d.notes LIKE ?
+                    OR COALESCE(d.manufacturer, '') LIKE ?
+                    OR COALESCE(d.interface, '') LIKE ?
+                    OR EXISTS (
+                        SELECT 1 FROM device_addresses matched_address
+                        WHERE matched_address.device_id = d.id
+                          AND matched_address.ip_address LIKE ?
+                    )""" + order,
+                (value, value, value, value, value, value, value),
             ).fetchall()
         else:
-            rows = db.execute("SELECT * FROM devices ORDER BY trusted ASC, last_seen DESC").fetchall()
-        devices = [_device_dict(row) for row in rows]
-        for device in devices:
-            address_rows = db.execute(
-                """SELECT ip_address, first_seen, last_seen, interface, source
-                   FROM device_addresses WHERE device_id = ?
-                   ORDER BY CASE WHEN instr(ip_address, ':') = 0 THEN 0 ELSE 1 END, ip_address""",
-                (device["id"],),
-            ).fetchall()
-            device["addresses"] = [dict(address) for address in address_rows]
-    return devices
+            rows = db.execute(select + order).fetchall()
 
+    devices_by_id: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        values = dict(row)
+        address_ip = values.pop("_address_ip_address")
+        address = {
+            "ip_address": address_ip,
+            "first_seen": values.pop("_address_first_seen"),
+            "last_seen": values.pop("_address_last_seen"),
+            "interface": values.pop("_address_interface"),
+            "source": values.pop("_address_source"),
+        }
+        device_id = int(values["id"])
+        device = devices_by_id.get(device_id)
+        if device is None:
+            device = _device_dict(values)
+            device["addresses"] = []
+            devices_by_id[device_id] = device
+        if address_ip is not None:
+            device["addresses"].append(address)
+    return list(devices_by_id.values())
 
 def get_device_addresses(device_id: int, path: Path | None = None) -> list[dict[str, Any]] | None:
     with connect(path) as db:

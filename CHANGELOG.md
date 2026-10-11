@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.6.1 — 11 de octubre de 2026
+
+- Hace que la búsqueda del inventario encuentre también direcciones IPv4/IPv6 secundarias e interfaces.
+- Carga el inventario y su historial de direcciones por lote para evitar consultas SQLite repetidas por cada dispositivo.
+- Agrega una prueba para localizar un dispositivo mediante una dirección IPv6 secundaria.
+
 ## 0.6.0 — 11 de octubre de 2026
 
 - Restringe el descubrimiento automático a redes privadas RFC 1918 (10/8, 172.16/12 y 192.168/16), evitando rangos especiales y de documentación.
