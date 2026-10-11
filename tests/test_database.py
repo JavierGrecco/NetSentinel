@@ -55,6 +55,9 @@ def test_scan_discovery_report_is_persisted(tmp_path: Path):
         discovery=report,
     )
     assert database.get_scans(path=db)[0]["discovery"] == report
+    exported = __import__("json").loads(database.export_json(path=db))
+    assert exported["scans"][0]["discovery"] == report
+    assert "discovery_json" not in exported["scans"][0]
 
 
 def test_update_missing_device_returns_none(tmp_path: Path):

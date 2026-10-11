@@ -1,28 +1,27 @@
 # Seguridad y límites
 
-## Alcance de la versión actual
+## Alcance de la versión 0.6.3
 
-NetSentinel mantiene el inventario local y puede iniciar un descubrimiento activo cuando el usuario lo solicita desde el panel. Detecta automáticamente subredes IPv4 privadas en interfaces activas compatibles, excluye interfaces virtuales y túneles conocidos, limita la búsqueda a un máximo de dos subredes y 254 direcciones por subred y envía como máximo un ping por dirección. Después filtra la tabla local de vecinos para guardar únicamente IPv4 dentro de esos rangos. No explora direcciones públicas, no cambia configuraciones y no bloquea equipos.
+NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y la base SQLite permanece en la computadora del usuario. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo comienza únicamente cuando se solicita desde el panel.
 
-El descubrimiento es best effort: algunos dispositivos bloquean ICMP, redes invitadas pueden aislar clientes y una LAN exclusivamente IPv6 no entra en este barrido. Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión.
+El descubrimiento activo solo examina subredes IPv4 privadas RFC 1918: `10.0.0.0/8`, `172.16.0.0/12` y `192.168.0.0/16`. Analiza como máximo dos subredes y, si una es mayor que /24, reduce el alcance a un /24. Envía como máximo un ping por dirección y acepta una sola ejecución de descubrimiento simultánea. No explora Internet ni modifica la configuración de los equipos. Un equipo puede no responder al ping, por lo que los resultados no garantizan un inventario completo y no cubren redes exclusivamente IPv6.
+
+Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas. Los registros históricos se conservan automáticamente; una MAC puede aleatorizarse o suplantarse, y un dispositivo desconocido no demuestra una intrusión.
 
 ## Operación segura
 
-- Ejecutar en la computadora donde está el usuario y mantener el host en `127.0.0.1`.
-- No exponer el servidor a una interfaz de red sin autenticación, protección CSRF/origen, configuración HTTPS apropiada y revisión de seguridad.
-- El diagnóstico y el descubrimiento de la red generan tráfico únicamente cuando se solicitan desde el panel. El descubrimiento se limita a subredes IPv4 privadas detectadas localmente.
-- Los comandos de lectura son listas fijas de argumentos; los valores del inventario no se ejecutan como comandos. Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local.
-- El archivo SQLite puede contener metadatos de red. Proteger la cuenta de usuario, evitar compartir copias sin revisarlas y eliminar la base cuando ya no sea necesaria.
-- No utilizar en redes sin autorización.
+- Mantener el host en `127.0.0.1`. No exponer el servidor a otras interfaces sin autenticación, protección CSRF/origen, HTTPS y una revisión de seguridad específica.
+- El descubrimiento, el diagnóstico y las comprobaciones de monitorización generan tráfico cuando se solicitan o se habilitan expresamente.
+- Los comandos se ejecutan con argumentos separados y no interpolan valores del inventario como comandos.
+- Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local; no se envían direcciones MAC a servicios externos.
+- La base SQLite y sus exportaciones pueden revelar topología y hábitos de red. Protegé el equipo y revisá los archivos antes de compartirlos.
+- Usá NetSentinel únicamente en redes y sobre objetivos que administrás o tenés autorización para revisar.
+- Los webhooks externos están deshabilitados por defecto. Si configurás uno, protegé su URL como un secreto y usá HTTPS.
 
-## Funciones futuras que exigen revisión específica
+## Funciones que exigen revisión específica
 
-Las consultas SNMP, las modificaciones de routers/DNS y la interceptación de proxy siguen fuera del alcance. Antes de incorporarlas, hay que definir autorización, límites de tasa, auditoría, almacenamiento de secretos, protección de credenciales, reversión de cambios y tratamiento de datos sensibles.
+Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloqueo de dispositivos y la interceptación de proxy requieren una revisión de autorización, alcance, límites de tasa, auditoría, almacenamiento de secretos, reversión de cambios y tratamiento de datos sensibles antes de implementarse.
 
 ## Reporte de vulnerabilidades
 
-Hasta configurar un canal dedicado, no publiques credenciales, tokens ni detalles explotables en issues públicos. Abrí un issue con una descripción mínima y sin secretos; se definirá un proceso privado de reporte antes de distribuir versiones estables.
-
-## Monitorización de disponibilidad
-
-Los monitores contactan con los objetivos que configura quien administra la aplicación. Los intervalos están limitados a 15 segundos como mínimo y los tiempos de espera a 10 segundos como máximo. El monitor HTTP no sigue redirecciones y rechaza credenciales, parámetros y fragmentos en las URL. Los webhooks deben usar HTTPS; su URL se configura mediante una variable de entorno y no se almacena en la base de datos. No supervises sistemas sin autorización ni publiques secretos en incidencias.
+No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.

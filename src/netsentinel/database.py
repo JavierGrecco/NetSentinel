@@ -514,6 +514,12 @@ def export_json(path: Path | None = None) -> str:
             except (TypeError, json.JSONDecodeError):
                 item["errors"] = []
                 item.pop("errors_json", None)
+            try:
+                report = json.loads(item.pop("discovery_json"))
+                item["discovery"] = report if isinstance(report, dict) else {}
+            except (TypeError, json.JSONDecodeError):
+                item["discovery"] = {}
+                item.pop("discovery_json", None)
             scans.append(item)
         observations = [dict(row) for row in db.execute("SELECT * FROM observations ORDER BY id").fetchall()]
         addresses = [dict(row) for row in db.execute("SELECT * FROM device_addresses ORDER BY device_id, ip_address").fetchall()]

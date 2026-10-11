@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.3 — 11 de octubre de 2026
+
+- Incluye el informe de descubrimiento como objeto JSON en las exportaciones, igual que en la API, en lugar de exportar el JSON serializado dentro de una cadena.
+- Actualiza la guía de seguridad que está enlazada desde el README con los límites activos actuales.
+
 ## 0.6.2 — 11 de octubre de 2026
 
 - Evita que solicitudes simultáneas inicien más de un descubrimiento local; devuelve HTTP 409 con un mensaje claro mientras hay una lectura en curso.
