@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.7 — 11 de octubre de 2026
+
+- Reconoce visualmente eventos históricos cuya IP coincide con la dirección local de la computadora, sin marcarla automáticamente como confiable ni borrar el evento.
+- Reutiliza el mismo cálculo de IP locales para la tabla de inventario y la actividad reciente.
+
 ## 0.6.6 — 11 de octubre de 2026
 
 - Identifica visualmente la IP local de la computadora según el informe de descubrimiento más reciente, para distinguirla de otros dispositivos de la LAN.
