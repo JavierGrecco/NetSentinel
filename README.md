@@ -13,7 +13,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar incidentes y ver cuándo se recupera un servicio.
-- Exportar el inventario a CSV compatible con Excel, con todas las direcciones IPv4/IPv6 conocidas por equipo, y el historial completo a JSON.
+- Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
@@ -82,6 +82,10 @@ Los intervalos permitidos van de 15 segundos a 24 horas. Al detectar una caída 
 NetSentinel funciona sin notificaciones externas. Para enviar avisos de caída y recuperación, configurá la variable `NETSENTINEL_WEBHOOK_URL` con la URL HTTPS de tu webhook antes de iniciar el programa. Tratá esa URL como una contraseña y no la subas al repositorio.
 
 La [guía de monitorización](docs/MONITORING.md) explica los límites y la configuración.
+
+## Copias de seguridad y datos
+
+Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación: cerrá NetSentinel antes de reemplazar la base local al restaurarla y guardá una copia de la base actual por las dudas. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
 ## Datos y privacidad
 

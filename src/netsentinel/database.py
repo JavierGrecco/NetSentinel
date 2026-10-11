@@ -7,6 +7,7 @@ import io
 import json
 import os
 import sqlite3
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from ipaddress import ip_address
@@ -542,6 +543,29 @@ def export_json(path: Path | None = None) -> str:
         "notification_log": notifications,
     }
     return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
+def export_sqlite_backup(path: Path | None = None) -> bytes:
+    """Crea una copia SQLite consistente mientras la aplicación sigue en uso.
+
+    Usa la API de backup de SQLite para incluir transacciones confirmadas aunque
+    la base de datos use WAL; el archivo temporal se elimina al retornar.
+    """
+    source_path = path or database_path()
+    if not source_path.is_file():
+        raise FileNotFoundError("No existe la base de datos de NetSentinel para respaldar.")
+
+    with tempfile.TemporaryDirectory(prefix="netsentinel-backup-") as temporary_directory:
+        backup_path = Path(temporary_directory) / "netsentinel-backup.sqlite3"
+        source = sqlite3.connect(source_path, timeout=10)
+        destination = sqlite3.connect(backup_path, timeout=10)
+        try:
+            source.backup(destination)
+            destination.commit()
+        finally:
+            destination.close()
+            source.close()
+        return backup_path.read_bytes()
 
 
 def export_csv(path: Path | None = None) -> str:

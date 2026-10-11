@@ -96,6 +96,24 @@ def test_installed_package_version_matches_runtime():
     assert installed_version("netsentinel") == __version__
 
 
+def test_sqlite_backup_download_is_openable(monkeypatch, tmp_path):
+    import sqlite3
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.7.5", "AA:BB:CC:DD:EE:77", "en0")])
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/export/backup.sqlite3")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/vnd.sqlite3")
+    assert "netsentinel-backup.sqlite3" in response.headers["content-disposition"]
+    backup_path = tmp_path / "downloaded.sqlite3"
+    backup_path.write_bytes(response.content)
+    with sqlite3.connect(backup_path) as backup:
+        assert backup.execute("SELECT mac_address FROM devices").fetchone()[0] == "AA:BB:CC:DD:EE:77"
+        assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+
 def test_host_guard_rejects_unknown_hostname(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     with TestClient(app, base_url="http://untrusted.example") as client:

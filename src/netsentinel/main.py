@@ -325,6 +325,15 @@ def export_devices_csv() -> Response:
     )
 
 
+@app.get("/api/export/backup.sqlite3")
+def export_sqlite_backup() -> Response:
+    return Response(
+        content=database.export_sqlite_backup(),
+        media_type="application/vnd.sqlite3",
+        headers={"Content-Disposition": 'attachment; filename="netsentinel-backup.sqlite3"'},
+    )
+
+
 @app.get("/api/export/data.json")
 def export_data_json() -> Response:
     return Response(

@@ -52,6 +52,24 @@ def test_trust_update_and_exports(tmp_path: Path):
     assert len(export["observations"]) == 3
 
 
+def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
+    import sqlite3
+
+    source = tmp_path / "netsentinel.sqlite3"
+    database.initialize(source)
+    database.record_scan(
+        [Neighbor("192.168.22.4", "AA:BB:CC:DD:EE:11", "en0")],
+        path=source,
+    )
+    backup_path = tmp_path / "backup.sqlite3"
+    backup_path.write_bytes(database.export_sqlite_backup(source))
+
+    with sqlite3.connect(backup_path) as backup:
+        assert backup.execute("SELECT mac_address FROM devices").fetchone()[0] == "AA:BB:CC:DD:EE:11"
+        assert backup.execute("SELECT COUNT(*) FROM scans").fetchone()[0] == 1
+        assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+
 def test_scan_discovery_report_is_persisted(tmp_path: Path):
     db = tmp_path / "test.sqlite3"
     database.initialize(db)

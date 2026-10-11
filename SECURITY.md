@@ -20,7 +20,7 @@ Estas defensas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no r
 - El descubrimiento local genera tráfico únicamente al solicitarlo desde el panel. El diagnóstico y las comprobaciones de monitorización también generan tráfico cuando se ejecutan.
 - Los comandos de lectura y ping usan argumentos separados; los datos del inventario nunca se ejecutan como comandos.
 - Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local. No se envían direcciones MAC a un proveedor externo para resolver fabricantes.
-- El archivo SQLite puede contener metadatos de red. Protegé la cuenta de usuario, revisá las exportaciones antes de compartirlas y conservá copias de seguridad seguras.
+- La base SQLite y sus copias pueden contener metadatos completos de red. Protegé la cuenta de usuario, revisá las exportaciones antes de compartirlas y almacená los respaldos en un lugar seguro.
 - Usá NetSentinel únicamente en redes y sobre objetivos que administrás o tenés autorización para revisar.
 - Los webhooks externos están deshabilitados por defecto. Si configurás uno, protegé su URL como un secreto y usá HTTPS.
 
