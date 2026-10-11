@@ -33,6 +33,11 @@ CSV_FIELDS = {
     "protocol", "app_name", "blocked", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject",
 }
+IMPORT_DEDUP_FIELDS = (
+    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
+    "protocol", "app_name", "page_url", "search_engine", "search_terms",
+    "email_provider", "email_from", "email_to", "email_subject", "blocked",
+)
 SENSITIVE_QUERY_KEY = re.compile(
     r"(?:access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|"
     r"username|email|phone|session|sid|csrf|nonce|signature|"
@@ -530,10 +535,31 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
         except ValueError as exc:
             raise ValueError(f"Fila {line}: {exc}") from exc
     if not normalized:
-        return {"device_id": device_id, "imported": 0, "note": "El CSV no contiene eventos."}
+        return {
+            "device_id": device_id,
+            "imported": 0,
+            "skipped_duplicates": 0,
+            "note": "El CSV no contiene eventos.",
+        }
+
+    # Null-safe equality makes re-importing the same normalized CSV idempotent.
+    # Only manual imports are deduplicated; events from live sources remain intact.
+    duplicate_sql = (
+        "SELECT 1 FROM activity_events "
+        "WHERE device_id = ? AND source = 'manual_import' AND "
+        + " AND ".join(f"{field} IS ?" for field in IMPORT_DEDUP_FIELDS)
+        + " LIMIT 1"
+    )
+    imported_count = 0
+    skipped_duplicates = 0
     with database.connect() as db:
         _cleanup(db)
         for item in normalized:
+            values = tuple(item[field] for field in IMPORT_DEDUP_FIELDS)
+            duplicate = db.execute(duplicate_sql, (device_id, *values)).fetchone()
+            if duplicate:
+                skipped_duplicates += 1
+                continue
             db.execute(
                 """INSERT INTO activity_events
                    (session_id, device_id, observed_at, received_at, event_type, source, domain,
@@ -547,10 +573,16 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
                     item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
                 ),
             )
+            imported_count += 1
     return {
         "device_id": device_id,
-        "imported": len(normalized),
-        "note": "Importado como metadatos históricos. Las filas no prueban que una persona haya interactuado con el servicio.",
+        "imported": imported_count,
+        "skipped_duplicates": skipped_duplicates,
+        "note": (
+            "Importado como metadatos históricos. Las filas no prueban que una persona haya "
+            "interactuado con el servicio. Las filas idénticas ya importadas para este dispositivo "
+            "se omitieron."
+        ),
     }
 
 
