@@ -80,10 +80,10 @@ CSV_HEADER_ALIASES = {
 
 
 def _normalized_csv_header(value: str | None) -> str:
-    return re.sub(
-        r"[^a-z0-9]+", "_", str(value or "").strip().lstrip("\\ufeff").lower()
-    ).strip("_")
-
+    raw = str(value or "").strip().lstrip(chr(0xFEFF))
+    # Provider exports commonly use camelCase fields such as receivedDateTime.
+    raw = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", raw)
+    return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
 
 def _is_sensitive_csv_header(value: str | None) -> bool:
     normalized = _normalized_csv_header(value)
