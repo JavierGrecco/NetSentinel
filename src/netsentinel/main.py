@@ -183,6 +183,10 @@ class ActivityEventIngest(BaseModel):
     page_url: str | None = Field(default=None, max_length=4096)
     search_engine: str | None = Field(default=None, max_length=40)
     search_terms: str | None = Field(default=None, max_length=500)
+    email_provider: str | None = Field(default=None, max_length=60)
+    email_from: str | None = Field(default=None, max_length=1500)
+    email_to: str | None = Field(default=None, max_length=1500)
+    email_subject: str | None = Field(default=None, max_length=200)
     blocked: bool = False
 
 
