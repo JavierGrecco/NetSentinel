@@ -71,11 +71,15 @@ def _host_is_allowed(host: str | None) -> bool:
 
 def _same_origin(origin: str, request: Request) -> bool:
     """Compare scheme, normalized host and effective port without trusting Origin."""
-    parsed = urlsplit(origin)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+    try:
+        parsed = urlsplit(origin)
+        origin_host_value = parsed.hostname
+    except ValueError:
+        return False
+    if parsed.scheme not in {"http", "https"} or not origin_host_value:
         return False
     request_host = (request.url.hostname or "").rstrip(".").lower()
-    origin_host = parsed.hostname.rstrip(".").lower()
+    origin_host = origin_host_value.rstrip(".").lower()
     request_scheme = request.url.scheme.lower()
     origin_scheme = parsed.scheme.lower()
     if request_host != origin_host or request_scheme != origin_scheme:

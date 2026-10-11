@@ -109,10 +109,13 @@ def test_csrf_guard_rejects_cross_origin_mutations(monkeypatch, tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         origin_response = client.post("/api/scan", headers={"Origin": "http://attacker.example"})
         fetch_response = client.post("/api/scan", headers={"Sec-Fetch-Site": "cross-site"})
+        malformed_response = client.post("/api/scan", headers={"Origin": "http://["})
     assert origin_response.status_code == 403
     assert fetch_response.status_code == 403
+    assert malformed_response.status_code == 403
     assert origin_response.json()["detail"] == "Origen no permitido para esta operación."
     assert fetch_response.json()["detail"] == "Solicitud entre sitios bloqueada."
+    assert malformed_response.json()["detail"] == "Origen no permitido para esta operación."
 
 
 def test_extra_hostname_must_be_explicitly_allowed(monkeypatch, tmp_path):
