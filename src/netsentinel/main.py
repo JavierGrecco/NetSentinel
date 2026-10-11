@@ -228,6 +228,15 @@ def scans(limit: int = Query(default=30, ge=1, le=100)) -> list[dict]:
     return database.get_scans(limit=limit)
 
 
+@app.get("/api/devices/{device_id}/history")
+def device_history(device_id: int, limit: int = Query(default=100, ge=1, le=500)) -> dict:
+    """Consulta el historial de observaciones del inventario para un dispositivo."""
+    result = database.get_device_history(device_id, limit=limit)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
+    return result
+
+
 @app.get("/api/devices/{device_id}/addresses")
 def device_addresses(device_id: int) -> list[dict]:
     addresses = database.get_device_addresses(device_id)
