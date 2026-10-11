@@ -29,7 +29,7 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [x] Acceder al historial desde la fila del dispositivo sin bloquear la carga del inventario.
 - [ ] Incorporar eventos de conexiones/servicios mediante una fuente compatible (telemetría del router/AP o captura autorizada en una interfaz que realmente vea el tráfico).
 - [ ] Distinguir DNS, destinos IP/puerto y SNI TLS cuando estén disponibles, documentando que no equivale a URLs completas ni al contenido HTTPS.
-- [ ] Añadir retención configurable, estado explícito de seguimiento y pruebas de integración con una fuente de tráfico simulada.
+- [x] Añadir retención configurable y estado explícito de seguimiento; las pruebas de API con eventos normalizados están incorporadas.\n- [ ] Añadir una prueba de integración con una fuente de tráfico real una vez elegido el adaptador.
 
 ### 0.11 — Diagnóstico DNS ampliado (en progreso)
 - [x] Consultar resolución inversa PTR para una IP ingresada explícitamente.
@@ -43,6 +43,16 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [ ] Añadir nombres DNS inversos visibles en el inventario solo tras validar la experiencia de usuario y los límites de tiempo.
 - [ ] Mostrar procedencia y fecha de cada dato enriquecido; nunca presentar un nombre como identidad verificada.
 - [ ] Permitir desactivar consultas automáticas.
+
+### 0.14 — Actividad familiar y metadatos (implementación inicial)
+- [x] Vista local `/activity` para elegir un dispositivo y una fuente, con ventanas temporales de 5 minutos a 12 horas.
+- [x] Aceptar eventos normalizados solo durante sesiones activas y exigir token aleatorio de ingestión cuyo hash es el único valor persistido.
+- [x] Admitir metadatos de DNS, conexiones, SNI visible, aplicación reportada y eventos de bloqueo, sin URLs completas, credenciales ni payloads.
+- [x] Importar CSV normalizado local (1 MB/1.000 filas máximo) y rechazar columnas desconocidas/sensibles.
+- [x] Configurar retención de 1 a 90 días; incluir eventos y sesiones en exportación JSON v4 y copia SQLite, sin exponer hashes de tokens.
+- [ ] Crear adaptador nativo para una fuente concreta de router/AP o resolvedor (depende de marca/modelo y formato disponible).
+- [ ] Proporcionar un agente explícito para telemetría de aplicaciones/tiempo de uso por sistema operativo, sin capturar teclado, contraseñas ni contenido.
+- [ ] Añadir pruebas manuales e integración de una fuente real tras completar CI.
 
 ### 0.13 — Integraciones de infraestructura
 - [ ] Adaptadores opcionales de DHCP y routers, primero en modo lectura.
