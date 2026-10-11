@@ -32,7 +32,7 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [x] Reducir consultas PTR repetidas con caché en memoria acotada, fecha de resolución y procedencia explícita.
 
 ### 0.12 — Inventario enriquecido
-- [ ] Añadir nombres DNS inversos opcionales al inventario, con caché y sin bloquear la carga de la tabla.
+- [x] Exponer una consulta PTR por dispositivo bajo demanda, usando su dirección observada más reciente y la caché existente; no altera el inventario ni bloquea la carga de la tabla.\n- [ ] Añadir nombres DNS inversos visibles en el inventario solo tras validar la experiencia de usuario y los límites de tiempo.
 - [ ] Mostrar procedencia y fecha de cada dato enriquecido; nunca presentar un nombre como identidad verificada.
 - [ ] Permitir desactivar consultas automáticas.
 
