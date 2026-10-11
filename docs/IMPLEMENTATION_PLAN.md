@@ -30,7 +30,7 @@
 2. Deduplicación idempotente para evitar dobles importaciones.
 3. Filtros por tipo, dispositivo, fuente y fechas; borrado/exportación selectiva.
 4. Tests de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
-5. Elegir un proveedor de correo y validar su exportación de auditoría real, permisos y cobertura antes de implementar el conector.
+5. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 
 ## P2 — Fuentes domésticas reales
 1. Elegir el modelo de router/AP/resolvedor y conseguir log de ejemplo o API documentada.
