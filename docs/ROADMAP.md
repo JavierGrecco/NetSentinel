@@ -24,6 +24,13 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 
 ## Próximos módulos — orden recomendado
 
+### 0.12 — Historial por dispositivo (primera etapa)
+- [x] Consultar las observaciones históricas del inventario por dispositivo, con límite de resultados y origen/fecha/IP.
+- [x] Acceder al historial desde la fila del dispositivo sin bloquear la carga del inventario.
+- [ ] Incorporar eventos de conexiones/servicios mediante una fuente compatible (telemetría del router/AP o captura autorizada en una interfaz que realmente vea el tráfico).
+- [ ] Distinguir DNS, destinos IP/puerto y SNI TLS cuando estén disponibles, documentando que no equivale a URLs completas ni al contenido HTTPS.
+- [ ] Añadir retención configurable, estado explícito de seguimiento y pruebas de integración con una fuente de tráfico simulada.
+
 ### 0.11 — Diagnóstico DNS ampliado (en progreso)
 - [x] Consultar resolución inversa PTR para una IP ingresada explícitamente.
 - [x] Mostrar una lectura de configuración DNS local, de solo lectura, con fuente y límites explícitos.
