@@ -1,71 +1,63 @@
-# Plan de versiones
+# Roadmap operativo de NetSentinel
 
-Este documento resume qué está implementado y qué falta.
+Separamos código presente, validación pendiente y trabajo que todavía no está implementado. Una casilla marcada indica que existe código, no que CI o pruebas manuales estén aprobadas.
 
-## 0.1 — Base local
-- [x] Aplicación instalable y panel web.
-- [x] Inventario inicial, confianza manual, eventos, exportación y diagnóstico a demanda.
+## Núcleo de inventario y diagnóstico
+- [x] Inventario local, observaciones, historial de direcciones, etiquetas de confianza y eventos.
+- [x] Descubrimiento local explícito y acotado a subredes privadas.
+- [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
+- [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
+- [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
+- [ ] Timeout DNS independiente del resolvedor del sistema y pruebas deterministas.
+- [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 
-## 0.2 — Inventario más fiable
-- [x] Proveedores de descubrimiento intercambiables y tolerancia a fallos.
-- [x] Direcciones IPv4/IPv6 por dispositivo con historial.
-- [x] Detección de cambios de IP y base OUI local opcional.
-- [x] Pruebas multiplataforma.
+## Actividad familiar: estado de código
+- [x] Historial de presencia por dispositivo (fecha/IP/fuente), claramente distinto de páginas visitadas.
+- [x] API/SQLite de sesiones acotadas, token temporal hasheado, CSV, retención y exportación JSON v4.
+- [x] Extensión Chromium visible, opt-in y apagada por defecto para registrar páginas futuras y búsquedas por URL en el dispositivo local.
+- [x] Importación manual de CSV de navegación y búsquedas; validación y saneamiento de URLs.
+- [x] Importación manual de metadatos de correo autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional.
+- [x] Rechazo de columnas de cuerpo de mensaje, contenido o adjuntos; no hay extracción de bandejas.
+- [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
+- [ ] CI verde en toda la matriz y pruebas manuales de importación en Chrome/Edge y Windows/macOS/Linux.
+- [ ] Revisar sanitización de URL con OAuth, tokens, tracking, rutas con PII y codificación percent.
+- [ ] Previsualización y deduplicación idempotente antes de importar CSV.
+- [ ] Filtros/exportaciones/borrado selectivo por dispositivo, fuente y rango temporal.
+- [ ] Sincronización en vivo desde equipos supervisados, tras añadir autenticación, autorización por dispositivo, cifrado de transporte, revocación y protección contra reenvío. No exponer la API actual a la LAN como atajo.
+- [ ] Extensión Firefox u otros navegadores compatibles.
+- [ ] Adaptador de auditoría para un proveedor concreto de correo, tras verificar qué registros admite el tipo de cuenta y con permisos válidos.
+- [ ] Agente opcional de tiempo de pantalla/uso de apps por SO, sin keylogging ni lectura de formularios.
+- [ ] Adaptador real de DNS/flows de router/AP/resolvedor doméstico, después de elegir modelo y formato.
 
-## 0.3 — Monitorización
-- [x] Controles de ping, TCP y HTTP/HTTPS configurables.
-- [x] Historial de comprobaciones y latencia.
-- [x] Incidentes deduplicados y recuperación automática.
-- [x] Webhook HTTPS opcional.
-- [x] Página independiente de monitorización.
-- [x] CSS separado del HTML y documentación más clara.
+## Adaptadores de infraestructura
+- [ ] Adaptadores DHCP/router/SNMP de solo lectura, con límites de tiempo, compatibilidad documentada, auditoría y fixtures.
+- [ ] Gestión de credenciales de adaptadores fuera del repositorio y de logs.
+- [ ] Integración de DNS/destinos IP/puerto del router sin inferir identidad personal.
+- [ ] Guía de despliegue local segura; loopback como valor predeterminado.
 
-## 0.4 — Diagnóstico guiado
-- [x] Asistente guiado que resume los resultados y propone próximos pasos sin confundir ICMP bloqueado con una caída confirmada.
+## Observabilidad y usabilidad
+- [ ] Topología basada en relaciones observadas y nivel de incertidumbre.
+- [ ] Métricas Prometheus de cardinalidad acotada.
+- [ ] Perfiles de varias redes/ubicaciones aislados entre sí.
+- [ ] Exportación selectiva por dispositivo/período/fuente.
 
-## 0.5 — Descubrimiento local automático
-- [x] Detección de subredes IPv4 privadas desde las interfaces activas, sin configuración manual del usuario.
-- [x] Búsqueda bajo demanda limitada a dos subredes y 254 direcciones por subred.
-- [x] Filtrado de resultados a las subredes locales detectadas y pruebas deterministas sin red real.
+## TLS y contenido privado
+- [ ] No implementar recuperación/interceptación de contraseñas, captura de formularios, keylogging, lectura de mensajes o cuerpos HTTP.
+- [ ] No realizar descifrado/proxy TLS general. Cualquier futura herramienta de diagnóstico TLS requiere diseño independiente, consentimiento visible, aislamiento y revisión de seguridad.
 
-## 0.6 — Descubrimiento auditable y fiable
-- [x] Limitar el sondeo automático a redes RFC 1918 y evitar interfaces virtuales conocidas.
-- [x] Guardar rango detectado, direcciones consultadas, respuestas y duración en el historial.
-- [x] Hacer que la búsqueda cubra direcciones secundarias IPv4/IPv6 y agilizar consultas del inventario.
+## Orden de trabajo recomendado
+1. Cerrar el fallo actual de CI y ejecutar toda la matriz; no declarar validada ninguna función antes de esa comprobación.
+2. Probar manualmente la extensión: navegación normal, SPA, Google/Bing/YouTube, exclusiones, pausa, retención, exportación e importación.
+3. Mejorar el importador con previsualización, validación, deduplicación y borrado/exportación selectiva.
+4. Elegir proveedor de correo y fuente concreta; primero solo auditoría de metadatos autorizada, nunca contenido.
+5. Elegir router/AP/resolvedor y desarrollar adaptador read-only con fixtures.
+6. Diseñar sincronización segura entre equipos; no exponer la API de ingestión en LAN sin autenticación.
+7. Añadir agente de uso de aplicaciones/tiempo de pantalla por SO.
 
-## 0.7 — Distribución, protección y respaldo
-- [x] Lanzadores de un clic para Windows, macOS y Linux, con instalación incremental en entornos virtuales locales.
-- [x] Proteger la interfaz frente a hosts arbitrarios y peticiones web mutantes de otro origen.
-- [x] Exportación CSV compatible con Excel, historial JSON y respaldo SQLite consistente.
-- [x] Pruebas de seguridad, respaldo e instalación en Windows, macOS y Linux con Python 3.10–3.14.
-
-## 0.6 — Descubrimiento auditable
-- [x] Limitar la búsqueda automática a RFC 1918 y filtrar interfaces Apple virtuales de enlace local.
-- [x] Guardar subredes detectadas, direcciones consultadas, respuestas y duración de cada lectura.
-- [x] Optimizar el inventario y permitir buscar por todas las direcciones observadas.
-
-## 0.7 — Distribución, seguridad y recuperación
-- [x] Lanzadores de un clic en Windows y macOS/Linux, con instalación incremental.
-- [x] Validar Host/Origin y enviar cabeceras HTTP defensivas en el panel local.
-- [x] Exportar CSV compatible con Excel y respaldo SQLite consistente.
-- [x] Probar la matriz Windows/macOS/Linux con Python 3.10–3.14.
-
-## 0.8 — Informes y tendencias de monitorización
-- [x] Resúmenes de comprobaciones, tasa de éxito por muestras e indicadores de latencia en ventanas de 24 horas y 7 días.
-- [x] Exportar el informe del período a CSV, con mitigación de fórmulas y cabeceras sin caché.
-- [x] Visualizar la secuencia cronológica de las últimas 15 comprobaciones por monitor.
-- [x] Añadir un índice SQLite por fecha para acelerar consultas por período.
-- [x] Mostrar duración estimada desde la detección y tiempos de recuperación de incidentes.
-- [x] Graficar la latencia de hasta 15 comprobaciones recientes sin generar tráfico extra.
-
-## Próximas mejoras
-- [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
-- [x] Exportar incidentes abiertos y resueltos, con duración y fallos, a CSV.
-- [x] Ver y exportar tendencias de latencia agregadas por hora (24 h) y por bloques de seis horas (7 días).
-
-## Más adelante
-- [ ] Mapa de topología respaldado por datos.
-- [ ] Métricas para Prometheus y supervisión de varias redes.
-- [ ] Proxy HTTP/S independiente, después de definir límites de privacidad claros.
-
-Las integraciones y acciones que modifiquen la red seguirán siendo explícitas, opcionales y documentadas.
+## Criterios para cerrar tareas
+1. Código integrado y revisado.
+2. Tests reproducibles sin red real ni privilegios administrativos.
+3. CI verde en Linux/Windows/macOS y empaquetado comprobado.
+4. Pruebas manuales para flujos dependientes de navegador, SO o router.
+5. Documentación de permisos, datos, retención, límites y eliminación.
+6. Changelog/versión estable solo después de validación; el roadmap no sustituye al código.

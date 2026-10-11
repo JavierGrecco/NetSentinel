@@ -10,11 +10,13 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Consultar dispositivos con sus direcciones IP y MAC, buscar por cualquiera de sus direcciones IPv4/IPv6 y revisar la procedencia de cada observación.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
+- Revisar **actividad familiar** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
 - Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
+- **En desarrollo (rama 0.10):** consultar registros A/AAAA por nombre y resolución inversa PTR por IP mediante el resolvedor DNS del sistema. La pantalla independiente `/tools` ejecuta las consultas de nombre/PTR solo cuando las solicitás y muestra una lectura orientativa de los servidores DNS detectables localmente, sin modificar la configuración. Las consultas PTR exitosas se conservan en una caché en memoria de tamaño y duración limitados para evitar consultas repetidas; los errores no se cachean. En macOS/Linux puede omitir DNS por interfaz, VPN o split DNS; en Windows lee valores del registro. Los nombres devueltos por DNS no verifican la identidad de un dispositivo.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
@@ -67,6 +69,10 @@ En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSen
 
 Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
 
+## Herramientas DNS (módulo en desarrollo)
+
+La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`. La configuración DNS se obtiene mediante lectura local y puede ser parcial según el sistema operativo y las interfaces activas. También se puede consultar PTR desde la API para un dispositivo concreto con `GET /api/devices/{device_id}/dns-reverse`: usa su dirección observada más recientemente, solo se ejecuta cuando se solicita y no guarda el nombre DNS en el inventario.
+
 ## Monitorización
 
 En el panel, elegí **Monitorización** y agregá un control:
@@ -87,6 +93,15 @@ La [guía de monitorización](docs/MONITORING.md) explica los límites y la conf
 
 Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación. Para restaurarla, cerrá NetSentinel, guardá aparte la base actual y reemplazá `netsentinel.sqlite3` por el archivo descargado renombrado con ese nombre. La ruta predeterminada es `~/.netsentinel/netsentinel.sqlite3` (en Windows, dentro de tu carpeta de usuario); si configuraste `NETSENTINEL_DATA_DIR`, usá ese directorio en su lugar. Volvé a iniciar NetSentinel después de reemplazar el archivo. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
+## Historial y actividad familiar
+
+Desde el inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad familiar** (`/activity`) permite consultar registros de red, navegación y metadatos de correo importados.
+
+Para registrar **páginas y búsquedas del navegador**, instalá la extensión Chromium de [`browser-extension/`](browser-extension/README.md) en cada dispositivo/navegador a supervisar y activala expresamente. Guarda localmente visitas y búsquedas compatibles, exporta un CSV y permite importarlo en `/activity` asociándolo al dispositivo correcto. Está apagada por defecto, solo registra navegación futura y no lee formularios ni contraseñas. La transferencia es manual por CSV; la sincronización automática entre equipos sigue pendiente.
+
+Para **correo electrónico**, NetSentinel acepta una importación manual de metadatos de registros de auditoría autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional. No se conecta a bandejas, no captura mensajes ni adjuntos y rechaza columnas de cuerpo/contenido. No hay todavía un adaptador específico para Google Workspace, Microsoft 365 ni cuentas personales; eso depende de las capacidades y permisos del proveedor.
+
+El backend por sí solo no ve todas las conexiones de otros equipos ni conoce las páginas que se abren. La extensión no registra búsquedas internas de aplicaciones nativas ni formatos que no aparecen en una URL compatible. No recolectamos contraseñas, cookies ni contenido de páginas, y no intentamos interceptar TLS. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
 ## Datos y privacidad
 
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
@@ -105,6 +120,9 @@ python -m pytest
 ## Documentación
 
 - [Arquitectura](docs/ARCHITECTURE.md)
+- [Seguimiento familiar de actividad](docs/FAMILY_ACTIVITY.md)
+- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
+- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
 - [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.

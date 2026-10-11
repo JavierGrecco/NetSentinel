@@ -30,7 +30,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "La observación proviene de una interfaz Apple de enlace local" in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
-        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v3"
+        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
 
 
 def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
@@ -153,3 +153,35 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert response.headers["cross-origin-resource-policy"] == "same-origin"
+
+
+def test_device_history_returns_observations_for_selected_device(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.5.2", "AA:BB:CC:DD:EE:01", "en0")])
+    database.record_scan([Neighbor("192.168.5.3", "AA:BB:CC:DD:EE:01", "en0")])
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        device = client.get("/api/devices").json()[0]
+        response = client.get(f"/api/devices/{device['id']}/history")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["device"]["id"] == device["id"]
+    assert payload["count"] == 2
+    assert {item["ip_address"] for item in payload["observations"]} == {"192.168.5.2", "192.168.5.3"}
+    assert "no registra páginas web" in payload["note"]
+
+
+def test_device_history_returns_404_for_unknown_device(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/devices/9999/history")
+    assert response.status_code == 404
+
+
+def test_device_history_limits_observation_count(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/devices/9999/history?limit=10000")
+    assert response.status_code == 422

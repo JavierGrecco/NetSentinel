@@ -43,6 +43,23 @@ jobs:
           python-version: '3.12'
       - name: Validate launcher shell syntax
         run: bash -n run.sh run-macos.command
+      - name: Validate Chromium extension JavaScript
+        run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
+      - name: Verify extension source files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = [
+              "browser-extension/manifest.json",
+              "browser-extension/service-worker.js",
+              "browser-extension/popup.html",
+              "browser-extension/popup.js",
+              "browser-extension/README.md",
+          ]
+          missing = [path for path in required if not Path(path).is_file()]
+          assert not missing, f"Missing browser extension files: {missing}"
+          PY
       - name: Build wheel
         run: python -m pip wheel . --no-deps --wheel-dir dist
       - name: Verify wheel version and interface files
@@ -71,6 +88,8 @@ jobs:
                   "netsentinel/static/monitors.html",
                   "netsentinel/static/styles.css",
                   "netsentinel/static/monitors.css",
+                  "netsentinel/static/tools.html",
+                  "netsentinel/static/activity.html",
               }
               missing = required - names
               assert not missing, f"Missing UI assets in wheel: {sorted(missing)}"

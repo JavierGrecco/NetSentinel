@@ -1,5 +1,30 @@
 # Historial de cambios
 
+## Próxima versión — 0.10.0 (en desarrollo)
+
+- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
+- Agrega una vista local de actividad familiar en `/activity`, con sesiones limitadas por dispositivo, token de ingestión de un solo uso, validación estricta de metadatos e importación CSV local.
+- Añade una extensión Chromium visible y desactivada por defecto para registrar páginas navegadas y búsquedas de motores compatibles en el dispositivo donde se instala; exporta un CSV para importación manual en NetSentinel.
+- Amplía el modelo de actividad con `page_visit` y `search_query`; las URLs se normalizan para quitar fragmentos y parámetros sensibles/de seguimiento conocidos, mientras los términos de búsqueda se guardan separados.
+- Extiende la CI para comprobar la sintaxis JavaScript de la extensión y la presencia de sus archivos.
+- Añade importación de metadatos de correo desde CSV de auditoría autorizado (fecha, proveedor, emisor, destinatarios y asunto opcional); se rechazan los campos de cuerpo, mensaje, contenido y adjuntos.
+- Normaliza alias comunes de cabeceras en exportaciones CSV de Google Workspace Email Log Search y Microsoft 365 Message Trace; el adaptador/API nativo de cada proveedor sigue pendiente.
+- Persiste eventos DNS, conexiones, SNI visible, uso de aplicaciones reportado por una fuente compatible y bloqueos reportados; no instala un capturador automático ni un agente.
+- Añade retención configurable entre 1 y 90 días, un resumen de dominios observados y límites de 1.000 eventos/1 MB por importación CSV.
+- Rechaza URLs/rutas y campos no admitidos, incluidos usuario, contraseña, tokens, cookies y payloads; el token de ingestión se almacena como hash.
+- Amplía la exportación JSON a `netsentinel-data-export-v4` para incluir sesiones y eventos de actividad sin exportar el hash del token.
+- Añade pruebas de API, fuente, sesión, importación, retención y redacción de credenciales; la CI todavía debe confirmar la ejecución de la suite.
+- Añade una ruta PTR por dispositivo bajo demanda y una acción en la tabla de inventario; no modifica los datos guardados y maneja dispositivos inexistentes o sin direcciones. La interfaz aclara que el nombre DNS no verifica identidad.
+- Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
+- Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.
+- Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.
+- Muestra los servidores DNS locales detectables en modo de solo lectura, con fuente y advertencias sobre VPN, split DNS y diferencias entre sistemas.
+- Clasifica fallos DNS en nombre no encontrado, error temporal y error general; la API responde con códigos HTTP diferenciados (404, 503 y 502).
+- Aclara en la interfaz y la documentación que los nombres DNS no son prueba de identidad.
+- Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.
+- Agrega pruebas simuladas para el parser de resolv.conf, la detección por plataforma y el endpoint de configuración.
+- Añade caché PTR en memoria, acotada por TTL y cantidad de entradas, con fecha de resolución y señalización de resultados cacheados; los fallos no se almacenan.
+
 ## 0.9.0 — 11 de octubre de 2026
 
 - Permite exportar hasta 5000 incidentes en CSV, filtrados por abiertos o resueltos, con duración estimada, recuperación, cantidad de fallos y detalle final.

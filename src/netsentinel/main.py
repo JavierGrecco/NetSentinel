@@ -13,13 +13,16 @@ import os
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import __version__
 from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
+from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
+from .dns_config import get_dns_configuration
+from . import activity_tracking
 
 
 _supervisor = MonitorSupervisor()
@@ -103,6 +106,7 @@ app = FastAPI(
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
 _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
+_ACTIVITY_STATIC = _STATIC_DIR / "activity.html"
 
 
 @app.middleware("http")
@@ -120,6 +124,9 @@ async def protect_local_app(request: Request, call_next):
             return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
 
     response = await call_next(request)
+    if request.url.path == "/activity" or request.url.path.startswith("/api/activity"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -152,6 +159,45 @@ class MonitorUpdate(BaseModel):
     timeout_seconds: int | None = Field(default=None, ge=1, le=10)
 
 
+class ActivitySessionCreate(BaseModel):
+    device_id: int = Field(ge=1)
+    duration_minutes: int = Field(default=60, ge=5, le=720)
+    source_mode: str = Field(min_length=1, max_length=32)
+
+
+class ActivityEventIngest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: int = Field(ge=1)
+    collector_token: str = Field(min_length=32, max_length=128)
+    device_id: int = Field(ge=1)
+    event_type: str = Field(min_length=1, max_length=32)
+    source: str = Field(min_length=1, max_length=32)
+    observed_at: str | None = Field(default=None, max_length=64)
+    domain: str | None = Field(default=None, max_length=253)
+    destination_ip: str | None = Field(default=None, max_length=64)
+    destination_port: int | None = Field(default=None, ge=1, le=65535)
+    protocol: str | None = Field(default=None, max_length=16)
+    app_name: str | None = Field(default=None, max_length=100)
+    page_url: str | None = Field(default=None, max_length=4096)
+    search_engine: str | None = Field(default=None, max_length=40)
+    search_terms: str | None = Field(default=None, max_length=500)
+    email_provider: str | None = Field(default=None, max_length=60)
+    email_from: str | None = Field(default=None, max_length=1500)
+    email_to: str | None = Field(default=None, max_length=1500)
+    email_subject: str | None = Field(default=None, max_length=200)
+    blocked: bool = False
+
+
+class ActivityCSVImport(BaseModel):
+    device_id: int = Field(ge=1)
+    csv_data: str = Field(min_length=1, max_length=1_000_000)
+
+
+class ActivityRetentionUpdate(BaseModel):
+    retention_days: int = Field(ge=1, le=90)
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -160,6 +206,50 @@ def index() -> FileResponse:
 @app.get("/monitors", include_in_schema=False)
 def monitors_page() -> FileResponse:
     return FileResponse(_MONITORS_STATIC)
+
+
+@app.get("/activity", include_in_schema=False)
+def activity_page() -> FileResponse:
+    return FileResponse(_ACTIVITY_STATIC)
+
+
+@app.get("/tools", include_in_schema=False)
+def tools_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "tools.html")
+
+
+@app.get("/api/tools/dns/configuration")
+def dns_configuration() -> dict:
+    """Lee la configuración DNS local sin modificarla ni consultar dominios externos."""
+    return get_dns_configuration()
+
+
+@app.get("/api/tools/dns/lookup")
+def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
+    """Resuelve registros A/AAAA mediante el resolvedor del sistema, a pedido del usuario."""
+    try:
+        return lookup_hostname(hostname)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo resolver el nombre con el DNS configurado en el sistema.") from exc
+
+
+@app.get("/api/tools/dns/reverse")
+def dns_reverse_lookup(address: str = Query(min_length=1, max_length=64)) -> dict:
+    """Consulta PTR para una IP ingresada explícitamente por el usuario."""
+    try:
+        return cached_reverse_lookup_ip(address)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR con el DNS configurado en el sistema.") from exc
 
 
 @app.get("/api/health")
@@ -187,12 +277,88 @@ def scans(limit: int = Query(default=30, ge=1, le=100)) -> list[dict]:
     return database.get_scans(limit=limit)
 
 
+@app.get("/api/devices/{device_id}/history")
+def device_history(device_id: int, limit: int = Query(default=100, ge=1, le=500)) -> dict:
+    """Consulta el historial de observaciones del inventario para un dispositivo."""
+    result = database.get_device_history(device_id, limit=limit)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
+    return result
+
+
 @app.get("/api/devices/{device_id}/addresses")
 def device_addresses(device_id: int) -> list[dict]:
     addresses = database.get_device_addresses(device_id)
     if addresses is None:
         raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
     return addresses
+
+
+@app.get("/api/activity")
+def get_family_activity(
+    device_id: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict:
+    """Devuelve sesiones y metadatos recopilados por una fuente compatible."""
+    try:
+        return activity_tracking.get_activity(device_id=device_id, limit=limit)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/sessions")
+def start_family_activity(body: ActivitySessionCreate) -> dict:
+    """Abre una ventana temporal explícita para la fuente de metadatos elegida."""
+    try:
+        return activity_tracking.start_session(body.device_id, body.duration_minutes, body.source_mode)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/sessions/{session_id}/stop")
+def stop_family_activity(session_id: int) -> dict:
+    result = activity_tracking.stop_session(session_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontró la sesión.")
+    return result
+
+
+@app.post("/api/activity/ingest")
+def ingest_family_activity(body: ActivityEventIngest) -> dict:
+    """Guarda metadatos limitados solo durante una sesión activa."""
+    try:
+        return activity_tracking.ingest_event(
+            body.session_id, body.device_id, body.collector_token, body.model_dump(exclude={"collector_token"})
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except activity_tracking.InvalidCollectorToken as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/import")
+def import_family_activity(body: ActivityCSVImport) -> dict:
+    """Importa explícitamente un CSV de metadatos desde el equipo local."""
+    try:
+        return activity_tracking.import_csv(body.device_id, body.csv_data)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.put("/api/activity/retention")
+def set_family_activity_retention(body: ActivityRetentionUpdate) -> dict:
+    try:
+        return activity_tracking.update_retention(body.retention_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/scan")
@@ -215,6 +381,28 @@ def scan() -> dict:
         return result
     finally:
         _scan_lock.release()
+
+
+@app.get("/api/devices/{device_id}/dns-reverse")
+def device_dns_reverse_lookup(device_id: int) -> dict:
+    """Consulta PTR de la dirección observada más recientemente, solo bajo demanda."""
+    addresses = database.get_device_addresses(device_id)
+    if addresses is None:
+        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
+    if not addresses:
+        raise HTTPException(status_code=404, detail="El dispositivo no tiene direcciones observadas para consultar.")
+    address = addresses[0]["ip_address"]
+    try:
+        result = cached_reverse_lookup_ip(address)
+        result["device_id"] = device_id
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR para la dirección observada.") from exc
 
 
 @app.patch("/api/devices/{device_id}")

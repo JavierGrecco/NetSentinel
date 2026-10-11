@@ -157,6 +157,43 @@ def initialize(path: Path | None = None) -> None:
                 success INTEGER NOT NULL CHECK (success IN (0, 1)),
                 detail TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS activity_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                source_mode TEXT NOT NULL CHECK (source_mode IN ('router_dns', 'router_flow', 'device_agent')),
+                started_at TEXT NOT NULL,
+                ends_at TEXT NOT NULL,
+                stopped_at TEXT,
+                status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'stopped', 'expired')),
+                collector_token_hash TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS activity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER REFERENCES activity_sessions(id) ON DELETE SET NULL,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                observed_at TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
+                source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                domain TEXT,
+                destination_ip TEXT,
+                destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
+                protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                app_name TEXT,
+                page_url TEXT,
+                search_engine TEXT,
+                search_terms TEXT,
+                email_provider TEXT,
+                email_from TEXT,
+                email_to TEXT,
+                email_subject TEXT,
+                blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
+            );
+            CREATE TABLE IF NOT EXISTS activity_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                retention_days INTEGER NOT NULL DEFAULT 7 CHECK (retention_days BETWEEN 1 AND 90)
+            );
+            INSERT OR IGNORE INTO activity_settings(id, retention_days) VALUES (1, 7);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_time ON monitor_checks(monitor_id, checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_checked_at ON monitor_checks(checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status, updated_at DESC);
@@ -165,8 +202,70 @@ def initialize(path: Path | None = None) -> None:
             CREATE INDEX IF NOT EXISTS idx_observations_device_time ON observations(device_id, observed_at DESC);
             CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_addresses_ip ON device_addresses(ip_address);
+            CREATE INDEX IF NOT EXISTS idx_activity_sessions_device_status ON activity_sessions(device_id, status, started_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC);
             """
         )
+        # Adicionar el hash del token sin romper bases creadas en iteraciones previas de la rama.
+        activity_session_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_sessions)")}
+        if "collector_token_hash" not in activity_session_columns:
+            db.execute("ALTER TABLE activity_sessions ADD COLUMN collector_token_hash TEXT NOT NULL DEFAULT ''")
+            db.execute("UPDATE activity_sessions SET status = 'expired' WHERE status = 'active'")
+        # Expand the early-branch activity schema while preserving already-imported rows.
+        activity_event_sql_row = db.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='activity_events'"
+        ).fetchone()
+        activity_event_sql = (activity_event_sql_row["sql"] or "") if activity_event_sql_row else ""
+        if any(event_type not in activity_event_sql for event_type in ("page_visit", "search_query", "email_metadata")):
+            db.execute("DROP TABLE IF EXISTS activity_events_migrated")
+            old_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
+            db.execute("""
+                CREATE TABLE activity_events_migrated (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER REFERENCES activity_sessions(id) ON DELETE SET NULL,
+                    device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                    observed_at TEXT NOT NULL,
+                    received_at TEXT NOT NULL,
+                    event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
+                    source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                    domain TEXT,
+                    destination_ip TEXT,
+                    destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
+                    protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                    app_name TEXT,
+                    page_url TEXT,
+                    search_engine TEXT,
+                    search_terms TEXT,
+                    email_provider TEXT,
+                    email_from TEXT,
+                    email_to TEXT,
+                    email_subject TEXT,
+                    blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
+                )
+            """)
+            core_columns = [
+                "id", "session_id", "device_id", "observed_at", "received_at", "event_type",
+                "source", "domain", "destination_ip", "destination_port", "protocol", "app_name",
+            ]
+            select_columns = [name if name in old_columns else "NULL" for name in core_columns]
+            extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
+            select_columns.extend(name if name in old_columns else "NULL" for name in extra_columns)
+            select_columns.append("blocked" if "blocked" in old_columns else "0")
+            target_columns = core_columns + list(extra_columns) + ["blocked"]
+            db.execute(
+                "INSERT INTO activity_events_migrated (" + ", ".join(target_columns) + ") "
+                "SELECT " + ", ".join(select_columns) + " FROM activity_events"
+            )
+            db.execute("DROP TABLE activity_events")
+            db.execute("ALTER TABLE activity_events_migrated RENAME TO activity_events")
+        else:
+            activity_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
+            for column in ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject"):
+                if column not in activity_columns:
+                    db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} TEXT")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC)")
         # Compatibility for existing v0.1 installations.
         existing_columns = {row[1] for row in db.execute("PRAGMA table_info(devices)")}
         if "manufacturer" not in existing_columns:
@@ -273,6 +372,35 @@ def get_device_addresses(device_id: int, path: Path | None = None) -> list[dict[
             (device_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_device_history(device_id: int, limit: int = 100, path: Path | None = None) -> dict[str, Any] | None:
+    """Devuelve observaciones históricas de un dispositivo, más recientes primero."""
+    bounded_limit = max(1, min(int(limit), 500))
+    with connect(path) as db:
+        device = db.execute(
+            "SELECT id, mac_address, ip_address, display_name, first_seen, last_seen FROM devices WHERE id = ?",
+            (device_id,),
+        ).fetchone()
+        if device is None:
+            return None
+        rows = db.execute(
+            """SELECT o.id, o.observed_at, o.ip_address, o.source, o.scan_id,
+                      s.source AS scan_source
+               FROM observations o
+               LEFT JOIN scans s ON s.id = o.scan_id
+               WHERE o.device_id = ?
+               ORDER BY o.observed_at DESC, o.id DESC
+               LIMIT ?""",
+            (device_id, bounded_limit),
+        ).fetchall()
+    return {
+        "device": dict(device),
+        "observations": [dict(row) for row in rows],
+        "count": len(rows),
+        "limit": bounded_limit,
+        "note": "Este historial refleja cuándo NetSentinel observó el dispositivo y sus direcciones; no registra páginas web ni todas las conexiones de red.",
+    }
 
 
 def get_events(path: Path | None = None, limit: int = 50) -> list[dict[str, Any]]:
@@ -545,9 +673,14 @@ def export_json(path: Path | None = None) -> str:
         monitor_checks = [dict(row) for row in db.execute("SELECT * FROM monitor_checks ORDER BY id").fetchall()]
         incidents = [dict(row) for row in db.execute("SELECT * FROM incidents ORDER BY id").fetchall()]
         notifications = [dict(row) for row in db.execute("SELECT * FROM notification_log ORDER BY id").fetchall()]
+        activity_sessions = [dict(row) for row in db.execute(
+            "SELECT id, device_id, source_mode, started_at, ends_at, stopped_at, status FROM activity_sessions ORDER BY id"
+        ).fetchall()]
+        activity_events = [dict(row) for row in db.execute("SELECT * FROM activity_events ORDER BY id").fetchall()]
+        activity_settings = [dict(row) for row in db.execute("SELECT * FROM activity_settings ORDER BY id").fetchall()]
     payload = {
         "generated_at": utc_now(),
-        "format": "netsentinel-data-export-v3",
+        "format": "netsentinel-data-export-v4",
         "restorable_backup": False,
         "devices": devices,
         "addresses": addresses,
@@ -558,6 +691,9 @@ def export_json(path: Path | None = None) -> str:
         "monitor_checks": monitor_checks,
         "incidents": incidents,
         "notification_log": notifications,
+        "activity_sessions": activity_sessions,
+        "activity_events": activity_events,
+        "activity_settings": activity_settings,
     }
     return json.dumps(payload, indent=2, ensure_ascii=False)
 

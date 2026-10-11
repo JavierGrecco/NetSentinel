@@ -1,32 +1,49 @@
-# Plan de implementación
+# Plan de implementación — estado auditable
 
-## Estado actual
+## Implementado en la rama
+- Inventario local, observaciones, monitores e incidentes.
+- DNS A/AAAA, PTR bajo demanda y configuración DNS local.
+- Historial por dispositivo, sesiones de actividad temporales y tokens de ingestión cuya versión en claro se muestra una sola vez.
+- Importación CSV de metadatos de red, páginas, búsquedas compatibles y metadatos de correo de auditoría autorizada.
+- Extensión Chromium visible y apagada al instalarse; registra navegación futura y búsquedas por URL compatibles, y exporta CSV.
+- Sanitización URL en cliente y servidor; rechazo de columnas de cuerpo de correo, contenido y adjuntos.
+- Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
 
-La versión 0.9.0 reúne inventario local, informes de monitorización e incidentes exportables a CSV, tendencias de latencia agregadas para 24 horas/7 días, duración estimada de incidentes, diagnóstico guiado, descubrimiento acotado a RFC 1918, lanzadores sencillos y copias SQLite consistentes.
+## Límites actuales
+- La extensión funciona solo en el navegador donde se instala y solo después de activarla; no recupera historia previa ni ve formularios, contenido, contraseñas o búsquedas internas de apps nativas.
+- La transferencia desde la extensión a la base central es manual mediante CSV.
+- El backend no captura tráfico por sí solo. No hay todavía adaptador para un router/AP ni agente de uso de aplicaciones.
+- El soporte de correo es importación manual de metadatos; no se conecta a proveedores, no lee bandejas y no guarda cuerpo ni adjuntos.
+- No puede garantizarse que un saneador URL detecte cualquier dato personal incrustado en rutas/parámetros desconocidos.
+- La CI y pruebas manuales siguen pendientes hasta que la matriz esté verde.
 
-### Completado
-- Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
-- Respaldo SQLite consistente descargable, con validación de integridad.
-- Lanzadores de un clic para Windows y macOS/Linux con instalación incremental.
-- Fuentes de descubrimiento separadas y seguimiento de direcciones.
-- Descubrimiento automático limitado a RFC 1918: hasta dos redes, máximo 254 direcciones por segmento, una sola lectura simultánea y exclusión de interfaces virtuales conocidas.
-- Métricas de alcance, respuestas ping y duración guardadas en el historial.
-- Controles de ping, TCP y HTTP/HTTPS.
-- Historial de resultados e incidentes que se deduplican.
-- Resúmenes de comprobaciones correctas/fallidas y latencia por ventana temporal, exportación CSV y secuencia visual de hasta 15 chequeos.
-- Duración estimada de incidentes, tiempos medios/máximos de recuperación y tendencias de latencia por hora/seis horas con exportación CSV.
-- Índice por fecha para acelerar los resúmenes del historial de monitorización.
-- Notificaciones opcionales por webhook HTTPS.
-- Protección de host/origen y cabeceras HTTP defensivas.
-- Pruebas automatizadas y CI multiplataforma para Python 3.10–3.14 en Windows, macOS y Linux.
+## P0 — Validación y estabilización
+1. Corregir fallos de CI y ejecutar tests, chequeo JS y empaquetado en la matriz.
+2. Validar migración SQLite conservando eventos existentes al ampliar esquema.
+3. Probar extensión Chrome/Edge: páginas normales, navegación SPA, motores, exclusiones, pausa, retención y exportación CSV.
+4. Importar el CSV a NetSentinel y comprobar eventos, fechas, términos y saneamiento.
+5. Probar metadatos de correo con CSV sintético autorizado; no incluir mensajes completos ni adjuntos.
+6. Probar instalación y flujo en Windows, macOS y Linux.
 
-### Próximas etapas
-1. Mejorar cobertura del descubrimiento, incluyendo estrategias para equipos que no responden a ICMP y una ruta IPv6 bien delimitada.
-2. Incorporar integraciones opcionales de DNS y DHCP.
-3. Agregar informes y visualización de tendencias.
-4. Evaluar integraciones con routers según sus APIs y permisos.
-5. Considerar un proxy separado solo tras definir su alcance y sus implicaciones de privacidad.
+## P1 — Experiencia de importación
+1. Previsualización de filas/campos antes de guardar y asociación de dispositivo.
+2. Deduplicación idempotente para evitar dobles importaciones.
+3. Filtros por tipo, dispositivo, fuente y fechas; borrado/exportación selectiva.
+4. Tests de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
+5. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 
-## Criterios de aceptación
+## P2 — Fuentes domésticas reales
+1. Elegir el modelo de router/AP/resolvedor y conseguir log de ejemplo o API documentada.
+2. Implementar parser read-only, fixtures, timeouts, atribución de fuente y límites.
+3. Diseñar sincronización en vivo con autenticación, autorización, rotación/revocación de tokens y transporte seguro.
+4. Añadir agente opcional de uso de aplicaciones/tiempo de pantalla por SO, sin keylogging ni captura de contenido.
 
-Cada función nueva debe tener pruebas automatizadas, mensajes de error comprensibles, documentación de permisos y tráfico que genera, y una opción de desactivación cuando corresponda. Las pruebas no deben depender de Internet, una red real ni privilegios de administrador.
+## P3 — Resto del plan conservado
+- DNS: timeout propio, pruebas multiplataforma y enriquecimiento opcional del inventario.
+- Infraestructura: adaptadores DHCP/router/SNMP y gestión segura de secretos.
+- Observabilidad: topología, métricas Prometheus y perfiles multired.
+- Extensión Firefox y otros navegadores compatibles.
+- Cualquier diagnóstico TLS futuro requiere diseño independiente; no debe capturar credenciales ni contenido privado.
+
+## Criterio de finalización
+Una tarea no se da por terminada solo por escribir el código o marcarla en el roadmap. Requiere tests verdes, empaquetado comprobado, pruebas manuales aplicables, documentación precisa y un mecanismo para desactivar/eliminar los datos.

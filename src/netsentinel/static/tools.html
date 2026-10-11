@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herramientas · NetSentinel</title>
+<style>
+:root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{margin:0;background:#101820;color:#e9f0f5;line-height:1.5}
+main{max-width:850px;margin:0 auto;padding:28px 20px}
+a{color:#8bd5ff}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+h1{margin:.4rem 0}.muted{color:#afbdc8}.panel{margin-top:24px;padding:22px;border:1px solid #344653;border-radius:14px;background:#17232d}
+label{display:block;font-weight:650;margin-bottom:8px}input{box-sizing:border-box;width:100%;padding:12px;border-radius:8px;border:1px solid #617584;background:#0d151c;color:inherit;font:inherit}
+button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#8bd5ff;color:#10202b;font-weight:750;font:inherit;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+.status{margin-top:16px;white-space:pre-wrap;overflow-wrap:anywhere}.results{display:grid;gap:8px;margin-top:14px}.address{padding:12px;border-radius:8px;background:#0d151c;border:1px solid #344653;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.tag{font-size:.85rem;color:#afbdc8}.warning{font-size:.92rem;color:#f0d7a4;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><div><div class="muted">Observabilidad local</div><h1>Herramientas de red</h1></div><a href="/">← Volver al inventario</a></div>
+<p class="muted">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</p>
+<section class="panel" aria-labelledby="dns-title">
+<h2 id="dns-title">Consulta DNS</h2>
+<p>Consulta las direcciones IPv4 e IPv6 que devuelve el resolvedor configurado en esta computadora.</p>
+<form id="dns-form">
+<label for="hostname">Nombre de host</label>
+<input id="hostname" name="hostname" maxlength="253" autocomplete="url" placeholder="ejemplo.com" required>
+<button id="submit" type="submit">Consultar DNS</button>
+</form>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+<div id="results" class="results"></div>
+<p class="warning">La consulta es de solo lectura y se realiza al enviarla. Una resolución correcta no demuestra que un dispositivo sea legítimo ni confiable. No ingreses datos privados.</p>
+</section>
+<section class="panel" aria-labelledby="ptr-title">
+<h2 id="ptr-title">DNS inverso (PTR)</h2>
+<p>Consulta si el resolvedor del sistema publica un nombre asociado a una dirección IP concreta.</p>
+<form id="ptr-form">
+<label for="address">Dirección IPv4 o IPv6</label>
+<input id="address" name="address" maxlength="64" autocomplete="off" inputmode="url" placeholder="192.0.2.10" required>
+<button id="ptr-submit" type="submit">Consultar PTR</button>
+</form>
+<div id="ptr-status" class="status" role="status" aria-live="polite"></div>
+<p class="warning">Un PTR puede faltar o estar desactualizado. El nombre devuelto no confirma quién controla la dirección ni que el equipo sea confiable.</p>
+</section>
+<section class="panel" aria-labelledby="config-title">
+<h2 id="config-title">DNS configurado en esta computadora</h2>
+<p>Vista de solo lectura de los servidores DNS que el sistema expone a NetSentinel. No se cambia ninguna configuración.</p>
+<div id="config-status" class="status" role="status" aria-live="polite">Leyendo configuración local…</div>
+<div id="config-servers" class="results"></div>
+<p class="warning">La configuración puede variar por interfaz, VPN o DNS dividido. Esta vista es orientativa y no necesariamente refleja todas las reglas activas del sistema.</p>
+</section>
+</main>
+<script>
+(() => {
+  const configStatus = document.getElementById("config-status");
+  const configServers = document.getElementById("config-servers");
+  fetch("/api/tools/dns/configuration", { headers: { "Accept": "application/json" }, cache: "no-store" })
+    .then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo leer la configuración DNS.");
+      configStatus.textContent = data.detected
+        ? data.count + " servidor(es) detectado(s) · Fuente: " + data.source + " · Sistema: " + data.platform
+        : "No se detectaron servidores DNS en la fuente consultada. Sistema: " + data.platform;
+      for (const server of data.servers) {
+        const row = document.createElement("div");
+        row.className = "address";
+        const value = document.createElement("strong");
+        value.textContent = server;
+        row.append(value);
+        configServers.append(row);
+      }
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = data.note;
+      configServers.append(note);
+    })
+    .catch(error => { configStatus.textContent = error instanceof Error ? error.message : "No se pudo leer la configuración DNS."; });
+
+  const form = document.getElementById("dns-form");
+  const input = document.getElementById("hostname");
+  const button = document.getElementById("submit");
+  const status = document.getElementById("status");
+  const results = document.getElementById("results");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const hostname = input.value.trim();
+    if (!hostname) return;
+    button.disabled = true;
+    status.textContent = "Consultando el resolvedor del sistema…";
+    results.replaceChildren();
+    try {
+      const response = await fetch("/api/tools/dns/lookup?hostname=" + encodeURIComponent(hostname), {
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta.");
+      status.textContent = data.count
+        ? "Se encontraron " + data.count + " dirección(es) para " + data.hostname + "."
+        : "El resolvedor no devolvió direcciones para ese nombre.";
+      for (const item of data.addresses) {
+        const row = document.createElement("div");
+        row.className = "address";
+        const address = document.createElement("strong");
+        address.textContent = item.ip;
+        const family = document.createElement("span");
+        family.className = "tag";
+        family.textContent = item.family;
+        row.append(address, family);
+        results.append(row);
+      }
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  const ptrForm = document.getElementById("ptr-form");
+  const addressInput = document.getElementById("address");
+  const ptrButton = document.getElementById("ptr-submit");
+  const ptrStatus = document.getElementById("ptr-status");
+  ptrForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const address = addressInput.value.trim();
+    if (!address) return;
+    ptrButton.disabled = true;
+    ptrStatus.textContent = "Consultando DNS inverso…";
+    try {
+      const response = await fetch("/api/tools/dns/reverse?address=" + encodeURIComponent(address), {
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta PTR.");
+      ptrStatus.textContent = data.ip + " → " + data.hostname + " (registro PTR) · " + (data.cache_hit ? "resultado en caché" : "consulta nueva") + (data.resolved_at ? " · resuelto: " + data.resolved_at : "");
+    } catch (error) {
+      ptrStatus.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta PTR.";
+    } finally {
+      ptrButton.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
