@@ -72,3 +72,48 @@ def test_dns_reverse_api_returns_not_found_when_ptr_is_absent(monkeypatch):
         response = client.get("/api/tools/dns/reverse", params={"address": "192.0.2.99"})
     assert response.status_code == 404
     assert "PTR" in response.json()["detail"]
+
+
+def test_device_dns_reverse_uses_latest_observed_address_on_demand(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    monkeypatch.setattr(
+        main_module.database,
+        "get_device_addresses",
+        lambda device_id: [
+            {"ip_address": "192.0.2.10", "last_seen": "2026-10-11T10:00:00Z"},
+            {"ip_address": "192.0.2.9", "last_seen": "2026-10-10T10:00:00Z"},
+        ] if device_id == 7 else None,
+    )
+    calls = []
+    monkeypatch.setattr(
+        main_module,
+        "cached_reverse_lookup_ip",
+        lambda address: calls.append(address) or {
+            "ip": address, "hostname": "router.example.test", "record_type": "PTR",
+            "cache_hit": False, "source": "system-resolver",
+        },
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/devices/7/dns-reverse")
+    assert response.status_code == 200
+    assert response.json()["ip"] == "192.0.2.10"
+    assert response.json()["device_id"] == 7
+    assert calls == ["192.0.2.10"]
+
+
+def test_device_dns_reverse_returns_404_for_unknown_device(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    monkeypatch.setattr(main_module.database, "get_device_addresses", lambda _device_id: None)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/devices/9999/dns-reverse")
+    assert response.status_code == 404
+    assert "dispositivo" in response.json()["detail"].lower()
+
+
+def test_device_dns_reverse_returns_404_when_device_has_no_addresses(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    monkeypatch.setattr(main_module.database, "get_device_addresses", lambda _device_id: [])
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/devices/7/dns-reverse")
+    assert response.status_code == 404
+    assert "direcciones" in response.json()["detail"].lower()
