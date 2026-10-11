@@ -30,7 +30,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "La observación proviene de una interfaz Apple de enlace local" in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
-        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v3"
+        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
 
 
 def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
