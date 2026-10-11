@@ -28,7 +28,7 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [x] Consultar resolución inversa PTR para una IP ingresada explícitamente.
 - [x] Mostrar una lectura de configuración DNS local, de solo lectura, con fuente y límites explícitos.
 - [x] Diferenciar nombre no encontrado, fallo temporal del resolvedor y error general en la API y los mensajes de consulta.
-- [ ] Mantener límites de tiempo para consultas DNS y pruebas deterministas.
+- [ ] Mantener límites de tiempo independientes para consultas DNS y pruebas deterministas.\n- [x] Reducir consultas PTR repetidas con caché en memoria acotada, fecha de resolución y procedencia explícita.
 
 ### 0.12 — Inventario enriquecido
 - [ ] Añadir nombres DNS inversos opcionales al inventario, con caché y sin bloquear la carga de la tabla.
