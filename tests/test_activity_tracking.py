@@ -273,8 +273,8 @@ def test_microsoft_message_trace_csv_aliases_import_metadata(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
     csv_data = (
-        "receivedDateTime,senderAddress,recipientAddress,subject,status,messageId,size\\n"
-        f'{stamp},parent@example.com,child@example.com,"Consulta escolar",Delivered,"<abc@example.com>",3456\\n'
+        "receivedDateTime,senderAddress,recipientAddress,subject,status,messageId,size\n"
+        f'{stamp},parent@example.com,child@example.com,"Consulta escolar",Delivered,"<abc@example.com>",3456\n'
     )
     response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
     assert response.status_code == 200, response.text
@@ -290,8 +290,8 @@ def test_google_workspace_email_log_csv_aliases_import_metadata(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
     csv_data = (
-        "Subject or Message ID,Date,Sender,Recipient\\n"
-        f'"Consulta de tarea",{stamp},parent@example.com,child@example.com\\n'
+        "Subject or Message ID,Date,Sender,Recipient\n"
+        f'"Consulta de tarea",{stamp},parent@example.com,child@example.com\n'
     )
     response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
     assert response.status_code == 200, response.text
