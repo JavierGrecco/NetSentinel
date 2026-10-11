@@ -545,12 +545,21 @@ def export_json(path: Path | None = None) -> str:
 
 
 def export_csv(path: Path | None = None) -> str:
+    """Exporta el inventario y todas las direcciones conocidas en un CSV legible."""
     rows = list_devices(path)
     buffer = io.StringIO(newline="")
     fields = [
-        "id", "display_name", "ip_address", "mac_address", "manufacturer", "mac_locally_administered",
+        "id", "display_name", "ip_address", "addresses", "address_count",
+        "mac_address", "manufacturer", "mac_locally_administered",
         "interface", "trusted", "first_seen", "last_seen", "notes",
     ]
+    for device in rows:
+        addresses = device.get("addresses") or []
+        device["address_count"] = len(addresses)
+        device["addresses"] = "; ".join(
+            f"{item['ip_address']} [interfaz: {item.get('interface') or '—'}; origen: {item.get('source') or '—'}]"
+            for item in addresses
+        )
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(rows)

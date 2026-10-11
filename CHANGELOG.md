@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.4 — 11 de octubre de 2026
+
+- Amplía la exportación CSV con todas las direcciones IP observadas por dispositivo, su cantidad, interfaz y procedencia.
+- Agrega cobertura para comprobar que las direcciones IPv4 e IPv6 secundarias no se pierdan en el CSV.
+
 ## 0.6.3 — 11 de octubre de 2026
 
 - Incluye el informe de descubrimiento como objeto JSON en las exportaciones, igual que en la API, en lugar de exportar el JSON serializado dentro de una cadena.

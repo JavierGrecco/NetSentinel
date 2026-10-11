@@ -32,7 +32,17 @@ def test_trust_update_and_exports(tmp_path: Path):
     assert updated["trusted"] is True
     assert updated["display_name"] == "Mi portátil"
     assert database.get_summary(db)["devices_trusted"] == 1
+    # CSV should contain the full observed address list, not just the primary IP.
+    database.record_scan([
+        Neighbor("192.168.10.11", "11:22:33:44:55:66", "wlan0"),
+        Neighbor("fe80::1", "11:22:33:44:55:66", "wlan0", "ndp"),
+    ], path=db)
+    csv_rows = list(__import__("csv").DictReader(__import__("io").StringIO(database.export_csv(db))))
+    csv_device = next(item for item in csv_rows if item["mac_address"] == "11:22:33:44:55:66")
     assert "Mi portátil" in database.export_csv(db)
+    assert csv_device["address_count"] == "2"
+    assert "192.168.10.11" in csv_device["addresses"]
+    assert "fe80::1" in csv_device["addresses"]
     export = __import__("json").loads(database.export_json(db))
     assert export["restorable_backup"] is False
     assert export["devices"][0]["display_name"] == "Mi portátil"
