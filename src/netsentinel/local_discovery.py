@@ -20,6 +20,12 @@ MAX_HOSTS_PER_NETWORK = 254
 MAX_WORKERS = 24
 PING_TIMEOUT_SECONDS = 1.6
 
+# Solo redes LAN privadas RFC 1918; excluye rangos especiales, documentación y CGNAT.
+_RFC1918_NETWORKS = tuple(
+    ipaddress.IPv4Network(value)
+    for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
+
 # Interfaces virtuales, túneles y enlaces entre dispositivos Apple no son redes LAN
 # físicas adecuadas para un descubrimiento general del hogar/oficina.
 _EXCLUDED_PREFIXES = (
@@ -41,10 +47,11 @@ def detect_scan_subnets(
     interface_addresses: dict | None = None,
     interface_stats: dict | None = None,
 ) -> list[ScanSubnet]:
-    """Detecta como máximo dos subredes privadas activas sin pedir datos al usuario.
+    """Detecta como máximo dos subredes RFC 1918 activas sin pedir datos al usuario.
 
     Para una red mayor que /24 solo se examina el bloque /24 donde está la IP local.
-    No incluye loopback, link-local, túneles ni interfaces virtuales conocidas.
+    Solo admite 10/8, 172.16/12 y 192.168/16; excluye rangos especiales,
+    loopback, link-local, túneles e interfaces virtuales conocidas.
     """
     addresses = interface_addresses if interface_addresses is not None else psutil.net_if_addrs()
     stats = interface_stats if interface_stats is not None else psutil.net_if_stats()
@@ -66,7 +73,7 @@ def detect_scan_subnets(
             try:
                 local_ip = ipaddress.IPv4Address(entry.address)
                 if (
-                    not local_ip.is_private
+                    not any(local_ip in network for network in _RFC1918_NETWORKS)
                     or local_ip.is_loopback
                     or local_ip.is_link_local
                     or local_ip.is_multicast

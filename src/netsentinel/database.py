@@ -69,7 +69,8 @@ def initialize(path: Path | None = None) -> None:
                 finished_at TEXT NOT NULL,
                 source TEXT NOT NULL,
                 devices_found INTEGER NOT NULL DEFAULT 0,
-                errors_json TEXT NOT NULL DEFAULT '[]'
+                errors_json TEXT NOT NULL DEFAULT '[]',
+                discovery_json TEXT NOT NULL DEFAULT '{}'
             );
             CREATE TABLE IF NOT EXISTS observations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,6 +161,9 @@ def initialize(path: Path | None = None) -> None:
             db.execute(
                 "ALTER TABLE devices ADD COLUMN mac_locally_administered INTEGER NOT NULL DEFAULT 0"
             )
+        scan_columns = {row[1] for row in db.execute("PRAGMA table_info(scans)")}
+        if "discovery_json" not in scan_columns:
+            db.execute("ALTER TABLE scans ADD COLUMN discovery_json TEXT NOT NULL DEFAULT '{}'")
         # Backfill known address history from existing observations. The current device IP
         # is also inserted because some older installations may have no observation row.
         db.execute(
@@ -247,6 +251,12 @@ def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]
         except (TypeError, json.JSONDecodeError):
             item["errors"] = []
             item.pop("errors_json", None)
+        try:
+            report = json.loads(item.pop("discovery_json"))
+            item["discovery"] = report if isinstance(report, dict) else {}
+        except (TypeError, json.JSONDecodeError):
+            item["discovery"] = {}
+            item.pop("discovery_json", None)
         items.append(item)
     return items
 
@@ -292,10 +302,12 @@ def record_scan(
     neighbors: list[Neighbor],
     errors: list[str] | None = None,
     path: Path | None = None,
+    discovery: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Registra una lectura, múltiples IP por MAC y cambios IPv4 confirmables."""
     started = utc_now()
     errors = errors or []
+    discovery = discovery or {}
     # Duplicate source output is common when fallback commands overlap.
     deduplicated: dict[tuple[str, str], Neighbor] = {}
     for neighbor in neighbors:
@@ -313,8 +325,8 @@ def record_scan(
 
     with connect(path) as db:
         cursor = db.execute(
-            "INSERT INTO scans(started_at, finished_at, source, devices_found, errors_json) VALUES (?, ?, ?, ?, ?)",
-            (started, started, source, len(grouped), json.dumps(errors, ensure_ascii=False)),
+            "INSERT INTO scans(started_at, finished_at, source, devices_found, errors_json, discovery_json) VALUES (?, ?, ?, ?, ?, ?)",
+            (started, started, source, len(grouped), json.dumps(errors, ensure_ascii=False), json.dumps(discovery, ensure_ascii=False)),
         )
         scan_id = int(cursor.lastrowid)
 

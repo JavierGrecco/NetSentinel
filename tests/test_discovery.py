@@ -49,6 +49,14 @@ def test_parse_ipv6_neighbor_and_preserve_source():
     assert result[0].source == "ip-neigh-ipv6"
 
 
+def test_parser_ignores_apple_peer_to_peer_interfaces():
+    output = """fe80::c444:b4ff:fe6a:ddc0 dev awdl0 lladdr c6:44:b4:6a:dd:c0 STALE
+fe80::1 dev llw0 lladdr 00:11:22:33:44:55 STALE
+192.168.1.1 dev en0 lladdr aa:bb:cc:dd:ee:ff REACHABLE"""
+    result = parse_neighbor_output(output, "Darwin")
+    assert [(item.ip_address, item.interface) for item in result] == [("192.168.1.1", "en0")]
+
+
 def test_parser_ignores_multicast_and_incomplete_neighbors():
     output = "192.168.1.10 dev eth0 lladdr 01:00:5e:00:00:01 REACHABLE\n192.168.1.11 dev eth0 FAILED\n"
     assert parse_neighbor_output(output, "Linux") == []

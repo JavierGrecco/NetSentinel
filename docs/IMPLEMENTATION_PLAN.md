@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La versión 0.5 reúne inventario local, monitorización, diagnóstico guiado y búsqueda automática y acotada de subredes IPv4 privadas.
+La versión 0.6 reúne inventario local, monitorización, diagnóstico guiado y búsqueda automática acotada a redes RFC 1918, con métricas de cada descubrimiento guardadas en el historial.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual y exportación.

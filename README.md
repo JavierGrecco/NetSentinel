@@ -6,7 +6,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 
 ## Qué podés hacer
 
-- Detectar automáticamente subredes IPv4 privadas activas y buscar dispositivos en ellas, sin que tengas que conocer el rango de IPs.
+- Detectar automáticamente subredes IPv4 privadas RFC 1918 activas (10/8, 172.16/12 y 192.168/16) y buscar dispositivos en ellas, sin que tengas que conocer el rango de IPs.
 - Consultar dispositivos con sus direcciones IP y MAC, según lo que la red permita observar.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
@@ -51,7 +51,7 @@ Se abrirá el panel en **http://127.0.0.1:8765**. Si no se abre automáticamente
 
 ## Descubrimiento de la red
 
-En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSentinel detecta automáticamente las subredes IPv4 privadas de interfaces activas compatibles; no necesitás escribir una dirección IP ni calcular una máscara de red. Para limitar el tráfico, busca como máximo dos subredes y hasta 254 direcciones por cada una. Después consulta la tabla local de vecinos de macOS, Windows o Linux y guarda las entradas que coinciden con las redes detectadas.
+En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSentinel detecta automáticamente las subredes IPv4 privadas RFC 1918 (10/8, 172.16/12 y 192.168/16) de interfaces activas compatibles; no necesitás escribir una dirección IP ni calcular una máscara de red. Para limitar el tráfico, busca como máximo dos subredes y hasta 254 direcciones por cada una. Después consulta la tabla local de vecinos de macOS, Windows o Linux y guarda las entradas que coinciden con las redes detectadas. El historial conserva también el rango, la cantidad de direcciones consultadas y las respuestas a ping, para comparar lecturas después de que desaparezca el aviso temporal.
 
 Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
 

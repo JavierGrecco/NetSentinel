@@ -28,6 +28,17 @@ def test_detects_private_ipv4_subnet_without_user_input():
     assert result[0].interface == "en0"
 
 
+def test_only_rfc1918_ranges_are_eligible_for_discovery():
+    addresses = {
+        "en0": [_entry("192.0.2.10")],       # Documentation range
+        "en1": [_entry("100.64.1.10")],      # Carrier-grade NAT shared space
+        "en2": [_entry("198.18.0.10")],      # Benchmarking range
+        "en3": [_entry("203.0.113.10")],     # Documentation range
+    }
+    stats = {name: SimpleNamespace(isup=True) for name in addresses}
+    assert detect_scan_subnets(addresses, stats) == []
+
+
 def test_large_subnet_is_limited_to_local_slash_24():
     result = detect_scan_subnets(
         {"en0": [_entry("10.42.17.8", "255.255.0.0")]},

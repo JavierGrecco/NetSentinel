@@ -67,7 +67,10 @@ def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path)
         assert response.json()["addresses_found"] == 1
         assert response.json()["discovery"]["networks"][0]["network"] == "192.168.5.0/24"
         assert response.json()["discovery"]["addresses_checked"] == 254
-        assert client.get("/api/scans").json()[0]["source"] == "automatic-local-network"
+        history = client.get("/api/scans").json()[0]
+        assert history["source"] == "automatic-local-network"
+        assert history["discovery"]["addresses_checked"] == 254
+        assert history["discovery"]["ping_responses"] == 1
         assert client.get("/api/health").json()["version"] == __version__
 
 

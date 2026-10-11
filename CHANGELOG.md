@@ -1,5 +1,14 @@
 # Historial de cambios
 
+## 0.6.0 — 11 de octubre de 2026
+
+- Restringe el descubrimiento automático a redes privadas RFC 1918 (10/8, 172.16/12 y 192.168/16), evitando rangos especiales y de documentación.
+- Guarda el informe de cada descubrimiento en el historial: subredes, interfaces, direcciones consultadas y respuestas ping.
+- Muestra las métricas del descubrimiento en el panel, no solo en el aviso temporal.
+- Omite entradas de las interfaces de enlace local Apple AWDL/LLW en nuevas lecturas y etiqueta los registros históricos que ya existían.
+- Agrega `httpx2` al entorno de pruebas para evitar la advertencia deprecada de Starlette TestClient.
+- Añade pruebas para rangos de red elegibles, filtrado de interfaces virtuales y migración de bases SQLite existentes.
+
 ## 0.5.1 — 11 de octubre de 2026
 
 - Corrige el mensaje de inicio para aclarar que NetSentinel no sondea la red al arrancar y que el descubrimiento activo se inicia solo desde el panel.

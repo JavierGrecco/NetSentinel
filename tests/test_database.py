@@ -40,6 +40,23 @@ def test_trust_update_and_exports(tmp_path: Path):
     assert len(export["observations"]) == 1
 
 
+def test_scan_discovery_report_is_persisted(tmp_path: Path):
+    db = tmp_path / "test.sqlite3"
+    database.initialize(db)
+    report = {
+        "networks": [{"network": "192.168.10.0/24", "interface": "en0", "local_address": "192.168.10.8", "range_limited": False}],
+        "addresses_checked": 254,
+        "ping_responses": 4,
+        "scope": "fixture",
+    }
+    database.record_scan(
+        [Neighbor("192.168.10.1", "AA:BB:CC:DD:EE:FF", "en0", "automatic-local-network")],
+        path=db,
+        discovery=report,
+    )
+    assert database.get_scans(path=db)[0]["discovery"] == report
+
+
 def test_update_missing_device_returns_none(tmp_path: Path):
     db = tmp_path / "test.sqlite3"
     database.initialize(db)
@@ -94,6 +111,11 @@ def test_migrates_v01_device_schema(tmp_path: Path):
              ip_address TEXT NOT NULL, interface TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
              trusted INTEGER NOT NULL DEFAULT 0, display_name TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT ''
            );
+           CREATE TABLE scans (
+             id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT NOT NULL,
+             finished_at TEXT NOT NULL, source TEXT NOT NULL,
+             devices_found INTEGER NOT NULL DEFAULT 0, errors_json TEXT NOT NULL DEFAULT '[]'
+           );
            INSERT INTO devices(mac_address, ip_address, first_seen, last_seen)
            VALUES ('00:11:22:33:44:55', '192.168.1.2', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00');"""
     )
@@ -104,6 +126,10 @@ def test_migrates_v01_device_schema(tmp_path: Path):
     assert device["manufacturer"] is None
     assert device["mac_locally_administered"] is False
     assert device["addresses"][0]["ip_address"] == "192.168.1.2"
+    with database.connect(db) as migrated:
+        columns = {row[1] for row in migrated.execute("PRAGMA table_info(scans)")}
+    assert "discovery_json" in columns
+    assert database.get_scans(path=db) == []
 
 
 def test_uses_local_oui_file_and_records_lookup_provenance(tmp_path: Path, monkeypatch):

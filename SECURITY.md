@@ -1,22 +1,27 @@
 # Seguridad y límites
 
-## Alcance de la versión inicial
+## Alcance de la versión 0.6.0
 
-NetSentinel v0.2 es una herramienta de observación local. La lectura de tablas de vecinos no es un escaneo de todos los equipos: contiene solo entradas que el sistema ha aprendido. v0.2 conserva varias direcciones por MAC y puede leer ARP, `ip neigh` y NDP según el sistema operativo. Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión.
+NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y los datos se guardan en SQLite. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo está separado y comienza únicamente cuando el usuario lo solicita desde el panel.
+
+El descubrimiento activo detecta interfaces compatibles y se limita a subredes privadas RFC 1918: `10.0.0.0/8`, `172.16.0.0/12` y `192.168.0.0/16`. Examina como máximo dos subredes y, si una es mayor que /24, reduce el alcance a un /24. Envía como máximo un ping por dirección dentro de esos límites. No escanea Internet ni cambia la configuración de ningún dispositivo. Algunos equipos pueden no responder; los resultados no garantizan un inventario completo.
+
+Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión. Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas. Los registros históricos se conservan para no borrar datos del usuario automáticamente.
 
 ## Operación segura
 
-- Ejecutar en la computadora donde está el usuario y mantener el host en `127.0.0.1`.
-- No exponer el servidor a una interfaz de red sin autenticación, protección CSRF/origen, configuración HTTPS apropiada y revisión de seguridad.
-- El diagnóstico genera tráfico de salida únicamente cuando se solicita desde el panel.
-- Los comandos de lectura son listas fijas de argumentos; los valores del inventario no se ejecutan como comandos. Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local.
-- El archivo SQLite puede contener metadatos de red. Proteger la cuenta de usuario, evitar compartir copias sin revisarlas y eliminar la base cuando ya no sea necesaria.
-- No utilizar en redes sin autorización.
+- Mantener el host de escucha en `127.0.0.1`. No exponer el panel a otras interfaces sin autenticación, protección CSRF/origen, HTTPS y una revisión de seguridad específica.
+- El descubrimiento local genera tráfico únicamente al solicitarlo desde el panel. El diagnóstico y las comprobaciones de monitorización también generan tráfico cuando se ejecutan.
+- Los comandos de lectura y ping usan argumentos separados; los datos del inventario nunca se ejecutan como comandos.
+- Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local. No se envían direcciones MAC a un proveedor externo para resolver fabricantes.
+- El archivo SQLite puede contener metadatos de red. Protegé la cuenta de usuario, revisá las exportaciones antes de compartirlas y conservá copias de seguridad seguras.
+- Usá NetSentinel únicamente en redes y sobre objetivos que administrás o tenés autorización para revisar.
+- Los webhooks externos están deshabilitados por defecto. Si configurás uno, protegé su URL como un secreto y usá HTTPS.
 
-## Funciones futuras que exigen revisión específica
+## Funciones que exigen revisión específica
 
-El escaneo activo, las consultas SNMP, las modificaciones de routers/DNS y la interceptación de proxy deben ser módulos explícitos. Antes de habilitarlos, hay que definir autorización, límites de tasa, auditoría, almacenamiento de secretos, protección de credenciales, reversión de cambios y tratamiento de datos sensibles.
+Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloqueo de dispositivos y la interceptación de proxy requieren una revisión de autorización, alcance, límites de tasa, auditoría, almacenamiento de secretos, reversión de cambios y tratamiento de datos sensibles antes de implementarse.
 
 ## Reporte de vulnerabilidades
 
-Hasta configurar un canal dedicado, no publiques credenciales, tokens ni detalles explotables en issues públicos. Abrí un issue con una descripción mínima y sin secretos; se definirá un proceso privado de reporte antes de distribuir versiones estables.
+No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.

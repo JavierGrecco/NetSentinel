@@ -17,6 +17,8 @@ from .vendor import is_unicast
 
 _MAC = r"(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}"
 _MAC_RE = re.compile(rf"^{_MAC}$")
+# macOS peer-to-peer link interfaces are not ordinary home/office LAN inventory.
+_NON_LAN_INTERFACE_PREFIXES = ("awdl", "llw")
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +74,8 @@ def parse_neighbor_output(
             if not mac or not _valid_ip(ip):
                 continue
             interface = match.groupdict().get("iface")
+            if interface and interface.lower().startswith(_NON_LAN_INTERFACE_PREFIXES):
+                continue
             item_source = detected_source if source == "system-neighbor-table" else source
             neighbor = Neighbor(ip, mac, interface, item_source)
             key = (ip, mac)

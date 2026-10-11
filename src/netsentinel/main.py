@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="NetSentinel",
-    description="Inventario pasivo, lista de confianza y eventos de red local.",
+    description="Inventario local, descubrimiento bajo demanda, lista de confianza, eventos y diagnóstico de red."
     version=__version__,
     docs_url="/api/docs",
     redoc_url=None,
@@ -118,7 +118,7 @@ def device_addresses(device_id: int) -> list[dict]:
 @app.post("/api/scan")
 def scan() -> dict:
     neighbors, errors, discovery = discover_local_network()
-    result = database.record_scan(neighbors, errors)
+    result = database.record_scan(neighbors, errors, discovery=discovery)
     result["discovery"] = discovery
     result["message"] = (
         "Se completó el descubrimiento automático de las subredes locales indicadas."
