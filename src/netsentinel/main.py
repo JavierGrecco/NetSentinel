@@ -22,6 +22,7 @@ from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
 from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
 from .dns_config import get_dns_configuration
+from . import activity_tracking
 
 
 _supervisor = MonitorSupervisor()
@@ -105,6 +106,7 @@ app = FastAPI(
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
 _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
+_ACTIVITY_STATIC = _STATIC_DIR / "activity.html"
 
 
 @app.middleware("http")
@@ -162,6 +164,11 @@ def index() -> FileResponse:
 @app.get("/monitors", include_in_schema=False)
 def monitors_page() -> FileResponse:
     return FileResponse(_MONITORS_STATIC)
+
+
+@app.get("/activity", include_in_schema=False)
+def activity_page() -> FileResponse:
+    return FileResponse(_ACTIVITY_STATIC)
 
 
 @app.get("/tools", include_in_schema=False)
