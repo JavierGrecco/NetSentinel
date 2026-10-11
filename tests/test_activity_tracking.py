@@ -31,11 +31,13 @@ def device_id(client):
 def test_activity_page_and_empty_state_are_available(client):
     page = client.get("/activity")
     assert page.status_code == 200
+    assert page.headers["cache-control"] == "no-store"
     assert "Actividad familiar" in page.text
     assert "no captura tráfico por sí mismo" in page.text
 
     response = client.get("/api/activity")
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     payload = response.json()
     assert payload["sessions"] == []
     assert payload["events"] == []
