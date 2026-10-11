@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
+- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.\n- Añade una ruta PTR por dispositivo bajo demanda, sin modificar los datos del inventario y con manejo explícito de dispositivos inexistentes o sin direcciones.
 - Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
 - Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.
 - Incorpora una interfaz PTR que valida la IP ingresada y distingue errores del resolvedor.\n- Muestra los servidores DNS locales detectables en modo de solo lectura, con fuente y advertencias sobre VPN, split DNS y diferencias entre sistemas.
