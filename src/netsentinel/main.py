@@ -20,7 +20,7 @@ from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
-from .dns_tools import lookup_hostname, reverse_lookup_ip
+from .dns_tools import DNSLookupError, lookup_hostname, reverse_lookup_ip
 
 
 _supervisor = MonitorSupervisor()
@@ -175,6 +175,9 @@ def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
         return lookup_hostname(hostname)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=502, detail="No se pudo resolver el nombre con el DNS configurado en el sistema.") from exc
 
@@ -186,6 +189,9 @@ def dns_reverse_lookup(address: str = Query(min_length=1, max_length=64)) -> dic
         return reverse_lookup_ip(address)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR con el DNS configurado en el sistema.") from exc
 
