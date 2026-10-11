@@ -8,6 +8,7 @@
 - Amplía el modelo de actividad con `page_visit` y `search_query`; las URLs se normalizan para quitar fragmentos y parámetros sensibles/de seguimiento conocidos, mientras los términos de búsqueda se guardan separados.
 - Extiende la CI para comprobar la sintaxis JavaScript de la extensión y la presencia de sus archivos.
 - Añade importación de metadatos de correo desde CSV de auditoría autorizado (fecha, proveedor, emisor, destinatarios y asunto opcional); se rechazan los campos de cuerpo, mensaje, contenido y adjuntos.
+- Normaliza alias comunes de cabeceras en exportaciones CSV de Google Workspace Email Log Search y Microsoft 365 Message Trace; el adaptador/API nativo de cada proveedor sigue pendiente.
 - Persiste eventos DNS, conexiones, SNI visible, uso de aplicaciones reportado por una fuente compatible y bloqueos reportados; no instala un capturador automático ni un agente.
 - Añade retención configurable entre 1 y 90 días, un resumen de dominios observados y límites de 1.000 eventos/1 MB por importación CSV.
 - Rechaza URLs/rutas y campos no admitidos, incluidos usuario, contraseña, tokens, cookies y payloads; el token de ingestión se almacena como hash.
