@@ -16,7 +16,7 @@ from threading import Event, Thread
 from typing import Any
 from urllib.parse import urlsplit
 
-from . import database
+from . import __version__, database
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
 
         request = urllib.request.Request(
             target,
-            headers={"User-Agent": "NetSentinel/0.3", "Accept": "*/*"},
+            headers={"User-Agent": f"NetSentinel/{__version__}", "Accept": "*/*"},
             method="GET",
         )
         try:
@@ -183,7 +183,7 @@ def send_webhook(transition: dict[str, Any]) -> tuple[bool, str]:
     request = urllib.request.Request(
         webhook_url,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": "NetSentinel/0.3"},
+        headers={"Content-Type": "application/json", "User-Agent": f"NetSentinel/{__version__}"},
         method="POST",
     )
     try:

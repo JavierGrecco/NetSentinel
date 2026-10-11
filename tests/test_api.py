@@ -1,7 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from netsentinel import database
+from importlib.metadata import version as installed_version
+
+from netsentinel import __version__, database
 from netsentinel.main import app
 from netsentinel.discovery import Neighbor
 
@@ -64,4 +66,8 @@ def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path)
         assert response.json()["devices_found"] == 1
         assert response.json()["addresses_found"] == 1
         assert client.get("/api/scans").json()[0]["source"] == "fixture"
-        assert client.get("/api/health").json()["version"] == "0.3.0"
+        assert client.get("/api/health").json()["version"] == __version__
+
+
+def test_installed_package_version_matches_runtime():
+    assert installed_version("netsentinel") == __version__

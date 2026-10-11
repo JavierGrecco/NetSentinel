@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,3 +30,47 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: Run tests
         run: python -m pytest
+
+  package:
+    name: Wheel metadata and static assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build wheel
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Verify wheel version and interface files
+        run: |
+          python - <<'PY'
+          from email.parser import Parser
+          from pathlib import Path
+          import glob
+          import zipfile
+
+          wheels = glob.glob("dist/*.whl")
+          assert len(wheels) == 1, f"Expected one wheel, found: {wheels}"
+          source = Path("src/netsentinel/__init__.py").read_text(encoding="utf-8")
+          version_line = next(line for line in source.splitlines() if line.startswith("__version__"))
+          expected_version = version_line.split("=", 1)[1].strip().strip(chr(34) + chr(39))
+
+          with zipfile.ZipFile(wheels[0]) as wheel:
+              names = set(wheel.namelist())
+              metadata_path = next(name for name in names if name.endswith(".dist-info/METADATA"))
+              metadata = Parser().parsestr(wheel.read(metadata_path).decode("utf-8"))
+              assert metadata["Version"] == expected_version, (
+                  f"Package version {metadata['Version']} != source version {expected_version}"
+              )
+              required = {
+                  "netsentinel/static/index.html",
+                  "netsentinel/static/monitors.html",
+                  "netsentinel/static/styles.css",
+                  "netsentinel/static/monitors.css",
+              }
+              missing = required - names
+              assert not missing, f"Missing UI assets in wheel: {sorted(missing)}"
+          print(f"Validated NetSentinel {expected_version}: HTML and CSS included.")
+          PY

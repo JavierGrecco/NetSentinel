@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netsentinel"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Panel local para observabilidad, inventario y diagnóstico de redes"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "netsentinel.__version__"}
 
 [tool.setuptools.package-data]
 netsentinel = ["static/*.html", "static/*.css"]

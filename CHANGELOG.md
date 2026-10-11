@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.3.1 — 11 de octubre de 2026
+
+- Unifica la versión del paquete y la aplicación para evitar metadatos desactualizados.
+- Corrige las variables de tema del enlace a Monitorización.
+- Amplía la CI a Python 3.11 y comprueba que el paquete distribuible incluya los HTML y CSS.
+
 ## 0.3.0 — 11 de octubre de 2026
 
 - Agrega monitorización periódica de hosts, puertos TCP y endpoints HTTP/HTTPS.
