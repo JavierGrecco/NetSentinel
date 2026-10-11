@@ -29,7 +29,8 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [x] Acceder al historial desde la fila del dispositivo sin bloquear la carga del inventario.
 - [ ] Incorporar eventos de conexiones/servicios mediante una fuente compatible (telemetría del router/AP o captura autorizada en una interfaz que realmente vea el tráfico).
 - [ ] Distinguir DNS, destinos IP/puerto y SNI TLS cuando estén disponibles, documentando que no equivale a URLs completas ni al contenido HTTPS.
-- [x] Añadir retención configurable y estado explícito de seguimiento; las pruebas de API con eventos normalizados están incorporadas.\n- [ ] Añadir una prueba de integración con una fuente de tráfico real una vez elegido el adaptador.
+- [x] Añadir retención configurable y estado explícito de seguimiento; las pruebas de API con eventos normalizados están incorporadas.
+- [ ] Añadir una prueba de integración con una fuente de tráfico real una vez elegido el adaptador.
 
 ### 0.11 — Diagnóstico DNS ampliado (en progreso)
 - [x] Consultar resolución inversa PTR para una IP ingresada explícitamente.
