@@ -42,3 +42,28 @@ def test_reverse_lookup_reports_missing_ptr(monkeypatch):
     monkeypatch.setattr(socket, "getnameinfo", fail)
     with pytest.raises(OSError):
         reverse_lookup_ip("192.0.2.99")
+
+
+
+def test_reverse_lookup_classifies_missing_ptr(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    def fail(*args, **kwargs):
+        raise socket.gaierror(socket.EAI_NONAME, "not found")
+
+    monkeypatch.setattr(socket, "getnameinfo", fail)
+    with pytest.raises(DNSLookupError) as error:
+        reverse_lookup_ip("192.0.2.99")
+    assert error.value.kind == "not_found"
+
+
+def test_reverse_lookup_classifies_temporary_resolver_failure(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    def fail(*args, **kwargs):
+        raise socket.gaierror(socket.EAI_AGAIN, "temporary failure")
+
+    monkeypatch.setattr(socket, "getnameinfo", fail)
+    with pytest.raises(DNSLookupError) as error:
+        reverse_lookup_ip("192.0.2.99")
+    assert error.value.kind == "temporary"
