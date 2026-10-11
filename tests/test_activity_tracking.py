@@ -269,6 +269,40 @@ def test_email_message_body_or_attachment_columns_are_rejected(client, header):
     assert "privacidad" in response.json()["detail"].lower()
 
 
+def test_microsoft_message_trace_csv_aliases_import_metadata(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "receivedDateTime,senderAddress,recipientAddress,subject,status,messageId,size\\n"
+        f'{stamp},parent@example.com,child@example.com,"Consulta escolar",Delivered,"<abc@example.com>",3456\\n'
+    )
+    response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert response.status_code == 200, response.text
+    event = client.get(f"/api/activity?device_id={selected}").json()["events"][0]
+    assert event["event_type"] == "email_metadata"
+    assert event["email_provider"] == "Microsoft 365"
+    assert event["email_from"] == "parent@example.com"
+    assert event["email_to"] == "child@example.com"
+    assert event["email_subject"] == "Consulta escolar"
+
+
+def test_google_workspace_email_log_csv_aliases_import_metadata(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "Subject or Message ID,Date,Sender,Recipient\\n"
+        f'"Consulta de tarea",{stamp},parent@example.com,child@example.com\\n'
+    )
+    response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert response.status_code == 200, response.text
+    event = client.get(f"/api/activity?device_id={selected}").json()["events"][0]
+    assert event["event_type"] == "email_metadata"
+    assert event["email_provider"] == "Google Workspace"
+    assert event["email_from"] == "parent@example.com"
+    assert event["email_to"] == "child@example.com"
+    assert event["email_subject"] == "Consulta de tarea"
+
+
 def test_email_metadata_cannot_be_live_ingested(client):
     selected = device_id(client)
     session = client.post(
