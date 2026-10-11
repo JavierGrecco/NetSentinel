@@ -235,10 +235,9 @@ def test_csv_preview_is_read_only_and_reports_deduplicated_rows(client):
 def test_csv_preview_rejects_message_content_and_unknown_columns(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
-    unsafe = (
-        "observed_at,event_type,domain,email_body\\n"
-        f"{stamp},email_metadata,example.com,PRIVATE BODY\\n"
-    )
+    unsafe = f"""observed_at,event_type,domain,email_body
+{stamp},email_metadata,example.com,PRIVATE BODY
+"""
     response = client.post(
         "/api/activity/import/preview",
         json={"device_id": selected, "csv_data": unsafe},
