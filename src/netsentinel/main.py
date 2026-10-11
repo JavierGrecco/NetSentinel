@@ -124,6 +124,9 @@ async def protect_local_app(request: Request, call_next):
             return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
 
     response = await call_next(request)
+    if request.url.path == "/activity" or request.url.path.startswith("/api/activity"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
