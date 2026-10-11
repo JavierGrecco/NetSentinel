@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Hace idempotente la importación CSV de metadatos: las filas idénticas ya importadas para el mismo dispositivo se omiten y se muestran en el recuento; no se deduplican eventos de fuentes en vivo.
 - Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
 - Agrega una vista local de actividad familiar en `/activity`, con sesiones limitadas por dispositivo, token de ingestión de un solo uso, validación estricta de metadatos e importación CSV local.
 - Añade una extensión Chromium visible y desactivada por defecto para registrar páginas navegadas y búsquedas de motores compatibles en el dispositivo donde se instala; exporta un CSV para importación manual en NetSentinel.
