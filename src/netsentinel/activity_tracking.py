@@ -7,13 +7,20 @@ deben normalizar y enviar eventos de metadatos a la API durante una sesión opt-
 from __future__ import annotations
 
 import csv
+import hashlib
+import hmac
 import io
 import ipaddress
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from . import database
+
+class InvalidCollectorToken(PermissionError):
+    """El secreto de una sesión de recopilación no coincide."""
+
 
 SESSION_SOURCES = {"router_dns", "router_flow", "device_agent"}
 EVENT_SOURCES = SESSION_SOURCES
@@ -161,7 +168,7 @@ def _cleanup(db) -> int:
 
 
 def start_session(device_id: int, duration_minutes: int, source_mode: str) -> dict[str, Any]:
-    """Arma una ventana de recopilación; no inicia una captura automática."""
+    """Abre una ventana temporal y devuelve un token de ingestión de un solo vistazo."""
     if not 5 <= int(duration_minutes) <= 720:
         raise ValueError("La duración debe estar entre 5 minutos y 12 horas.")
     source_mode = source_mode.strip().lower()
@@ -170,47 +177,62 @@ def start_session(device_id: int, duration_minutes: int, source_mode: str) -> di
     now = _now()
     started_at = _iso(now)
     ends_at = _iso(now + timedelta(minutes=int(duration_minutes)))
+    collector_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
     with database.connect() as db:
         _cleanup(db)
         device = db.execute("SELECT id FROM devices WHERE id = ?", (device_id,)).fetchone()
         if device is None:
             raise LookupError("No se encontró el dispositivo.")
         db.execute(
-            "UPDATE activity_sessions SET status = 'stopped', ends_at = ? WHERE device_id = ? AND status = 'active'",
-            (started_at, device_id),
+            "UPDATE activity_sessions SET status = 'stopped', stopped_at = ?, ends_at = ? WHERE device_id = ? AND status = 'active'",
+            (started_at, started_at, device_id),
         )
         cursor = db.execute(
-            """INSERT INTO activity_sessions(device_id, source_mode, started_at, ends_at, status)
-               VALUES (?, ?, ?, ?, 'active')""",
-            (device_id, source_mode, started_at, ends_at),
+            """INSERT INTO activity_sessions
+               (device_id, source_mode, started_at, ends_at, status, collector_token_hash)
+               VALUES (?, ?, ?, ?, 'active', ?)""",
+            (device_id, source_mode, started_at, ends_at, token_hash),
         )
         row = db.execute(
-            """SELECT s.*, d.display_name, d.ip_address, d.mac_address
+            """SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
+                      d.display_name, d.ip_address, d.mac_address
                FROM activity_sessions s JOIN devices d ON d.id=s.device_id WHERE s.id=?""",
             (cursor.lastrowid,),
         ).fetchone()
-        return dict(row)
+        result = dict(row)
+        result["collector_token"] = collector_token
+        result["token_note"] = "Copiá este token ahora. Solo se almacena su hash y no volverá a mostrarse."
+        return result
 
 
 def stop_session(session_id: int) -> dict[str, Any] | None:
     now = _iso(_now())
     with database.connect() as db:
         _cleanup(db)
-        row = db.execute("SELECT * FROM activity_sessions WHERE id = ?", (session_id,)).fetchone()
+        row = db.execute("SELECT id FROM activity_sessions WHERE id = ?", (session_id,)).fetchone()
         if row is None:
             return None
-        if row["status"] == "active":
+        status = db.execute("SELECT status FROM activity_sessions WHERE id=?", (session_id,)).fetchone()["status"]
+        if status == "active":
             db.execute(
                 "UPDATE activity_sessions SET status='stopped', stopped_at=?, ends_at=? WHERE id=?",
                 (now, now, session_id),
             )
-        return dict(db.execute("SELECT * FROM activity_sessions WHERE id=?", (session_id,)).fetchone())
+        return dict(db.execute(
+            """SELECT id, device_id, source_mode, started_at, ends_at, stopped_at, status
+               FROM activity_sessions WHERE id=?""",
+            (session_id,),
+        ).fetchone())
 
 
-def ingest_event(session_id: int, device_id: int, payload: dict[str, Any]) -> dict[str, Any]:
-    """Guarda metadatos solo si coinciden con una sesión activa y la fuente declarada."""
+def ingest_event(
+    session_id: int, device_id: int, collector_token: str, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Guarda metadatos si sesión, dispositivo, fuente, plazo y token coinciden."""
     event = normalize_event(payload)
     now = _iso(_now())
+    supplied_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
     with database.connect() as db:
         _cleanup(db)
         session = db.execute(
@@ -219,6 +241,8 @@ def ingest_event(session_id: int, device_id: int, payload: dict[str, Any]) -> di
         ).fetchone()
         if session is None:
             raise LookupError("No existe una sesión para ese dispositivo.")
+        if not hmac.compare_digest(session["collector_token_hash"], supplied_hash):
+            raise InvalidCollectorToken("El token de recopilación no es válido.")
         if session["status"] != "active" or session["ends_at"] <= now:
             raise PermissionError("La sesión no está activa; iniciá otra ventana de seguimiento.")
         if event["source"] != session["source_mode"]:
@@ -310,7 +334,8 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
         if device_id is not None and db.execute("SELECT 1 FROM devices WHERE id=?", (device_id,)).fetchone() is None:
             raise LookupError("No se encontró el dispositivo.")
         sessions = db.execute(
-            """SELECT s.*, d.display_name, d.ip_address, d.mac_address
+            """SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
+                      d.display_name, d.ip_address, d.mac_address
                FROM activity_sessions s JOIN devices d ON d.id=s.device_id
                ORDER BY s.started_at DESC, s.id DESC LIMIT 100"""
         ).fetchall()
@@ -321,6 +346,20 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
                 {event_filter} ORDER BY e.observed_at DESC, e.id DESC LIMIT ?""",
             (*params, max(1, min(int(limit), 500))),
         ).fetchall()
+        domain_filter = "WHERE domain IS NOT NULL AND domain <> ''" if device_id is None else "WHERE device_id = ? AND domain IS NOT NULL AND domain <> ''"
+        domain_params: tuple[Any, ...] = () if device_id is None else (device_id,)
+        top_domains = db.execute(
+            f"""SELECT domain, COUNT(*) AS events, MAX(observed_at) AS last_seen
+                FROM activity_events {domain_filter}
+                GROUP BY domain ORDER BY events DESC, last_seen DESC LIMIT 15""",
+            domain_params,
+        ).fetchall()
+        blocked_filter = "" if device_id is None else " WHERE device_id = ?"
+        blocked_params: tuple[Any, ...] = () if device_id is None else (device_id,)
+        blocked_count = db.execute(
+            "SELECT COUNT(*) FROM activity_events WHERE blocked = 1" + ("" if device_id is None else " AND device_id = ?"),
+            blocked_params,
+        ).fetchone()[0]
         setting = db.execute("SELECT retention_days FROM activity_settings WHERE id=1").fetchone()
         active_count = db.execute("SELECT COUNT(*) FROM activity_sessions WHERE status='active'").fetchone()[0]
         event_count = db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0]
@@ -330,6 +369,8 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
     return {
         "sessions": [dict(row) for row in sessions],
         "events": [dict(row) for row in events],
+        "top_domains": [dict(row) for row in top_domains],
+        "blocked_events": int(blocked_count),
         "devices": [dict(row) for row in devices],
         "retention_days": int(setting["retention_days"]) if setting else 7,
         "active_sessions": int(active_count),
