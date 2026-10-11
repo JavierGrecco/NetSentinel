@@ -133,7 +133,7 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta PTR.");
-      ptrStatus.textContent = data.ip + " → " + data.hostname + " (registro PTR)";
+      ptrStatus.textContent = data.ip + " → " + data.hostname + " (registro PTR) · " + (data.cache_hit ? "resultado en caché" : "consulta nueva") + (data.resolved_at ? " · resuelto: " + data.resolved_at : "");
     } catch (error) {
       ptrStatus.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta PTR.";
     } finally {
