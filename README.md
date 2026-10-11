@@ -92,7 +92,7 @@ La [guía de monitorización](docs/MONITORING.md) explica los límites y la conf
 
 Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación. Para restaurarla, cerrá NetSentinel, guardá aparte la base actual y reemplazá `netsentinel.sqlite3` por el archivo descargado renombrado con ese nombre. La ruta predeterminada es `~/.netsentinel/netsentinel.sqlite3` (en Windows, dentro de tu carpeta de usuario); si configuraste `NETSENTINEL_DATA_DIR`, usá ese directorio en su lugar. Volvé a iniciar NetSentinel después de reemplazar el archivo. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
-## Datos y privacidad
+## Historial por dispositivo\n\nDesde la tabla de inventario, la acción **Historial** permite revisar las observaciones que NetSentinel ya guardó: fecha, IP y fuente. Esta primera etapa registra presencia e historial de direcciones, no páginas visitadas ni todas las conexiones. Para identificar servicios de red hace falta integrar telemetría del router/punto de acceso o una captura autorizada en una interfaz que reciba el tráfico del dispositivo; HTTPS normalmente impide conocer las rutas completas de las páginas.\n\n## Datos y privacidad
 
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
 
