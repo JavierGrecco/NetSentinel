@@ -24,6 +24,18 @@ def test_reverse_lookup_rejects_non_ip_input(address):
         reverse_lookup_ip(address)
 
 
+
+def test_reverse_lookup_uses_ipv6_sockaddr(monkeypatch):
+    def resolve(sockaddr, flags):
+        assert sockaddr == ("2001:db8::1", 0, 0, 0)
+        assert flags == socket.NI_NAMEREQD
+        return ("host.example.com", "0")
+    monkeypatch.setattr(socket, "getnameinfo", resolve)
+    result = reverse_lookup_ip("2001:0db8::1")
+    assert result["ip"] == "2001:db8::1"
+    assert result["hostname"] == "host.example.com"
+
+
 def test_reverse_lookup_reports_missing_ptr(monkeypatch):
     def fail(*args, **kwargs):
         raise socket.gaierror("not found")
