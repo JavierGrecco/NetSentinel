@@ -8,7 +8,7 @@
 - Extensión Chromium visible y apagada al instalarse; registra navegación futura y búsquedas por URL compatibles, y exporta CSV.
 - Sanitización URL en cliente y servidor; rechazo de columnas de cuerpo de correo, contenido y adjuntos.
 - Importaciones CSV manuales idempotentes: compara eventos normalizados del mismo dispositivo, omite duplicados exactos y muestra el recuento omitido.
-- Vista previa CSV de solo lectura: valida todas las filas, estima altas/duplicados y presenta hasta 10 filas de metadatos saneados antes de guardar.
+- Vista previa CSV de solo lectura: valida todas las filas, estima altas/duplicados y presenta hasta 10 filas de metadatos normalizados antes de guardar.
 - Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
 
 ## Límites actuales
