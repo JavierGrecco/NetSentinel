@@ -1,12 +1,12 @@
 # Seguridad y límites
 
-## Alcance de la versión 0.6.0
+## Alcance de la versión 0.6.9
 
 NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y los datos se guardan en SQLite. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo está separado y comienza únicamente cuando el usuario lo solicita desde el panel.
 
 El descubrimiento activo detecta interfaces compatibles y se limita a subredes privadas RFC 1918: `10.0.0.0/8`, `172.16.0.0/12` y `192.168.0.0/16`. Examina como máximo dos subredes y, si una es mayor que /24, reduce el alcance a un /24. Envía como máximo un ping por dirección dentro de esos límites y acepta una sola ejecución de descubrimiento simultánea. No escanea Internet ni cambia la configuración de ningún dispositivo. Algunos equipos pueden no responder; los resultados no garantizan un inventario completo.
 
-Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión. Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas. Los registros históricos se conservan para no borrar datos del usuario automáticamente.
+Una MAC puede aleatorizarse o suplantarse; una alerta de dispositivo desconocido no demuestra una intrusión. Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas; las alertas históricas se etiquetan visualmente sin borrar eventos ni datos. El historial del descubrimiento conserva también la duración de cada ejecución.
 
 ## Operación segura
 
