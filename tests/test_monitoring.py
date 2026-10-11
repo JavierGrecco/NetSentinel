@@ -140,8 +140,8 @@ def test_monitor_analytics_csv_export_contains_metrics_and_safe_text(tmp_path):
     database.record_monitor_check(monitor["id"], "down", None, "Fallo", path=path)
 
     export = database.export_monitoring_csv(window_hours=24, path=path)
-    assert export.startswith("\\ufeff")
-    rows = list(csv.DictReader(io.StringIO(export.lstrip("\\ufeff"))))
+    assert export.startswith("\ufeff")
+    rows = list(csv.DictReader(io.StringIO(export.lstrip("\ufeff"))))
     assert len(rows) == 1
     assert rows[0]["nombre"] == "'=SUM(A1:A2)"
     assert rows[0]["comprobaciones"] == "2"
@@ -161,5 +161,5 @@ def test_monitoring_csv_api_sets_download_and_privacy_headers(monkeypatch, tmp_p
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert "netsentinel-monitoring-report.csv" in response.headers["content-disposition"]
-    assert response.text.lstrip("\\ufeff").splitlines()[1].startswith("168,")
+    assert response.text.lstrip("\ufeff").splitlines()[1].startswith("168,")
     assert invalid.status_code == 422
