@@ -33,3 +33,28 @@ def test_lookup_hostname_reports_resolver_failure(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", fail)
     with pytest.raises(OSError):
         lookup_hostname("missing.example")
+
+
+
+def test_lookup_hostname_distinguishes_missing_name(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    def fail(*args, **kwargs):
+        raise socket.gaierror(socket.EAI_NONAME, "not found")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fail)
+    with pytest.raises(DNSLookupError) as error:
+        lookup_hostname("missing.example")
+    assert error.value.kind == "not_found"
+
+
+def test_lookup_hostname_distinguishes_temporary_resolver_failure(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    def fail(*args, **kwargs):
+        raise socket.gaierror(socket.EAI_AGAIN, "temporary failure")
+
+    monkeypatch.setattr(socket, "getaddrinfo", fail)
+    with pytest.raises(DNSLookupError) as error:
+        lookup_hostname("example.com")
+    assert error.value.kind == "temporary"
