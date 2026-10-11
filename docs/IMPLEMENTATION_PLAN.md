@@ -10,7 +10,7 @@ Esta rama incorpora herramientas DNS de solo lectura. La pantalla `/tools` permi
 
 1. **Módulo DNS básico:** implementado en la rama; validación estricta de host, resolución A/AAAA y pruebas con el resolvedor simulado.
 2. **Interfaz DNS:** implementada en la rama con formularios separados, estados accesibles y consultas explícitas.
-3. **DNS inverso y contexto local:** consulta PTR por IP implementada y probada con mocks; queda pendiente detectar la configuración DNS de forma portable y diferenciar mejor los tipos de fallo.
+3. **DNS inverso y contexto local:** consulta PTR por IP implementada y probada con mocks; la API distingue nombre no encontrado (404), fallo temporal (503) y error general del resolvedor (502); queda pendiente detectar la configuración DNS de forma portable y evaluar límites de tiempo independientes del sistema operativo.
 4. **Inventario enriquecido:** nombres DNS como metadatos opcionales con caché, procedencia y desactivación.
 5. **DHCP/router:** adaptadores optativos, inicialmente de solo lectura y por proveedor.
 6. **Topología y métricas:** cuando los datos disponibles sean suficientes y se definan límites de privacidad.
