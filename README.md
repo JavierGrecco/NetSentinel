@@ -95,12 +95,13 @@ Desde el pie del inventario podés descargar una copia completa SQLite con el hi
 
 ## Historial y actividad familiar
 
-Desde la tabla de inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad familiar** (`/activity`) permite importar registros DNS/flows normalizados, administrar sesiones temporales y consultar páginas y búsquedas que se hayan recogido desde una fuente compatible.
+Desde el inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad familiar** (`/activity`) permite consultar registros de red, navegación y metadatos de correo importados.
 
-Para registrar **páginas y búsquedas de navegador**, ya se incluye la extensión Chromium en [`browser-extension/`](browser-extension/README.md). Debe instalarse en cada dispositivo/navegador a supervisar y activarse explícitamente. Guarda localmente visitas y consultas de motores compatibles y exporta un CSV, que luego se importa en `/activity` asociándolo al dispositivo correcto. Solo registra navegación futura, está apagada por defecto y no lee formularios ni contraseñas. La sincronización automática entre dispositivos todavía no está implementada.
+Para registrar **páginas y búsquedas del navegador**, instalá la extensión Chromium de [`browser-extension/`](browser-extension/README.md) en cada dispositivo/navegador a supervisar y activala expresamente. Guarda localmente visitas y búsquedas compatibles, exporta un CSV y permite importarlo en `/activity` asociándolo al dispositivo correcto. Está apagada por defecto, solo registra navegación futura y no lee formularios ni contraseñas. La transferencia es manual por CSV; la sincronización automática entre equipos sigue pendiente.
 
-El backend por sí solo no ve todas las conexiones de otros equipos en una LAN/Wi-Fi ni conoce las páginas que se abren. Los eventos de DNS, IP y SNI son indicios, no prueba de quién usó una cuenta. No recolectamos contraseñas, cookies, tokens ni contenido de páginas, y no intentamos interceptar TLS ni descifrar credenciales. La captura de búsquedas solo cubre motores con un formato de URL reconocido por la extensión; las aplicaciones nativas y búsquedas internas no visibles para la API de navegación quedan fuera. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
+Para **correo electrónico**, NetSentinel acepta una importación manual de metadatos de registros de auditoría autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional. No se conecta a bandejas, no captura mensajes ni adjuntos y rechaza columnas de cuerpo/contenido. No hay todavía un adaptador específico para Google Workspace, Microsoft 365 ni cuentas personales; eso depende de las capacidades y permisos del proveedor.
 
+El backend por sí solo no ve todas las conexiones de otros equipos ni conoce las páginas que se abren. La extensión no registra búsquedas internas de aplicaciones nativas ni formatos que no aparecen en una URL compatible. No recolectamos contraseñas, cookies ni contenido de páginas, y no intentamos interceptar TLS. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
 ## Datos y privacidad
 
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
@@ -120,6 +121,7 @@ python -m pytest
 
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Seguimiento familiar de actividad](docs/FAMILY_ACTIVITY.md)
+- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
