@@ -4,7 +4,7 @@
 
 La versión estable 0.9.0 reúne inventario local, descubrimiento acotado a RFC 1918, confianza manual, historial, diagnóstico guiado, monitorización Ping/TCP/HTTP(S), incidentes, tendencias, exportaciones y respaldo SQLite.
 
-Esta rama inicia el primer módulo de herramientas: **consulta DNS de solo lectura**. La API permite consultar un nombre de host mediante el resolvedor del sistema operativo y devuelve las direcciones A/AAAA que el sistema logra resolver. No modifica DNS, no realiza escaneo de puertos y no acepta URLs completas.
+Esta rama inicia el primer módulo de herramientas: **consulta DNS de solo lectura**. La pantalla `/tools` permite consultar un nombre de host mediante el resolvedor del sistema operativo y devuelve las direcciones A/AAAA que el sistema logra resolver. No modifica DNS, no realiza escaneo de puertos y no acepta URLs completas.
 
 ## Etapas
 
