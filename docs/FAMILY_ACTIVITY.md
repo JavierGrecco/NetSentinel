@@ -6,6 +6,7 @@
 - `browser-extension/`: extensión Chromium visible, apagada por defecto, que registra navegación futura y búsquedas compatibles en el dispositivo donde se instala.
 - Importación manual desde CSV de metadatos de correo de registros de auditoría autorizados: proveedor, emisor, destinatarios, fecha y asunto opcional.
 - Validación estricta del CSV y rechazo de campos de cuerpo de mensaje, contenido y adjuntos.
+- Importación idempotente: se omiten y contabilizan filas normalizadas idénticas ya importadas para el mismo dispositivo, incluso si se repite el archivo completo.
 
 ## Páginas y búsquedas del navegador
 
@@ -32,7 +33,7 @@ El importador normaliza algunas cabeceras habituales de Google Workspace Email L
 
 1. Activá la extensión en el navegador supervisado, si querés registro de navegación.
 2. Exportá el CSV desde la extensión.
-3. En NetSentinel, abrí `/activity`, elegí el dispositivo e importá el archivo.
+3. En NetSentinel, abrí `/activity`, elegí el dispositivo e importá el archivo. La interfaz informa cuántos eventos agregó y cuántas filas duplicadas omitió; volver a cargar el mismo CSV no duplica los eventos idénticos.
 4. Para correo, prepará/importá el CSV a partir de un registro de auditoría autorizado. Asociá el registro con el dispositivo correspondiente solo si la fuente realmente lo permite; no inferir identidad por el mero destinatario.
 
 La transferencia de los datos de la extensión a NetSentinel es manual. No hay sincronización central en vivo ni un conector de correo automático. Las sesiones de red del backend tampoco capturan tráfico por sí solas: necesitan una fuente compatible; aún no hay adaptador de router/AP ni agente de uso de aplicaciones.
