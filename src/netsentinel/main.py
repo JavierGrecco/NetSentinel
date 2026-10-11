@@ -163,6 +163,11 @@ def monitors_page() -> FileResponse:
     return FileResponse(_MONITORS_STATIC)
 
 
+@app.get("/tools", include_in_schema=False)
+def tools_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "tools.html")
+
+
 @app.get("/api/tools/dns/lookup")
 def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
     """Resuelve registros A/AAAA mediante el resolvedor del sistema, a pedido del usuario."""
