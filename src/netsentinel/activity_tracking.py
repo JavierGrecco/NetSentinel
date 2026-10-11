@@ -152,7 +152,7 @@ def _email_address_list(value: str | None, *, field: str, required: bool) -> lis
             raise ValueError(f"{field} es obligatorio para el evento de correo.")
         return []
     raw = str(value).strip()
-    if len(raw) > 1500 or any(ord(ch) < 32 and ch not in "\\t\\r\\n" for ch in raw):
+    if len(raw) > 1500 or any(ord(ch) < 32 for ch in raw):
         raise ValueError(f"{field} supera el límite o contiene caracteres de control.")
     addresses = getaddresses([raw.replace(";", ",")])
     normalized: list[str] = []
@@ -202,7 +202,13 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
     email_from_list = _email_address_list(payload.get("email_from"), field="email_from", required=event_type == "email_metadata")
     email_to_list = _email_address_list(payload.get("email_to"), field="email_to", required=event_type == "email_metadata")
     email_subject = payload.get("email_subject")
-    email_subject = " ".join(str(email_subject).replace("\\r", " ").replace("\\n", " ").split())[:200] if email_subject not in (None, "") else None
+    if email_subject not in (None, ""):
+        raw_subject = str(email_subject)
+        if any(ord(ch) < 32 and not ch.isspace() for ch in raw_subject):
+            raise ValueError("email_subject contiene caracteres de control.")
+        email_subject = " ".join(raw_subject.split())[:200]
+    else:
+        email_subject = None
     if event_type == "email_metadata":
         if source_override != "manual_import":
             raise ValueError("Los metadatos de correo solo se admiten mediante importación explícita de registros autorizados.")
