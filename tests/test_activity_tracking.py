@@ -71,6 +71,17 @@ def test_session_accepts_valid_metadata_only_during_active_window(client):
     assert "password" not in event
     assert client.get(f"/api/activity?device_id={selected}").json()["events"][0]["domain"] == "www.example.com"
 
+    # Credentials or any unsupported fields must be rejected, not silently accepted.
+    leaked = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"], "device_id": selected,
+            "event_type": "dns_query", "source": "router_dns", "domain": "example.com",
+            "password": "must-not-be-accepted",
+        },
+    )
+    assert leaked.status_code == 422
+
 
 def test_ingest_rejects_wrong_source_unknown_session_and_inactive_session(client):
     selected = device_id(client)
