@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.6 — 11 de octubre de 2026
+
+- Identifica visualmente la IP local de la computadora según el informe de descubrimiento más reciente, para distinguirla de otros dispositivos de la LAN.
+- Agrega una comprobación automatizada para mantener visible esa aclaración en el panel.
+
 ## 0.6.5 — 11 de octubre de 2026
 
 - Añade el BOM UTF-8 a la exportación CSV para que Excel reconozca mejor los acentos y caracteres españoles.
