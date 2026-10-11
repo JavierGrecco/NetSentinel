@@ -60,8 +60,9 @@ def reverse_lookup_ip(address: str) -> dict:
 
     normalized_ip = str(parsed)
     try:
+        sockaddr = (normalized_ip, 0, 0, 0) if parsed.version == 6 else (normalized_ip, 0)
         hostname, _service = socket.getnameinfo(
-            (normalized_ip, 0),
+            sockaddr,
             socket.NI_NAMEREQD,
         )
     except (socket.gaierror, OSError) as exc:
