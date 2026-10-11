@@ -21,6 +21,7 @@ from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
 from .dns_tools import DNSLookupError, lookup_hostname, reverse_lookup_ip
+from .dns_config import get_dns_configuration
 
 
 _supervisor = MonitorSupervisor()
@@ -166,6 +167,12 @@ def monitors_page() -> FileResponse:
 @app.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
+
+
+@app.get("/api/tools/dns/configuration")
+def dns_configuration() -> dict:
+    """Lee la configuración DNS local sin modificarla ni consultar dominios externos."""
+    return get_dns_configuration()
 
 
 @app.get("/api/tools/dns/lookup")
