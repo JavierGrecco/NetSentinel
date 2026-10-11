@@ -168,11 +168,10 @@ def test_csv_import_and_rejects_sensitive_columns(client):
 def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
-    csv_data = (
-        "observed_at,event_type,domain\\n"
-        f"{stamp},dns_query,duplicate.example\\n"
-        f"{stamp},dns_query,duplicate.example\\n"
-    )
+    csv_data = f"""observed_at,event_type,domain
+{stamp},dns_query,duplicate.example
+{stamp},dns_query,duplicate.example
+"""
 
     first = client.post(
         "/api/activity/import",
