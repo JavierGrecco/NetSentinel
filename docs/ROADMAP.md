@@ -19,7 +19,8 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 - [x] Validar la entrada como nombre de host; no aceptar URL, rutas, credenciales ni opciones de consulta arbitrarias.
 - [x] Devolver direcciones IPv4/IPv6 deduplicadas y ordenadas.
 - [x] Mantener la operación bajo demanda, sin escaneos ni cambios de configuración.
-- [ ] Incorporar una interfaz de usuario específica y pruebas manuales en Windows/macOS/Linux antes de marcar el módulo como listo para usuarios finales.
+- [x] Incorporar una pantalla independiente `/tools` con formulario explícito y estados accesibles.
+- [ ] Completar pruebas manuales en Windows/macOS/Linux antes de marcar el módulo como listo para usuarios finales.
 
 ## Próximos módulos — orden recomendado
 
