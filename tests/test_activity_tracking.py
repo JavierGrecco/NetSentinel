@@ -241,6 +241,51 @@ def test_legacy_activity_event_schema_migrates_without_losing_events(monkeypatch
     assert event["event_type"] == "dns_query"
 
 
+def test_email_metadata_import_stores_only_sender_recipient_subject(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "observed_at,event_type,email_provider,email_from,email_to,email_subject\\n"
+        f'{stamp},email_metadata,Gmail,"Parent <parent@example.com>","Child <child@example.com>","Pedido de ayuda"\\n'
+    )
+    response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert response.status_code == 200, response.text
+    event = client.get(f"/api/activity?device_id={selected}").json()["events"][0]
+    assert event["event_type"] == "email_metadata"
+    assert event["email_provider"] == "Gmail"
+    assert event["email_from"] == "parent@example.com"
+    assert event["email_to"] == "child@example.com"
+    assert event["email_subject"] == "Pedido de ayuda"
+    assert "email_body" not in event and "message" not in event
+
+
+@pytest.mark.parametrize("header", ["message", "email_body", "body_text", "body_html", "content", "attachments", "attachment_content"])
+def test_email_message_body_or_attachment_columns_are_rejected(client, header):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = f"observed_at,event_type,email_provider,email_from,email_to,{header}\\n{stamp},email_metadata,Gmail,a@example.com,b@example.com,PRIVATE\\n"
+    response = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert response.status_code == 422
+    assert "privacidad" in response.json()["detail"].lower()
+
+
+def test_email_metadata_cannot_be_live_ingested(client):
+    selected = device_id(client)
+    session = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 15, "source_mode": "device_agent"},
+    ).json()
+    response = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"], "collector_token": session["collector_token"],
+            "device_id": selected, "event_type": "email_metadata", "source": "device_agent",
+            "email_from": "a@example.com", "email_to": "b@example.com", "email_subject": "Example",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_retention_is_configurable_and_deletes_expired_events(client):
     selected = device_id(client)
     old = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
