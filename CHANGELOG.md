@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## Próxima versión — 0.10.0 (en desarrollo)
+
+- Inicia el módulo de herramientas DNS de solo lectura mediante el resolvedor configurado en el sistema.
+- Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
+- Añade una ruta API bajo demanda y pruebas unitarias sin consultas DNS reales.
+- Reordena el roadmap para desarrollar módulos independientes sin degradar el núcleo de inventario y monitorización.
+
 ## 0.9.0 — 11 de octubre de 2026
 
 - Permite exportar hasta 5000 incidentes en CSV, filtrados por abiertos o resueltos, con duración estimada, recuperación, cantidad de fallos y detalle final.
