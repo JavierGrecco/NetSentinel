@@ -76,8 +76,10 @@
     if(!state.events.length){box.innerHTML='<div class="empty"><strong>No hay eventos todavía</strong>Los dispositivos nuevos aparecerán después de la primera lectura.</div>';return;}
     box.innerHTML=state.events.map(e=>{
       const isLocalDevice=e.event_type==='new_device'&&localAddresses.has(e.ip_address);
-      const title=isLocalDevice?'Equipo local identificado':e.event_type==='new_device'?'Dispositivo nuevo':e.event_type==='trust_changed'?'Cambio de confianza':e.event_type==='ip_changed'?'Cambio de IPv4':e.event_type==='new_address'?'Nueva dirección':e.event_type;
-      const message=isLocalDevice?'Esta IP coincide con la dirección local de la computadora que ejecuta NetSentinel.':e.message;
+      const eventDevice=state.devices.find(device=>device.mac_address===e.mac_address);
+      const isAppleLinkInterface=['awdl0','llw0'].includes(String(eventDevice?.interface||'').toLowerCase());
+      const title=isLocalDevice?'Equipo local identificado':isAppleLinkInterface&&e.event_type==='new_device'?'Interfaz Apple de enlace local':e.event_type==='new_device'?'Dispositivo nuevo':e.event_type==='trust_changed'?'Cambio de confianza':e.event_type==='ip_changed'?'Cambio de IPv4':e.event_type==='new_address'?'Nueva dirección':e.event_type;
+      const message=isLocalDevice?'Esta IP coincide con la dirección local de la computadora que ejecuta NetSentinel.':isAppleLinkInterface?'La observación proviene de una interfaz Apple de enlace local y no identifica necesariamente un equipo de la LAN.':e.message;
       return `<div class="event"><div class="dot ${e.severity==='info'?'info':''}"></div><div><div class="event-title">${escapeHtml(title)}</div><div class="event-meta">${escapeHtml(dateTime(e.created_at))} · ${escapeHtml(e.mac_address||'Sin dispositivo asociado')} ${e.ip_address?'· '+escapeHtml(e.ip_address):''}</div><div class="event-message">${escapeHtml(message)}</div>${e.acknowledged?'':'<div class="event-actions"><button class="tiny quiet" data-ack="'+e.id+'">Marcar revisado</button></div>'}</div></div>`;
     }).join('');
     box.querySelectorAll('[data-ack]').forEach(button=>button.addEventListener('click',async()=>{try{await api(`/api/events/${button.dataset.ack}`,{method:'PATCH',body:JSON.stringify({acknowledged:true})});await refresh();}catch(e){toast(e.message);}}));

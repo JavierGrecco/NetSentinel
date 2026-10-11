@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.9 — 11 de octubre de 2026
+
+- Reinterpreta visualmente alertas históricas de interfaces Apple AWDL/LLW como observaciones de enlace local, no como evidencia de un dispositivo de la LAN.
+- Mantiene intactos los eventos y registros originales; solo aclara su presentación.
+
 ## 0.6.8 — 11 de octubre de 2026
 
 - Mide y guarda el tiempo total que tarda cada descubrimiento local, incluyendo la lectura de vecinos.

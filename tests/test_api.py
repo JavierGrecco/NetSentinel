@@ -27,6 +27,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "NetSentinel" in page.text
         assert "IP local de esta computadora según la última lectura" in page.text
         assert "Equipo local identificado" in page.text
+        assert "La observación proviene de una interfaz Apple de enlace local" in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v3"
