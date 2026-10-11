@@ -237,6 +237,10 @@ def initialize(path: Path | None = None) -> None:
                     page_url TEXT,
                     search_engine TEXT,
                     search_terms TEXT,
+                    email_provider TEXT,
+                    email_from TEXT,
+                    email_to TEXT,
+                    email_subject TEXT,
                     blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
                 )
             """)
