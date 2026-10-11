@@ -77,6 +77,7 @@ def test_discovery_pings_only_detected_network_and_filters_unrelated_neighbors(m
     assert errors == []
     assert report["addresses_checked"] == 2
     assert report["ping_responses"] == 1
+    assert report["duration_seconds"] >= 0
 
 
 def test_no_private_network_means_no_pings(monkeypatch):

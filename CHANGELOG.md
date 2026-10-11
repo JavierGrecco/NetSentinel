@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.6.8 — 11 de octubre de 2026
+
+- Mide y guarda el tiempo total que tarda cada descubrimiento local, incluyendo la lectura de vecinos.
+- Muestra la duración de cada búsqueda en el historial, junto con las subredes y las respuestas a ping.
+- Agrega una prueba para validar la métrica de duración.
+
 ## 0.6.7 — 11 de octubre de 2026
 
 - Reconoce visualmente eventos históricos cuya IP coincide con la dirección local de la computadora, sin marcarla automáticamente como confiable ni borrar el evento.

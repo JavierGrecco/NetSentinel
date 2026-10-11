@@ -8,6 +8,7 @@ import ipaddress
 import platform
 import socket
 import subprocess
+import time
 from typing import Callable
 
 import psutil
@@ -145,6 +146,7 @@ def discover_local_network(
     La llamada debe hacerse por acción explícita del usuario: el barrido genera tráfico
     en las redes privadas locales detectadas, pero no modifica equipos ni consulta Internet.
     """
+    started_at = time.monotonic()
     errors: list[str] = []
     try:
         subnets = detect_scan_subnets()
@@ -164,6 +166,7 @@ def discover_local_network(
         ],
         "addresses_checked": 0,
         "ping_responses": 0,
+        "duration_seconds": 0.0,
         "scope": "Solo subredes IPv4 privadas detectadas automáticamente; máximo dos segmentos y hasta 254 direcciones por segmento.",
     }
     if not subnets:
@@ -171,6 +174,7 @@ def discover_local_network(
             "No se encontró una subred IPv4 privada activa en una interfaz compatible. "
             "No se envió ningún ping de descubrimiento."
         )
+        report["duration_seconds"] = round(time.monotonic() - started_at, 3)
         return [], errors, report
 
     addresses: list[str] = []
@@ -214,4 +218,5 @@ def discover_local_network(
         filtered.values(),
         key=lambda item: (int(ipaddress.IPv4Address(item.ip_address)), item.mac_address),
     )
+    report["duration_seconds"] = round(time.monotonic() - started_at, 3)
     return results, errors, report
