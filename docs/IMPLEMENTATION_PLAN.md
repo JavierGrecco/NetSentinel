@@ -5,13 +5,17 @@
 La versión 0.7.3 reúne inventario local, monitorización, diagnóstico guiado, búsqueda automática acotada a redes RFC 1918, lanzadores de inicio sencillos y copias de seguridad SQLite consistentes.
 
 ### Completado
-- Panel de inventario, nombres, notas, confianza manual y exportación.
+- Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
+- Respaldo SQLite consistente descargable, con validación de integridad.
+- Lanzadores de un clic para Windows y macOS/Linux con instalación incremental.
 - Fuentes de descubrimiento separadas y seguimiento de direcciones.
-- Detección automática de las subredes IPv4 privadas activas y búsqueda local limitada, sin pedir al usuario que calcule el rango.
+- Descubrimiento automático limitado a RFC 1918: hasta dos redes, máximo 254 direcciones por segmento, una sola lectura simultánea y exclusión de interfaces virtuales conocidas.
+- Métricas de alcance, respuestas ping y duración guardadas en el historial.
 - Controles de ping, TCP y HTTP/HTTPS.
 - Historial de resultados e incidentes que se deduplican.
 - Notificaciones opcionales por webhook HTTPS.
-- Pruebas automatizadas y CI multiplataforma.
+- Protección de host/origen y cabeceras HTTP defensivas.
+- Pruebas automatizadas y CI multiplataforma para Python 3.10–3.14 en Windows, macOS y Linux.
 
 ### Próximas etapas
 1. Mejorar cobertura del descubrimiento, incluyendo estrategias para equipos que no responden a ICMP y una ruta IPv6 bien delimitada.

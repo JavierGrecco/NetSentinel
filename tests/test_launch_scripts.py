@@ -9,6 +9,8 @@ def test_unix_launchers_use_a_local_virtual_environment():
     macos_script = (ROOT / "run-macos.command").read_text(encoding="utf-8")
     assert ".venv/bin/python" in run_script
     assert "-m pip install -e ." in run_script
+    assert ".netsentinel-install-hash" in run_script
+    assert "pyproject.toml" in run_script
     assert "-m netsentinel" in run_script
     assert "exec ./run.sh" in macos_script
 

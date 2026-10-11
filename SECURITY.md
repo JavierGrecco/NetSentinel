@@ -1,6 +1,6 @@
 # Seguridad y límites
 
-## Alcance de la versión 0.7.0
+## Alcance de la versión 0.7.3
 
 NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y los datos se guardan en SQLite. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo está separado y comienza únicamente cuando el usuario lo solicita desde el panel.
 
@@ -20,7 +20,7 @@ Estas defensas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no r
 - El descubrimiento local genera tráfico únicamente al solicitarlo desde el panel. El diagnóstico y las comprobaciones de monitorización también generan tráfico cuando se ejecutan.
 - Los comandos de lectura y ping usan argumentos separados; los datos del inventario nunca se ejecutan como comandos.
 - Los fabricantes, si se habilitan, se consultan únicamente en un CSV OUI local. No se envían direcciones MAC a un proveedor externo para resolver fabricantes.
-- La base SQLite y sus copias pueden contener metadatos completos de red. Protegé la cuenta de usuario, revisá las exportaciones antes de compartirlas y almacená los respaldos en un lugar seguro.
+- La base SQLite, las copias descargables y las exportaciones pueden contener metadatos completos de red. Protegé la cuenta de usuario, revisá los archivos antes de compartirlos y almacená los respaldos en un lugar seguro. El respaldo SQLite se genera mediante la API de copia de SQLite para obtener una imagen consistente mientras la aplicación está activa.
 - Usá NetSentinel únicamente en redes y sobre objetivos que administrás o tenés autorización para revisar.
 - Los webhooks externos están deshabilitados por defecto. Si configurás uno, protegé su URL como un secreto y usá HTTPS.
 

@@ -28,6 +28,17 @@ Este documento resume qué está implementado y qué falta.
 - [x] Búsqueda bajo demanda limitada a dos subredes y 254 direcciones por subred.
 - [x] Filtrado de resultados a las subredes locales detectadas y pruebas deterministas sin red real.
 
+## 0.6 — Descubrimiento auditable y fiable
+- [x] Limitar el sondeo automático a redes RFC 1918 y evitar interfaces virtuales conocidas.
+- [x] Guardar rango detectado, direcciones consultadas, respuestas y duración en el historial.
+- [x] Hacer que la búsqueda cubra direcciones secundarias IPv4/IPv6 y agilizar consultas del inventario.
+
+## 0.7 — Distribución, protección y respaldo
+- [x] Lanzadores de un clic para Windows, macOS y Linux, con instalación incremental en entornos virtuales locales.
+- [x] Proteger la interfaz frente a hosts arbitrarios y peticiones web mutantes de otro origen.
+- [x] Exportación CSV compatible con Excel, historial JSON y respaldo SQLite consistente.
+- [x] Pruebas de seguridad, respaldo e instalación en Windows, macOS y Linux con Python 3.10–3.14.
+
 ## Próximas mejoras
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
 - [ ] Mejor visualización de tendencias e informes exportables.
