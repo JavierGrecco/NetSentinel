@@ -1,5 +1,10 @@
 # Historial de cambios
 
+## 0.6.5 — 11 de octubre de 2026
+
+- Añade el BOM UTF-8 a la exportación CSV para que Excel reconozca mejor los acentos y caracteres españoles.
+- Extiende la prueba de exportación para comprobar la marca de codificación.
+
 ## 0.6.4 — 11 de octubre de 2026
 
 - Amplía la exportación CSV con todas las direcciones IP observadas por dispositivo, su cantidad, interfaz y procedencia.

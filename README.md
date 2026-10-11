@@ -13,7 +13,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar incidentes y ver cuándo se recupera un servicio.
-- Exportar el inventario a CSV con todas las direcciones IPv4/IPv6 conocidas por equipo, y el historial completo a JSON.
+- Exportar el inventario a CSV compatible con Excel, con todas las direcciones IPv4/IPv6 conocidas por equipo, y el historial completo a JSON.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.

@@ -37,7 +37,9 @@ def test_trust_update_and_exports(tmp_path: Path):
         Neighbor("192.168.10.11", "11:22:33:44:55:66", "wlan0"),
         Neighbor("fe80::1", "11:22:33:44:55:66", "wlan0", "ndp"),
     ], path=db)
-    csv_rows = list(__import__("csv").DictReader(__import__("io").StringIO(database.export_csv(db))))
+    csv_text = database.export_csv(db)
+    assert csv_text.startswith("\ufeff")
+    csv_rows = list(__import__("csv").DictReader(__import__("io").StringIO(csv_text.lstrip("\ufeff"))))
     csv_device = next(item for item in csv_rows if item["mac_address"] == "11:22:33:44:55:66")
     assert "Mi portátil" in database.export_csv(db)
     assert csv_device["address_count"] == "2"

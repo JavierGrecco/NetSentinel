@@ -563,7 +563,8 @@ def export_csv(path: Path | None = None) -> str:
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(rows)
-    return buffer.getvalue()
+    # Excel on Windows recognizes UTF-8 reliably when the CSV has a BOM.
+    return "\ufeff" + buffer.getvalue()
 
 
 
