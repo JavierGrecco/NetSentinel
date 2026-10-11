@@ -106,6 +106,7 @@ def test_sqlite_backup_download_is_openable(monkeypatch, tmp_path):
         response = client.get("/api/export/backup.sqlite3")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/vnd.sqlite3")
+    assert response.headers["cache-control"] == "no-store"
     assert "netsentinel-backup.sqlite3" in response.headers["content-disposition"]
     backup_path = tmp_path / "downloaded.sqlite3"
     backup_path.write_bytes(response.content)

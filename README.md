@@ -85,7 +85,7 @@ La [guía de monitorización](docs/MONITORING.md) explica los límites y la conf
 
 ## Copias de seguridad y datos
 
-Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación: cerrá NetSentinel antes de reemplazar la base local al restaurarla y guardá una copia de la base actual por las dudas. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
+Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación. Para restaurarla, cerrá NetSentinel, guardá aparte la base actual y reemplazá `netsentinel.sqlite3` por el archivo descargado renombrado con ese nombre. La ruta predeterminada es `~/.netsentinel/netsentinel.sqlite3` (en Windows, dentro de tu carpeta de usuario); si configuraste `NETSENTINEL_DATA_DIR`, usá ese directorio en su lugar. Volvé a iniciar NetSentinel después de reemplazar el archivo. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
 ## Datos y privacidad
 

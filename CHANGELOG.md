@@ -5,6 +5,7 @@
 - Añade una descarga SQLite consistente y comprobable, apta para conservar el inventario, los eventos, lecturas y monitorización en una copia real.
 - Agrega el enlace de copia SQLite al panel junto a las exportaciones CSV y JSON.
 - Prueba que las copias se puedan abrir y pasen `PRAGMA integrity_check`.
+- Marca las descargas CSV, JSON y SQLite como `no-store` para evitar su almacenamiento en caché del navegador.
 
 ## 0.7.2 — 11 de octubre de 2026
 

@@ -321,7 +321,7 @@ def export_devices_csv() -> Response:
     return Response(
         content=database.export_csv(),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-devices.csv"'},
+        headers={"Content-Disposition": 'attachment; filename="netsentinel-devices.csv"', "Cache-Control": "no-store"},
     )
 
 
@@ -330,7 +330,7 @@ def export_sqlite_backup() -> Response:
     return Response(
         content=database.export_sqlite_backup(),
         media_type="application/vnd.sqlite3",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-backup.sqlite3"'},
+        headers={"Content-Disposition": 'attachment; filename="netsentinel-backup.sqlite3"', "Cache-Control": "no-store"},
     )
 
 
@@ -339,7 +339,7 @@ def export_data_json() -> Response:
     return Response(
         content=database.export_json(),
         media_type="application/json; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-export.json"'},
+        headers={"Content-Disposition": 'attachment; filename="netsentinel-export.json"', "Cache-Control": "no-store"},
     )
 
 
