@@ -1,0 +1,185 @@
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from fastapi.testclient import TestClient
+
+from netsentinel import database
+from netsentinel.discovery import Neighbor
+from netsentinel.main import app
+
+
+@pytest.fixture(autouse=True)
+def disable_scheduler(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+
+
+@pytest.fixture
+def client(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.5.20", "AA:BB:CC:DD:EE:91", "en0")])
+    with TestClient(app, base_url="http://127.0.0.1") as test_client:
+        yield test_client
+
+
+def device_id(client):
+    devices = client.get("/api/devices").json()
+    assert devices
+    return devices[0]["id"]
+
+
+def test_activity_page_and_empty_state_are_available(client):
+    page = client.get("/activity")
+    assert page.status_code == 200
+    assert "Actividad familiar" in page.text
+    assert "No captura tráfico por sí mismo" in page.text
+
+    response = client.get("/api/activity")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sessions"] == []
+    assert payload["events"] == []
+    assert payload["retention_days"] == 7
+    assert "No se guardan credenciales" in payload["note"]
+
+
+def test_session_accepts_valid_metadata_only_during_active_window(client):
+    selected = device_id(client)
+    session_response = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 30, "source_mode": "router_dns"},
+    )
+    assert session_response.status_code == 200
+    session = session_response.json()
+    assert session["status"] == "active"
+    assert session["device_id"] == selected
+
+    event_response = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"],
+            "device_id": selected,
+            "event_type": "dns_query",
+            "source": "router_dns",
+            "domain": "www.example.com.",
+        },
+    )
+    assert event_response.status_code == 200
+    event = event_response.json()
+    assert event["domain"] == "www.example.com"
+    assert event["source"] == "router_dns"
+    assert "password" not in event
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"][0]["domain"] == "www.example.com"
+
+
+def test_ingest_rejects_wrong_source_unknown_session_and_inactive_session(client):
+    selected = device_id(client)
+    session = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 15, "source_mode": "router_dns"},
+    ).json()
+    event = {
+        "session_id": session["id"], "device_id": selected,
+        "event_type": "dns_query", "source": "device_agent", "domain": "example.com",
+    }
+    assert client.post("/api/activity/ingest", json=event).status_code == 422
+
+    assert client.post(
+        "/api/activity/ingest",
+        json={**event, "session_id": 9999, "source": "router_dns"},
+    ).status_code == 404
+
+    stopped = client.post(f"/api/activity/sessions/{session['id']}/stop")
+    assert stopped.status_code == 200
+    assert stopped.json()["status"] == "stopped"
+    assert client.post(
+        "/api/activity/ingest",
+        json={**event, "source": "router_dns"},
+    ).status_code == 409
+
+
+@pytest.mark.parametrize("domain", ["https://example.com/login", "example.com/account", "user@example.com", "192.0.2.1"])
+def test_dns_event_rejects_urls_paths_addresses_and_userinfo(client, domain):
+    selected = device_id(client)
+    session = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 15, "source_mode": "router_dns"},
+    ).json()
+    response = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"], "device_id": selected,
+            "event_type": "dns_query", "source": "router_dns", "domain": domain,
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_csv_import_and_rejects_sensitive_columns(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked\n"
+        f"{stamp},dns_query,example.com,,,,,false\n"
+    )
+    imported = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert imported.status_code == 200
+    assert imported.json()["imported"] == 1
+    payload = client.get(f"/api/activity?device_id={selected}").json()
+    assert payload["events"][0]["source"] == "manual_import"
+    assert payload["events"][0]["domain"] == "example.com"
+
+    forbidden = (
+        "observed_at,event_type,domain,password\n"
+        f"{stamp},dns_query,example.com,guessme\n"
+    )
+    rejected = client.post("/api/activity/import", json={"device_id": selected, "csv_data": forbidden})
+    assert rejected.status_code == 422
+    assert "privacidad" in rejected.json()["detail"].lower()
+
+
+def test_retention_is_configurable_and_deletes_expired_events(client):
+    selected = device_id(client)
+    old = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+    csv_data = (
+        "observed_at,event_type,domain\n"
+        f"{old},dns_query,old.example\n"
+    )
+    imported = client.post("/api/activity/import", json={"device_id": selected, "csv_data": csv_data})
+    assert imported.status_code == 200
+    response = client.put("/api/activity/retention", json={"retention_days": 1})
+    assert response.status_code == 200
+    assert response.json()["retention_days"] == 1
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+
+def test_limits_unknown_device_and_invalid_retention(client):
+    assert client.get("/api/activity?device_id=99999").status_code == 404
+    assert client.post(
+        "/api/activity/sessions",
+        json={"device_id": 99999, "duration_minutes": 15, "source_mode": "router_dns"},
+    ).status_code == 404
+    assert client.put("/api/activity/retention", json={"retention_days": 365}).status_code == 422
+    assert client.post(
+        "/api/activity/sessions",
+        json={"device_id": device_id(client), "duration_minutes": 721, "source_mode": "router_dns"},
+    ).status_code == 422
+
+
+def test_metadata_events_are_included_in_json_export(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    imported = client.post(
+        "/api/activity/import",
+        json={
+            "device_id": selected,
+            "csv_data": "observed_at,event_type,domain\n" + f"{stamp},dns_query,example.com\n",
+        },
+    )
+    assert imported.status_code == 200
+    response = client.get("/api/export/data.json")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["format"] == "netsentinel-data-export-v4"
+    assert payload["activity_events"][0]["domain"] == "example.com"
+    assert payload["activity_settings"][0]["retention_days"] == 7
