@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="NetSentinel",
-    description="Inventario local, descubrimiento bajo demanda, lista de confianza, eventos y diagnóstico de red."
+    description="Inventario local, descubrimiento bajo demanda, lista de confianza, eventos y diagnóstico de red.",
     version=__version__,
     docs_url="/api/docs",
     redoc_url=None,
