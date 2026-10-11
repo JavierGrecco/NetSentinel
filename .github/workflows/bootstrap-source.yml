@@ -24,11 +24,14 @@ jobs:
           base64 --decode /tmp/netsentinel-publish/source.tar.xz.b64 > /tmp/netsentinel-publish/source.tar.xz
           echo "83d766200d7b8b39eaaa281a51afc85d9811e8583a1f657a86048479a37e9186  /tmp/netsentinel-publish/source.tar.xz" | sha256sum --check -
           tar -tJf /tmp/netsentinel-publish/source.tar.xz > /dev/null
-      - name: Expand source, install, and test
+      - name: Expand source, install and test
         shell: bash
         run: |
           set -euo pipefail
           tar -xJf /tmp/netsentinel-publish/source.tar.xz -C .
+          # The Actions token cannot create a commit that adds another workflow.
+          # Keep CI content aside and publish the project source first.
+          mv .github/workflows/ci.yml /tmp/netsentinel-ci.yml
           rm -rf .bootstrap .github/workflows/bootstrap-source.yml
           python -m pip install -e ".[test]"
           python -m pytest -q
