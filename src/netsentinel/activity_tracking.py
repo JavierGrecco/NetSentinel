@@ -266,7 +266,7 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
     if len(csv_data.encode("utf-8")) > 1_000_000:
         raise ValueError("El archivo CSV supera el máximo de 1 MB.")
     reader = csv.DictReader(io.StringIO(csv_data))
-    headers = [str(name or "").strip().lower() for name in (reader.fieldnames or [])]
+    headers = [str(name or "").strip().lstrip("\ufeff").lower() for name in (reader.fieldnames or [])]
     if not headers:
         raise ValueError("El CSV está vacío o no contiene cabeceras.")
     forbidden = SENSITIVE_HEADERS.intersection(headers)
@@ -288,7 +288,14 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
             raise LookupError("No se encontró el dispositivo.")
     normalized: list[dict[str, Any]] = []
     for line, row in enumerate(raw_rows, start=2):
-        mapped = {str(key or "").strip().lower(): value for key, value in row.items() if key is not None}
+        if row.get(None):
+            raise ValueError(f"Fila {line}: contiene más columnas que las cabeceras del CSV.")
+        mapped = {
+            str(key or "").strip().lstrip("\ufeff").lower(): value
+            for key, value in row.items() if key is not None
+        }
+        if not mapped.get("observed_at") or not mapped.get("event_type"):
+            raise ValueError(f"Fila {line}: observed_at y event_type son obligatorios.")
         try:
             normalized.append(normalize_event(mapped, source_override="manual_import"))
         except ValueError as exc:
@@ -329,15 +336,16 @@ def update_retention(retention_days: int) -> dict[str, Any]:
 def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, Any]:
     with database.connect() as db:
         _cleanup(db)
-        where = "WHERE s.device_id = ?" if device_id is not None else ""
         params: tuple[Any, ...] = (device_id,) if device_id is not None else ()
         if device_id is not None and db.execute("SELECT 1 FROM devices WHERE id=?", (device_id,)).fetchone() is None:
             raise LookupError("No se encontró el dispositivo.")
+        session_filter = "WHERE s.device_id = ?" if device_id is not None else ""
         sessions = db.execute(
-            """SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
-                      d.display_name, d.ip_address, d.mac_address
-               FROM activity_sessions s JOIN devices d ON d.id=s.device_id
-               ORDER BY s.started_at DESC, s.id DESC LIMIT 100"""
+            f"""SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
+                       d.display_name, d.ip_address, d.mac_address
+                FROM activity_sessions s JOIN devices d ON d.id=s.device_id
+                {session_filter} ORDER BY s.started_at DESC, s.id DESC LIMIT 100""",
+            params,
         ).fetchall()
         event_filter = "WHERE e.device_id = ?" if device_id is not None else ""
         events = db.execute(
@@ -354,15 +362,16 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
                 GROUP BY domain ORDER BY events DESC, last_seen DESC LIMIT 15""",
             domain_params,
         ).fetchall()
-        blocked_filter = "" if device_id is None else " WHERE device_id = ?"
         blocked_params: tuple[Any, ...] = () if device_id is None else (device_id,)
         blocked_count = db.execute(
             "SELECT COUNT(*) FROM activity_events WHERE blocked = 1" + ("" if device_id is None else " AND device_id = ?"),
             blocked_params,
         ).fetchone()[0]
         setting = db.execute("SELECT retention_days FROM activity_settings WHERE id=1").fetchone()
-        active_count = db.execute("SELECT COUNT(*) FROM activity_sessions WHERE status='active'").fetchone()[0]
-        event_count = db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0]
+        session_count_sql = "SELECT COUNT(*) FROM activity_sessions WHERE status='active'" + ("" if device_id is None else " AND device_id = ?")
+        event_count_sql = "SELECT COUNT(*) FROM activity_events" + ("" if device_id is None else " WHERE device_id = ?")
+        active_count = db.execute(session_count_sql, blocked_params).fetchone()[0]
+        event_count = db.execute(event_count_sql, blocked_params).fetchone()[0]
         devices = db.execute(
             "SELECT id, display_name, ip_address, mac_address FROM devices ORDER BY display_name, ip_address"
         ).fetchall()
