@@ -70,7 +70,7 @@ Algunos equipos no responderán al ping, las redes aisladas de invitados pueden 
 
 ## Herramientas DNS (módulo en desarrollo)
 
-La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`. La configuración DNS se obtiene mediante lectura local y puede ser parcial según el sistema operativo y las interfaces activas.
+La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`. La configuración DNS se obtiene mediante lectura local y puede ser parcial según el sistema operativo y las interfaces activas. También se puede consultar PTR desde la API para un dispositivo concreto con `GET /api/devices/{device_id}/dns-reverse`: usa su dirección observada más recientemente, solo se ejecuta cuando se solicita y no guarda el nombre DNS en el inventario.
 
 ## Monitorización
 
