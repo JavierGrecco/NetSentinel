@@ -275,6 +275,35 @@ def get_device_addresses(device_id: int, path: Path | None = None) -> list[dict[
     return [dict(row) for row in rows]
 
 
+def get_device_history(device_id: int, limit: int = 100, path: Path | None = None) -> dict[str, Any] | None:
+    """Devuelve observaciones históricas de un dispositivo, más recientes primero."""
+    bounded_limit = max(1, min(int(limit), 500))
+    with connect(path) as db:
+        device = db.execute(
+            "SELECT id, mac_address, ip_address, display_name, first_seen, last_seen FROM devices WHERE id = ?",
+            (device_id,),
+        ).fetchone()
+        if device is None:
+            return None
+        rows = db.execute(
+            """SELECT o.id, o.observed_at, o.ip_address, o.source, o.scan_id,
+                      s.source AS scan_source
+               FROM observations o
+               LEFT JOIN scans s ON s.id = o.scan_id
+               WHERE o.device_id = ?
+               ORDER BY o.observed_at DESC, o.id DESC
+               LIMIT ?""",
+            (device_id, bounded_limit),
+        ).fetchall()
+    return {
+        "device": dict(device),
+        "observations": [dict(row) for row in rows],
+        "count": len(rows),
+        "limit": bounded_limit,
+        "note": "Este historial refleja cuándo NetSentinel observó el dispositivo y sus direcciones; no registra páginas web ni todas las conexiones de red.",
+    }
+
+
 def get_events(path: Path | None = None, limit: int = 50) -> list[dict[str, Any]]:
     with connect(path) as db:
         rows = db.execute(
