@@ -2,18 +2,19 @@
 
 ## Estado actual
 
-La versión 0.3 reúne un inventario local con historial y un primer módulo de monitorización.
+La versión 0.5 reúne inventario local, monitorización, diagnóstico guiado y búsqueda automática y acotada de subredes IPv4 privadas.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual y exportación.
 - Fuentes de descubrimiento separadas y seguimiento de direcciones.
+- Detección automática de las subredes IPv4 privadas activas y búsqueda local limitada, sin pedir al usuario que calcule el rango.
 - Controles de ping, TCP y HTTP/HTTPS.
 - Historial de resultados e incidentes que se deduplican.
 - Notificaciones opcionales por webhook HTTPS.
 - Pruebas automatizadas y CI multiplataforma.
 
 ### Próximas etapas
-1. Mejorar el diagnóstico guiado y las explicaciones de los resultados.
+1. Mejorar cobertura del descubrimiento, incluyendo estrategias para equipos que no responden a ICMP y una ruta IPv6 bien delimitada.
 2. Incorporar integraciones opcionales de DNS y DHCP.
 3. Agregar informes y visualización de tendencias.
 4. Evaluar integraciones con routers según sus APIs y permisos.

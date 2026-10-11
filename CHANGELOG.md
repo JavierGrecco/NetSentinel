@@ -1,5 +1,13 @@
 # Historial de cambios
 
+## 0.5.0 — 11 de octubre de 2026
+
+- Añade descubrimiento de red local sin configuración manual de subredes.
+- Limita la búsqueda bajo demanda a dos subredes IPv4 privadas y hasta 254 direcciones por subred.
+- Filtra el inventario del barrido a las subredes detectadas y excluye interfaces virtuales y túneles comunes.
+- Configura pytest para encontrar el paquete del layout `src/` al ejecutar las pruebas desde el repositorio.
+- Amplía CI a Python 3.14 y agrega pruebas del descubrimiento automático.
+
 ## 0.4.0 — 11 de octubre de 2026
 
 - Agrega un resumen orientativo al diagnóstico de conectividad, con pasos sugeridos según los resultados.

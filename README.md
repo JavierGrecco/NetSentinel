@@ -6,7 +6,8 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 
 ## Qué podés hacer
 
-- Consultar dispositivos que el sistema operativo ya conoce, con sus direcciones IP y MAC.
+- Detectar automáticamente subredes IPv4 privadas activas y buscar dispositivos en ellas, sin que tengas que conocer el rango de IPs.
+- Consultar dispositivos con sus direcciones IP y MAC, según lo que la red permita observar.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
@@ -15,7 +16,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Exportar el inventario y los datos a CSV o JSON.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
 
-> **Importante:** el inventario inicial no garantiza descubrir todos los equipos de la red. El diagnóstico es orientativo: una prueba de ping fallida no demuestra por sí sola que Internet esté caído. Los monitores generan conexiones hacia los objetivos que configures; usalos solo con sistemas que administrás o estás autorizado a comprobar.
+> **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
 ## Requisitos
 
@@ -48,6 +49,12 @@ netsentinel
 
 Se abrirá el panel en **http://127.0.0.1:8765**. Si no se abre automáticamente, copiá esa dirección en el navegador.
 
+## Descubrimiento de la red
+
+En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSentinel detecta automáticamente las subredes IPv4 privadas de interfaces activas compatibles; no necesitás escribir una dirección IP ni calcular una máscara de red. Para limitar el tráfico, busca como máximo dos subredes y hasta 254 direcciones por cada una. Después consulta la tabla local de vecinos de macOS, Windows o Linux y guarda las entradas que coinciden con las redes detectadas.
+
+Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
+
 ## Monitorización
 
 En el panel, elegí **Monitorización** y agregá un control:
@@ -76,7 +83,7 @@ Para ejecutar las pruebas automatizadas:
 
 ```bash
 python -m pip install -e ".[test]"
-pytest
+python -m pytest
 ```
 
 ## Documentación

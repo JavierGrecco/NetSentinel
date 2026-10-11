@@ -20,8 +20,15 @@ Este documento resume qué está implementado y qué falta.
 - [x] Página independiente de monitorización.
 - [x] CSS separado del HTML y documentación más clara.
 
-## 0.4 — Diagnóstico e integraciones
+## 0.4 — Diagnóstico guiado
 - [x] Asistente guiado que resume los resultados y propone próximos pasos sin confundir ICMP bloqueado con una caída confirmada.
+
+## 0.5 — Descubrimiento local automático
+- [x] Detección de subredes IPv4 privadas desde las interfaces activas, sin configuración manual del usuario.
+- [x] Búsqueda bajo demanda limitada a dos subredes y 254 direcciones por subred.
+- [x] Filtrado de resultados a las subredes locales detectadas y pruebas deterministas sin red real.
+
+## Próximas mejoras
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
 - [ ] Mejor visualización de tendencias e informes exportables.
 
