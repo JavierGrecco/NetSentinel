@@ -24,8 +24,8 @@ Este documento separa el núcleo estable de los módulos que se incorporarán de
 
 ## Próximos módulos — orden recomendado
 
-### 0.11 — Diagnóstico DNS ampliado
-- [ ] Consultar resolución inversa PTR para una IP ingresada explícitamente.
+### 0.11 — Diagnóstico DNS ampliado (en progreso)
+- [x] Consultar resolución inversa PTR para una IP ingresada explícitamente.
 - [ ] Mostrar configuración DNS detectada del sistema cuando pueda obtenerse de forma portable.
 - [ ] Diferenciar con claridad “sin respuesta”, “nombre inexistente” y “error del resolvedor”.
 - [ ] Mantener límites de tiempo y pruebas deterministas.
