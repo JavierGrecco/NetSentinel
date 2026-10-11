@@ -13,7 +13,7 @@ import os
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import __version__
 from . import database
@@ -166,8 +166,7 @@ class ActivitySessionCreate(BaseModel):
 
 
 class ActivityEventIngest(BaseModel):
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
     session_id: int = Field(ge=1)
     collector_token: str = Field(min_length=32, max_length=128)
@@ -331,7 +330,7 @@ def ingest_family_activity(body: ActivityEventIngest) -> dict:
     """Guarda metadatos limitados solo durante una sesión activa."""
     try:
         return activity_tracking.ingest_event(
-            body.session_id, body.device_id, body.collector_token, body.dict(exclude={"collector_token"})
+            body.session_id, body.device_id, body.collector_token, body.model_dump(exclude={"collector_token"})
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
