@@ -39,6 +39,23 @@ Este documento resume qué está implementado y qué falta.
 - [x] Exportación CSV compatible con Excel, historial JSON y respaldo SQLite consistente.
 - [x] Pruebas de seguridad, respaldo e instalación en Windows, macOS y Linux con Python 3.10–3.14.
 
+## 0.6 — Descubrimiento auditable
+- [x] Limitar la búsqueda automática a RFC 1918 y filtrar interfaces Apple virtuales de enlace local.
+- [x] Guardar subredes detectadas, direcciones consultadas, respuestas y duración de cada lectura.
+- [x] Optimizar el inventario y permitir buscar por todas las direcciones observadas.
+
+## 0.7 — Distribución, seguridad y recuperación
+- [x] Lanzadores de un clic en Windows y macOS/Linux, con instalación incremental.
+- [x] Validar Host/Origin y enviar cabeceras HTTP defensivas en el panel local.
+- [x] Exportar CSV compatible con Excel y respaldo SQLite consistente.
+- [x] Probar la matriz Windows/macOS/Linux con Python 3.10–3.14.
+
+## 0.8 — Informes y tendencias de monitorización
+- [x] Resúmenes de comprobaciones, tasa de éxito por muestras e indicadores de latencia en ventanas de 24 horas y 7 días.
+- [x] Exportar el informe del período a CSV, con mitigación de fórmulas y cabeceras sin caché.
+- [x] Visualizar la secuencia cronológica de las últimas 15 comprobaciones por monitor.
+- [x] Añadir un índice SQLite por fecha para acelerar consultas por período.
+
 ## Próximas mejoras
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
 - [ ] Mejor visualización de tendencias e informes exportables.
