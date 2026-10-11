@@ -46,3 +46,13 @@ def test_dns_reverse_api_reports_ptr_failure(monkeypatch):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/tools/dns/reverse", params={"address": "192.0.2.9"})
     assert response.status_code == 502
+
+
+def test_tools_page_exposes_dns_and_ptr_forms(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/tools")
+    assert response.status_code == 200
+    assert 'id="dns-form"' in response.text
+    assert 'id="ptr-form"' in response.text
+    assert "/api/tools/dns/reverse" in response.text
