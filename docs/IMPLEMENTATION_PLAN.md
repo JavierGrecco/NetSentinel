@@ -4,13 +4,13 @@
 
 La versión estable 0.9.0 reúne inventario local, descubrimiento acotado a RFC 1918, confianza manual, historial, diagnóstico guiado, monitorización Ping/TCP/HTTP(S), incidentes, tendencias, exportaciones y respaldo SQLite.
 
-Esta rama inicia el primer módulo de herramientas: **consulta DNS de solo lectura**. La pantalla `/tools` permite consultar un nombre de host mediante el resolvedor del sistema operativo y devuelve las direcciones A/AAAA que el sistema logra resolver. No modifica DNS, no realiza escaneo de puertos y no acepta URLs completas.
+Esta rama incorpora herramientas DNS de solo lectura. La pantalla `/tools` permite consultar direcciones A/AAAA a partir de un nombre de host y consultar el PTR de una IP ingresada explícitamente, usando el resolvedor del sistema operativo. No modifica la configuración DNS ni realiza escaneo de puertos. Los nombres obtenidos se presentan como datos declarados por DNS, nunca como identidad verificada.
 
 ## Etapas
 
-1. **Módulo DNS básico:** validación estricta de host, resolución A/AAAA, salida estable y pruebas con el resolvedor simulado.
-2. **Interfaz DNS:** formulario separado con validación, estados vacíos y errores comprensibles; sin ejecutar consultas automáticamente al abrir la aplicación.
-3. **DNS inverso y contexto local:** PTR opcional y detección portable de configuración DNS, distinguiendo datos conocidos de inferencias.
+1. **Módulo DNS básico:** implementado en la rama; validación estricta de host, resolución A/AAAA y pruebas con el resolvedor simulado.
+2. **Interfaz DNS:** implementada en la rama con formularios separados, estados accesibles y consultas explícitas.
+3. **DNS inverso y contexto local:** consulta PTR por IP implementada y probada con mocks; queda pendiente detectar la configuración DNS de forma portable y diferenciar mejor los tipos de fallo.
 4. **Inventario enriquecido:** nombres DNS como metadatos opcionales con caché, procedencia y desactivación.
 5. **DHCP/router:** adaptadores optativos, inicialmente de solo lectura y por proveedor.
 6. **Topología y métricas:** cuando los datos disponibles sean suficientes y se definan límites de privacidad.
