@@ -71,8 +71,8 @@ def _windows_dns_servers() -> list[str]:
     # Revisar interfaces IPv4 e IPv6: los valores globales no siempre reflejan
     # la configuración específica asignada por DHCP o establecida por adaptador.
     interface_roots = (
-        r"SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces",
-        r"SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\Interfaces",
+        r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces",
+        r"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\Interfaces",
     )
     for interfaces in interface_roots:
         try:
