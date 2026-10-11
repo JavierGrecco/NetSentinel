@@ -163,6 +163,9 @@ class ActivitySessionCreate(BaseModel):
 
 
 class ActivityEventIngest(BaseModel):
+    class Config:
+        extra = "forbid"
+
     session_id: int = Field(ge=1)
     device_id: int = Field(ge=1)
     event_type: str = Field(min_length=1, max_length=32)
