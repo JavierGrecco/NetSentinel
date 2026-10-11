@@ -141,7 +141,7 @@ def discover_local_network(
     errors: list[str] = []
     try:
         subnets = detect_scan_subnets()
-    except (OSError, RuntimeError) as exc:
+    except Exception as exc:
         subnets = []
         errors.append(f"No se pudieron detectar las redes locales: {type(exc).__name__}.")
 
