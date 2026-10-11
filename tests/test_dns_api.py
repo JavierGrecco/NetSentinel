@@ -84,7 +84,7 @@ def test_dns_lookup_api_classifies_ptr_and_dns_temporarily_unavailable(monkeypat
 
     monkeypatch.setattr(
         main_module,
-        "reverse_lookup_ip",
+        "cached_reverse_lookup_ip",
         lambda _address: (_ for _ in ()).throw(DNSLookupError("El resolvedor DNS no respondió a tiempo; probá nuevamente.", "temporary")),
     )
     with TestClient(app, base_url="http://127.0.0.1") as client:
