@@ -1,5 +1,11 @@
 # Historial de cambios
 
+## 0.8.3 — 11 de octubre de 2026
+
+- Añade una secuencia visual de las 15 comprobaciones más recientes por monitor, ordenada cronológicamente y con distinción accesible entre éxitos y fallos.
+- Mantiene el historial detallado debajo de la secuencia para facilitar la investigación de una caída.
+- Amplía las pruebas de interfaz para verificar la presencia de la secuencia y sus estilos de estado.
+
 ## 0.8.2 — 11 de octubre de 2026
 
 - Añade un índice SQLite por fecha de comprobación para acelerar los resúmenes de 24 horas y 7 días cuando crezca el historial.

@@ -11,6 +11,8 @@ Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 seg
 Para evitar conexiones inesperadas, el monitor HTTP no sigue redirecciones y rechaza credenciales, parámetros y fragmentos en la URL. No incluyas tokens en direcciones web. Las comprobaciones generan tráfico hacia los objetivos seleccionados: usá solo equipos y servicios que administrás o tenés autorización para supervisar.
 
 ## Informes y tendencias
+En cada monitor, el botón **Historial** muestra también una secuencia de hasta 15 estados recientes. Se lee de izquierda (más antiguo) a derecha (más nuevo); el detalle de cada chequeo queda debajo para investigar horarios y motivos de fallo.
+
 
 En la página de monitorización podés cambiar entre las últimas 24 horas y los últimos 7 días. El resumen muestra cantidad de comprobaciones, fallos, tasa de resultados correctos, latencia media registrada y los incidentes que siguen abiertos.
 
