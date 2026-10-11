@@ -48,3 +48,31 @@ def test_dns_lookup_api_reports_resolver_errors(monkeypatch):
         response = client.get("/api/tools/dns/lookup", params={"hostname": "missing.example"})
     assert response.status_code == 502
     assert "DNS configurado" in response.json()["detail"]
+
+
+
+def test_dns_lookup_api_returns_not_found_for_missing_name(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    monkeypatch.setattr(
+        main_module,
+        "lookup_hostname",
+        lambda _hostname: (_ for _ in ()).throw(DNSLookupError("El resolvedor no encontró ese nombre.", "not_found")),
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/tools/dns/lookup", params={"hostname": "missing.example"})
+    assert response.status_code == 404
+    assert "no encontró" in response.json()["detail"]
+
+
+def test_dns_lookup_api_returns_service_unavailable_for_temporary_failure(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    monkeypatch.setattr(
+        main_module,
+        "lookup_hostname",
+        lambda _hostname: (_ for _ in ()).throw(DNSLookupError("El resolvedor DNS no respondió a tiempo; probá nuevamente.", "temporary")),
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/tools/dns/lookup", params={"hostname": "example.com"})
+    assert response.status_code == 503
