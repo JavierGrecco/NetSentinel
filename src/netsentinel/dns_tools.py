@@ -4,6 +4,17 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
+from collections import OrderedDict
+from datetime import datetime, timezone
+from threading import Lock
+
+
+# Caché acotada: evita repetir consultas PTR al inspeccionar varias veces una IP.
+_PTR_CACHE_TTL_SECONDS = 300
+_PTR_CACHE_MAX_ENTRIES = 256
+_ptr_cache: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+_ptr_cache_lock = Lock()
 
 
 class DNSLookupError(OSError):
@@ -112,3 +123,44 @@ def reverse_lookup_ip(address: str) -> dict:
         "record_type": "PTR",
         "note": "Un registro PTR es información declarada por DNS; no verifica la identidad ni la confiabilidad del equipo.",
     }
+
+
+
+def cached_reverse_lookup_ip(address: str) -> dict:
+    """Consulta PTR bajo demanda con caché TTL acotada y marca temporal de resolución.
+
+    Solo almacena resultados correctos; los errores temporales no quedan cacheados.
+    La llamada inicial sigue usando el resolvedor del sistema y sus límites de tiempo.
+    """
+    try:
+        normalized_ip = str(ipaddress.ip_address(address.strip()))
+    except ValueError as exc:
+        raise ValueError("Ingresá una dirección IPv4 o IPv6 válida.") from exc
+
+    now = time.monotonic()
+    with _ptr_cache_lock:
+        entry = _ptr_cache.get(normalized_ip)
+        if entry is not None:
+            expires_at, cached_result = entry
+            if expires_at > now:
+                _ptr_cache.move_to_end(normalized_ip)
+                result = dict(cached_result)
+                result["cache_hit"] = True
+                return result
+            del _ptr_cache[normalized_ip]
+
+    result = reverse_lookup_ip(normalized_ip)
+    result["resolved_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    result["cache_hit"] = False
+    with _ptr_cache_lock:
+        _ptr_cache[normalized_ip] = (time.monotonic() + _PTR_CACHE_TTL_SECONDS, dict(result))
+        _ptr_cache.move_to_end(normalized_ip)
+        while len(_ptr_cache) > _PTR_CACHE_MAX_ENTRIES:
+            _ptr_cache.popitem(last=False)
+    return result
+
+
+def clear_ptr_cache() -> None:
+    """Limpia la caché PTR; útil para pruebas y para reiniciar estado en memoria."""
+    with _ptr_cache_lock:
+        _ptr_cache.clear()
