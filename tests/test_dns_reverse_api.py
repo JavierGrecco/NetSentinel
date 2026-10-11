@@ -56,3 +56,19 @@ def test_tools_page_exposes_dns_and_ptr_forms(monkeypatch):
     assert 'id="dns-form"' in response.text
     assert 'id="ptr-form"' in response.text
     assert "/api/tools/dns/reverse" in response.text
+
+
+
+def test_dns_reverse_api_returns_not_found_when_ptr_is_absent(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    monkeypatch.setattr(
+        main_module,
+        "reverse_lookup_ip",
+        lambda _address: (_ for _ in ()).throw(DNSLookupError("No se encontró un registro PTR para esa dirección.", "not_found")),
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/tools/dns/reverse", params={"address": "192.0.2.99"})
+    assert response.status_code == 404
+    assert "PTR" in response.json()["detail"]
