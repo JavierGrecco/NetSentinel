@@ -92,9 +92,13 @@ La [guía de monitorización](docs/MONITORING.md) explica los límites y la conf
 
 Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación. Para restaurarla, cerrá NetSentinel, guardá aparte la base actual y reemplazá `netsentinel.sqlite3` por el archivo descargado renombrado con ese nombre. La ruta predeterminada es `~/.netsentinel/netsentinel.sqlite3` (en Windows, dentro de tu carpeta de usuario); si configuraste `NETSENTINEL_DATA_DIR`, usá ese directorio en su lugar. Volvé a iniciar NetSentinel después de reemplazar el archivo. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
-## Historial por dispositivo
+## Historial y actividad familiar
 
-Desde la tabla de inventario, la acción **Historial** permite revisar las observaciones que NetSentinel ya guardó: fecha, IP y fuente. Esta primera etapa registra presencia e historial de direcciones, no páginas visitadas ni todas las conexiones. Para identificar servicios de red hace falta integrar telemetría del router/punto de acceso o una captura autorizada en una interfaz que reciba el tráfico del dispositivo; HTTPS normalmente impide conocer las rutas completas de las páginas.
+Desde la tabla de inventario, la acción **Historial** permite revisar observaciones de presencia: fecha, IP y fuente. En **Actividad familiar** (`/activity`) podés abrir una ventana temporal de seguimiento, revisar dominios y conexiones reportados por una fuente disponible, importar logs normalizados de router/DNS desde CSV y definir una retención entre 1 y 90 días. La base conserva como máximo los metadatos incluidos en el esquema.
+
+**Importante:** esta versión no instala agentes ni captura automáticamente tráfico de otros dispositivos. Las sesiones habilitan una ventana para que una fuente local compatible envíe eventos; todavía no hay adaptador nativo para una marca/modelo de router. En Wi-Fi/redes conmutadas, esta computadora normalmente no ve todo el tráfico unicast de otros clientes. Un nombre DNS, SNI o destino IP es un indicio y no demuestra que una persona haya visitado una página ni usado una cuenta.
+
+NetSentinel no recolecta contraseñas, tokens, cookies, cuerpos HTTP, payloads, rutas ni URLs completas, y no intenta interceptar TLS ni descifrar credenciales. Para actividad por aplicación y tiempo de pantalla, combiná los metadatos con controles parentales nativos del sistema operativo. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) antes de integrar una fuente.
 
 ## Datos y privacidad
 
