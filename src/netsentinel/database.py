@@ -748,6 +748,119 @@ def get_monitor_analytics(window_hours: int = 24, path: Path | None = None) -> d
     }
 
 
+def export_incidents_csv(status: str | None = None, path: Path | None = None, limit: int = 5000) -> str:
+    """Exporta incidentes con duración estimada y protección contra fórmulas CSV."""
+    if status not in {None, "open", "resolved"}:
+        raise ValueError("El estado debe ser open o resolved.")
+    incidents = get_incidents(path=path, limit=limit, status=status)
+    buffer = io.StringIO(newline="")
+    fields = [
+        "id_incidente", "monitor", "tipo", "objetivo", "estado", "detectado_utc",
+        "recuperado_utc", "duracion_estimada_segundos", "tiempo_recuperacion_segundos",
+        "cantidad_fallos", "detalle_final", "base_duracion",
+    ]
+    writer = csv.DictWriter(buffer, fieldnames=fields)
+    writer.writeheader()
+    for incident in incidents:
+        row = {
+            "id_incidente": incident["id"],
+            "monitor": incident["monitor_name"],
+            "tipo": incident["kind"],
+            "objetivo": incident["target"],
+            "estado": "abierto" if incident["status"] == "open" else "resuelto",
+            "detectado_utc": incident["opened_at"],
+            "recuperado_utc": incident.get("resolved_at") or "",
+            "duracion_estimada_segundos": incident.get("duration_seconds"),
+            "tiempo_recuperacion_segundos": incident.get("time_to_recovery_seconds")
+                if incident.get("time_to_recovery_seconds") is not None else "",
+            "cantidad_fallos": incident["failure_count"],
+            "detalle_final": incident["last_detail"],
+            "base_duracion": incident.get("duration_basis", ""),
+        }
+        for key, value in row.items():
+            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+                row[key] = "'" + value
+        writer.writerow(row)
+    return "\ufeff" + buffer.getvalue()
+
+
+def get_monitor_latency_trend(monitor_id: int, window_hours: int = 24,
+                              path: Path | None = None) -> dict[str, Any] | None:
+    """Agrega la latencia histórica en buckets horarios (24 h) o de seis horas (7 días)."""
+    hours = max(1, min(int(window_hours), 168))
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds")
+    bucket_minutes = 60 if hours <= 24 else 360
+    if bucket_minutes == 60:
+        bucket_expr = "strftime('%Y-%m-%dT%H:00:00+00:00', checked_at)"
+    else:
+        bucket_expr = (
+            "strftime('%Y-%m-%dT', checked_at) || "
+            "printf('%02d:00:00+00:00', (CAST(strftime('%H', checked_at) AS INTEGER) / 6) * 6)"
+        )
+    with connect(path) as db:
+        monitor = db.execute(
+            "SELECT id, name, kind, target FROM monitors WHERE id = ?", (monitor_id,)
+        ).fetchone()
+        if monitor is None:
+            return None
+        rows = db.execute(
+            f"""SELECT {bucket_expr} AS bucket_start,
+                       COUNT(*) AS checks_total,
+                       SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END) AS checks_up,
+                       SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END) AS checks_down,
+                       AVG(CASE WHEN status = 'up' THEN latency_ms END) AS average_latency_ms,
+                       MIN(CASE WHEN status = 'up' THEN latency_ms END) AS min_latency_ms,
+                       MAX(CASE WHEN status = 'up' THEN latency_ms END) AS max_latency_ms
+                FROM monitor_checks
+                WHERE monitor_id = ? AND checked_at >= ?
+                GROUP BY bucket_start ORDER BY bucket_start ASC""",
+            (monitor_id, since),
+        ).fetchall()
+    points = []
+    for row in rows:
+        point = dict(row)
+        for key in ("average_latency_ms", "min_latency_ms", "max_latency_ms"):
+            point[key] = round(float(point[key]), 2) if point[key] is not None else None
+        points.append(point)
+    return {
+        "monitor": dict(monitor), "window_hours": hours, "since": since,
+        "bucket_minutes": bucket_minutes, "points": points,
+    }
+
+
+def export_monitor_latency_csv(monitor_id: int, window_hours: int = 24,
+                               path: Path | None = None) -> str | None:
+    """Exporta métricas de latencia agrupadas por hora o por bloques de seis horas."""
+    report = get_monitor_latency_trend(monitor_id, window_hours=window_hours, path=path)
+    if report is None:
+        return None
+    buffer = io.StringIO(newline="")
+    fields = [
+        "monitor_id", "monitor", "tipo", "objetivo", "periodo_horas", "bucket_minutos",
+        "inicio_bucket_utc", "comprobaciones", "correctas", "fallidas",
+        "latencia_media_ms", "latencia_minima_ms", "latencia_maxima_ms",
+    ]
+    writer = csv.DictWriter(buffer, fieldnames=fields)
+    writer.writeheader()
+    for point in report["points"]:
+        row = {
+            "monitor_id": report["monitor"]["id"],
+            "monitor": report["monitor"]["name"], "tipo": report["monitor"]["kind"],
+            "objetivo": report["monitor"]["target"], "periodo_horas": report["window_hours"],
+            "bucket_minutos": report["bucket_minutes"], "inicio_bucket_utc": point["bucket_start"],
+            "comprobaciones": point["checks_total"], "correctas": point["checks_up"],
+            "fallidas": point["checks_down"],
+            "latencia_media_ms": point["average_latency_ms"] if point["average_latency_ms"] is not None else "",
+            "latencia_minima_ms": point["min_latency_ms"] if point["min_latency_ms"] is not None else "",
+            "latencia_maxima_ms": point["max_latency_ms"] if point["max_latency_ms"] is not None else "",
+        }
+        for key, value in row.items():
+            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+                row[key] = "'" + value
+        writer.writerow(row)
+    return "\ufeff" + buffer.getvalue()
+
+
 def export_monitoring_csv(window_hours: int = 24, path: Path | None = None) -> str:
     """Exporta el resumen de monitorización por período en CSV seguro para hojas de cálculo."""
     report = get_monitor_analytics(window_hours=window_hours, path=path)
@@ -823,7 +936,7 @@ def get_incidents(path: Path | None = None, limit: int = 50, status: str | None 
     if status in {"open", "resolved"}:
         where = "WHERE i.status = ?"
         params.append(status)
-    params.append(max(1, min(int(limit), 200)))
+    params.append(max(1, min(int(limit), 5000)))
     with connect(path) as db:
         rows = db.execute(
             f"""SELECT i.*, m.name AS monitor_name, m.kind, m.target

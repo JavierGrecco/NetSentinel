@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La versión 0.8.4 reúne inventario local, informes de monitorización de 24 horas/7 días exportables a CSV, duración estimada de incidentes y gráficas de latencia reciente, diagnóstico guiado, descubrimiento acotado a RFC 1918, lanzadores sencillos y copias de seguridad SQLite consistentes.
+La versión 0.9.0 reúne inventario local, informes de monitorización e incidentes exportables a CSV, tendencias de latencia agregadas para 24 horas/7 días, duración estimada de incidentes, diagnóstico guiado, descubrimiento acotado a RFC 1918, lanzadores sencillos y copias SQLite consistentes.
 
 ### Completado
 - Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
@@ -14,7 +14,7 @@ La versión 0.8.4 reúne inventario local, informes de monitorización de 24 hor
 - Controles de ping, TCP y HTTP/HTTPS.
 - Historial de resultados e incidentes que se deduplican.
 - Resúmenes de comprobaciones correctas/fallidas y latencia por ventana temporal, exportación CSV y secuencia visual de hasta 15 chequeos.
-- Duración estimada de incidentes, tiempo medio/máximo hasta recuperación y gráfico de latencias recientes por monitor.
+- Duración estimada de incidentes, tiempos medios/máximos de recuperación y tendencias de latencia por hora/seis horas con exportación CSV.
 - Índice por fecha para acelerar los resúmenes del historial de monitorización.
 - Notificaciones opcionales por webhook HTTPS.
 - Protección de host/origen y cabeceras HTTP defensivas.

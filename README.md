@@ -12,7 +12,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Guardar un historial de lecturas y cambios observados.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
-- Consultar incidentes con duración estimada desde la detección y tiempo hasta la recuperación. Revisar la evolución de latencia de las últimas comprobaciones, además de los resúmenes de 24 horas o 7 días exportables a CSV.
+- Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
 - Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
 

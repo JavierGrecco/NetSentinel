@@ -28,6 +28,12 @@ Estos tiempos son **estimaciones de observación**, no la duración exacta de un
 
 Al expandir el historial de un monitor, el gráfico de latencia presenta las mediciones registradas en hasta 15 comprobaciones recientes. Solo las respuestas correctas con latencia medida contribuyen a los valores mínimo, medio y máximo; un fallo se indica por separado y no se convierte en una latencia ficticia. El gráfico usa datos ya guardados y no realiza chequeos adicionales.
 
+## Informes CSV e historial extendido
+
+En **Incidentes** podés filtrar la lista por abiertos, resueltos o todos y descargar el informe completo en CSV. La exportación incluye monitor, objetivo, fechas, cantidad de fallos y duración estimada en segundos. Se limita a 5000 incidentes por archivo para mantener un tamaño razonable.
+
+En el historial de cada monitor, además del gráfico de las últimas comprobaciones, hay una tendencia agregada del período seleccionado: una barra por hora para las últimas 24 horas y una por bloque de seis horas para los últimos siete días. El botón **Exportar tendencia CSV** descarga los mismos bloques con conteos de comprobaciones y latencia media/mínima/máxima. Los bloques sin latencia no se convierten artificialmente en cero; los fallos se conservan en el conteo y no entran al promedio de latencia.
+
 ## Webhook opcional
 
 Configurá la variable `NETSENTINEL_WEBHOOK_URL` antes de iniciar el programa. Debe ser una URL HTTPS sin usuario ni contraseña incrustados. NetSentinel intenta enviar avisos al pasar a caído y al recuperarse. Sin webhook, la monitorización funciona normalmente.

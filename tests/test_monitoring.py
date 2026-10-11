@@ -251,3 +251,97 @@ def test_latency_trend_ui_has_accessible_chart_and_recovery_metrics(monkeypatch,
     assert ".latency-bar.up" in css.text
     assert summary.status_code == 200
     assert "average_recovery_seconds" in summary.json()["summary"]
+
+
+def test_incident_csv_export_contains_durations_and_neutralizes_formulas(tmp_path):
+    import csv
+    import io
+
+    path = tmp_path / "incident-export.sqlite3"
+    database.initialize(path)
+    monitor = database.create_monitor("=SUM(A1:A2)", "tcp", "127.0.0.1:443", 60, 3, path=path)
+    failed = database.record_monitor_check(monitor["id"], "down", None, "Error", path=path)
+    database.record_monitor_check(monitor["id"], "up", 4.0, "Recuperado", path=path)
+    with database.connect(path) as db:
+        db.execute(
+            "UPDATE incidents SET opened_at = ?, resolved_at = ?, updated_at = ? WHERE id = ?",
+            ("2026-10-11T10:00:00+00:00", "2026-10-11T10:05:00+00:00",
+             "2026-10-11T10:05:00+00:00", failed["transition"]["incident_id"]),
+        )
+    output = database.export_incidents_csv(status="resolved", path=path)
+    rows = list(csv.DictReader(io.StringIO(output.lstrip("\\ufeff"))))
+    assert len(rows) == 1
+    assert rows[0]["monitor"] == "'=SUM(A1:A2)"
+    assert rows[0]["estado"] == "resuelto"
+    assert rows[0]["duracion_estimada_segundos"] == "300"
+    assert rows[0]["tiempo_recuperacion_segundos"] == "300"
+    open_rows = list(csv.DictReader(io.StringIO(database.export_incidents_csv(status="open", path=path).lstrip("\\ufeff"))))
+    assert open_rows == []
+
+
+def test_latency_history_aggregates_by_hour_and_six_hour_bucket(tmp_path):
+    from datetime import datetime, timedelta, timezone
+
+    path = tmp_path / "latency-trend.sqlite3"
+    database.initialize(path)
+    monitor = database.create_monitor("Latency", "tcp", "127.0.0.1:443", 60, 3, path=path)
+    database.record_monitor_check(monitor["id"], "up", 12.0, "Correcto", path=path)
+    database.record_monitor_check(monitor["id"], "up", 18.0, "Correcto", path=path)
+    database.record_monitor_check(monitor["id"], "down", None, "Falló", path=path)
+    recent = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    earlier = recent - timedelta(hours=30)
+    with database.connect(path) as db:
+        ids = [row["id"] for row in db.execute(
+            "SELECT id FROM monitor_checks WHERE monitor_id = ? ORDER BY id", (monitor["id"],)
+        )]
+        db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (recent.isoformat(), ids[0]))
+        db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (recent.isoformat(), ids[1]))
+        db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (earlier.isoformat(), ids[2]))
+    day = database.get_monitor_latency_trend(monitor["id"], window_hours=24, path=path)
+    week = database.get_monitor_latency_trend(monitor["id"], window_hours=168, path=path)
+    assert day["bucket_minutes"] == 60
+    recent_points = [p for p in day["points"] if p["checks_total"]]
+    assert len(recent_points) == 1
+    assert recent_points[0]["checks_up"] == 2
+    assert recent_points[0]["average_latency_ms"] == 15.0
+    assert week["bucket_minutes"] == 360
+    assert sum(p["checks_total"] for p in week["points"]) == 3
+    assert database.get_monitor_latency_trend(9999, path=path) is None
+
+
+def test_incident_and_latency_export_endpoints_are_no_store(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    monitor = database.create_monitor("Servicio", "tcp", "127.0.0.1:443", 60, 3)
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        incidents = client.get("/api/export/incidents.csv")
+        invalid = client.get("/api/export/incidents.csv?status=unknown")
+        trend = client.get(f"/api/monitors/{monitor['id']}/latency?hours=168")
+        export = client.get(f"/api/export/monitor-latency.csv?monitor_id={monitor['id']}&hours=168")
+        missing = client.get("/api/monitors/9999/latency")
+        missing_export = client.get("/api/export/monitor-latency.csv?monitor_id=9999")
+    assert incidents.status_code == 200
+    assert incidents.headers["cache-control"] == "no-store"
+    assert "netsentinel-incidents.csv" in incidents.headers["content-disposition"]
+    assert invalid.status_code == 422
+    assert trend.status_code == 200
+    assert trend.json()["bucket_minutes"] == 360
+    assert export.status_code == 200
+    assert export.headers["cache-control"] == "no-store"
+    assert "inicio_bucket_utc" in export.text
+    assert missing.status_code == 404
+    assert missing_export.status_code == 404
+
+
+def test_monitor_page_exposes_incident_filter_and_historical_latency_exports(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        page = client.get("/monitors")
+        css = client.get("/static/monitors.css")
+    assert page.status_code == 200
+    assert 'id="incidentStatus"' in page.text
+    assert 'id="incidentExport"' in page.text
+    assert "appendHistoricalLatencyTrend" in page.text
+    assert "/api/export/monitor-latency.csv" in page.text
+    assert ".latency-history-bar" in css.text

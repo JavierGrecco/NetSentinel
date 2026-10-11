@@ -60,7 +60,8 @@ Este documento resume qué está implementado y qué falta.
 
 ## Próximas mejoras
 - [ ] Adaptadores opcionales para DNS, DHCP y routers compatibles.
-- [ ] Agregados exportables de duración de incidentes y latencia histórica más allá de las últimas 15 comprobaciones.
+- [x] Exportar incidentes abiertos y resueltos, con duración y fallos, a CSV.
+- [x] Ver y exportar tendencias de latencia agregadas por hora (24 h) y por bloques de seis horas (7 días).
 
 ## Más adelante
 - [ ] Mapa de topología respaldado por datos.

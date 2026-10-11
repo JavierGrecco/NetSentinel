@@ -1,5 +1,12 @@
 # Historial de cambios
 
+## 0.9.0 — 11 de octubre de 2026
+
+- Permite exportar hasta 5000 incidentes en CSV, filtrados por abiertos o resueltos, con duración estimada, recuperación, cantidad de fallos y detalle final.
+- Amplía las tendencias de latencia: una barra por hora para 24 horas y una por bloque de seis horas para los últimos siete días.
+- Añade exportación CSV de métricas históricas agrupadas, con UTF-8, neutralización de fórmulas y cabeceras sin caché.
+- Incorpora filtros visuales de incidentes y pruebas de agregación temporal, exportación segura y respuestas 404/422.
+
 ## 0.8.4 — 11 de octubre de 2026
 
 - Añade duración desde la detección y tiempo hasta la recuperación a los incidentes, señalando que son estimaciones basadas en la cadencia de comprobaciones.
