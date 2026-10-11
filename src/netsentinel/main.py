@@ -258,6 +258,28 @@ def scan() -> dict:
         _scan_lock.release()
 
 
+@app.get("/api/devices/{device_id}/dns-reverse")
+def device_dns_reverse_lookup(device_id: int) -> dict:
+    """Consulta PTR de la dirección observada más recientemente, solo bajo demanda."""
+    addresses = database.get_device_addresses(device_id)
+    if addresses is None:
+        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
+    if not addresses:
+        raise HTTPException(status_code=404, detail="El dispositivo no tiene direcciones observadas para consultar.")
+    address = addresses[0]["ip_address"]
+    try:
+        result = cached_reverse_lookup_ip(address)
+        result["device_id"] = device_id
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DNSLookupError as exc:
+        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR para la dirección observada.") from exc
+
+
 @app.patch("/api/devices/{device_id}")
 def edit_device(device_id: int, body: DeviceUpdate) -> dict:
     try:
