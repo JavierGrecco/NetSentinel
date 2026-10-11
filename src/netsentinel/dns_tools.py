@@ -6,6 +6,24 @@ import ipaddress
 import socket
 
 
+class DNSLookupError(OSError):
+    """Error DNS con una categoría estable para la API y la interfaz."""
+
+    def __init__(self, message: str, kind: str):
+        super().__init__(message)
+        self.kind = kind
+
+
+def _resolver_error_kind(exc: socket.gaierror) -> str:
+    """Clasifica errores comunes sin depender de textos localizados del sistema."""
+    code = exc.errno
+    if code == getattr(socket, "EAI_NONAME", object()) or code == getattr(socket, "EAI_NODATA", object()):
+        return "not_found"
+    if code == getattr(socket, "EAI_AGAIN", object()):
+        return "temporary"
+    return "resolver_error"
+
+
 def _normalize_hostname(hostname: str) -> str:
     """Valida un nombre DNS simple; no admite URLs, puertos ni credenciales."""
     value = hostname.strip().rstrip(".")
@@ -36,7 +54,14 @@ def lookup_hostname(hostname: str) -> dict:
     try:
         records = socket.getaddrinfo(normalized, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise OSError("El resolvedor no pudo encontrar el nombre solicitado.") from exc
+        kind = _resolver_error_kind(exc)
+        if kind == "not_found":
+            message = "El resolvedor no encontró ese nombre."
+        elif kind == "temporary":
+            message = "El resolvedor DNS no respondió a tiempo; probá nuevamente."
+        else:
+            message = "El resolvedor DNS devolvió un error."
+        raise DNSLookupError(message, kind) from exc
     addresses = sorted({record[4][0].split("%", 1)[0] for record in records},
                        key=lambda value: (ipaddress.ip_address(value).version, int(ipaddress.ip_address(value))))
     return {
@@ -65,8 +90,17 @@ def reverse_lookup_ip(address: str) -> dict:
             sockaddr,
             socket.NI_NAMEREQD,
         )
-    except (socket.gaierror, OSError) as exc:
-        raise OSError("El resolvedor no devolvió un nombre PTR para esa dirección.") from exc
+    except socket.gaierror as exc:
+        kind = _resolver_error_kind(exc)
+        if kind == "not_found":
+            message = "No se encontró un registro PTR para esa dirección."
+        elif kind == "temporary":
+            message = "El resolvedor DNS no respondió a tiempo; probá nuevamente."
+        else:
+            message = "El resolvedor DNS devolvió un error al consultar PTR."
+        raise DNSLookupError(message, kind) from exc
+    except OSError as exc:
+        raise DNSLookupError("No se pudo completar la consulta PTR.", "resolver_error") from exc
 
     hostname = hostname.rstrip(".").lower()
     if not hostname:
