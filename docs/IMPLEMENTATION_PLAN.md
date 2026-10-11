@@ -1,32 +1,20 @@
 # Plan de implementación
 
-## Estado actual
+## Estado actual — rama de trabajo 0.10
 
-La versión 0.9.0 reúne inventario local, informes de monitorización e incidentes exportables a CSV, tendencias de latencia agregadas para 24 horas/7 días, duración estimada de incidentes, diagnóstico guiado, descubrimiento acotado a RFC 1918, lanzadores sencillos y copias SQLite consistentes.
+La versión estable 0.9.0 reúne inventario local, descubrimiento acotado a RFC 1918, confianza manual, historial, diagnóstico guiado, monitorización Ping/TCP/HTTP(S), incidentes, tendencias, exportaciones y respaldo SQLite.
 
-### Completado
-- Panel de inventario, nombres, notas, confianza manual, búsqueda sobre direcciones secundarias y exportaciones CSV/JSON.
-- Respaldo SQLite consistente descargable, con validación de integridad.
-- Lanzadores de un clic para Windows y macOS/Linux con instalación incremental.
-- Fuentes de descubrimiento separadas y seguimiento de direcciones.
-- Descubrimiento automático limitado a RFC 1918: hasta dos redes, máximo 254 direcciones por segmento, una sola lectura simultánea y exclusión de interfaces virtuales conocidas.
-- Métricas de alcance, respuestas ping y duración guardadas en el historial.
-- Controles de ping, TCP y HTTP/HTTPS.
-- Historial de resultados e incidentes que se deduplican.
-- Resúmenes de comprobaciones correctas/fallidas y latencia por ventana temporal, exportación CSV y secuencia visual de hasta 15 chequeos.
-- Duración estimada de incidentes, tiempos medios/máximos de recuperación y tendencias de latencia por hora/seis horas con exportación CSV.
-- Índice por fecha para acelerar los resúmenes del historial de monitorización.
-- Notificaciones opcionales por webhook HTTPS.
-- Protección de host/origen y cabeceras HTTP defensivas.
-- Pruebas automatizadas y CI multiplataforma para Python 3.10–3.14 en Windows, macOS y Linux.
+Esta rama inicia el primer módulo de herramientas: **consulta DNS de solo lectura**. La API permite consultar un nombre de host mediante el resolvedor del sistema operativo y devuelve las direcciones A/AAAA que el sistema logra resolver. No modifica DNS, no realiza escaneo de puertos y no acepta URLs completas.
 
-### Próximas etapas
-1. Mejorar cobertura del descubrimiento, incluyendo estrategias para equipos que no responden a ICMP y una ruta IPv6 bien delimitada.
-2. Incorporar integraciones opcionales de DNS y DHCP.
-3. Agregar informes y visualización de tendencias.
-4. Evaluar integraciones con routers según sus APIs y permisos.
-5. Considerar un proxy separado solo tras definir su alcance y sus implicaciones de privacidad.
+## Etapas
+
+1. **Módulo DNS básico:** validación estricta de host, resolución A/AAAA, salida estable y pruebas con el resolvedor simulado.
+2. **Interfaz DNS:** formulario separado con validación, estados vacíos y errores comprensibles; sin ejecutar consultas automáticamente al abrir la aplicación.
+3. **DNS inverso y contexto local:** PTR opcional y detección portable de configuración DNS, distinguiendo datos conocidos de inferencias.
+4. **Inventario enriquecido:** nombres DNS como metadatos opcionales con caché, procedencia y desactivación.
+5. **DHCP/router:** adaptadores optativos, inicialmente de solo lectura y por proveedor.
+6. **Topología y métricas:** cuando los datos disponibles sean suficientes y se definan límites de privacidad.
 
 ## Criterios de aceptación
 
-Cada función nueva debe tener pruebas automatizadas, mensajes de error comprensibles, documentación de permisos y tráfico que genera, y una opción de desactivación cuando corresponda. Las pruebas no deben depender de Internet, una red real ni privilegios de administrador.
+Cada función nueva requiere pruebas automatizadas, mensajes de error comprensibles, documentación de permisos y tráfico, límites explícitos y una opción de desactivación cuando corresponda. Las pruebas no deben depender de Internet, una red real ni privilegios de administrador. La versión estable no debe cambiar hasta completar revisión y CI.
