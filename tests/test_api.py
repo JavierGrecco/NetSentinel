@@ -58,7 +58,7 @@ def test_scan_endpoint_uses_discovery_and_records_history(monkeypatch, tmp_path)
     database.initialize()
     monkeypatch.setattr(
         "netsentinel.main.discover_local_network",
-        lambda: ([Neighbor("192.168.5.3", "00:11:22:33:44:55", "automatic-local-network")], [], {"networks": [{"network": "192.168.5.0/24", "interface": "en0", "local_address": "192.168.5.20", "range_limited": False}], "addresses_checked": 254, "ping_responses": 1, "scope": "fixture"}),
+        lambda: ([Neighbor("192.168.5.3", "00:11:22:33:44:55", "en0", "automatic-local-network")], [], {"networks": [{"network": "192.168.5.0/24", "interface": "en0", "local_address": "192.168.5.20", "range_limited": False}], "addresses_checked": 254, "ping_responses": 1, "scope": "fixture"}),
     )
     with TestClient(app) as client:
         response = client.post("/api/scan")
