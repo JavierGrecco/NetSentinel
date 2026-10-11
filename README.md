@@ -14,7 +14,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
 - Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
-- Enviar avisos externos opcionales mediante un webhook HTTPS.
+- Enviar avisos externos opcionales mediante un webhook HTTPS.\n- **En desarrollo (rama 0.10):** consultar registros de nombre A/AAAA mediante el resolvedor DNS del sistema a través de la API; todavía no hay una pantalla DNS propia.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
@@ -67,7 +67,7 @@ En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSen
 
 Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
 
-## Monitorización
+## Herramientas DNS (módulo en desarrollo)\n\nLa rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y aún no tiene formulario en el panel.\n\n## Monitorización
 
 En el panel, elegí **Monitorización** y agregá un control:
 
