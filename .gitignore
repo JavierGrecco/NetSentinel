@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Packaging
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local NetSentinel data and secrets
+.netsentinel/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+oui.csv
+.env
+.env.*
+!.env.example
