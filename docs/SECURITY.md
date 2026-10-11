@@ -39,3 +39,7 @@ Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloque
 ## Reporte de vulnerabilidades
 
 No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.
+
+
+### Importación de correo
+La funcionalidad de correo es exclusivamente una importación explícita de metadatos desde una exportación de auditoría autorizada. Guarda fecha/proveedor/emisor/destinatarios/asunto opcional, nunca cuerpos ni adjuntos. La aplicación no se autentica en buzones, no extrae mensajes desde webmail y rechaza columnas de contenido. Los CSV importados deben tratarse como datos sensibles y mantenerse solo el tiempo necesario.
