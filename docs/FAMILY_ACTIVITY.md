@@ -26,7 +26,7 @@ observed_at,event_type,email_provider,email_from,email_to,email_subject
 
 El emisor y al menos un destinatario son obligatorios; se aceptan hasta diez destinatarios. El asunto es opcional y se limita a 200 caracteres. La importación se etiqueta como `manual_import`. Las columnas `message`, `email_body`, `body_text`, `body_html`, `content`, `attachments` y equivalentes se rechazan.
 
-No hay aún un adaptador nativo para Google Workspace, Microsoft 365 ni cuentas personales: primero hay que elegir proveedor, revisar qué registros brinda el tipo de cuenta y verificar los permisos necesarios. No todos los planes familiares exponen los mismos logs. No se guardan cuerpos de mensajes ni archivos adjuntos; para una preocupación concreta sobre contenido, es preferible utilizar las herramientas oficiales de seguridad y controles parentales de la cuenta de forma transparente, no extraer comunicaciones desde el navegador.
+El importador normaliza algunas cabeceras habituales de Google Workspace Email Log Search (Date, Sender, Recipient, Subject or Message ID) y Microsoft 365 Message Trace (receivedDateTime, senderAddress, recipientAddress, subject). El campo de Google "Subject or Message ID" puede contener un identificador en vez del asunto real. Esto solo normaliza CSV exportados manualmente: no es un conector API ni inicia sesión en cuentas, y la cobertura depende de la edición y permisos del proveedor. No se guardan cuerpos de mensajes ni archivos adjuntos; para una preocupación concreta sobre contenido, es preferible utilizar las herramientas oficiales de seguridad y controles parentales de la cuenta de forma transparente, no extraer comunicaciones desde el navegador.
 
 ## Flujo de uso actual
 
