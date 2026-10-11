@@ -76,3 +76,18 @@ def test_dns_lookup_api_returns_service_unavailable_for_temporary_failure(monkey
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/tools/dns/lookup", params={"hostname": "example.com"})
     assert response.status_code == 503
+
+
+
+def test_dns_lookup_api_classifies_ptr_and_dns_temporarily_unavailable(monkeypatch):
+    from netsentinel.dns_tools import DNSLookupError
+
+    monkeypatch.setattr(
+        main_module,
+        "reverse_lookup_ip",
+        lambda _address: (_ for _ in ()).throw(DNSLookupError("El resolvedor DNS no respondió a tiempo; probá nuevamente.", "temporary")),
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/tools/dns/reverse", params={"address": "192.0.2.8"})
+    assert response.status_code == 503
+    assert "no respondió a tiempo" in response.json()["detail"]
