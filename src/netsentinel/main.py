@@ -20,7 +20,7 @@ from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
-from .dns_tools import DNSLookupError, lookup_hostname, reverse_lookup_ip
+from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
 from .dns_config import get_dns_configuration
 
 
@@ -193,7 +193,7 @@ def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
 def dns_reverse_lookup(address: str = Query(min_length=1, max_length=64)) -> dict:
     """Consulta PTR para una IP ingresada explícitamente por el usuario."""
     try:
-        return reverse_lookup_ip(address)
+        return cached_reverse_lookup_ip(address)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DNSLookupError as exc:
