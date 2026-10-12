@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from .config import database_path
+from .csv_safety import spreadsheet_safe_text
 from .discovery import Neighbor
 from .vendor import is_locally_administered, manufacturer_for_mac, oui_database_path
 
@@ -834,7 +835,10 @@ def export_csv(path: Path | None = None) -> str:
         )
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows(
+        {key: spreadsheet_safe_text(value) for key, value in row.items()}
+        for row in rows
+    )
     # Excel on Windows recognizes UTF-8 reliably when the CSV has a BOM.
     return "\ufeff" + buffer.getvalue()
 
@@ -1023,10 +1027,7 @@ def export_incidents_csv(status: str | None = None, path: Path | None = None, li
             "detalle_final": incident["last_detail"],
             "base_duracion": incident.get("duration_basis", ""),
         }
-        for key, value in row.items():
-            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
-                row[key] = "'" + value
-        writer.writerow(row)
+        writer.writerow({key: spreadsheet_safe_text(value) for key, value in row.items()})
     return "\ufeff" + buffer.getvalue()
 
 
@@ -1100,10 +1101,7 @@ def export_monitor_latency_csv(monitor_id: int, window_hours: int = 24,
             "latencia_minima_ms": point["min_latency_ms"] if point["min_latency_ms"] is not None else "",
             "latencia_maxima_ms": point["max_latency_ms"] if point["max_latency_ms"] is not None else "",
         }
-        for key, value in row.items():
-            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
-                row[key] = "'" + value
-        writer.writerow(row)
+        writer.writerow({key: spreadsheet_safe_text(value) for key, value in row.items()})
     return "\ufeff" + buffer.getvalue()
 
 
@@ -1139,10 +1137,7 @@ def export_monitoring_csv(window_hours: int = 24, path: Path | None = None) -> s
             "latencia_minima_ms": monitor["min_latency_ms"] if monitor["min_latency_ms"] is not None else "",
             "latencia_maxima_ms": monitor["max_latency_ms"] if monitor["max_latency_ms"] is not None else "",
         }
-        for key, value in row.items():
-            if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
-                row[key] = "'" + value
-        writer.writerow(row)
+        writer.writerow({key: spreadsheet_safe_text(value) for key, value in row.items()})
     return "\ufeff" + buffer.getvalue()
 
 
