@@ -33,6 +33,7 @@ const {
   cleanUrl,
   isExcluded,
   loadState,
+  enqueueNavigation,
   privateOrLocalHost,
   searchInfo
 } = require("./service-worker.js");
@@ -201,4 +202,42 @@ test("stored event retention and event limit are enforced when loading state", a
   assert.equal(state.settings.retentionDays, 1);
   assert.equal(state.events.length, MAX_EVENTS);
   assert.equal(state.events.some(event => event === old), false);
+});
+
+
+test("concurrent navigation notifications are serialized without losing events", async () => {
+  setState(enabledSettings(), []);
+  const baseTime = Date.now();
+
+  await Promise.all([
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 101,
+      url: "https://example.com/first",
+      timeStamp: baseTime
+    }),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 202,
+      url: "https://example.net/second",
+      timeStamp: baseTime + 1
+    }),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 303,
+      url: "https://example.org/third",
+      timeStamp: baseTime + 2
+    })
+  ]);
+
+  const pages = mockStore[EVENTS_KEY].filter(event => event.event_type === "page_visit");
+  assert.equal(pages.length, 3, "each distinct navigation must survive concurrent storage updates");
+  assert.deepEqual(
+    new Set(pages.map(event => event.page_url)),
+    new Set([
+      "https://example.com/first",
+      "https://example.net/second",
+      "https://example.org/third"
+    ])
+  );
 });
