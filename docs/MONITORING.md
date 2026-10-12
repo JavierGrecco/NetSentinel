@@ -8,6 +8,31 @@ NetSentinel comprueba tres tipos de objetivo:
 
 Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 segundos. Cada resultado guarda fecha, estado, detalle y latencia cuando está disponible. El primer fallo abre un incidente. Los fallos siguientes actualizan ese incidente; el primer resultado correcto lo resuelve.
 
+## Retención del historial detallado
+
+Las comprobaciones individuales se conservan **90 días por defecto**. La limpieza se ejecuta al iniciar NetSentinel y luego como máximo una vez al día. Solo elimina filas antiguas de comprobaciones detalladas (`monitor_checks`): no elimina monitores, estados actuales, incidentes abiertos o resueltos, eventos, lecturas de inventario ni observaciones de dispositivos. Las tendencias siguen usando sus ventanas de 24 horas/7 días; los controles actuales e incidentes conservan su estado.
+
+Podés cambiar la política con la variable de entorno `NETSENTINEL_MONITOR_HISTORY_DAYS` antes de iniciar:
+
+- Un entero entre `1` y `3650` fija los días de retención (por ejemplo, `365` para un año).
+- `0`, `off` o `disabled` desactiva la limpieza automática y conserva las comprobaciones indefinidamente.
+- Si el valor no es válido, NetSentinel registra una advertencia y no elimina comprobaciones.
+
+La limpieza no recupera espacio físico del archivo SQLite de inmediato, pero permite reutilizar las páginas liberadas. Los respaldos SQLite incluyen el historial detallado que permanezca retenido: hacé una copia antes de reducir el período si necesitás conservar muestras antiguas.
+
+En PowerShell:
+
+```powershell
+$env:NETSENTINEL_MONITOR_HISTORY_DAYS = "365"
+netsentinel
+```
+
+En macOS/Linux:
+
+```bash
+NETSENTINEL_MONITOR_HISTORY_DAYS=365 netsentinel
+```
+
 Para evitar conexiones inesperadas, el monitor HTTP no sigue redirecciones y rechaza credenciales, parámetros y fragmentos en la URL. No incluyas tokens en direcciones web. Las comprobaciones generan tráfico hacia los objetivos seleccionados: usá solo equipos y servicios que administrás o tenés autorización para supervisar.
 
 ## Informes y tendencias
