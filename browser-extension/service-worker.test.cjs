@@ -5,21 +5,52 @@ function listenerSlot() {
   return { addListener() {} };
 }
 
-// The service worker uses only listener registration at module load. These minimal
-// mocks let the real sanitizer functions run under Node without a browser profile.
+let mockStore = {};
+// These minimal Chrome mocks let us exercise the real service worker in Node
+// without opening a browser profile or touching a user's browsing data.
 global.chrome = {
-  storage: { local: { async get() { return {}; }, async set() {} } },
+  storage: {
+    local: {
+      async get(keys) {
+        if (!Array.isArray(keys)) return { ...mockStore };
+        return Object.fromEntries(keys
+          .filter(key => Object.prototype.hasOwnProperty.call(mockStore, key))
+          .map(key => [key, mockStore[key]]));
+      },
+      async set(values) { Object.assign(mockStore, values); }
+    }
+  },
   webNavigation: { onCompleted: listenerSlot(), onHistoryStateUpdated: listenerSlot() },
   runtime: { onStartup: listenerSlot(), onInstalled: listenerSlot() },
   extension: { inIncognitoContext: false }
 };
 
 const {
+  SETTINGS_KEY,
+  EVENTS_KEY,
+  MAX_EVENTS,
+  captureNavigation,
   cleanUrl,
   isExcluded,
+  loadState,
   privateOrLocalHost,
   searchInfo
 } = require("./service-worker.js");
+
+function setState(settings, events = []) {
+  mockStore = { [SETTINGS_KEY]: settings, [EVENTS_KEY]: events };
+  global.chrome.extension.inIncognitoContext = false;
+}
+function enabledSettings(overrides = {}) {
+  return {
+    enabled: true,
+    capturePages: true,
+    captureSearches: true,
+    retentionDays: 7,
+    excludeDomains: [],
+    ...overrides
+  };
+}
 
 test("removes OAuth, double-encoded token, tracking, search query and fragment data", () => {
   const raw = "HTTPS://Example.COM:443/docs?lang=es&access%255Ftoken=secret&state=oauth-state" +
@@ -83,4 +114,91 @@ test("recognizes Google search terms separately from the sanitized page URL", ()
 test("sanitizer preserves unknown non-sensitive path and query values", () => {
   const raw = "https://example.com/profile/javier?tab=overview&sort=recent";
   assert.equal(cleanUrl(raw), raw);
+});
+
+
+test("capture is disabled by default and performs no storage write", async () => {
+  mockStore = {};
+  await captureNavigation({
+    frameId: 0, tabId: 1, url: "https://example.com/home", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY], undefined);
+});
+
+test("opt-in capture stores sanitized page and separate search metadata", async () => {
+  setState(enabledSettings(), []);
+  const url = "https://www.google.com/search?q=private+search&access%255Ftoken=secret&utm_source=mail#fragment";
+  await captureNavigation({ frameId: 0, tabId: 42, url, timeStamp: Date.now() });
+
+  let events = mockStore[EVENTS_KEY];
+  assert.equal(events.length, 2);
+  const page = events.find(event => event.event_type === "page_visit");
+  const search = events.find(event => event.event_type === "search_query");
+  assert.equal(page.page_url, "https://www.google.com/search");
+  assert.doesNotMatch(page.page_url, /private|secret|access|utm/i);
+  assert.equal(search.search_engine, "Google");
+  assert.equal(search.search_terms, "private search");
+  assert.equal(search.page_url, "https://www.google.com/search");
+
+  await captureNavigation({ frameId: 0, tabId: 42, url, timeStamp: Date.now() });
+  events = mockStore[EVENTS_KEY];
+  assert.equal(events.length, 2, "rapid duplicate navigation should not be added twice");
+});
+
+test("capture ignores subframes, private browsing and non-HTTP(S) URLs", async () => {
+  setState(enabledSettings(), []);
+  await captureNavigation({
+    frameId: 1, tabId: 4, url: "https://example.com/frame", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY].length, 0);
+
+  global.chrome.extension.inIncognitoContext = true;
+  await captureNavigation({
+    frameId: 0, tabId: 4, url: "https://example.com/private", timeStamp: Date.now()
+  });
+  global.chrome.extension.inIncognitoContext = false;
+  await captureNavigation({
+    frameId: 0, tabId: 4, url: "file:///Users/example/private.txt", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY].length, 0);
+});
+
+test("domain exclusions apply to subdomains and trailing-dot hosts", async () => {
+  setState(enabledSettings({ excludeDomains: ["example.com"] }), []);
+  await captureNavigation({
+    frameId: 0, tabId: 5, url: "https://sub.example.com./home", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY].length, 0);
+});
+
+test("page and search capture options can be disabled independently", async () => {
+  setState(enabledSettings({ capturePages: false, captureSearches: true }), []);
+  await captureNavigation({
+    frameId: 0, tabId: 6, url: "https://www.google.com/search?q=only+search", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY].length, 1);
+  assert.equal(mockStore[EVENTS_KEY][0].event_type, "search_query");
+
+  setState(enabledSettings({ capturePages: true, captureSearches: false }), []);
+  await captureNavigation({
+    frameId: 0, tabId: 7, url: "https://www.google.com/search?q=no+search+record", timeStamp: Date.now()
+  });
+  assert.equal(mockStore[EVENTS_KEY].length, 1);
+  assert.equal(mockStore[EVENTS_KEY][0].event_type, "page_visit");
+  assert.equal(mockStore[EVENTS_KEY][0].page_url, "https://www.google.com/search");
+});
+
+test("stored event retention and event limit are enforced when loading state", async () => {
+  const now = Date.now();
+  const old = { event_type: "page_visit", observed_at: new Date(now - 2 * 86400000).toISOString() };
+  const freshEvents = Array.from({ length: MAX_EVENTS + 1 }, (_, i) => ({
+    event_type: "page_visit",
+    observed_at: new Date(now - i).toISOString(),
+    marker: i
+  }));
+  setState(enabledSettings({ retentionDays: 1 }), [old, ...freshEvents]);
+  const state = await loadState();
+  assert.equal(state.settings.retentionDays, 1);
+  assert.equal(state.events.length, MAX_EVENTS);
+  assert.equal(state.events.some(event => event === old), false);
 });

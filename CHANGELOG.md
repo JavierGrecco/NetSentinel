@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Amplía las pruebas Node del service worker para estados opt-in, frames/privado, exclusiones, toggles, retención y deduplicación de navegación.
 - Refuerza el saneamiento de URLs en extensión y backend con detección de OAuth/redirect, claves doblemente codificadas, más tracking, IPv6 canónico y redacción heurística de segmentos reconocibles; añade pruebas Python/Node a la CI.
 - Añade filtros de historial, exportación CSV y borrado selectivo por fuente, además del dispositivo, tipo de evento y fechas.
 - Añade borrado selectivo de eventos con previsualización no destructiva, alcance obligatorio y confirmación exacta del recuento bajo transacción SQLite.

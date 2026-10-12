@@ -157,12 +157,17 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    SETTINGS_KEY,
+    EVENTS_KEY,
+    MAX_EVENTS,
     normalizedDomain,
     privateOrLocalHost,
     isExcluded,
     normalizedQueryKey,
     isSensitivePathSegment,
     cleanUrl,
-    searchInfo
+    searchInfo,
+    loadState,
+    captureNavigation
   };
 }
