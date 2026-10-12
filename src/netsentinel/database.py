@@ -39,15 +39,53 @@ def _elapsed_seconds(start: str | None, end: str | None = None) -> int | None:
         return None
 
 
+def _ensure_private_directory(directory: Path) -> None:
+    """Create missing data directories with private permissions without chmodding existing paths."""
+    # Do not chmod a pre-existing directory: NETSENTINEL_DATA_DIR can point to a
+    # shared/system directory (for example /tmp), and changing its mode would
+    # affect unrelated applications. Only chmod directory components we created.
+    if os.name != "posix":
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return
+
+    missing: list[Path] = []
+    current = directory
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    for candidate in reversed(missing):
+        try:
+            candidate.mkdir(mode=0o700)
+        except FileExistsError:
+            # Another process may have created this path since the walk above.
+            # Never change permissions on a directory that we did not create.
+            if not candidate.is_dir():
+                raise NotADirectoryError(f"El directorio de datos no es un directorio: {candidate}")
+        else:
+            try:
+                os.chmod(candidate, 0o700)
+            except OSError:
+                # mkdir(mode=0o700) is already restrictive under a normal umask.
+                pass
+
+    if not directory.is_dir():
+        raise NotADirectoryError(f"El directorio de datos no es un directorio: {directory}")
+
+
 @contextmanager
 def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
     db_path = path or database_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _ensure_private_directory(db_path.parent)
     connection = sqlite3.connect(db_path, timeout=10)
     if os.name == "posix":
         try:
-            os.chmod(db_path.parent, 0o700)
+            # Tighten the database file itself, but never change the permissions
+            # of a parent directory that may be shared with unrelated software.
             os.chmod(db_path, 0o600)
         except OSError:
             pass
