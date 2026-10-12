@@ -56,12 +56,25 @@ jobs:
           manifest = json.loads(Path("browser-extension/manifest.json").read_text(encoding="utf-8"))
           assert manifest["manifest_version"] == 3, "Chromium extension must use Manifest V3"
           assert set(manifest["permissions"]) == {"storage", "webNavigation"}
-          assert manifest["host_permissions"] == ["http://*/*", "https://*/*"]
+          assert "host_permissions" not in manifest, "Do not request broad host access unnecessarily"
+          assert "optional_host_permissions" not in manifest, "Do not request optional host access unnecessarily"
           assert "incognito" not in manifest, "Do not enable private browsing by default"
           for path in ("browser-extension/service-worker.js", "browser-extension/popup.js"):
               source = Path(path).read_text(encoding="utf-8")
               assert "enabled: false" in source, f"Tracking default must remain off in {path}"
           PY
+      - name: Validate embedded dashboard JavaScript
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          html = Path("src/netsentinel/static/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
+          assert scripts, "No embedded script found in index.html"
+          Path("dashboard-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
+          PY
+          node --check dashboard-inline-check.js
       - name: Validate embedded activity page JavaScript
         run: |
           python - <<'PY'

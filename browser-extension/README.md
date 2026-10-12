@@ -11,7 +11,7 @@ Esta extensión registra navegación futura en el dispositivo donde está instal
 5. Abrí el ícono de NetSentinel. Revisá los permisos y activá **Activar seguimiento**.
 6. Elegí si querés registrar páginas, búsquedas, exclusiones de dominio y retención de 1 a 90 días.
 
-El permiso de host cubre sitios HTTP(S); el navegador lo solicita porque una extensión necesita permiso para consultar URLs de distintas webs. El seguimiento está apagado por defecto y queda visible en el popup.
+La extensión solicita solo los permisos `storage` y `webNavigation`: el primero conserva la configuración y los eventos en este navegador, y el segundo recibe notificaciones de navegación. No solicita permisos de host, cookies, historial web ni interceptación de solicitudes. El seguimiento está apagado por defecto y queda visible en el popup.
 
 ## Qué registra
 

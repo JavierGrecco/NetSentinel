@@ -16,7 +16,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
 - Exportar el inventario a CSV compatible con Excel, el historial a JSON y una copia SQLite consistente que puede guardarse como respaldo.
 - Enviar avisos externos opcionales mediante un webhook HTTPS.
-- **En desarrollo (rama 0.10):** consultar registros A/AAAA por nombre y resolución inversa PTR por IP mediante el resolvedor DNS del sistema. La pantalla independiente `/tools` ejecuta las consultas de nombre/PTR solo cuando las solicitás y muestra una lectura orientativa de los servidores DNS detectables localmente, sin modificar la configuración. Las consultas PTR exitosas se conservan en una caché en memoria de tamaño y duración limitados para evitar consultas repetidas; los errores no se cachean. En macOS/Linux puede omitir DNS por interfaz, VPN o split DNS; en Windows lee valores del registro. Los nombres devueltos por DNS no verifican la identidad de un dispositivo.
+- Consultar registros DNS A/AAAA por nombre y resolución inversa PTR por IP bajo demanda, usando el resolvedor del sistema. La pantalla `/tools` también muestra una lectura orientativa de la configuración DNS local sin modificarla. Los resultados DNS no verifican la identidad de un dispositivo; el comportamiento puede variar con VPN, split DNS e interfaces activas. Las respuestas PTR exitosas usan una caché en memoria acotada por tamaño y duración.
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
@@ -69,9 +69,9 @@ En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSen
 
 Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
 
-## Herramientas DNS (módulo en desarrollo)
+## Herramientas DNS
 
-La rama `feat/dns-tools-module` incorpora la ruta `GET /api/tools/dns/lookup?hostname=example.com` para consultar la resolución del sistema operativo. Es una función de solo lectura y bajo demanda; acepta nombres de host, no URLs ni direcciones IP literales. Los resultados indican resolución, no identidad verificada. Este módulo está en desarrollo y tiene una pantalla independiente disponible en `/tools`. La configuración DNS se obtiene mediante lectura local y puede ser parcial según el sistema operativo y las interfaces activas. También se puede consultar PTR desde la API para un dispositivo concreto con `GET /api/devices/{device_id}/dns-reverse`: usa su dirección observada más recientemente, solo se ejecuta cuando se solicita y no guarda el nombre DNS en el inventario.
+Las consultas DNS A/AAAA por nombre y PTR inverso por IP están disponibles en `/tools` y en las acciones del inventario. Se ejecutan solo cuando las solicitás y no cambian la configuración de red. La consulta A/AAAA acepta nombres de host, no URLs ni direcciones IP literales. La API ofrece `GET /api/tools/dns/lookup?hostname=example.com` y `GET /api/devices/{device_id}/dns-reverse`. Los resultados indican resolución, no identidad verificada; la detección de DNS local puede ser parcial según el sistema operativo, las VPN y el split DNS.
 
 ## Monitorización
 

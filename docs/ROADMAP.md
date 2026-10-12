@@ -21,7 +21,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
 - [x] CI automatizada verde en la matriz de Python 3.10–3.14 en Windows/macOS/Linux y validación del paquete para la integración anterior.
 - [x] Pruebas Node automatizadas del ciclo de extensión: apagada por defecto, opt-in, subframes/privado, exclusiones, opciones de captura, retención/límite y deduplicación.
-- [x] Pruebas CSV del popup para comillas, comas, saltos de línea, fórmulas y BOM UTF-8; comprobación automática del manifest MV3 y permisos mínimos.
+- [x] Pruebas CSV del popup para comillas, comas, saltos de línea, fórmulas y BOM UTF-8; el manifest MV3 solicita solo permisos necesarios y CI comprueba los permisos mínimos.
 - [ ] Pruebas manuales de importación/extensión en Chrome/Edge y Windows/macOS/Linux; los cambios de deduplicación también deben pasar CI.
 - [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
 - [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.

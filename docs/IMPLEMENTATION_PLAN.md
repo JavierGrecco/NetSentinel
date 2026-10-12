@@ -15,6 +15,8 @@
 - Pruebas puras de CSV del popup (quoting, fórmulas, delimitadores, saltos de línea y BOM) más validación CI de Manifest V3, permisos explícitos y seguimiento desactivado por defecto.
 - Borrado selectivo de eventos por dispositivo, fuente, tipo o fechas con previsualización de alcance, prohibición de alcance vacío, confirmación exacta basada en el recuento actual y borrado transaccional; no elimina sesiones ni registros de inventario.
 - Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
+- La extensión declara solo `storage` y `webNavigation`; no solicita permisos de host globales.
+- La pantalla principal ofrece una guía de primer uso, distingue inventario vacío de búsqueda sin coincidencias y se valida sintácticamente en CI.
 
 ## Límites actuales
 - La extensión funciona solo en el navegador donde se instala y solo después de activarla; no recupera historia previa ni ve formularios, contenido, contraseñas o búsquedas internas de apps nativas.
@@ -22,7 +24,7 @@
 - El backend no captura tráfico por sí solo. No hay todavía adaptador para un router/AP ni agente de uso de aplicaciones.
 - El soporte de correo es importación manual de metadatos; no se conecta a proveedores, no lee bandejas y no guarda cuerpo ni adjuntos.
 - No puede garantizarse que un saneador URL detecte cualquier dato personal incrustado en rutas/parámetros desconocidos.
-- La CI y pruebas manuales siguen pendientes hasta que la matriz esté verde.
+- La matriz automatizada de la revisión actual está verde; las pruebas manuales completas de instalación y uso siguen pendientes en Windows, macOS y Linux.
 
 ## P0 — Validación y estabilización
 1. Corregir fallos de CI y ejecutar tests, chequeo JS y empaquetado en la matriz.
