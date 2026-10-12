@@ -7,6 +7,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Descubrimiento local explícito y acotado a subredes privadas.
 - [x] Priorización determinista de interfaces físicas al deduplicar subredes compartidas entre adaptadores; prueba que no depende del orden de enumeración.
 - [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
+- [x] Aislamiento de excepciones internas por monitor: los siguientes monitores se procesan igual y solo el monitor fallido entra en backoff exponencial acotado.
 - [x] Retención configurable de muestras detalladas de monitorización (90 días por defecto, 1–3650 configurable, o desactivación explícita); limpieza diaria que preserva incidentes, estado actual e inventario, con pruebas deterministas.
 - [x] Protección de permisos POSIX del directorio de datos: no modifica destinos de enlaces simbólicos de `~/.netsentinel`; prueba el recorrido real de configuración, base SQLite y permisos.
 - [x] Operaciones TCP/HTTP y webhook en procesos terminables con plazos globales (timeout del monitor + 1 s de arranque; webhook 5 s); pruebas de timeout, salida inválida y protocolo hijo.
