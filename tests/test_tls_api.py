@@ -79,3 +79,15 @@ def test_tls_inspection_api_rejects_cross_site_post():
         )
 
     assert response.status_code == 403
+
+
+
+def test_tools_page_exposes_tls_inspection_with_clear_scope(monkeypatch):
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/tools")
+
+    assert response.status_code == 200
+    assert 'id="tls-form"' in response.text
+    assert '"/api/tools/tls/inspect"' in response.text
+    assert "no solicita páginas" in response.text
+    assert "autorización para evaluar" in response.text
