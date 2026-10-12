@@ -24,3 +24,6 @@ def test_windows_launcher_uses_local_virtual_environment():
     assert "pyproject.toml" in script
     assert "-m netsentinel" in script
     assert "3,10" in script
+    assert 'set "NETSENTINEL_EXIT_CODE=%ERRORLEVEL%"' in script
+    assert "NetSentinel finalizo con error" in script
+    assert "endlocal & exit /b %NETSENTINEL_EXIT_CODE%" in script
