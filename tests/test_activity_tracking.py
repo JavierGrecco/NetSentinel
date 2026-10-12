@@ -38,6 +38,8 @@ def test_activity_page_and_empty_state_are_available(client):
     assert "Previsualizar CSV" in page.text
     assert "Exportar CSV filtrado" in page.text
     assert "filterEventType" in page.text
+    assert "filterSource" in page.text
+    assert "deleteSource" in page.text
     assert "Previsualizar borrado" in page.text
     assert "confirmDeleteActivity" in page.text
     assert "no captura tráfico por sí mismo" in page.text
@@ -586,6 +588,94 @@ def test_activity_delete_preview_validates_device_and_event_type(client):
         json={"device_id": selected, "event_type": "email_body"},
     )
     assert invalid_type.status_code == 422
+
+
+def test_activity_source_filters_export_and_selective_delete(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    imported = client.post(
+        "/api/activity/import",
+        json={
+            "device_id": selected,
+            "csv_data": f"""observed_at,event_type,domain
+{stamp},dns_query,manual.example
+""",
+        },
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 1
+
+    session = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 30, "source_mode": "router_dns"},
+    ).json()
+    ingested = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"],
+            "collector_token": session["collector_token"],
+            "device_id": selected,
+            "event_type": "dns_query",
+            "source": "router_dns",
+            "domain": "router.example",
+        },
+    )
+    assert ingested.status_code == 200, ingested.text
+
+    manual_events = client.get(
+        "/api/activity",
+        params={"device_id": selected, "source": "manual_import"},
+    )
+    assert manual_events.status_code == 200, manual_events.text
+    assert [event["domain"] for event in manual_events.json()["events"]] == ["manual.example"]
+
+    router_events = client.get(
+        "/api/activity",
+        params={"device_id": selected, "source": "router_dns"},
+    )
+    assert router_events.status_code == 200, router_events.text
+    assert [event["domain"] for event in router_events.json()["events"]] == ["router.example"]
+    assert "manual_import" in router_events.json()["activity_sources"]
+
+    invalid_source = client.get(
+        "/api/activity",
+        params={"device_id": selected, "source": "unknown_source"},
+    )
+    assert invalid_source.status_code == 422
+
+    exported = client.get(
+        "/api/activity/export.csv",
+        params={"device_id": selected, "source": "manual_import"},
+    )
+    assert exported.status_code == 200, exported.text
+    rows = list(csv.DictReader(io.StringIO(exported.text.lstrip("\ufeff"))))
+    assert len(rows) == 1
+    assert rows[0]["source"] == "manual_import"
+    assert rows[0]["domain"] == "manual.example"
+
+    preview = client.post(
+        "/api/activity/delete/preview",
+        json={"device_id": selected, "source": "manual_import"},
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["matching_events"] == 1
+    assert preview.json()["source"] == "manual_import"
+
+    deleted = client.post(
+        "/api/activity/delete",
+        json={
+            "device_id": selected,
+            "source": "manual_import",
+            "confirmation": "BORRAR 1",
+        },
+    )
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["deleted_events"] == 1
+
+    remaining = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    assert len(remaining) == 1
+    assert remaining[0]["source"] == "router_dns"
+    assert remaining[0]["domain"] == "router.example"
 
 
 def test_metadata_events_are_included_in_json_export(client):

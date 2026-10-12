@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade filtros de historial, exportación CSV y borrado selectivo por fuente, además del dispositivo, tipo de evento y fechas.
 - Añade borrado selectivo de eventos con previsualización no destructiva, alcance obligatorio y confirmación exacta del recuento bajo transacción SQLite.
 - Incorpora filtros del historial de actividad por dispositivo, tipo y fechas UTC, y exportación CSV de la selección hasta 10.000 filas con neutralización de fórmulas.
 - Incorpora vista previa CSV de solo lectura: valida el archivo completo, marca duplicados, estima altas y muestra hasta 10 filas normalizadas antes de confirmar la importación.
