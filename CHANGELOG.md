@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Añade una primera vista unificada de hallazgos en `/api/findings` y exportación JSON: normaliza eventos de inventario e incidentes de monitorización con evidencia, procedencia, estado, severidad y confianza diferenciadas; omite duplicados de transiciones de monitorización y mantiene el proceso en solo lectura.
+- Añade una primera vista unificada de hallazgos en `/api/findings` y exportación JSON: normaliza eventos de inventario e incidentes de monitorización con evidencia, procedencia, estado, severidad y confianza diferenciadas; omite duplicados de transiciones de monitorización y mantiene el proceso en solo lectura. Los tipos duplicados se excluyen en SQL antes de aplicar el límite, para que no oculten eventos de inventario anteriores.
 - Añade la bandeja visual `/findings`, filtros por estado, panel expandible de evidencia/procedencia, reconocimiento de eventos de inventario y exportación JSON; valida el JavaScript integrado en CI y evita almacenar la vista en caché del navegador.
 - Documenta la dirección de producto, la priorización empresarial y los criterios de aceptación de seguridad, privacidad, UX, pruebas y releases.
 - Alinea la nomenclatura de actividad de navegador y red con telemetría autorizada, consentimiento, alcance visible y retención; elimina referencias de interfaz orientadas a vigilancia familiar.

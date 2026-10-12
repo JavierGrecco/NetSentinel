@@ -152,3 +152,33 @@ def test_findings_api_rejects_invalid_state_and_limit(monkeypatch, tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         assert client.get("/api/findings?state=open").status_code == 422
         assert client.get("/api/findings?limit=201").status_code == 422
+
+def test_findings_exclude_duplicate_monitor_events_before_applying_source_limit(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.5.9", "AA:BB:CC:DD:EE:99", "en0")])
+    inventory_event = next(
+        item for item in database.get_events(limit=10)
+        if item["event_type"] == "new_device"
+    )
+    monitor = database.create_monitor("Flapping service", "tcp", "192.168.5.10:443")
+
+    # Generate newer transition events that are duplicates of the persisted incidents.
+    for index in range(4):
+        database.record_monitor_check(
+            monitor["id"], "down", None, f"timeout {index}"
+        )
+        database.record_monitor_check(
+            monitor["id"], "up", 10.0, f"recovered {index}"
+        )
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/findings?state=active&limit=1")
+
+    assert response.status_code == 200
+    report = response.json()
+    assert [item["id"] for item in report["findings"]] == [
+        f"event:{inventory_event['id']}"
+    ]
+    assert report["summary"]["returned"] == 1
+    assert report["findings"][0]["evidence"]["event_type"] == "new_device"
