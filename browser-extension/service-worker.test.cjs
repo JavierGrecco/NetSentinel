@@ -99,10 +99,16 @@ test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
   assert.equal(cleanUrl("https://alice:password@example.com/profile"), null);
 });
 
-test("excludes local/private hosts and applies domain exclusions to trailing-dot hostnames", () => {
+test("excludes local/private IPv4, IPv6 and mapped IPv6 hosts", () => {
   assert.equal(privateOrLocalHost("router.local."), true);
   assert.equal(privateOrLocalHost("[::1]"), true);
+  assert.equal(privateOrLocalHost("::"), true);
   assert.equal(privateOrLocalHost("fd12::1"), true);
+  assert.equal(privateOrLocalHost("fe81::1"), true, "the complete fe80::/10 link-local range is excluded");
+  assert.equal(privateOrLocalHost("febf::1"), true, "the upper bound of the link-local range is excluded");
+  assert.equal(privateOrLocalHost("[::ffff:c0a8:101]"), true, "mapped 192.168.1.1 must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:7f00:1]"), true, "mapped 127.0.0.1 must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:0808:0808]"), false, "mapped public 8.8.8.8 is not classified as private");
   assert.equal(isExcluded("sub.example.com.", ["example.com"]), true);
   assert.equal(isExcluded("public.example.net", ["example.com"]), false);
 });
