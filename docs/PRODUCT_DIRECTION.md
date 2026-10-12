@@ -44,7 +44,9 @@ La privacidad debe ser una ventaja de diseño verificable. En el panel de activi
 
 ### P1 — Motor de hallazgos con evidencia
 
-Es el mayor salto funcional después de estabilizar los flujos actuales. Centralizar cambios del inventario, incidentes de disponibilidad y resultados de diagnóstico/TLS en una bandeja de hallazgos, sin mezclar simples observaciones con alertas de seguridad confirmadas.
+Es el mayor salto funcional después de estabilizar los flujos actuales. La primera iteración ya expone `/api/findings` y `/api/export/findings.json`, con eventos almacenados del inventario e incidentes de disponibilidad. Es una vista compuesta de solo lectura, limitada a 200 registros por consulta, con estados `active`, `acknowledged`, `resolved` y `all`; omite eventos duplicados que reflejan la misma transición de monitorización. Todavía no hay una bandeja visual ni se incluyen resultados DNS/TLS puntuales, porque esas inspecciones no se guardan. El próximo paso deberá añadir UI y una política de retención/eliminación antes de persistir resultados adicionales.
+
+La vista no atribuye causa raíz, no correlaciona ataques y no identifica personas. El objetivo es ordenar evidencia existente, sin mezclar simples observaciones con alertas de seguridad confirmadas.
 
 Cada hallazgo debe incluir, como mínimo:
 - identificador y categoría;
