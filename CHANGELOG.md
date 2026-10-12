@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita que una resolución DNS A/AAAA o PTR bloquee indefinidamente una solicitud: las consultas interactivas se aíslan en un proceso terminable con límite de 3 segundos. Añade pruebas de timeout, errores del resolvedor y rechazo de salida malformada.
 - Evita importaciones CSV contradictorias con la retención de actividad: previsualización e importación rechazan lotes con filas fuera del plazo configurado antes de escribir, con mensaje para ampliar la retención; la operación se serializa con cambios de política.
 - Añade retención configurable para comprobaciones detalladas de monitorización: 90 días por defecto, limpieza al inicio y diaria, opción de desactivación explícita y pruebas de que la limpieza no borra incidentes ni el estado actual.
 - Corrige la protección de permisos SQLite: no cambia el modo de directorios personalizados preexistentes (evita alterar `/tmp` u otras carpetas compartidas), conserva privado `~/.netsentinel` y crea de forma privada los directorios faltantes; agrega regresiones multiplataforma.
