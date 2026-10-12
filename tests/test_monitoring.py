@@ -1,5 +1,10 @@
+import json
+import subprocess
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
+import netsentinel.monitoring as monitoring
 from netsentinel import database
 from netsentinel.main import app
 from netsentinel.monitoring import DEFAULT_MONITOR_HISTORY_DAYS, HISTORY_CLEANUP_INTERVAL_SECONDS, MonitorSupervisor, monitor_history_retention_days, validate_spec
@@ -378,3 +383,133 @@ def test_monitor_history_cleanup_runs_no_more_than_daily(monkeypatch):
     assert supervisor.cleanup_history_if_due(now=100 + HISTORY_CLEANUP_INTERVAL_SECONDS - 1) == 0
     assert supervisor.cleanup_history_if_due(now=100 + HISTORY_CLEANUP_INTERVAL_SECONDS) == 4
     assert cleaned == [30, 30]
+
+
+def test_tcp_http_probe_uses_bounded_child_and_keeps_target_out_of_command(monkeypatch):
+    payload = {"status": "up", "latency_ms": 3.25, "detail": "TCP respondió."}
+    calls = {}
+
+    def fake_run(command, **kwargs):
+        calls["command"] = command
+        calls["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(monitoring.subprocess, "run", fake_run)
+    target = "https://service.example.test/health"
+
+    result = monitoring.probe("http", target, 3)
+
+    assert result == payload
+    assert calls["command"][0] == sys.executable
+    assert calls["command"][1] == "-c"
+    assert target not in " ".join(calls["command"])
+    assert json.loads(calls["kwargs"]["input"]) == {
+        "kind": "http",
+        "target": target,
+        "timeout_seconds": 3,
+    }
+    assert calls["kwargs"]["timeout"] == 3 + monitoring._PROBE_PROCESS_STARTUP_GRACE_SECONDS
+    assert calls["kwargs"]["capture_output"] is True
+    assert calls["kwargs"]["check"] is False
+
+
+def test_tcp_probe_total_deadline_includes_stuck_system_dns(monkeypatch):
+    def fake_timeout(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(monitoring.subprocess, "run", fake_timeout)
+
+    result = monitoring.probe("tcp", "service.example.test:443", 2)
+
+    assert result["status"] == "down"
+    assert result["latency_ms"] is None
+    assert result["elapsed_ms"] >= 0
+    assert "límite total" in result["detail"]
+    assert "resolución del nombre" in result["detail"]
+
+
+def test_tcp_http_probe_rejects_malformed_child_result(monkeypatch):
+    monkeypatch.setattr(
+        monitoring.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0, stdout="not-json", stderr=""),
+    )
+
+    result = monitoring.probe("tcp", "192.0.2.10:443", 1)
+
+    assert result["status"] == "down"
+    assert result["latency_ms"] is None
+    assert "resultado válido" in result["detail"]
+
+
+def test_ping_probe_keeps_platform_specific_terminated_command(monkeypatch):
+    monkeypatch.setattr(
+        monitoring,
+        "_probe_direct",
+        lambda kind, target, timeout: {"status": "down", "latency_ms": None, "detail": "simulado"},
+    )
+    monkeypatch.setattr(
+        monitoring.subprocess,
+        "run",
+        lambda *_args, **_kwargs: pytest.fail("Ping no debe pasar por el wrapper de child TCP/HTTP."),
+    )
+
+    assert monitoring.probe("ping", "127.0.0.1", 1)["detail"] == "simulado"
+
+
+def test_tcp_probe_child_smoke_test_uses_loopback_only():
+    # A real loopback attempt verifies that the child bootstrap/import/protocol
+    # work in editable installs and CI without depending on an external network.
+    result = monitoring.probe("tcp", "127.0.0.1:1", 1)
+
+    assert result["status"] in {"up", "down"}
+    assert isinstance(result["detail"], str)
+    assert result["detail"]
+
+
+def test_webhook_delivery_uses_bounded_child_and_limits_result_detail(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_WEBHOOK_URL", "https://hooks.example.test/private-token")
+    transition = {
+        "transition": "down",
+        "monitor_name": "Servicio de prueba",
+        "target": "service.example.test",
+        "message": "Servicio sin respuesta",
+        "at": "2026-10-12T12:00:00+00:00",
+    }
+    calls = {}
+
+    def fake_run(command, **kwargs):
+        calls["command"] = command
+        calls["kwargs"] = kwargs
+        return subprocess.CompletedProcess(
+            command, 0,
+            stdout=json.dumps({"ok": True, "detail": "HTTP 204 " + ("x" * 250)}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(monitoring.subprocess, "run", fake_run)
+
+    success, detail = monitoring.send_webhook(transition)
+
+    assert success is True
+    assert len(detail) <= 160
+    assert calls["command"][0] == sys.executable
+    assert calls["command"][1] == "-c"
+    assert "hooks.example.test" not in " ".join(calls["command"])
+    assert json.loads(calls["kwargs"]["input"]) == transition
+    assert calls["kwargs"]["timeout"] == monitoring._WEBHOOK_TOTAL_TIMEOUT_SECONDS
+
+
+def test_webhook_delivery_timeout_does_not_block_monitor_supervisor(monkeypatch):
+    monkeypatch.setenv("NETSENTINEL_WEBHOOK_URL", "https://hooks.example.test/token")
+
+    def fake_timeout(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(monitoring.subprocess, "run", fake_timeout)
+
+    success, detail = monitoring.send_webhook({"transition": "down", "target": "safe-target"})
+
+    assert success is False
+    assert "5 segundos" in detail
+    assert monitoring._WEBHOOK_TOTAL_TIMEOUT_SECONDS == 5.0
