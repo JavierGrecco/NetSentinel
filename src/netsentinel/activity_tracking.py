@@ -1,8 +1,11 @@
-"""Seguimiento familiar basado solo en metadatos explícitos y fuentes autorizadas.
+"""Seguimiento de actividad basado en metadatos explícitos y fuentes autorizadas.
 
 Este módulo no captura paquetes por sí mismo ni lee contenido HTTPS, credenciales,
-cookies, cuerpos HTTP ni rutas completas de URL. Las fuentes externas compatibles
-deben normalizar y enviar eventos de metadatos a la API durante una sesión opt-in.
+cookies o cuerpos HTTP. Las URLs de navegación se guardan normalizadas, no como
+la URL original: se eliminan fragmentos y parámetros conocidos sensibles y se
+redactan algunos identificadores reconocibles en la ruta. Otros segmentos o
+parámetros desconocidos pueden persistir. Las fuentes compatibles envían metadatos
+durante una sesión opt-in o mediante importación explícita.
 """
 from __future__ import annotations
 
@@ -1036,7 +1039,9 @@ def get_activity(
             "La aplicación no captura tráfico por sí misma. El correo solo se incorpora como metadatos importados "
             "de registros autorizados, sin cuerpos ni adjuntos. Las sesiones habilitan una ventana para que un adaptador "
             "autorizado envíe metadatos; la importación CSV añade registros históricos. No se guardan credenciales, "
-            "cookies, cargas útiles, rutas ni URLs completas. DNS/SNI/conexiones son indicios de tráfico, no prueba "
-            "de que una persona haya usado una cuenta o visto una página concreta."
+            "cookies ni cargas útiles. Las URLs de navegación se normalizan: se quitan fragmentos y parámetros "
+            "conocidos sensibles, y se redactan algunos identificadores reconocibles en la ruta; otros segmentos o "
+            "parámetros no reconocidos pueden persistir. DNS/SNI/conexiones son indicios de tráfico, no prueba de "
+            "que una persona haya usado una cuenta o visto una página concreta."
         ),
     }
