@@ -324,16 +324,24 @@ def _collect_findings_report(state: str, limit: int) -> dict:
         )
 
     if state == "active":
-        source_events = database.get_events(\n            limit=limit, acknowledged=False,\n            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,\n        )
+        source_events = database.get_events(
+            limit=limit, acknowledged=False,
+            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
+        )
         source_incidents = database.get_incidents(limit=limit, status="open")
     elif state == "acknowledged":
-        source_events = database.get_events(\n            limit=limit, acknowledged=True,\n            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,\n        )
+        source_events = database.get_events(
+            limit=limit, acknowledged=True,
+            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
+        )
         source_incidents = []
     elif state == "resolved":
         source_events = []
         source_incidents = database.get_incidents(limit=limit, status="resolved")
     else:
-        source_events = database.get_events(\n            limit=limit, exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,\n        )
+        source_events = database.get_events(
+            limit=limit, exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
+        )
         source_incidents = database.get_incidents(limit=limit)
 
     return build_findings(source_events, source_incidents, state=state, limit=limit)
