@@ -238,3 +238,26 @@ def test_tls_inspection_wrapper_rejects_invalid_child_results(monkeypatch, retur
 
     assert result["status"] == "error"
     assert result["findings"][0]["code"] == "inspection_failed"
+
+
+
+@pytest.mark.parametrize("timeout", [0, -1, 3.1, True, "1"])
+def test_tls_inspection_rejects_invalid_timeout(timeout):
+    with pytest.raises(ValueError):
+        tls_tools.inspect_tls_endpoint("example.com", timeout=timeout)
+
+
+def test_tls_inspection_wrapper_rejects_child_result_for_different_host(monkeypatch):
+    payload = {"host": "other.example", "port": 443, "status": "ok"}
+    monkeypatch.setattr(
+        tls_tools.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(
+            command, 0, stdout=json.dumps(payload), stderr=""
+        ),
+    )
+
+    result = tls_tools.inspect_tls_endpoint("example.com")
+
+    assert result["status"] == "error"
+    assert result["findings"][0]["code"] == "inspection_result_mismatch"
