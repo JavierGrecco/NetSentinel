@@ -153,6 +153,44 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert response.headers["cross-origin-resource-policy"] == "same-origin"
+    assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    policy = response.headers["content-security-policy"]
+    for directive in (
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "frame-src 'none'",
+        "form-action 'self'",
+        "connect-src 'self'",
+    ):
+        assert directive in policy
+    # App screens currently contain inline JS/CSS, so unsafe-inline remains an
+    # explicit compatibility constraint until those assets can be externalized.
+    assert "script-src 'self' 'unsafe-inline'" in policy
+    assert "https://cdn.jsdelivr.net" not in policy
+
+
+def test_api_docs_content_security_policy_allows_only_required_cdn(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/docs")
+    assert response.status_code == 200
+    policy = response.headers["content-security-policy"]
+    assert "https://cdn.jsdelivr.net" in policy
+    assert "https://fastapi.tiangolo.com" in policy
+    assert "frame-ancestors 'none'" in policy
+    assert "connect-src 'self'" in policy
+
+
+def test_security_headers_are_present_on_host_rejections(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://untrusted.example") as client:
+        response = client.get("/api/health")
+    assert response.status_code == 400
+    assert "default-src 'self'" in response.headers["content-security-policy"]
+    assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_device_history_returns_observations_for_selected_device(monkeypatch, tmp_path):
