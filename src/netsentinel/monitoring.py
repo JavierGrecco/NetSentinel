@@ -45,6 +45,8 @@ _SUPERVISOR_STOP_TIMEOUT_SECONDS = (
     + _WEBHOOK_TOTAL_TIMEOUT_SECONDS
     + 2.0
 )
+_SUPERVISOR_RETRY_BASE_SECONDS = 2.0
+_SUPERVISOR_RETRY_MAX_SECONDS = 60.0
 
 
 def monitor_history_retention_days() -> int | None:
@@ -404,6 +406,8 @@ class MonitorSupervisor:
         self._stop = Event()
         self._thread: Thread | None = None
         self._last_history_cleanup_monotonic = 0.0
+        self._consecutive_errors: dict[int, int] = {}
+        self._retry_after: dict[int, float] = {}
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -471,13 +475,28 @@ class MonitorSupervisor:
 
         now = datetime.now(timezone.utc)
         executed = 0
-        for monitor in database.list_monitors():
+        monitors = database.list_monitors()
+        monitor_ids = {int(item["id"]) for item in monitors}
+        # Remove retry state for monitors that no longer exist.
+        for monitor_id in set(self._consecutive_errors) - monitor_ids:
+            self._consecutive_errors.pop(monitor_id, None)
+            self._retry_after.pop(monitor_id, None)
+
+        for monitor in monitors:
             # Shutdown should finish the current bounded check, not drain every
             # due monitor in sequence after the application asked us to stop.
             if self._stop.is_set():
                 break
+
+            monitor_id = int(monitor["id"])
             if not monitor["enabled"]:
+                self._consecutive_errors.pop(monitor_id, None)
+                self._retry_after.pop(monitor_id, None)
                 continue
+
+            if time.monotonic() < self._retry_after.get(monitor_id, 0.0):
+                continue
+
             last_checked = monitor.get("last_checked_at")
             due = True
             if last_checked:
@@ -488,11 +507,32 @@ class MonitorSupervisor:
                     due = (now - previous).total_seconds() >= int(monitor["interval_seconds"])
                 except (ValueError, TypeError):
                     due = True
+
             if due:
                 if self._stop.is_set():
                     break
-                check_once(monitor)
+                try:
+                    check_once(monitor)
+                except Exception:
+                    failures = self._consecutive_errors.get(monitor_id, 0) + 1
+                    self._consecutive_errors[monitor_id] = failures
+                    delay = min(
+                        _SUPERVISOR_RETRY_MAX_SECONDS,
+                        _SUPERVISOR_RETRY_BASE_SECONDS * (2 ** min(failures - 1, 8)),
+                    )
+                    self._retry_after[monitor_id] = time.monotonic() + delay
+                    logger.exception(
+                        "No se pudo ejecutar el monitor id=%s; se continuará con los restantes. "
+                        "Reintento interno en %.1f segundos.",
+                        monitor_id,
+                        delay,
+                    )
+                    continue
+
+                self._consecutive_errors.pop(monitor_id, None)
+                self._retry_after.pop(monitor_id, None)
                 executed += 1
+
         return executed
 
     def _run(self) -> None:
