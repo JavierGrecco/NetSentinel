@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import logging
 import base64
 import hashlib
 import ipaddress
@@ -29,6 +30,9 @@ from .dns_config import get_dns_configuration
 from . import activity_tracking
 from .tls_tools import inspect_tls_endpoint
 from .findings import build_findings
+
+
+logger = logging.getLogger(__name__)
 
 
 _supervisor = MonitorSupervisor()
@@ -184,6 +188,22 @@ def _apply_security_headers(response: Response, *, page_path: str = "") -> Respo
     response.headers.setdefault("Content-Security-Policy", _base_content_security_policy(page_path))
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
     return response
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
+    """Return a generic 500 response with security headers, without exposing internals."""
+    logger.error(
+        "Error interno no controlado en %s %s",
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno de NetSentinel."},
+    )
+    return _apply_security_headers(response)
 
 
 @app.middleware("http")
