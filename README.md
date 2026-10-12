@@ -20,6 +20,8 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 
 > **Importante:** la búsqueda local se inicia cuando la solicitás. Detecta automáticamente hasta dos subredes IPv4 privadas y puede consultar hasta 254 direcciones por subred, mediante una sola prueba de ping por dirección. Esto genera tráfico en la red local, no modifica equipos y no garantiza encontrar todos los dispositivos: algunos no responden al ping, pueden filtrar ICMP o usar solo IPv6. Usalo únicamente en redes que administrás o tenés autorización para revisar. El diagnóstico también es orientativo: un ping fallido no demuestra por sí solo que Internet esté caído.
 
+- Inspeccionar bajo demanda un endpoint TLS autorizado: validez de certificado, vencimiento, versión TLS y cifrado negociado, sin descargar contenido web.
+
 ## Requisitos
 
 - Python 3.10 o posterior.
@@ -72,6 +74,10 @@ Algunos equipos no responderán al ping, las redes aisladas de invitados pueden 
 ## Herramientas DNS
 
 Las consultas DNS A/AAAA por nombre y PTR inverso por IP están disponibles en `/tools` y en las acciones del inventario. Se ejecutan solo cuando las solicitás y no cambian la configuración de red. La consulta A/AAAA acepta nombres de host, no URLs ni direcciones IP literales. La API ofrece `GET /api/tools/dns/lookup?hostname=example.com` y `GET /api/devices/{device_id}/dns-reverse`. Los resultados indican resolución, no identidad verificada; la detección de DNS local puede ser parcial según el sistema operativo, las VPN y el split DNS.
+
+## Inspección TLS
+
+En **Herramientas** podés comprobar un único host/IP y puerto TLS. La herramienta valida el certificado con el almacén de confianza del sistema e informa fechas de validez, nombre del certificado, versión TLS y cifrado negociado. Solo realiza el handshake TLS; no solicita páginas, no lee contenido HTTP y no guarda el resultado. Usala únicamente sobre endpoints que administrás o tenés autorización para evaluar. No reemplaza una auditoría completa de TLS.
 
 ## Monitorización
 
