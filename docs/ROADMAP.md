@@ -21,7 +21,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
 - [x] CI automatizada verde en la matriz de Python 3.10–3.14 en Windows/macOS/Linux y validación del paquete para la integración anterior.
 - [ ] Pruebas manuales de importación/extensión en Chrome/Edge y Windows/macOS/Linux; los cambios de deduplicación también deben pasar CI.
-- [ ] Revisar sanitización de URL con OAuth, tokens, tracking, rutas con PII y codificación percent.
+- [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
+- [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Deduplicación idempotente de filas CSV manuales por dispositivo; las filas idénticas ya importadas se omiten y se contabilizan.
 - [x] Filtros de eventos por dispositivo, tipo y rango de fechas UTC; exportación CSV filtrada con neutralización de fórmulas, hasta 10.000 filas.
