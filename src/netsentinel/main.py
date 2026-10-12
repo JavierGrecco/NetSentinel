@@ -126,7 +126,11 @@ async def protect_local_app(request: Request, call_next):
             return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
 
     response = await call_next(request)
-    if request.url.path == "/activity" or request.url.path.startswith("/api/activity"):
+    if (
+        request.url.path == "/activity"
+        or request.url.path.startswith("/api/activity")
+        or request.url.path in {"/api/findings", "/api/export/findings.json"}
+    ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
