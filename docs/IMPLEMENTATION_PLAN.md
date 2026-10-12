@@ -3,6 +3,7 @@
 ## Implementado en la rama
 - Inventario local, observaciones, monitores e incidentes.
 - DNS A/AAAA, PTR bajo demanda y configuración DNS local.
+- Inspección TLS puntual de un endpoint autorizado: validación de certificado, vigencia, nombre, versión TLS y cifrado negociado; no descarga contenido ni persiste resultados.
 - Historial por dispositivo, sesiones de actividad temporales y tokens de ingestión cuya versión en claro se muestra una sola vez.
 - Importación CSV de metadatos de red, páginas, búsquedas compatibles y metadatos de correo de auditoría autorizada.
 - Extensión Chromium visible y apagada al instalarse; registra navegación futura y búsquedas por URL compatibles, y exporta CSV.
@@ -34,7 +35,9 @@
 5. Probar metadatos de correo con CSV sintético autorizado; no incluir mensajes completos ni adjuntos.
 6. Probar instalación y flujo en Windows, macOS y Linux.
 
-## P1 — Experiencia de importación
+## P1 — Experiencia de importación y validación TLS
+- Probar manualmente endpoints TLS válidos y fallidos, certificado cercano al vencimiento, puerto no TLS y timeout en Windows/macOS/Linux.
+- Comprobar la representación accesible de hallazgos sin renderizar texto remoto como HTML.
 1. Validación manual del saneamiento URL con casos reales y evaluación de falsos positivos en rutas largas.
 2. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 3. Pruebas manuales del flujo de borrado y revisión de usabilidad multi-SO/navegador.
@@ -50,7 +53,7 @@
 - Infraestructura: adaptadores DHCP/router/SNMP y gestión segura de secretos.
 - Observabilidad: topología, métricas Prometheus y perfiles multired.
 - Extensión Firefox y otros navegadores compatibles.
-- Cualquier diagnóstico TLS futuro requiere diseño independiente; no debe capturar credenciales ni contenido privado.
+- La auditoría TLS inicial ya existe como conexión puntual validada; cualquier seguimiento persistente o alerta automática necesita diseño independiente y no debe capturar credenciales ni contenido privado.
 
 ## Criterio de finalización
 Una tarea no se da por terminada solo por escribir el código o marcarla en el roadmap. Requiere tests verdes, empaquetado comprobado, pruebas manuales aplicables, documentación precisa y un mecanismo para desactivar/eliminar los datos.
