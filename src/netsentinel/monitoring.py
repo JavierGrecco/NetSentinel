@@ -255,7 +255,8 @@ class MonitorSupervisor:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self.cleanup_history_if_due(force=True)
+        # The worker's first pass performs retention cleanup; don't block app startup
+        # while an old, high-volume history is pruned.
         self._thread = Thread(target=self._run, name="netsentinel-monitor", daemon=True)
         self._thread.start()
 
