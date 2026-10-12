@@ -385,6 +385,68 @@ def test_monitor_history_cleanup_runs_no_more_than_daily(monkeypatch):
     assert cleaned == [30, 30]
 
 
+def test_run_due_once_stops_scheduling_after_shutdown_is_requested(monkeypatch):
+    supervisor = MonitorSupervisor()
+    monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
+    monitors = [
+        {"id": 1, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 2, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 3, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+    ]
+    monkeypatch.setattr(monitoring.database, "list_monitors", lambda: monitors)
+    checked = []
+
+    def stop_after_first_check(monitor):
+        checked.append(monitor["id"])
+        supervisor._stop.set()
+        return {"status": "up"}
+
+    monkeypatch.setattr(monitoring, "check_once", stop_after_first_check)
+
+    assert supervisor.run_due_once() == 1
+    assert checked == [1]
+
+
+def test_stop_keeps_reference_to_worker_that_missed_shutdown_deadline():
+    class SlowWorker:
+        joined_with = None
+
+        def is_alive(self):
+            return True
+
+        def join(self, timeout=None):
+            self.joined_with = timeout
+
+    supervisor = MonitorSupervisor()
+    worker = SlowWorker()
+    supervisor._thread = worker
+
+    supervisor.stop()
+
+    assert supervisor._stop.is_set()
+    assert worker.joined_with == monitoring._SUPERVISOR_STOP_TIMEOUT_SECONDS
+    assert worker.joined_with >= (
+        monitoring.MAX_TIMEOUT_SECONDS
+        + monitoring._PROBE_PROCESS_STARTUP_GRACE_SECONDS
+        + monitoring._WEBHOOK_TOTAL_TIMEOUT_SECONDS
+    )
+    assert supervisor._thread is worker, "A still-live worker must not be forgotten or duplicated"
+
+
+def test_stop_clears_reference_after_worker_exits():
+    class FinishedWorker:
+        def is_alive(self):
+            return False
+
+    supervisor = MonitorSupervisor()
+    supervisor._thread = FinishedWorker()
+
+    supervisor.stop()
+
+    assert supervisor._stop.is_set()
+    assert supervisor._thread is None
+
+
 def test_tcp_http_probe_uses_bounded_child_and_keeps_target_out_of_command(monkeypatch):
     payload = {"status": "up", "latency_ms": 3.25, "detail": "TCP respondió."}
     calls = {}
