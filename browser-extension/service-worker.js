@@ -24,7 +24,7 @@ function privateOrLocalHost(hostname) {
     (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }
 function isExcluded(hostname, excludeDomains) {
-  const host = String(hostname || "").toLowerCase();
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
   if (privateOrLocalHost(host)) return true;
   return (excludeDomains || []).some(entry => {
     const rule = normalizedDomain(entry);
