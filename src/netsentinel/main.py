@@ -164,7 +164,7 @@ _API_DOCS_CONTENT_SECURITY_POLICY = (
 
 
 def _apply_security_headers(
-    response: Response, *, api_docs: bool = False, page_path: str = "/"
+    response: Response, *, api_docs: bool = False, page_path: str = ""
 ) -> Response:
     """Evita cachés locales y aplica una política defensiva uniforme al navegador."""
     # El inventario, el historial y las exportaciones pueden revelar topología y
