@@ -14,6 +14,7 @@ from typing import AsyncIterator
 import os
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
@@ -105,7 +106,7 @@ app = FastAPI(
     title="NetSentinel",
     description="Inventario local, descubrimiento bajo demanda, lista de confianza, eventos y diagnóstico de red.",
     version=__version__,
-    docs_url="/api/docs",
+    docs_url=None,
     redoc_url=None,
     lifespan=lifespan,
 )
@@ -125,20 +126,26 @@ _APP_HTML_PATHS = {
 _INLINE_SCRIPT_PATTERN = re.compile(r"<script(?:\s[^>]*)?>(.*?)</script>", re.IGNORECASE | re.DOTALL)
 
 
-def _inline_script_hashes(path: str) -> tuple[str, ...]:
-    """Hash trusted inline script blocks in one packaged HTML page for CSP."""
-    html_path = _APP_HTML_PATHS.get(path)
-    if html_path is None or not html_path.is_file():
-        return ()
-    content = html_path.read_text(encoding="utf-8")
+def _inline_script_hashes_in_html(content: str) -> tuple[str, ...]:
+    """Return CSP SHA-256 sources for non-empty inline scripts in trusted HTML."""
+    # The HTML parser normalizes CRLF and CR to LF before calculating script hashes.
+    normalized = content.replace("\r\n", "\n").replace("\r", "\n")
     hashes: list[str] = []
-    for match in _INLINE_SCRIPT_PATTERN.finditer(content):
+    for match in _INLINE_SCRIPT_PATTERN.finditer(normalized):
         script = match.group(1)
         if not script.strip():
             continue
         digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
         hashes.append(f"'sha256-{digest}'")
     return tuple(hashes)
+
+
+def _inline_script_hashes(path: str) -> tuple[str, ...]:
+    """Hash trusted inline script blocks in one packaged HTML page for CSP."""
+    html_path = _APP_HTML_PATHS.get(path)
+    if html_path is None or not html_path.is_file():
+        return ()
+    return _inline_script_hashes_in_html(html_path.read_text(encoding="utf-8"))
 
 
 def _base_content_security_policy(path: str) -> str:
@@ -152,20 +159,7 @@ def _base_content_security_policy(path: str) -> str:
     )
 
 
-# FastAPI's Swagger UI currently loads its JavaScript and CSS from jsDelivr and uses
-# a remote favicon. Keep that exception limited to the documentation HTML route.
-_API_DOCS_CONTENT_SECURITY_POLICY = (
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-    "frame-src 'none'; form-action 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "style-src 'self' https://cdn.jsdelivr.net; "
-    "img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'"
-)
-
-
-def _apply_security_headers(
-    response: Response, *, api_docs: bool = False, page_path: str = ""
-) -> Response:
+def _apply_security_headers(response: Response, *, page_path: str = "") -> Response:
     """Evita cachés locales y aplica una política defensiva uniforme al navegador."""
     # El inventario, el historial y las exportaciones pueden revelar topología y
     # actividad sensibles. No permitimos que navegadores o proxies los almacenen.
@@ -175,11 +169,7 @@ def _apply_security_headers(
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
-    if api_docs:
-        policy = _API_DOCS_CONTENT_SECURITY_POLICY
-    else:
-        policy = _base_content_security_policy(page_path)
-    response.headers.setdefault("Content-Security-Policy", policy)
+    response.headers.setdefault("Content-Security-Policy", _base_content_security_policy(page_path))
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
     return response
 
@@ -205,11 +195,28 @@ async def protect_local_app(request: Request, call_next):
             )
 
     response = await call_next(request)
-    return _apply_security_headers(
-        response,
-        api_docs=request.url.path == "/api/docs" and response.status_code < 400,
-        page_path=request.url.path,
+    return _apply_security_headers(response, page_path=request.url.path)
+
+
+
+@app.get("/api/docs", include_in_schema=False)
+def api_docs() -> Response:
+    """Serve Swagger UI with a per-response hash for its generated inline initializer."""
+    response = get_swagger_ui_html(
+        openapi_url=app.openapi_url or "/openapi.json",
+        title=f"{app.title} - Swagger UI",
+        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
     )
+    html = response.body.decode("utf-8")
+    inline_hashes = _inline_script_hashes_in_html(html)
+    script_sources = " ".join(("'self'", *inline_hashes, "https://cdn.jsdelivr.net"))
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+        "frame-src 'none'; form-action 'self'; "
+        f"script-src {script_sources}; style-src 'self' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'"
+    )
+    return response
 
 class DeviceUpdate(BaseModel):
     trusted: bool | None = None

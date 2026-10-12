@@ -282,16 +282,38 @@ def test_api_docs_style_policy_does_not_allow_inline_styles(monkeypatch, tmp_pat
     assert "https://cdn.jsdelivr.net" in style_policy
 
 
-def test_api_docs_content_security_policy_allows_only_required_cdn(monkeypatch, tmp_path):
+def test_api_docs_content_security_policy_hashes_initializer_and_scopes_cdn(monkeypatch, tmp_path):
+    import base64
+    import hashlib
+    import re
+
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/docs")
     assert response.status_code == 200
+    html = response.text.replace("\r\n", "\n").replace("\r", "\n")
     policy = response.headers["content-security-policy"]
     assert "https://cdn.jsdelivr.net" in policy
     assert "https://fastapi.tiangolo.com" in policy
     assert "frame-ancestors 'none'" in policy
     assert "connect-src 'self'" in policy
+
+    scripts = [
+        match.group(1).replace("\r\n", "\n").replace("\r", "\n")
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.IGNORECASE | re.DOTALL)
+        if match.group(1).strip()
+    ]
+    assert scripts, "Swagger UI must include an inline initializer that is authorized by hash"
+    expected = {
+        "'sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii") + "'"
+        for script in scripts
+    }
+    script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
+    observed = {token for token in script_policy.split()[1:] if token.startswith("'sha256-")}
+
+    assert expected == observed
+    assert "'unsafe-inline'" not in script_policy
+    assert "https://cdn.jsdelivr.net" not in policy.split("script-src ", 1)[0]
 
 
 def test_security_headers_are_present_on_host_rejections(monkeypatch, tmp_path):
