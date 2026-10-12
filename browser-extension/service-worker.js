@@ -13,15 +13,41 @@ function normalizedDomain(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 }
 function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
-function privateOrLocalHost(hostname) {
-  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
-  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
-  if (host.includes(":")) return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:");
-  const parts = host.split(".");
+function isPrivateOrLocalIPv4(host) {
+  const parts = String(host || "").split(".");
   if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return false;
   const [a, b] = parts.map(Number);
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
+function mappedIPv4FromIPv6(host) {
+  const value = String(host || "").replace(/^\[|\]$/g, "").toLowerCase();
+  if (!value.startsWith("::ffff:")) return null;
+  const suffix = value.slice("::ffff:".length);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(suffix)) {
+    const octets = suffix.split(".").map(Number);
+    return octets.every(part => part >= 0 && part <= 255) ? octets.join(".") : null;
+  }
+  const groups = suffix.split(":");
+  if (groups.length !== 2 || groups.some(group => !/^[0-9a-f]{1,4}$/.test(group))) return null;
+  const high = Number.parseInt(groups[0], 16);
+  const low = Number.parseInt(groups[1], 16);
+  return [high >> 8, high & 255, low >> 8, low & 255].join(".");
+}
+
+function privateOrLocalHost(hostname) {
+  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
+  if (!host.includes(":")) return isPrivateOrLocalIPv4(host);
+
+  // IPv4-mapped IPv6 literals can still point at localhost or an RFC1918 host.
+  const mappedIPv4 = mappedIPv4FromIPv6(host);
+  if (mappedIPv4 !== null) return isPrivateOrLocalIPv4(mappedIPv4);
+  // Exclude unspecified/loopback, unique-local fc00::/7, and the full
+  // fe80::/10 link-local range (fe80 through febf), not only fe80::/16.
+  return host === "::" || host === "::1" || host.startsWith("fc") || host.startsWith("fd") ||
+    /^fe[89ab]/.test(host);
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
