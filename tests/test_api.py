@@ -248,6 +248,11 @@ def test_security_headers_are_present_on_host_rejections(monkeypatch, tmp_path):
     assert "default-src 'self'" in response.headers["content-security-policy"]
     assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
     assert response.headers["cache-control"] == "no-store"
+    script_policy = next(
+        item for item in response.headers["content-security-policy"].split("; ")
+        if item.startswith("script-src ")
+    )
+    assert not any(token.startswith("'sha256-") for token in script_policy.split())
 
 
 def test_device_history_returns_observations_for_selected_device(monkeypatch, tmp_path):
