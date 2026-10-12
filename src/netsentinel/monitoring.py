@@ -126,7 +126,7 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 _NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirectHandler())
 
 
-ef probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
+def _probe_direct(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
     """Ejecuta una comprobación con tiempo límite y devuelve un resultado sin secretos."""
     started = time.monotonic()
     try:
