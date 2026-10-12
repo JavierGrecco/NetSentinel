@@ -9,6 +9,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
 - [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
+- [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
+- [ ] Pruebas manuales de TLS con endpoints autorizados (certificado válido, próximo a vencer, no confiable, timeout y puerto no TLS) en Windows, macOS y Linux.
 - [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 
 ## Actividad familiar: estado de código
@@ -50,6 +52,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] Exportación selectiva por dispositivo/período/fuente.
 
 ## TLS y contenido privado
+- [x] Inspección explícita de un único handshake TLS con validación normal del certificado; metadatos temporales y hallazgos orientativos, sin petición HTTP.
+- [ ] Valorar alertas persistentes de vencimiento únicamente después de diseñar retención, destino de avisos y tratamiento de resultados.
 - [ ] No implementar recuperación/interceptación de contraseñas, captura de formularios, keylogging, lectura de mensajes o cuerpos HTTP.
 - [ ] No realizar descifrado/proxy TLS general. Cualquier futura herramienta de diagnóstico TLS requiere diseño independiente, consentimiento visible, aislamiento y revisión de seguridad.
 
