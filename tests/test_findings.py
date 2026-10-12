@@ -59,7 +59,7 @@ def test_build_findings_preserves_evidence_and_separates_confidence_from_severit
     assert event["asset"]["label"] == "Fabricante de prueba"
     assert event["evidence"]["message"] == "Primer avistamiento en la red local."
     assert event["recommended_action"]
-    assert "no es un motor SIEM" in report["notice"]
+    assert "No es un motor SIEM" in report["notice"]
 
 
 def test_build_findings_filters_states_limits_results_and_omits_duplicate_monitor_events():
