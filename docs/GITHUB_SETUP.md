@@ -29,6 +29,16 @@ El workflow también ejecuta Gitleaks con el historial completo para detectar se
 
 Las acciones externas usadas por los workflows de CI, análisis de seguridad y cadena de suministro se fijan a SHA completos, no a etiquetas móviles. Dependabot tiene habilitadas actualizaciones semanales para GitHub Actions; revisá cada propuesta y su cambio de SHA antes de integrarla. La fijación reduce el riesgo de que una etiqueta se mueva de forma inesperada, pero las actualizaciones siguen requiriendo revisión y CI.
 
+## Validación de checksums
+
+El helper `scripts/verify-sha256-manifest.sh` comprueba un manifiesto desde la carpeta donde se generó, por lo que funciona aunque se invoque desde otra ubicación:
+
+```bash
+bash scripts/verify-sha256-manifest.sh dist/SHA256SUMS
+```
+
+La CI prueba un artefacto sintético intacto y verifica que el helper rechace el mismo archivo tras modificarlo. Para artefactos descargados sin el repositorio, ejecutá `sha256sum --check SHA256SUMS` desde la carpeta que contiene el manifiesto y todos los archivos listados. Esto comprueba integridad, pero no certifica autenticidad; verificá también la atestación de procedencia cuando exista.
+
 ## Estructura básica
 
 - `src/netsentinel/`: código de la aplicación.

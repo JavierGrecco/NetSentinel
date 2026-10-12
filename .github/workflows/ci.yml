@@ -41,8 +41,21 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
-      - name: Validate launcher shell syntax
-        run: bash -n run.sh run-macos.command
+      - name: Validate launcher and release helper shell syntax
+        run: bash -n run.sh run-macos.command scripts/verify-sha256-manifest.sh
+      - name: Test release checksum verification and tamper detection
+        run: |
+          tempdir="$(mktemp -d)"
+          trap 'rm -rf "$tempdir"' EXIT
+          printf '%s\n' 'fixture wheel bytes' > "$tempdir/sample.whl"
+          (cd "$tempdir" && sha256sum sample.whl > SHA256SUMS)
+          bash scripts/verify-sha256-manifest.sh "$tempdir/SHA256SUMS"
+          printf '%s\n' 'tampered bytes' > "$tempdir/sample.whl"
+          if bash scripts/verify-sha256-manifest.sh "$tempdir/SHA256SUMS" >/dev/null 2>&1; then
+            echo "Checksum verifier accepted a modified artifact." >&2
+            exit 1
+          fi
+          echo "Modified artifact correctly rejected."
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
       - name: Test Chromium extension URL sanitizer, capture lifecycle and popup CSV

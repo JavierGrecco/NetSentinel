@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Endurece la cadena de suministro: escaneo de secretos con Gitleaks, SBOM CycloneDX, checksums SHA-256 con detección de alteraciones y atestaciones Sigstore para releases etiquetadas; CI comprueba de forma regresiva el verificador de checksums.
 - Añade una primera vista unificada de hallazgos en `/api/findings` y exportación JSON: normaliza eventos de inventario e incidentes de monitorización con evidencia, procedencia, estado, severidad y confianza diferenciadas; omite duplicados de transiciones de monitorización y mantiene el proceso en solo lectura. Los tipos duplicados se excluyen en SQL antes de aplicar el límite, para que no oculten eventos de inventario anteriores.
 - Añade la bandeja visual `/findings`, filtros por estado, panel expandible de evidencia/procedencia, reconocimiento de eventos de inventario y exportación JSON; valida el JavaScript integrado en CI y evita almacenar la vista en caché del navegador.
 - Documenta la dirección de producto, la priorización empresarial y los criterios de aceptación de seguridad, privacidad, UX, pruebas y releases.
