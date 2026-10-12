@@ -43,6 +43,7 @@ def test_activity_page_and_empty_state_are_available(client):
     assert "Previsualizar borrado" in page.text
     assert "confirmDeleteActivity" in page.text
     assert "no captura tráfico por sí mismo" in page.text
+    assert "otros segmentos o parámetros desconocidos pueden seguir conteniendo datos personales" in page.text
 
     response = client.get("/api/activity")
     assert response.status_code == 200
@@ -52,6 +53,8 @@ def test_activity_page_and_empty_state_are_available(client):
     assert payload["events"] == []
     assert payload["retention_days"] == 7
     assert "No se guardan credenciales" in payload["note"]
+    assert "otros segmentos o parámetros no reconocidos pueden persistir" in payload["note"]
+    assert "rutas ni URLs completas" not in payload["note"]
 
 
 def test_session_accepts_valid_metadata_only_during_active_window(client):
