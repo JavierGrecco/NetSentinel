@@ -16,6 +16,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
 - [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
 - [x] CLI fail-closed para enlace remoto: solo loopback, validación de puerto y pruebas para bloquear exposición accidental sin autenticación.
+- [x] Canonicalización de `localhost` a loopback literal y propagación del código de salida en el lanzador Windows, con pruebas de regresión.
 - [x] Protección de rutas GET con efectos DNS/PTR: bloquea Fetch Metadata cross-site/same-site y Origin remoto antes de invocar el resolvedor; conserva navegación directa y same-origin.
 - [x] Política CSP/Permissions-Policy para respuestas del servidor, con excepción acotada de Swagger UI y pruebas de cabeceras de seguridad en rutas válidas y rechazos.
 - [x] `script-src` hash-only por pantalla para las cinco interfaces principales; CI verifica el hash exacto de cada bloque y rechaza manejadores JavaScript inline.
