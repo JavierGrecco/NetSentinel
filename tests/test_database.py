@@ -178,3 +178,57 @@ def test_uses_local_oui_file_and_records_lookup_provenance(tmp_path: Path, monke
     assert device["manufacturer"] == "Proveedor de ejemplo"
     assert device["manufacturer_source"] == "oui.csv (base local)"
     assert device["manufacturer_checked_at"]
+
+
+def test_monitor_history_retention_prunes_only_old_check_rows(tmp_path: Path):
+    from datetime import datetime, timedelta, timezone
+
+    db = tmp_path / "retention.sqlite3"
+    database.initialize(db)
+    monitor = database.create_monitor("Retención", "tcp", "127.0.0.1:80", 60, 3, path=db)
+    current = datetime.now(timezone.utc).replace(microsecond=0)
+    recent = current.isoformat(timespec="seconds")
+    old = (current - timedelta(days=91)).isoformat(timespec="seconds")
+
+    # Create an open incident and a current monitor status; the cleanup must not
+    # remove either because only detailed samples are subject to this policy.
+    database.record_monitor_check(monitor["id"], "down", None, "Fallo simulado", path=db)
+    with database.connect(db) as connection:
+        connection.execute(
+            "INSERT INTO monitor_checks(monitor_id, checked_at, status, latency_ms, detail) VALUES (?, ?, ?, ?, ?)",
+            (monitor["id"], old, "down", None, "Comprobación antigua"),
+        )
+        connection.execute(
+            "INSERT INTO monitor_checks(monitor_id, checked_at, status, latency_ms, detail) VALUES (?, ?, ?, ?, ?)",
+            (monitor["id"], recent, "up", 12.5, "Comprobación reciente"),
+        )
+
+    assert database.cleanup_monitor_history(90, path=db) == 1
+    with database.connect(db) as connection:
+        checks = connection.execute(
+            "SELECT checked_at, detail FROM monitor_checks WHERE monitor_id = ? ORDER BY checked_at",
+            (monitor["id"],),
+        ).fetchall()
+        incidents = connection.execute(
+            "SELECT status, failure_count FROM incidents WHERE monitor_id = ?",
+            (monitor["id"],),
+        ).fetchall()
+
+    assert len(checks) == 2  # The generated current failure and the explicit recent row.
+    assert all(row["detail"] != "Comprobación antigua" for row in checks)
+    assert any(row["detail"] == "Comprobación reciente" for row in checks)
+    assert len(incidents) == 1
+    assert incidents[0]["status"] == "open"
+    assert incidents[0]["failure_count"] == 1
+
+
+def test_monitor_history_retention_rejects_unsafe_days(tmp_path: Path):
+    db = tmp_path / "retention-validation.sqlite3"
+    database.initialize(db)
+    for value in (0, -1, 3651, True, "90"):
+        try:
+            database.cleanup_monitor_history(value, path=db)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Invalid retention value should be rejected: {value!r}")
