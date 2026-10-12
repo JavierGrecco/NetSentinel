@@ -15,7 +15,7 @@
 
 Instalá la [extensión Chromium](../browser-extension/README.md) en cada dispositivo/navegador a supervisar y activala desde su panel. Registra navegación de nivel superior y URLs de motores conocidos como Google, Bing, DuckDuckGo, Yahoo, Ecosia, Brave Search, Yandex, Baidu, YouTube, Wikipedia, Amazon, Reddit y TikTok. Está apagada por defecto, conserva hasta 1.000 eventos localmente y permite exportar CSV para importarlo manualmente en `/activity`.
 
-No lee el historial previo, contenido de páginas, formularios, pulsaciones, contraseñas ni cookies. No puede reconocer necesariamente búsquedas que ocurren dentro de aplicaciones nativas o en motores desconocidos. Antes de guardar una URL se eliminan fragmentos y parámetros conocidos de sesión, autenticación, búsqueda y seguimiento. Ningún saneador genérico puede reconocer todos los datos personales que un sitio podría incluir en rutas o parámetros atípicos.
+No lee el historial previo, contenido de páginas, formularios, pulsaciones, contraseñas ni cookies. No puede reconocer necesariamente búsquedas que ocurren dentro de aplicaciones nativas o en motores desconocidos. Antes de guardar una URL se eliminan fragmentos y parámetros conocidos de sesión, autenticación, búsqueda y seguimiento. Se conserva el host y la ruta normalizada; ciertos segmentos reconocibles (correo, teléfono, UUID e identificadores opacos largos) se sustituyen por una marca de redacción. Otros segmentos de ruta y parámetros que el saneador no reconoce pueden persistir y contener datos personales. Ningún saneador genérico puede garantizar su detección.
 
 ## Correo electrónico: solo metadatos de auditoría
 
