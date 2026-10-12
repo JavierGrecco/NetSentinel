@@ -8,7 +8,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
 - [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
 - [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
-- [ ] Timeout DNS independiente del resolvedor del sistema y pruebas deterministas.
+- [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
 - [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 
 ## Actividad familiar: estado de código
