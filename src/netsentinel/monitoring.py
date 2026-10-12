@@ -28,6 +28,34 @@ SUPPORTED_KINDS = {"ping", "tcp", "http"}
 _HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 _LATENCY = re.compile(r"(?:time|tiempo)\s*[=<]\s*([\d.,]+)\s*ms", re.IGNORECASE)
 
+DEFAULT_MONITOR_HISTORY_DAYS = 90
+MAX_MONITOR_HISTORY_DAYS = 3650
+HISTORY_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+
+
+def monitor_history_retention_days() -> int | None:
+    """Return configured retention days; None explicitly disables automatic pruning."""
+    raw = os.environ.get("NETSENTINEL_MONITOR_HISTORY_DAYS", str(DEFAULT_MONITOR_HISTORY_DAYS)).strip().lower()
+    if not raw:
+        return DEFAULT_MONITOR_HISTORY_DAYS
+    if raw in {"0", "off", "disabled", "none", "never"}:
+        return None
+    try:
+        days = int(raw)
+    except ValueError:
+        logger.warning(
+            "NETSENTINEL_MONITOR_HISTORY_DAYS no es un entero válido; se conserva el historial sin limpieza automática."
+        )
+        return None
+    if not 1 <= days <= MAX_MONITOR_HISTORY_DAYS:
+        logger.warning(
+            "NETSENTINEL_MONITOR_HISTORY_DAYS debe estar entre 1 y %s; se conserva el historial sin limpieza automática.",
+            MAX_MONITOR_HISTORY_DAYS,
+        )
+        return None
+    return days
+
+
 
 def valid_host(host: str) -> bool:
     host = host.strip().rstrip(".")
@@ -221,11 +249,13 @@ class MonitorSupervisor:
         self.poll_seconds = max(0.5, poll_seconds)
         self._stop = Event()
         self._thread: Thread | None = None
+        self._last_history_cleanup_monotonic = 0.0
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
+        self.cleanup_history_if_due(force=True)
         self._thread = Thread(target=self._run, name="netsentinel-monitor", daemon=True)
         self._thread.start()
 
@@ -235,7 +265,36 @@ class MonitorSupervisor:
             self._thread.join(timeout=MAX_TIMEOUT_SECONDS + 3)
         self._thread = None
 
+    def cleanup_history_if_due(self, *, force: bool = False, now: float | None = None) -> int:
+        """Prune old detailed checks at most once a day, without failing app startup."""
+        current = time.monotonic() if now is None else now
+        if (
+            not force
+            and self._last_history_cleanup_monotonic > 0
+            and current - self._last_history_cleanup_monotonic < HISTORY_CLEANUP_INTERVAL_SECONDS
+        ):
+            return 0
+
+        retention_days = monitor_history_retention_days()
+        if retention_days is None:
+            self._last_history_cleanup_monotonic = current
+            return 0
+
+        try:
+            removed = database.cleanup_monitor_history(retention_days)
+        except Exception:
+            # Retry after roughly an hour, avoiding tight-loop logging when SQLite is busy.
+            self._last_history_cleanup_monotonic = current - (HISTORY_CLEANUP_INTERVAL_SECONDS - 60 * 60)
+            logger.exception("No se pudo limpiar el historial detallado de monitorización.")
+            return 0
+
+        self._last_history_cleanup_monotonic = current
+        if removed:
+            logger.info("Se eliminaron %s comprobaciones de monitorización anteriores a %s días.", removed, retention_days)
+        return removed
+
     def run_due_once(self) -> int:
+        self.cleanup_history_if_due()
         now = datetime.now(timezone.utc)
         executed = 0
         for monitor in database.list_monitors():
