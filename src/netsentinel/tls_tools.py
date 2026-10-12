@@ -292,7 +292,7 @@ def _child_main() -> None:
         )
     except (ValueError, TypeError):
         raise SystemExit(2)
-    sys.stdout.write(json.dumps(report, ensure_ascii=False) + "\\n")
+    sys.stdout.write(json.dumps(report, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":
