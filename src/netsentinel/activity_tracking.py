@@ -535,7 +535,12 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
     if len(csv_data.encode("utf-8")) > 1_000_000:
         raise ValueError("El archivo CSV supera el máximo de 1 MB.")
     reader = csv.DictReader(io.StringIO(csv_data))
-    raw_headers = list(reader.fieldnames or [])
+    try:
+        # Accessing fieldnames reads the CSV header and can itself raise csv.Error
+        # when an input field exceeds the standard library's parser limit.
+        raw_headers = list(reader.fieldnames or [])
+    except csv.Error as exc:
+        raise ValueError("El CSV contiene una cabecera inválida o demasiado grande.") from exc
     if not raw_headers:
         raise ValueError("El CSV está vacío o no contiene cabeceras.")
     forbidden = [name for name in raw_headers if _is_sensitive_csv_header(name)]
@@ -560,9 +565,16 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
     unknown = set(effective_headers) - CSV_FIELDS
     if unknown:
         raise ValueError("Cabeceras CSV no admitidas: " + ", ".join(sorted(unknown)) + ".")
-    raw_rows = list(reader)
-    if len(raw_rows) > 1000:
-        raise ValueError("Se permiten hasta 1000 eventos por importación.")
+    # Stop parsing as soon as row 1001 is reached instead of materializing an
+    # attacker-controlled number of dictionaries before applying the import cap.
+    raw_rows: list[dict[str, Any]] = []
+    try:
+        for row in reader:
+            if len(raw_rows) >= 1000:
+                raise ValueError("Se permiten hasta 1000 eventos por importación.")
+            raw_rows.append(row)
+    except csv.Error as exc:
+        raise ValueError("El CSV contiene una columna demasiado grande o tiene un formato inválido.") from exc
     with database.connect() as db:
         device = db.execute("SELECT id FROM devices WHERE id = ?", (device_id,)).fetchone()
         if device is None:
