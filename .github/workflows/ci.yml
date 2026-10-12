@@ -45,6 +45,8 @@ jobs:
         run: bash -n run.sh run-macos.command
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
+      - name: Test Chromium extension URL sanitizer
+        run: node --test browser-extension/service-worker.test.cjs
       - name: Validate embedded activity page JavaScript
         run: |
           python - <<'PY'

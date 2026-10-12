@@ -3,15 +3,18 @@ const EVENTS_KEY = "netsentinelEvents";
 const MAX_EVENTS = 1000;
 const DEFAULTS = { enabled: false, capturePages: true, captureSearches: true, retentionDays: 7, excludeDomains: [] };
 const SEARCH_QUERY_KEYS = new Set(["q", "query", "text", "wd", "word", "search_query", "search"]);
-const TRACKING_QUERY_KEYS = new Set(["fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid"]);
-const SENSITIVE_KEY = /access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|username|email|phone|session|sid|csrf|nonce|signature|(^|_)(token|auth|code|state|otp|jwt|key|user|account|customer)(_|$)/i;
+const TRACKING_QUERY_KEYS = new Set([
+  "fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid", "ttclid",
+  "twclid", "li_fat_id", "mkt_tok", "vero_id", "s_cid", "_ga", "_gl", "_hsenc", "_hsmi"
+]);
+const SENSITIVE_KEY = /access.?token|refresh.?token|id.?token|client.?secret|client.?assertion|password|passwd|secret|authorization|bearer|api.?key|private.?key|username|email|phone|session|sid|csrf|nonce|signature|redirect.?uri|return.?url|return.?to|returnto|relay.?state|saml.?request|callback|(^|_)(token|auth|code|state|otp|jwt|key|user|account|customer|continue|next)(_|$)/i;
 
 function normalizedDomain(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 }
 function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
 function privateOrLocalHost(hostname) {
-  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase();
+  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
   if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
   if (host.includes(":")) return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:");
   const parts = host.split(".");
@@ -21,20 +24,46 @@ function privateOrLocalHost(hostname) {
     (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }
 function isExcluded(hostname, excludeDomains) {
-  const host = String(hostname || "").toLowerCase();
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
   if (privateOrLocalHost(host)) return true;
   return (excludeDomains || []).some(entry => {
     const rule = normalizedDomain(entry);
     return rule && hostMatches(host, rule);
   });
 }
+function normalizedQueryKey(value) {
+  let normalized = String(value || "").toLowerCase();
+  for (let i = 0; i < 3; i++) {
+    let decoded;
+    try { decoded = decodeURIComponent(normalized.replace(/\+/g, "%20")); } catch { break; }
+    if (decoded === normalized) break;
+    normalized = decoded;
+  }
+  return normalized.replace(/[^a-z0-9_]/g, "");
+}
+function isSensitivePathSegment(value) {
+  let decoded = String(value || "");
+  for (let i = 0; i < 3; i++) {
+    let expanded;
+    try { expanded = decodeURIComponent(decoded); } catch { break; }
+    if (expanded === decoded) break;
+    decoded = expanded;
+  }
+  if (/^[^/\s@]+@[^/\s@]+\.[^/\s@]+$/.test(decoded)) return true;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decoded)) return true;
+  if (/^[+()0-9.\-\s]+$/.test(decoded) && (decoded.match(/\d/g) || []).length >= 10) return true;
+  return decoded.length >= 32 && /^[A-Za-z0-9._~-]+$/.test(decoded) && /[A-Za-z]/.test(decoded) && /\d/.test(decoded);
+}
 function cleanUrl(rawUrl) {
   let url;
   try { url = new URL(rawUrl); } catch { return null; }
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
   url.hash = "";
+  url.pathname = url.pathname.split("/").map(segment =>
+    isSensitivePathSegment(segment) ? "%5Bredacted%5D" : segment
+  ).join("/") || "/";
   for (const key of [...url.searchParams.keys()]) {
-    const normalized = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    const normalized = normalizedQueryKey(key);
     if (SENSITIVE_KEY.test(normalized) || normalized.startsWith("utm_") ||
         TRACKING_QUERY_KEYS.has(normalized) || SEARCH_QUERY_KEYS.has(normalized)) url.searchParams.delete(key);
   }
@@ -125,3 +154,15 @@ chrome.runtime.onInstalled.addListener(async () => {
   const state = await loadState();
   await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
 });
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    normalizedDomain,
+    privateOrLocalHost,
+    isExcluded,
+    normalizedQueryKey,
+    isSensitivePathSegment,
+    cleanUrl,
+    searchInfo
+  };
+}
