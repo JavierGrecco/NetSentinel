@@ -276,3 +276,25 @@ def test_connect_creates_new_nested_directories_with_private_permissions(tmp_pat
         assert stat.S_IMODE((shared_parent / "nested").stat().st_mode) == 0o700
         assert stat.S_IMODE(destination.stat().st_mode) == 0o700
         assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+
+
+
+def test_connect_hardens_existing_default_application_directory(tmp_path, monkeypatch):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los modos POSIX no se aplican en Windows.")
+
+    app_data = tmp_path / ".netsentinel"
+    app_data.mkdir()
+    os.chmod(app_data, 0o755)
+    db_path = app_data / "netsentinel.sqlite3"
+    monkeypatch.delenv("NETSENTINEL_DATA_DIR", raising=False)
+    monkeypatch.setattr(database, "database_path", lambda: db_path)
+
+    with database.connect():
+        pass
+
+    assert stat.S_IMODE(app_data.stat().st_mode) == 0o700
+    assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
