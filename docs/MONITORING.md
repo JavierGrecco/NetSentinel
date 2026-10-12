@@ -8,6 +8,8 @@ NetSentinel comprueba tres tipos de objetivo:
 
 Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 segundos. Cada resultado guarda fecha, estado, detalle y latencia cuando está disponible. El primer fallo abre un incidente. Los fallos siguientes actualizan ese incidente; el primer resultado correcto lo resuelve.
 
+Las comprobaciones TCP y HTTP/HTTPS se ejecutan en un proceso hijo terminable, con un límite total de `timeout_seconds + 1` segundo de margen para iniciar Python. Esto cubre también una resolución DNS del sistema bloqueada, que no siempre queda contenida por el timeout del socket. Un resultado agotado se registra como caída sin exponer URLs completas ni detalles del resolvedor. Ping mantiene su proceso y timeout nativo por sistema operativo. El webhook opcional usa otro proceso aislado con límite total de 5 segundos, para que un DNS HTTPS o servidor lento no congele el supervisor secuencial.
+
 ## Retención del historial detallado
 
 Las comprobaciones individuales se conservan **90 días por defecto**. La limpieza se ejecuta al iniciar NetSentinel y luego como máximo una vez al día. Solo elimina filas antiguas de comprobaciones detalladas (`monitor_checks`): no elimina monitores, estados actuales, incidentes abiertos o resueltos, eventos, lecturas de inventario ni observaciones de dispositivos. Las tendencias siguen usando sus ventanas de 24 horas/7 días; los controles actuales e incidentes conservan su estado.
