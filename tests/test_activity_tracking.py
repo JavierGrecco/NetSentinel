@@ -695,3 +695,64 @@ def test_metadata_events_are_included_in_json_export(client):
     assert payload["format"] == "netsentinel-data-export-v4"
     assert payload["activity_events"][0]["domain"] == "example.com"
     assert payload["activity_settings"][0]["retention_days"] == 7
+
+
+
+def test_csv_import_rejects_rows_outside_retention_until_policy_is_extended(client):
+    selected = device_id(client)
+    old = (datetime.now(timezone.utc) - timedelta(days=8)).isoformat(timespec="seconds")
+    csv_data = "observed_at,event_type,domain\n" + f"{old},dns_query,old.example\n"
+
+    preview = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert preview.status_code == 422
+    assert "retención configurada de 7 día(s)" in preview.json()["detail"]
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 422
+    assert "Aumentá la retención antes de importar" in imported.json()["detail"]
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+    retention = client.put("/api/activity/retention", json={"retention_days": 30})
+    assert retention.status_code == 200
+    preview = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert preview.status_code == 200
+    assert preview.json()["would_import"] == 1
+
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200
+    assert imported.json()["imported"] == 1
+    events = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    assert any(event["domain"] == "old.example" for event in events)
+
+
+def test_csv_import_rejects_entire_batch_if_any_row_is_expired(client):
+    selected = device_id(client)
+    current = datetime.now(timezone.utc).replace(microsecond=0)
+    old = (current - timedelta(days=8)).isoformat()
+    recent = current.isoformat()
+    csv_data = (
+        "observed_at,event_type,domain\n"
+        f"{recent},dns_query,recent.example\n"
+        f"{old},dns_query,old.example\n"
+    )
+
+    response = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert response.status_code == 422
+    assert "Fila 3" in response.json()["detail"]
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
