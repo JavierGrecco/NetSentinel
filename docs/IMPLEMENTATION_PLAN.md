@@ -30,7 +30,7 @@
 6. Probar instalación y flujo en Windows, macOS y Linux.
 
 ## P1 — Experiencia de importación
-1. Filtros adicionales por fuente y tests de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
+1. Tests adicionales de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
 2. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 3. Pruebas manuales del flujo de borrado y revisión de usabilidad multi-SO/navegador.
 
