@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita que una resolución DNS bloqueada detenga la monitorización secuencial: TCP/HTTP se ejecutan en procesos terminables con plazo global y el webhook opcional queda limitado a 5 segundos. Añade regresiones para timeout, salida inválida y arranque del proceso hijo.
 - Evita que una resolución DNS A/AAAA o PTR bloquee indefinidamente una solicitud: las consultas interactivas se aíslan en un proceso terminable con límite de 3 segundos. Añade pruebas de timeout, errores del resolvedor y rechazo de salida malformada.
 - Evita importaciones CSV contradictorias con la retención de actividad: previsualización e importación rechazan lotes con filas fuera del plazo configurado antes de escribir, con mensaje para ampliar la retención; la operación se serializa con cambios de política.
 - Añade retención configurable para comprobaciones detalladas de monitorización: 90 días por defecto, limpieza al inicio y diaria, opción de desactivación explícita y pruebas de que la limpieza no borra incidentes ni el estado actual.
