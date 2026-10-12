@@ -1,3 +1,5 @@
+import csv
+import io
 from pathlib import Path
 
 import pytest
@@ -52,6 +54,39 @@ def test_trust_update_and_exports(tmp_path: Path):
     assert export["devices"][0]["display_name"] == "Mi portátil"
     assert len(export["scans"]) == 2
     assert len(export["observations"]) == 3
+
+
+def test_inventory_csv_neutralizes_formula_cells_without_mutating_database(tmp_path: Path):
+    db = tmp_path / "test.sqlite3"
+    database.initialize(db)
+    database.record_scan(
+        [Neighbor("192.168.10.21", "AA:BB:CC:DD:EE:22", "eth0")],
+        path=db,
+    )
+    device = database.list_devices(db)[0]
+    formula_name = '=HYPERLINK("https://example.invalid","open")'
+    formula_notes = "+SUM(1,1)"
+
+    updated = database.update_device(
+        device["id"],
+        display_name=formula_name,
+        notes=formula_notes,
+        path=db,
+    )
+    assert updated is not None
+    assert updated["display_name"] == formula_name
+    assert updated["notes"] == formula_notes
+
+    csv_text = database.export_csv(db)
+    rows = list(csv.DictReader(io.StringIO(csv_text.lstrip("\\ufeff"))))
+    exported = next(item for item in rows if item["id"] == str(device["id"]))
+    assert exported["display_name"] == "'" + formula_name
+    assert exported["notes"] == "'" + formula_notes
+
+    # Protection belongs to the exported representation; stored values remain intact.
+    stored = database.list_devices(db)[0]
+    assert stored["display_name"] == formula_name
+    assert stored["notes"] == formula_notes
 
 
 def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
