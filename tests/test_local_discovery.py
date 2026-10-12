@@ -28,6 +28,24 @@ def test_detects_private_ipv4_subnet_without_user_input():
     assert result[0].interface == "en0"
 
 
+def test_duplicate_subnet_keeps_preferred_physical_interface_even_if_seen_later():
+    addresses = {
+        # Interface enumeration order is platform-dependent; the preferred
+        # physical adapter must not be discarded because a less-preferred alias
+        # happened to expose the same subnet first.
+        "mystery0": [_entry("192.168.1.2")],
+        "Ethernet": [_entry("192.168.1.3")],
+    }
+    stats = {name: SimpleNamespace(isup=True) for name in addresses}
+
+    result = detect_scan_subnets(addresses, stats)
+
+    assert len(result) == 1
+    assert result[0].network == ipaddress.IPv4Network("192.168.1.0/24")
+    assert result[0].interface == "Ethernet"
+    assert result[0].local_address == "192.168.1.3"
+
+
 def test_only_rfc1918_ranges_are_eligible_for_discovery():
     addresses = {
         "en0": [_entry("192.0.2.10")],       # Documentation range
