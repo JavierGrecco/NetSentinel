@@ -307,6 +307,8 @@ def test_connect_does_not_chmod_target_of_default_directory_symlink(tmp_path, mo
     import os
     import stat
 
+    from netsentinel import config
+
     if os.name != "posix":
         pytest.skip("Los enlaces simbólicos POSIX no son uniformes en Windows.")
 
@@ -315,9 +317,14 @@ def test_connect_does_not_chmod_target_of_default_directory_symlink(tmp_path, mo
     os.chmod(target, 0o755)
     link = tmp_path / ".netsentinel"
     link.symlink_to(target, target_is_directory=True)
-    db_path = link / "netsentinel.sqlite3"
     monkeypatch.delenv("NETSENTINEL_DATA_DIR", raising=False)
-    monkeypatch.setattr(database, "database_path", lambda: db_path)
+    monkeypatch.setattr(config.Path, "home", classmethod(lambda _cls: tmp_path))
+
+    # Exercise the real config -> database_path -> connect path: resolving the
+    # default path here would hide the symlink from the private-directory guard.
+    assert config.data_dir() == link
+    db_path = config.database_path()
+    assert db_path == link / "netsentinel.sqlite3"
 
     with database.connect():
         pass
