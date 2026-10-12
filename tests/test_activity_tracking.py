@@ -157,7 +157,7 @@ def test_csv_import_rejects_more_than_1000_rows_before_writing(client, endpoint)
     stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     rows = ["observed_at,event_type,domain"]
     rows.extend(f"{stamp},dns_query,host-{index}.example" for index in range(1001))
-    response = client.post(endpoint, json={"device_id": selected, "csv_data": "\\n".join(rows) + "\\n"})
+    response = client.post(endpoint, json={"device_id": selected, "csv_data": "\n".join(rows) + "\n"})
 
     assert response.status_code == 422
     assert "1000" in response.json()["detail"]
@@ -169,7 +169,7 @@ def test_csv_import_returns_validation_error_for_oversized_field(client, endpoin
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     oversized_value = "x" * 140_000  # Above csv's default per-field parser limit, below the 1 MB API cap.
-    csv_data = f"observed_at,event_type,app_name\\n{stamp},app_usage,{oversized_value}\\n"
+    csv_data = f"observed_at,event_type,app_name\n{stamp},app_usage,{oversized_value}\n"
 
     response = client.post(endpoint, json={"device_id": selected, "csv_data": csv_data})
 
