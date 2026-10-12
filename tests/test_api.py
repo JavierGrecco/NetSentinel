@@ -195,8 +195,8 @@ def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_
     # HTML parsing normalizes CRLF/CR to LF before CSP hashing; mirror that
     # behavior so these regression checks are stable on Windows checkouts too.
     scripts = [
-        match.group(1).replace("\\r\\n", "\\n").replace("\\r", "\\n")
-        for match in re.finditer(r"<script(?:\\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
+        match.group(1).replace("\r\n", "\n").replace("\r", "\n")
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
         if match.group(1).strip()
     ]
     assert scripts, f"{route} should have a known inline script fixture"
@@ -212,7 +212,7 @@ def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_
     assert expected == observed
     assert "'unsafe-inline'" not in script_policy
     assert "https://cdn.jsdelivr.net" not in script_policy
-    assert response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n") == Path(
+    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
         "src/netsentinel/static", asset
     ).read_text(encoding="utf-8")
 
