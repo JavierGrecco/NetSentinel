@@ -2,6 +2,9 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Unifica la navegación principal de Inventario, Monitorización, Herramientas y Actividad con enlaces consistentes, estado de sección actual y estilos adaptables a pantallas pequeñas.
+- Añade una prueba automatizada que verifica los cuatro enlaces y el indicador de página actual en cada módulo.
+
 - Reduce los permisos de la extensión Chromium: elimina el acceso de host global innecesario y comprueba que no vuelva a solicitarse en las pruebas.
 - Añade guía de primer uso a la pantalla principal, con pasos simples para descubrir dispositivos, reconocerlos y revisar la confianza.
 - Distingue una búsqueda sin coincidencias de un inventario vacío para evitar mensajes confusos.
