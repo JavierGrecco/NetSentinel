@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta, timezone
+import json
 import socket
 import ssl
+import subprocess
+import sys
 
 import pytest
 
@@ -92,7 +95,7 @@ def test_tls_inspection_rejects_url_paths_credentials_and_invalid_hosts(host):
 def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch):
     calls, context, raw = _mock_success(monkeypatch)
 
-    result = tls_tools.inspect_tls_endpoint("Example.COM.", port=8443, timeout=2.5)
+    result = tls_tools._inspect_tls_endpoint_direct("Example.COM.", port=8443, timeout=2.5)
 
     assert result["status"] == "ok"
     assert result["host"] == "example.com"
@@ -116,7 +119,7 @@ def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch)
 def test_tls_inspection_warns_about_certificate_expiring_soon(monkeypatch):
     _mock_success(monkeypatch, certificate=_certificate(days_until_expiry=5))
 
-    result = tls_tools.inspect_tls_endpoint("example.com")
+    result = tls_tools._inspect_tls_endpoint_direct("example.com")
 
     assert result["status"] == "warning"
     assert result["certificate"]["days_remaining"] <= 5
@@ -176,3 +179,62 @@ def test_tls_inspection_supports_ip_addresses(monkeypatch):
     assert result["host"] == "192.0.2.10"
     assert calls["address"] == ("192.0.2.10", 443)
     assert context.server_name == "192.0.2.10"
+
+
+
+def test_tls_inspection_wrapper_enforces_child_process_deadline(monkeypatch):
+    calls = {}
+    report = {
+        "host": "example.com",
+        "port": 443,
+        "status": "ok",
+        "summary": "valid",
+        "certificate": None,
+        "tls": {"version": "TLSv1.3"},
+        "findings": [],
+    }
+
+    def fake_run(command, **kwargs):
+        calls["command"] = command
+        calls["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(report), stderr="")
+
+    monkeypatch.setattr(tls_tools.subprocess, "run", fake_run)
+    result = tls_tools.inspect_tls_endpoint("Example.COM.")
+
+    assert result == report
+    assert calls["command"][0] == sys.executable
+    assert calls["command"][1] == str(__import__("pathlib").Path(tls_tools.__file__).resolve())
+    assert calls["command"][2] == "--inspect-child"
+    assert calls["command"][-2:] == ["443", "3.0"]
+    assert calls["kwargs"]["timeout"] == 3.0
+    assert calls["kwargs"]["capture_output"] is True
+    assert calls["kwargs"]["check"] is False
+
+
+def test_tls_inspection_wrapper_returns_timeout_if_dns_child_hangs(monkeypatch):
+    def timeout_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(tls_tools.subprocess, "run", timeout_run)
+    result = tls_tools.inspect_tls_endpoint("example.com", timeout=0.5)
+
+    assert result["status"] == "timeout"
+    assert result["findings"][0]["code"] == "inspection_timeout"
+    assert "resolución DNS" in result["summary"]
+
+
+@pytest.mark.parametrize(
+    ("returncode", "stdout"),
+    [(1, '{"host":"example.com","port":443}'), (0, "not-json")],
+)
+def test_tls_inspection_wrapper_rejects_invalid_child_results(monkeypatch, returncode, stdout):
+    monkeypatch.setattr(
+        tls_tools.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, returncode, stdout=stdout, stderr=""),
+    )
+    result = tls_tools.inspect_tls_endpoint("example.com")
+
+    assert result["status"] == "error"
+    assert result["findings"][0]["code"] == "inspection_failed"
