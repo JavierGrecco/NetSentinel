@@ -7,6 +7,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Descubrimiento local explícito y acotado a subredes privadas.
 - [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
 - [x] Retención configurable de muestras detalladas de monitorización (90 días por defecto, 1–3650 configurable, o desactivación explícita); limpieza diaria que preserva incidentes, estado actual e inventario, con pruebas deterministas.
+- [x] Protección de permisos POSIX del directorio de datos: no modifica destinos de enlaces simbólicos de `~/.netsentinel`; prueba el recorrido real de configuración, base SQLite y permisos.
 - [x] Operaciones TCP/HTTP y webhook en procesos terminables con plazos globales (timeout del monitor + 1 s de arranque; webhook 5 s); pruebas de timeout, salida inválida y protocolo hijo.
 - [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
 - [x] Límite estricto de 3 segundos para consultas interactivas A/AAAA y PTR mediante proceso hijo terminable; pruebas de timeouts, clasificación de errores y validación de la salida del proceso.
