@@ -144,8 +144,25 @@ async function captureNavigation(details) {
   events = events.filter(event => Date.parse(event.observed_at) >= now - settings.retentionDays * 86400000).slice(-MAX_EVENTS);
   await chrome.storage.local.set({ [EVENTS_KEY]: events });
 }
-chrome.webNavigation.onCompleted.addListener(details => { void captureNavigation(details); });
-chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void captureNavigation(details); });
+// Chrome can deliver multiple navigation events while storage reads/writes are
+// pending. Serialize the read-modify-write cycle so a later event cannot overwrite
+// an earlier one with a stale snapshot of chrome.storage.local.
+let navigationQueue = Promise.resolve();
+
+function enqueueNavigation(details) {
+  navigationQueue = navigationQueue
+    .catch(() => undefined)
+    .then(() => captureNavigation(details))
+    .catch(error => {
+      // Do not log URLs or event contents, which may contain sensitive metadata.
+      const name = error && typeof error.name === "string" ? error.name : "Error";
+      console.error("NetSentinel: no se pudo guardar un evento de navegación (" + name + ").");
+    });
+  return navigationQueue;
+}
+
+chrome.webNavigation.onCompleted.addListener(details => { void enqueueNavigation(details); });
+chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueueNavigation(details); });
 chrome.runtime.onStartup.addListener(async () => {
   const state = await loadState();
   await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
@@ -168,6 +185,7 @@ if (typeof module !== "undefined" && module.exports) {
     cleanUrl,
     searchInfo,
     loadState,
-    captureNavigation
+    captureNavigation,
+    enqueueNavigation
   };
 }
