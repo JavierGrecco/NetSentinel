@@ -11,8 +11,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
 - [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
 - [x] CLI fail-closed para enlace remoto: solo loopback, validación de puerto y pruebas para bloquear exposición accidental sin autenticación.
-- [x] Política CSP/Permissions-Policy para respuestas del servidor, con excepción acotada de Swagger UI y pruebas de cabeceras de seguridad en rutas válidas y rechazos.
 - [x] Protección de rutas GET con efectos DNS/PTR: bloquea Fetch Metadata cross-site/same-site y Origin remoto antes de invocar el resolvedor; conserva navegación directa y same-origin.
+- [x] Política CSP/Permissions-Policy para respuestas del servidor, con excepción acotada de Swagger UI y pruebas de cabeceras de seguridad en rutas válidas y rechazos.
 - [x] `script-src` hash-only por pantalla para las cinco interfaces principales; CI verifica el hash exacto de cada bloque y rechaza manejadores JavaScript inline.
 - [x] Eliminar `style-src unsafe-inline`: externaliza estilos de página, sustituye atributos inline por clases y valida los CSS incluidos en el wheel y servidos localmente.
 - [x] Retirar `script-src unsafe-inline` de `/api/docs`: el inicializador generado por Swagger se autoriza mediante hash SHA-256 calculado por respuesta; el CDN conserva alcance exclusivo a la documentación.
@@ -32,6 +32,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
 - [x] CI automatizada verde en la matriz de Python 3.10–3.14 en Windows/macOS/Linux y validación del paquete para la integración anterior.
 - [x] Pruebas Node automatizadas del ciclo de extensión: apagada por defecto, opt-in, subframes/privado, exclusiones, opciones de captura, retención/límite y deduplicación.
+- [x] Mutaciones del historial Chromium serializadas en el service worker, incluyendo limpieza inicial y borrado explícito; el popup ya no escribe snapshots antiguos de eventos al renderizar. Pruebas deterministas de concurrencia y orden de borrado. También excluye IPv4-mapped IPv6 privadas y el rango IPv6 link-local completo en el filtro de privacidad.
 - [x] Pruebas CSV del popup para comillas, comas, saltos de línea, fórmulas y BOM UTF-8; el manifest MV3 solicita solo permisos necesarios y CI comprueba los permisos mínimos.
 - [ ] Pruebas manuales de importación/extensión en Chrome/Edge y Windows/macOS/Linux; los cambios de deduplicación también deben pasar CI.
 - [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
