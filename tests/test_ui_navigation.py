@@ -4,6 +4,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = {
     "/": ("src/netsentinel/static/index.html", "/"),
+    "/findings": ("src/netsentinel/static/findings.html", "/findings"),
     "/monitors": ("src/netsentinel/static/monitors.html", "/monitors"),
     "/tools": ("src/netsentinel/static/tools.html", "/tools"),
     "/activity": ("src/netsentinel/static/activity.html", "/activity"),
@@ -16,7 +17,7 @@ LINK_RE = re.compile(
     r'<a class="nav-link"(?P<current> aria-current="page")? '
     r'href="(?P<href>[^"]+)">(?P<label>[^<]+)</a>'
 )
-EXPECTED_HREFS = ["/", "/monitors", "/tools", "/activity"]
+EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity"]
 
 
 def test_every_module_has_consistent_primary_navigation():

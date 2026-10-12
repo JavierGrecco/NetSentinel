@@ -11,7 +11,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
 - [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
 - [x] Primera iteración del motor de hallazgos: API de solo lectura y exportación JSON para cambios del inventario e incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas; evita duplicar transiciones de monitorización.
-- [ ] Interfaz visual y ampliación del motor de hallazgos para incluir resultados DNS/TLS persistibles con política explícita de retención y falsos positivos.
+- [x] Bandeja visual `/findings` conectada al motor de hallazgos, con filtros por estado, evidencia/procedencia, reconocimiento de eventos del inventario y exportación JSON; respuestas locales sin caché.
+- [ ] Ampliar el motor para incluir resultados DNS/TLS persistibles solo después de definir retención, eliminación, consentimiento cuando corresponda y control de falsos positivos.
 - [ ] Pruebas manuales de TLS con endpoints autorizados (certificado válido, próximo a vencer, no confiable, timeout y puerto no TLS) en Windows, macOS y Linux.
 - [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 

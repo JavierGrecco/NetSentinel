@@ -127,7 +127,7 @@ async def protect_local_app(request: Request, call_next):
 
     response = await call_next(request)
     if (
-        request.url.path == "/activity"
+        request.url.path in {"/activity", "/findings"}
         or request.url.path.startswith("/api/activity")
         or request.url.path in {"/api/findings", "/api/export/findings.json"}
     ):
@@ -238,6 +238,12 @@ def monitors_page() -> FileResponse:
 @app.get("/activity", include_in_schema=False)
 def activity_page() -> FileResponse:
     return FileResponse(_ACTIVITY_STATIC)
+
+
+@app.get("/findings", include_in_schema=False)
+def findings_page() -> FileResponse:
+    """Muestra la bandeja local de hallazgos con evidencia."""
+    return FileResponse(_STATIC_DIR / "findings.html")
 
 
 @app.get("/tools", include_in_schema=False)
