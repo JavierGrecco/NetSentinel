@@ -51,7 +51,7 @@ jobs:
 
           workflow = Path(".github/workflows/security.yml").read_text(encoding="utf-8")
           pattern = re.compile(
-              r"uses:\\s*github/codeql-action/(init|analyze)@([0-9a-f]{40})\\s+#\\s*(v[0-9.]+)"
+              r"uses:\s*github/codeql-action/(init|analyze)@([0-9a-f]{40})\s+#\s*(v[0-9.]+)"
           )
           refs = pattern.findall(workflow)
           assert len(refs) == 2, (
