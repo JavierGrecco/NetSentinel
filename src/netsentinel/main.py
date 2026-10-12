@@ -23,6 +23,7 @@ from .monitoring import MonitorSupervisor, check_once, validate_spec
 from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
 from .dns_config import get_dns_configuration
 from . import activity_tracking
+from .tls_tools import inspect_tls_endpoint
 
 
 _supervisor = MonitorSupervisor()
@@ -212,6 +213,13 @@ class ActivityDeleteRequest(ActivityDeleteSelection):
     confirmation: str = Field(min_length=1, max_length=40)
 
 
+class TLSInspectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    host: str = Field(min_length=1, max_length=253)
+    port: int = Field(default=443, ge=1, le=65535, strict=True)
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -230,6 +238,15 @@ def activity_page() -> FileResponse:
 @app.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
+
+
+@app.post("/api/tools/tls/inspect")
+def tls_endpoint_inspection(body: TLSInspectionRequest) -> dict:
+    """Audita un único handshake TLS, sin solicitar contenido HTTP ni persistir resultados."""
+    try:
+        return inspect_tls_endpoint(body.host, body.port)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/api/tools/dns/configuration")

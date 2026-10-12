@@ -2,6 +2,9 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Incorpora en Herramientas una inspección TLS puntual de endpoints autorizados: valida el certificado, informa vencimiento, nombres, versión TLS y cifrado negociado sin solicitar contenido HTTP ni guardar resultados.
+- Amplía la CI para validar la sintaxis JavaScript embebida en la página Herramientas.
+
 - Unifica la navegación principal de Inventario, Monitorización, Herramientas y Actividad con enlaces consistentes, estado de sección actual y estilos adaptables a pantallas pequeñas.
 - Añade una prueba automatizada que verifica los cuatro enlaces y el indicador de página actual en cada módulo.
 
