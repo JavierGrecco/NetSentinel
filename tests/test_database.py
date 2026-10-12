@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from netsentinel import database
 from netsentinel.discovery import Neighbor
 
