@@ -13,6 +13,10 @@ from netsentinel.csv_safety import spreadsheet_safe_text
         "  =1+1",
         "\t+SUM(1,1)",
         "\r\n@SUM(1,1)",
+        "\x00=1+1",
+        "\x0b@cmd",
+        "\x00\u2003=1+1",
+        "\u00a0+SUM(1,1)",
     ],
 )
 def test_spreadsheet_safe_text_prefixes_formula_like_values(value):
