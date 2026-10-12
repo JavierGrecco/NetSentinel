@@ -127,7 +127,7 @@ async def protect_local_app(request: Request, call_next):
 
     response = await call_next(request)
     if (
-        request.url.path == "/activity"
+        request.url.path in {"/activity", "/findings"}
         or request.url.path.startswith("/api/activity")
         or request.url.path in {"/api/findings", "/api/export/findings.json"}
     ):
