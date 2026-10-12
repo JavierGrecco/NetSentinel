@@ -188,6 +188,10 @@ def build_findings(
 
     findings: list[dict[str, Any]] = []
     for event in events:
+        # Estos eventos reflejan transiciones que ya se representan como incidentes.
+        # Omitirlos evita duplicar el mismo fallo/recuperación en la vista unificada.
+        if event.get("event_type") in {"monitor_down", "monitor_recovered"}:
+            continue
         finding = _event_finding(event)
         if state == "all" or finding["status"] == state:
             findings.append(finding)
