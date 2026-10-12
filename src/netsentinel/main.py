@@ -129,7 +129,7 @@ _INLINE_SCRIPT_PATTERN = re.compile(r"<script(?:\s[^>]*)?>(.*?)</script>", re.IG
 def _inline_script_hashes_in_html(content: str) -> tuple[str, ...]:
     """Return CSP SHA-256 sources for non-empty inline scripts in trusted HTML."""
     # The HTML parser normalizes CRLF and CR to LF before calculating script hashes.
-    normalized = content.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+    normalized = content.replace("\r\n", "\n").replace("\r", "\n")
     hashes: list[str] = []
     for match in _INLINE_SCRIPT_PATTERN.finditer(normalized):
         script = match.group(1)
