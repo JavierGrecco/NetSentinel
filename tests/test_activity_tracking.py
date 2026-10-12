@@ -34,7 +34,7 @@ def test_activity_page_and_empty_state_are_available(client):
     page = client.get("/activity")
     assert page.status_code == 200
     assert page.headers["cache-control"] == "no-store"
-    assert "Actividad familiar" in page.text
+    assert "Actividad y telemetría" in page.text
     assert "Previsualizar CSV" in page.text
     assert "Exportar CSV filtrado" in page.text
     assert "filterEventType" in page.text
