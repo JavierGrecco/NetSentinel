@@ -54,6 +54,10 @@ _RFC1918_HOST_NETWORKS = tuple(
 )
 _IPV6_UNIQUE_LOCAL = ipaddress.IPv6Network("fc00::/7")
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# These GET routes initiate DNS traffic. They must not be triggerable by pages
+# from another origin merely by embedding a local URL in an image/link/script.
+_NETWORK_SIDE_EFFECT_GET_PATHS = {"/api/tools/dns/lookup", "/api/tools/dns/reverse"}
+_DEVICE_DNS_REVERSE_PATH = re.compile(r"^/api/devices/\d+/dns-reverse$")
 
 
 def _host_is_allowed(host: str | None) -> bool:
@@ -100,6 +104,11 @@ def _same_origin(origin: str, request: Request) -> bool:
     except ValueError:
         return False
     return request_port == origin_port
+
+
+def _is_network_side_effect_get(path: str) -> bool:
+    """Identify GET endpoints that can initiate outbound DNS lookups."""
+    return path in _NETWORK_SIDE_EFFECT_GET_PATHS or bool(_DEVICE_DNS_REVERSE_PATH.fullmatch(path))
 
 
 app = FastAPI(
@@ -181,6 +190,22 @@ async def protect_local_app(request: Request, call_next):
         return _apply_security_headers(
             JSONResponse(status_code=400, content={"detail": "Host no permitido para NetSentinel."})
         )
+
+    if request.method.upper() == "GET" and _is_network_side_effect_get(request.url.path):
+        # Modern browsers expose Fetch Metadata even for image/link requests
+        # whose Origin header may be absent. Direct navigation (Sec-Fetch-Site:
+        # none) remains available; requests initiated by the app are same-origin.
+        fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+        origin = request.headers.get("origin")
+        cross_site_fetch = fetch_site and fetch_site not in {"same-origin", "none"}
+        cross_origin_header = origin and not _same_origin(origin, request)
+        if cross_site_fetch or cross_origin_header:
+            return _apply_security_headers(
+                JSONResponse(
+                    status_code=403,
+                    content={"detail": "Consulta de red iniciada desde otro origen bloqueada."},
+                )
+            )
 
     if request.method.upper() in _MUTATING_METHODS:
         fetch_site = request.headers.get("sec-fetch-site", "").lower()

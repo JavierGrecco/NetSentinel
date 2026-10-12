@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from netsentinel import database
+import netsentinel.main as main_module
 from netsentinel.main import app
 
 
@@ -62,3 +63,52 @@ def test_cross_origin_rejection_also_receives_defensive_headers(client):
     assert response.status_code == 403
     assert response.json()["detail"] == "Origen no permitido para esta operación."
     assert_defensive_headers(response)
+
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/tools/dns/lookup?hostname=probe.attacker.example",
+        "/api/tools/dns/reverse?address=192.0.2.42",
+        "/api/devices/7/dns-reverse",
+    ],
+)
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Sec-Fetch-Site": "cross-site"},
+        {"Sec-Fetch-Site": "same-site"},
+        {"Origin": "http://attacker.example"},
+    ],
+)
+def test_cross_site_dns_requests_are_blocked_before_resolver(client, monkeypatch, path, headers):
+    def unexpected_call(*_args, **_kwargs):
+        pytest.fail("A cross-origin request must not trigger DNS traffic.")
+
+    monkeypatch.setattr(main_module, "lookup_hostname", unexpected_call)
+    monkeypatch.setattr(main_module, "cached_reverse_lookup_ip", unexpected_call)
+    monkeypatch.setattr(main_module.database, "get_device_addresses", unexpected_call)
+
+    response = client.get(path, headers=headers)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Consulta de red iniciada desde otro origen bloqueada."
+    assert_defensive_headers(response)
+
+
+def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "lookup_hostname",
+        lambda hostname: {"hostname": hostname, "addresses": [], "count": 0, "source": "test"},
+    )
+
+    response = client.get(
+        "/api/tools/dns/lookup",
+        params={"hostname": "example.test"},
+        headers={"Sec-Fetch-Site": "same-origin", "Origin": "http://127.0.0.1"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["hostname"] == "example.test"
