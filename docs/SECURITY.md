@@ -32,6 +32,10 @@ Las sesiones del backend son opt-in, se limitan a un dispositivo y un máximo de
 
 En redes conmutadas o Wi-Fi, un equipo ordinario no suele ver todo el tráfico unicast de otros clientes; puede requerirse telemetría del router/AP o un puerto espejo administrado y autorizado. DNS/SNI/conexiones son indicios de actividad, no prueba de identidad ni de páginas vistas. No se debe intentar interceptar/deshacer TLS para obtener credenciales. La API está prevista para uso local: no expongas el panel en la LAN o Internet sin autenticación, TLS y revisión de seguridad adicionales.
 
+## Auditoría TLS puntual
+
+La inspección TLS de Herramientas se inicia explícitamente con un host/IP y puerto introducidos por el operador. Realiza una única conexión TLS con la validación normal de certificados del sistema; muestra solo metadatos del certificado y del handshake. No envía solicitudes HTTP, no descarga páginas, no captura credenciales, no intercepta tráfico y no persiste los resultados. Un error de conexión no demuestra por sí solo que un servicio esté comprometido o mal configurado. Ejecutá pruebas solo contra endpoints propios o autorizados; los hallazgos son orientación técnica, no una certificación de cumplimiento.
+
 ## Funciones que exigen revisión específica
 
 Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloqueo de dispositivos y la interceptación de proxy requieren una revisión de autorización, alcance, límites de tasa, auditoría, almacenamiento de secretos, reversión de cambios y tratamiento de datos sensibles antes de implementarse.
