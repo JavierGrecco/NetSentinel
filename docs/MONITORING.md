@@ -10,6 +10,10 @@ Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 seg
 
 Las comprobaciones TCP y HTTP/HTTPS se ejecutan en un proceso hijo terminable, con un límite total de `timeout_seconds + 1` segundo de margen para iniciar Python. Esto cubre también una resolución DNS del sistema bloqueada, que no siempre queda contenida por el timeout del socket. Un resultado agotado se registra como caída sin exponer URLs completas ni detalles del resolvedor. Ping mantiene su proceso y timeout nativo por sistema operativo. El webhook opcional usa otro proceso aislado con límite total de 5 segundos, para que un DNS HTTPS o servidor lento no congele el supervisor secuencial.
 
+## Apagado seguro del supervisor
+
+Al cerrar NetSentinel, el supervisor solicita una parada cooperativa y no inicia nuevas comprobaciones del resto de la cola. La comprobación que ya estaba en curso puede terminar dentro de sus límites; el cierre espera el tiempo máximo documentado para una sonda y un posible webhook. Si el sistema operativo no permite que el worker termine dentro de ese margen, NetSentinel conserva la referencia al hilo y registra un error en vez de olvidar un worker activo y arriesgar un segundo supervisor sobre la misma base SQLite.
+
 ## Retención del historial detallado
 
 Las comprobaciones individuales se conservan **90 días por defecto**. La limpieza se ejecuta al iniciar NetSentinel y luego como máximo una vez al día. Solo elimina filas antiguas de comprobaciones detalladas (`monitor_checks`): no elimina monitores, estados actuales, incidentes abiertos o resueltos, eventos, lecturas de inventario ni observaciones de dispositivos. Las tendencias siguen usando sus ventanas de 24 horas/7 días; los controles actuales e incidentes conservan su estado.

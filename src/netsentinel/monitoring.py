@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from ipaddress import ip_address
-from threading import Event, Thread
+from threading import Event, Thread, current_thread
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -36,6 +36,15 @@ HISTORY_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
 # operation bounded even if the operating-system DNS resolver stalls.
 _PROBE_PROCESS_STARTUP_GRACE_SECONDS = 1.0
 _WEBHOOK_TOTAL_TIMEOUT_SECONDS = 5.0
+# One in-flight check can spend timeout + startup grace in its probe and up to
+# five seconds delivering a transition webhook. Allow a little scheduling/DB
+# overhead, but never wait for a whole queue of monitors during shutdown.
+_SUPERVISOR_STOP_TIMEOUT_SECONDS = (
+    MAX_TIMEOUT_SECONDS
+    + _PROBE_PROCESS_STARTUP_GRACE_SECONDS
+    + _WEBHOOK_TOTAL_TIMEOUT_SECONDS
+    + 2.0
+)
 
 
 def monitor_history_retention_days() -> int | None:
@@ -406,9 +415,25 @@ class MonitorSupervisor:
         self._thread.start()
 
     def stop(self) -> None:
+        """Request a cooperative stop and retain any worker that missed its deadline."""
         self._stop.set()
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=MAX_TIMEOUT_SECONDS + 3)
+        thread = self._thread
+        if thread is None:
+            return
+
+        if thread.is_alive() and thread is not current_thread():
+            thread.join(timeout=_SUPERVISOR_STOP_TIMEOUT_SECONDS)
+
+        if thread.is_alive():
+            # Keep the reference. Dropping it would let a later start() launch a
+            # second worker while the original one can still write to SQLite.
+            logger.error(
+                "El supervisor de monitorización no terminó dentro de %.1f segundos; "
+                "se conserva su referencia para impedir un segundo worker.",
+                _SUPERVISOR_STOP_TIMEOUT_SECONDS,
+            )
+            return
+
         self._thread = None
 
     def cleanup_history_if_due(self, *, force: bool = False, now: float | None = None) -> int:
@@ -441,9 +466,16 @@ class MonitorSupervisor:
 
     def run_due_once(self) -> int:
         self.cleanup_history_if_due()
+        if self._stop.is_set():
+            return 0
+
         now = datetime.now(timezone.utc)
         executed = 0
         for monitor in database.list_monitors():
+            # Shutdown should finish the current bounded check, not drain every
+            # due monitor in sequence after the application asked us to stop.
+            if self._stop.is_set():
+                break
             if not monitor["enabled"]:
                 continue
             last_checked = monitor.get("last_checked_at")
@@ -457,6 +489,8 @@ class MonitorSupervisor:
                 except (ValueError, TypeError):
                     due = True
             if due:
+                if self._stop.is_set():
+                    break
                 check_once(monitor)
                 executed += 1
         return executed
