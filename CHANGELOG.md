@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita que una excepción interna en una comprobación interrumpa el resto de la cola; los monitores fallidos se aíslan y usan reintentos exponenciales de 2–60 segundos, con limpieza de estado cuando se eliminan o pausan.
 - Endurece la protección CSRF de operaciones de modificación: bloquea Fetch Metadata `same-site` además de `cross-site` cuando no es el origen exacto de la interfaz, incluso si falta `Origin`; agrega regresiones de rechazo y compatibilidad same-origin.
 - Corrige la selección de subredes duplicadas: la preferencia por interfaces físicas se aplica antes de deduplicar, para que el orden de enumeración del sistema no oculte una interfaz mejor.
 - Evita endurecer por accidente los permisos del destino de un enlace simbólico usado como `~/.netsentinel`: conserva la ruta predeterminada sin resolverla y prueba el flujo real de configuración, SQLite y permisos.
