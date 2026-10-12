@@ -17,3 +17,12 @@ input,select{width:100%;font:inherit;border:1px solid #cfd7e3;background:white;p
 
 .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.section-heading h2{margin:0}.incident-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.incident-controls label{display:flex;align-items:center;gap:6px;margin:0;font-size:12px}.incident-controls select{width:auto;min-width:105px;padding:6px 8px;font-size:12px}.export-link{display:inline-block;color:var(--accent);font-weight:750;font-size:12px;text-decoration:none;border:1px solid #d7e1fb;border-radius:8px;padding:6px 9px;white-space:nowrap}.export-link:hover{text-decoration:underline}.latency-history-chart{height:96px;display:flex;align-items:flex-end;gap:4px;padding:8px 8px 0;margin:8px 0 10px;border-bottom:1px solid var(--line);background:linear-gradient(to bottom,transparent 32%,#e9eef6 33%,transparent 34%,transparent 65%,#e9eef6 66%,transparent 67%);overflow-x:auto;overflow-y:hidden}.latency-history-bar{display:block;min-width:6px;max-width:24px;flex:1 0 6px;background:#315ee8;border-radius:4px 4px 0 0;cursor:help}.latency-history-bar.empty-bucket{height:16px!important;background:#e7ebf1;color:#667085;font-size:10px;text-align:center;border-radius:4px 4px 0 0}
 @media(max-width:560px){.incident-controls{width:100%;justify-content:space-between}.incident-controls label{flex:1}.incident-controls select{flex:1}}
+
+
+/* Primary navigation shared by monitoring and activity views. */
+.primary-nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:12px}
+.primary-nav .nav-link{display:inline-flex;align-items:center;min-height:34px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:#fff;font-size:12px;font-weight:700;text-decoration:none;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.primary-nav .nav-link:hover{border-color:var(--accent);color:var(--accent);background:#f5f8ff}
+.primary-nav .nav-link[aria-current="page"]{border-color:#b9c9ff;background:#eaf0ff;color:#2347b9}
+.primary-nav .nav-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:560px){.primary-nav{gap:5px}.primary-nav .nav-link{padding:7px 9px;font-size:11px}}

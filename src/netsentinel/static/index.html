@@ -11,7 +11,12 @@
 <body>
   <main class="wrap">
     <header class="top">
-      <div class="brand"><div class="logo" aria-hidden="true">⌁</div><div><div class="eyebrow">Observabilidad local</div><h1 class="title">NetSentinel</h1><div class="sub">Inventario · Confianza · Eventos · Diagnóstico</div><a class="monitor-link" href="/monitors">◷ Monitorización</a><br><a class="monitor-link" href="/tools">⌕ Herramientas</a><br><a class="monitor-link" href="/activity">◷ Actividad familiar</a></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">⌁</div><div><div class="eyebrow">Observabilidad local</div><h1 class="title">NetSentinel</h1><div class="sub">Inventario · Confianza · Eventos · Diagnóstico</div><nav class="primary-nav" aria-label="Navegación principal">
+        <a class="nav-link" aria-current="page" href="/">Inventario</a>
+        <a class="nav-link" href="/monitors">Monitorización</a>
+        <a class="nav-link" href="/tools">Herramientas</a>
+        <a class="nav-link" href="/activity">Actividad</a>
+      </nav></div></div>
       <div class="actions"><button id="refreshBtn" class="quiet">↻ Actualizar</button><button id="diagBtn" class="quiet">◉ Diagnóstico</button><button id="scanBtn" class="primary">⌕ Descubrir dispositivos</button></div>
     </header>
     <div class="notice"><strong>Descubrimiento local bajo demanda.</strong> Al pulsar «Descubrir dispositivos», NetSentinel detecta automáticamente hasta dos subredes IPv4 privadas y envía un ping por dirección para ayudar a poblar la tabla local. No escanea Internet ni modifica dispositivos. Que un equipo no aparezca no significa que esté desconectado.</div>
