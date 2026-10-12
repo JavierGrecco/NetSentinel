@@ -81,7 +81,9 @@ En **Herramientas** podés comprobar un único host/IP y puerto TLS. La herramie
 
 ## Hallazgos con evidencia
 
-La API local `GET /api/findings` presenta en un contrato común los cambios observados del inventario y los incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas. Admite `state=active|acknowledged|resolved|all` y un `limit` de hasta 200. `GET /api/export/findings.json` exporta la misma vista en JSON sin modificar los datos. Esta primera iteración no correlaciona causas raíz ni incluye resultados puntuales DNS/TLS, porque esas inspecciones no se persisten. No es un SIEM ni confirma por sí sola una intrusión.
+Abrí **Hallazgos** en el panel o visitá `/findings` para revisar la bandeja visual del inventario y la disponibilidad. Podés filtrar pendientes, revisados, incidentes recuperados o todos los estados; expandir la evidencia y procedencia; marcar eventos de inventario como revisados; y exportar la consulta a JSON. Las cifras indican los registros devueltos (máximo 200), no un total histórico.
+
+La API local `GET /api/findings` normaliza los cambios observados del inventario y los incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas. Admite `state=active|acknowledged|resolved|all` y un `limit` de hasta 200. `GET /api/export/findings.json` exporta la misma vista en JSON sin modificar los datos. Esta primera iteración no correlaciona causas raíz ni incluye resultados puntuales DNS/TLS, porque esas inspecciones no se persisten. No es un SIEM ni confirma por sí sola una intrusión.
 
 ## Monitorización
 
