@@ -10,6 +10,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
 - [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
+- [x] Primera iteración del motor de hallazgos: API de solo lectura y exportación JSON para cambios del inventario e incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas; evita duplicar transiciones de monitorización.
+- [ ] Interfaz visual y ampliación del motor de hallazgos para incluir resultados DNS/TLS persistibles con política explícita de retención y falsos positivos.
 - [ ] Pruebas manuales de TLS con endpoints autorizados (certificado válido, próximo a vencer, no confiable, timeout y puerto no TLS) en Windows, macOS y Linux.
 - [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 
@@ -60,7 +62,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 ## Orden de trabajo recomendado
 
 1. **Validación real y confianza en los resultados.** Ejecutar flujos manuales en Windows, macOS y Linux: inventario, DNS, monitorización, informes, extensión Chromium/Edge, importación/exportación y borrado selectivo. Probar TLS con certificados válidos, próximos a vencer, no confiables, puertos sin TLS y timeouts. La CI verde no sustituye estas comprobaciones.
-2. **Motor de hallazgos de seguridad.** Unificar cambios del inventario, dispositivos nuevos o modificados, monitores e inspecciones TLS en hallazgos con severidad, evidencia, procedencia, confianza y remediación sugerida. Separar hechos medidos de inferencias; no marcar como comprometido un equipo solo por ser desconocido.
+2. **Motor de hallazgos de seguridad.** La primera capa ya unifica por API eventos persistidos del inventario e incidentes de monitorización. El siguiente paso es ofrecer una bandeja visual y, solo después de definir retención y eliminación, integrar resultados DNS/TLS persistibles. Mantener severidad, evidencia, procedencia y confianza separadas; no marcar como comprometido un equipo solo por ser desconocido.
 3. **Adaptador de infraestructura de solo lectura.** Elegir un router/AP/resolvedor concreto según hardware y APIs disponibles; incorporar DHCP, DNS o flujos realmente soportados con límites de tiempo, fixtures, origen de datos y pruebas sin equipo real. No prometer visibilidad completa sin una fuente que la provea.
 4. **Sincronización remota segura.** Antes de exponer NetSentinel a una LAN o desplegarlo en varias sedes, implementar autenticación, autorización por equipo/rol, alta explícita, credenciales revocables, transporte cifrado, protección contra repetición, límites de tasa y registro de auditoría.
 5. **Informes e integración SOC.** Añadir informes de hallazgos con evidencia y recomendaciones; después métricas Prometheus e integración SIEM. Una matriz de cobertura frente a NIST CSF 2.0/CISA CPG debe mostrar evidencia y brechas, nunca una certificación automática.

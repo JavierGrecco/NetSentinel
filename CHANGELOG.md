@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade una primera vista unificada de hallazgos en `/api/findings` y exportación JSON: normaliza eventos de inventario e incidentes de monitorización con evidencia, procedencia, estado, severidad y confianza diferenciadas; omite duplicados de transiciones de monitorización y mantiene el proceso en solo lectura.
 - Documenta la dirección de producto, la priorización empresarial y los criterios de aceptación de seguridad, privacidad, UX, pruebas y releases.
 - Alinea la nomenclatura de actividad de navegador y red con telemetría autorizada, consentimiento, alcance visible y retención; elimina referencias de interfaz orientadas a vigilancia familiar.
 

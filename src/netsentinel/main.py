@@ -24,6 +24,7 @@ from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
 from .dns_config import get_dns_configuration
 from . import activity_tracking
 from .tls_tools import inspect_tls_endpoint
+from .findings import build_findings
 
 
 _supervisor = MonitorSupervisor()
@@ -125,7 +126,11 @@ async def protect_local_app(request: Request, call_next):
             return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
 
     response = await call_next(request)
-    if request.url.path == "/activity" or request.url.path.startswith("/api/activity"):
+    if (
+        request.url.path == "/activity"
+        or request.url.path.startswith("/api/activity")
+        or request.url.path in {"/api/findings", "/api/export/findings.json"}
+    ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -301,6 +306,55 @@ def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
 @app.get("/api/events")
 def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
     return database.get_events(limit=limit)
+
+
+def _collect_findings_report(state: str, limit: int) -> dict:
+    """Compone hallazgos únicamente con eventos e incidentes ya persistidos."""
+    if state not in {"active", "acknowledged", "resolved", "all"}:
+        raise HTTPException(
+            status_code=422,
+            detail="El estado debe ser active, acknowledged, resolved o all.",
+        )
+
+    if state == "active":
+        source_events = database.get_events(limit=limit, acknowledged=False)
+        source_incidents = database.get_incidents(limit=limit, status="open")
+    elif state == "acknowledged":
+        source_events = database.get_events(limit=limit, acknowledged=True)
+        source_incidents = []
+    elif state == "resolved":
+        source_events = []
+        source_incidents = database.get_incidents(limit=limit, status="resolved")
+    else:
+        source_events = database.get_events(limit=limit)
+        source_incidents = database.get_incidents(limit=limit)
+
+    return build_findings(source_events, source_incidents, state=state, limit=limit)
+
+
+@app.get("/api/findings")
+def findings(
+    state: str = Query(default="active", max_length=20),
+    limit: int = Query(default=100, ge=1, le=200),
+) -> dict:
+    """Devuelve una vista unificada y acotada de hallazgos con evidencia y límites."""
+    return _collect_findings_report(state, limit)
+
+
+@app.get("/api/export/findings.json")
+def export_findings_json(
+    state: str = Query(default="active", max_length=20),
+    limit: int = Query(default=100, ge=1, le=200),
+) -> JSONResponse:
+    """Exporta el conjunto de hallazgos consultado, sin modificar el historial."""
+    report = _collect_findings_report(state, limit)
+    return JSONResponse(
+        content=report,
+        headers={
+            "Content-Disposition": 'attachment; filename="netsentinel-findings.json"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/api/scans")

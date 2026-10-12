@@ -403,13 +403,25 @@ def get_device_history(device_id: int, limit: int = 100, path: Path | None = Non
     }
 
 
-def get_events(path: Path | None = None, limit: int = 50) -> list[dict[str, Any]]:
+def get_events(
+    path: Path | None = None,
+    limit: int = 50,
+    acknowledged: bool | None = None,
+) -> list[dict[str, Any]]:
+    """Lista eventos, opcionalmente filtrados por reconocimiento antes del límite."""
+    where = ""
+    params: list[Any] = []
+    if acknowledged is not None:
+        where = "WHERE e.acknowledged = ?"
+        params.append(int(acknowledged))
+    params.append(max(1, min(int(limit), 200)))
     with connect(path) as db:
         rows = db.execute(
-            """SELECT e.*, d.mac_address, d.ip_address, d.display_name, d.manufacturer
-               FROM events e LEFT JOIN devices d ON d.id = e.device_id
-               ORDER BY e.created_at DESC, e.id DESC LIMIT ?""",
-            (max(1, min(limit, 200)),),
+            f"""SELECT e.*, d.mac_address, d.ip_address, d.display_name, d.manufacturer
+                FROM events e LEFT JOIN devices d ON d.id = e.device_id
+                {where}
+                ORDER BY e.created_at DESC, e.id DESC LIMIT ?""",
+            params,
         ).fetchall()
     return [dict(row) for row in rows]
 
