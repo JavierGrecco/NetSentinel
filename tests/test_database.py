@@ -300,3 +300,28 @@ def test_connect_hardens_existing_default_application_directory(tmp_path, monkey
 
     assert stat.S_IMODE(app_data.stat().st_mode) == 0o700
     assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+
+
+
+def test_connect_does_not_chmod_target_of_default_directory_symlink(tmp_path, monkeypatch):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los enlaces simbólicos POSIX no son uniformes en Windows.")
+
+    target = tmp_path / "shared-target"
+    target.mkdir()
+    os.chmod(target, 0o755)
+    link = tmp_path / ".netsentinel"
+    link.symlink_to(target, target_is_directory=True)
+    db_path = link / "netsentinel.sqlite3"
+    monkeypatch.delenv("NETSENTINEL_DATA_DIR", raising=False)
+    monkeypatch.setattr(database, "database_path", lambda: db_path)
+
+    with database.connect():
+        pass
+
+    assert link.is_symlink()
+    assert stat.S_IMODE(target.stat().st_mode) == 0o755
+    assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
