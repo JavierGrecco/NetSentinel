@@ -38,6 +38,8 @@ def test_activity_page_and_empty_state_are_available(client):
     assert "Previsualizar CSV" in page.text
     assert "Exportar CSV filtrado" in page.text
     assert "filterEventType" in page.text
+    assert "Previsualizar borrado" in page.text
+    assert "confirmDeleteActivity" in page.text
     assert "no captura tráfico por sí mismo" in page.text
 
     response = client.get("/api/activity")
@@ -522,6 +524,68 @@ def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
 
     missing = client.get("/api/activity/export.csv", params={"device_id": 99999})
     assert missing.status_code == 404
+
+
+def test_activity_delete_preview_is_read_only_and_delete_requires_exact_count(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    csv_data = f"""observed_at,event_type,domain,search_engine,search_terms
+{stamp},dns_query,first.example,,
+{stamp},dns_query,second.example,,
+{stamp},search_query,www.google.com,Google,weather
+"""
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 3
+
+    unscoped = client.post("/api/activity/delete/preview", json={})
+    assert unscoped.status_code == 422
+
+    preview = client.post(
+        "/api/activity/delete/preview",
+        json={"device_id": selected, "event_type": "dns_query"},
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["matching_events"] == 2
+    assert preview.json()["confirmation_required"] == "BORRAR 2"
+    assert preview.json()["deleted"] is False
+    assert "no se borró" in preview.json()["note"].lower()
+    before = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    assert len(before) == 3
+
+    wrong_confirmation = client.post(
+        "/api/activity/delete",
+        json={"device_id": selected, "event_type": "dns_query", "confirmation": "BORRAR 1"},
+    )
+    assert wrong_confirmation.status_code == 409
+    assert len(client.get(f"/api/activity?device_id={selected}").json()["events"]) == 3
+
+    deleted = client.post(
+        "/api/activity/delete",
+        json={"device_id": selected, "event_type": "dns_query", "confirmation": "BORRAR 2"},
+    )
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["deleted_events"] == 2
+    remaining = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    assert len(remaining) == 1
+    assert remaining[0]["event_type"] == "search_query"
+
+
+def test_activity_delete_preview_validates_device_and_event_type(client):
+    selected = device_id(client)
+    missing = client.post(
+        "/api/activity/delete/preview",
+        json={"device_id": 99999, "event_type": "dns_query"},
+    )
+    assert missing.status_code == 404
+    invalid_type = client.post(
+        "/api/activity/delete/preview",
+        json={"device_id": selected, "event_type": "email_body"},
+    )
+    assert invalid_type.status_code == 422
 
 
 def test_metadata_events_are_included_in_json_export(client):
