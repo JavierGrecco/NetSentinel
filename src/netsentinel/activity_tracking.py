@@ -703,6 +703,93 @@ def _csv_safe_text(value: Any) -> Any:
     return value
 
 
+def _activity_delete_scope(
+    device_id: int | None,
+    event_type: str | None,
+    from_date: str | None,
+    to_date: str | None,
+) -> tuple[str, tuple[Any, ...]]:
+    """Build a scoped DELETE/COUNT predicate; an unbounded operation is never allowed."""
+    if device_id is None and event_type in (None, "") and from_date in (None, "") and to_date in (None, ""):
+        raise ValueError("Elegí al menos un alcance: dispositivo, tipo de evento o fechas.")
+    clauses, params = _activity_filter_values(event_type, from_date, to_date)
+    if device_id is not None:
+        if int(device_id) < 1:
+            raise ValueError("device_id debe ser un entero positivo.")
+        clauses.insert(0, "device_id = ?")
+        params.insert(0, int(device_id))
+    return " WHERE " + " AND ".join(clauses), tuple(params)
+
+
+def preview_delete_activity(
+    device_id: int | None = None,
+    event_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict[str, Any]:
+    """Count matching activity rows without writing or running retention cleanup."""
+    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date)
+    with database.connect() as db:
+        if device_id is not None and db.execute(
+            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
+        ).fetchone() is None:
+            raise LookupError("No se encontró el dispositivo.")
+        count = int(db.execute(
+            "SELECT COUNT(*) FROM activity_events" + where_sql, params
+        ).fetchone()[0])
+    return {
+        "device_id": device_id,
+        "event_type": event_type or None,
+        "from_date": from_date or None,
+        "to_date": to_date or None,
+        "matching_events": count,
+        "confirmation_required": f"BORRAR {count}",
+        "deleted": False,
+        "note": "Vista previa únicamente: no se borró ningún evento.",
+    }
+
+
+def delete_activity(
+    device_id: int | None,
+    event_type: str | None,
+    from_date: str | None,
+    to_date: str | None,
+    confirmation: str,
+) -> dict[str, Any]:
+    """Delete only a scoped selection after matching the exact current count."""
+    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date)
+    if not isinstance(confirmation, str) or len(confirmation) > 40:
+        raise PermissionError("La frase de confirmación no es válida.")
+
+    with database.connect() as db:
+        # Lock the SQLite write transaction before counting, so inserts/deletes cannot
+        # race between checking the count and deleting the selected rows.
+        db.execute("BEGIN IMMEDIATE")
+        if device_id is not None and db.execute(
+            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
+        ).fetchone() is None:
+            raise LookupError("No se encontró el dispositivo.")
+        count = int(db.execute(
+            "SELECT COUNT(*) FROM activity_events" + where_sql, params
+        ).fetchone()[0])
+        expected = f"BORRAR {count}"
+        if confirmation != expected:
+            raise PermissionError(
+                f"No se borró nada: la selección contiene {count} evento(s). "
+                f"Escribí exactamente «{expected}» para confirmar."
+            )
+        cursor = db.execute("DELETE FROM activity_events" + where_sql, params)
+        deleted = int(cursor.rowcount)
+    return {
+        "deleted_events": deleted,
+        "device_id": device_id,
+        "event_type": event_type or None,
+        "from_date": from_date or None,
+        "to_date": to_date or None,
+        "note": "Se borraron únicamente los eventos que coincidían con el alcance confirmado.",
+    }
+
+
 def export_activity_csv(
     device_id: int | None = None,
     event_type: str | None = None,
