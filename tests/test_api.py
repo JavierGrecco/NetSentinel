@@ -194,7 +194,7 @@ def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_
     assert response.status_code == 200
     scripts = [
         match.group(1)
-        for match in re.finditer(r"<script(?:\\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
         if match.group(1).strip()
     ]
     assert scripts, f"{route} should have a known inline script fixture"
@@ -210,7 +210,7 @@ def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_
     assert expected == observed
     assert "'unsafe-inline'" not in script_policy
     assert "https://cdn.jsdelivr.net" not in script_policy
-    assert asset in Path("src/netsentinel/static", asset).name
+    assert response.text == Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
 
 
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
@@ -219,7 +219,7 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
 
     for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
         content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
-        assert not re.search(r"\\son[a-z]+\\s*=", content, re.IGNORECASE), (
+        assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
             f"{asset} contains an inline event handler incompatible with hash-only script CSP"
         )
 
