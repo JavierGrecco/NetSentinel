@@ -8,7 +8,7 @@
 - Validación estricta del CSV y rechazo de campos de cuerpo de mensaje, contenido y adjuntos.
 - Importación idempotente: se omiten y contabilizan filas normalizadas idénticas ya importadas para el mismo dispositivo, incluso si se repite el archivo completo.
 - Vista previa local de CSV antes de guardar: comprueba las filas completas, muestra hasta 10 ejemplos normalizados y estima cuántos eventos se agregarían o se omitirían sin escribir datos.
-- Filtros del historial por dispositivo, tipo y fechas UTC; exportación CSV filtrada de hasta 10.000 filas con neutralización de fórmulas.
+- Filtros del historial por dispositivo, fuente, tipo y fechas UTC; exportación CSV filtrada de hasta 10.000 filas con neutralización de fórmulas. El filtro de fuente también sirve para previsualizar y borrar solo eventos de esa procedencia.
 - Borrado selectivo con vista previa no destructiva, alcance obligatorio y confirmación escrita exacta basada en el recuento actual. Solo borra eventos de actividad, no sesiones ni dispositivos.
 
 ## Páginas y búsquedas del navegador
