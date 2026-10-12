@@ -128,11 +128,11 @@ python -m pytest
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Seguimiento familiar de actividad](docs/FAMILY_ACTIVITY.md)
 - [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
-- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
 - [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.
 - [Plan de implementación](docs/IMPLEMENTATION_PLAN.md)
+- [Dirección del producto y criterios de calidad empresarial](docs/PRODUCT_DIRECTION.md)
 - [Base local de fabricantes OUI](docs/OUI_DATABASE.md)
 - [Mantenimiento del repositorio](docs/GITHUB_SETUP.md)
 - [Historial de cambios](CHANGELOG.md)
