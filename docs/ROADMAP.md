@@ -13,7 +13,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] CLI fail-closed para enlace remoto: solo loopback, validación de puerto y pruebas para bloquear exposición accidental sin autenticación.
 - [x] Política CSP/Permissions-Policy para respuestas del servidor, con excepción acotada de Swagger UI y pruebas de cabeceras de seguridad en rutas válidas y rechazos.
 - [x] `script-src` hash-only por pantalla para las cinco interfaces principales; CI verifica el hash exacto de cada bloque y rechaza manejadores JavaScript inline.
-- [ ] Eliminar `style-src unsafe-inline` mediante externalización de los atributos y bloques CSS inline sin degradar la interfaz.
+- [x] Eliminar `style-src unsafe-inline`: externaliza estilos de página, sustituye atributos inline por clases y valida los CSS incluidos en el wheel y servidos localmente.
+- [ ] Retirar el permiso `script-src unsafe-inline` restante de `/api/docs` mediante un inicializador Swagger con nonce/hash o documentación personalizada.
 - [x] Primera iteración del motor de hallazgos: API de solo lectura y exportación JSON para cambios del inventario e incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas; evita duplicar transiciones de monitorización.
 - [x] Bandeja visual `/findings` conectada al motor de hallazgos, con filtros por estado, evidencia/procedencia, reconocimiento de eventos del inventario y exportación JSON; respuestas locales sin caché.
 - [ ] Ampliar el motor para incluir resultados DNS/TLS persistibles solo después de definir retención, eliminación, consentimiento cuando corresponda y control de falsos positivos.
