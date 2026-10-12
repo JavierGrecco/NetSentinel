@@ -26,7 +26,7 @@ def test_cli_version_matches_package(monkeypatch, capsys):
     assert capsys.readouterr().out.strip() == f"NetSentinel {__version__}"
 
 
-@pytest.mark.parametrize("host", ["0.0.0.0", "192.168.1.20", "example.com"])
+@pytest.mark.parametrize("host", ["0.0.0.0", "192.168.1.20", "example.com", "localhost.localdomain"])
 def test_cli_rejects_non_loopback_host_before_starting_server(monkeypatch, capsys, host):
     monkeypatch.setattr("sys.argv", ["netsentinel", "--host", host, "--no-browser"])
     monkeypatch.setattr(
@@ -39,6 +39,17 @@ def test_cli_rejects_non_loopback_host_before_starting_server(monkeypatch, capsy
 
     assert exc.value.code == 2
     assert "El acceso remoto no está disponible" in capsys.readouterr().err
+
+
+def test_cli_canonicalizes_localhost_to_literal_ipv4_loopback(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr("sys.argv", ["netsentinel", "--host", "localhost", "--no-browser"])
+    monkeypatch.setattr("netsentinel.cli.uvicorn.run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    main()
+
+    assert "NetSentinel iniciará en http://127.0.0.1:8765" in capsys.readouterr().out
+    assert calls[0][1]["host"] == "127.0.0.1"
 
 
 def test_cli_supports_ipv6_loopback_url(monkeypatch, capsys):
