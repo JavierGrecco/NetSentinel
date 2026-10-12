@@ -77,7 +77,7 @@ def _ensure_private_directory(directory: Path, *, enforce_existing_final: bool =
     # The default ~/.netsentinel directory is application-owned by convention.
     # It is safe to harden that known location even when it already exists;
     # custom NETSENTINEL_DATA_DIR paths are not assumed to be dedicated.
-    if enforce_existing_final:
+    if enforce_existing_final and not directory.is_symlink():
         try:
             os.chmod(directory, 0o700)
         except OSError:
