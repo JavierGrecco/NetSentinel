@@ -299,6 +299,46 @@ def test_connect_never_changes_permissions_of_an_existing_parent(tmp_path, monke
         assert chmod_calls == []
 
 
+
+def test_connect_hardens_existing_database_file_permissions(tmp_path):
+    import os
+    import sqlite3
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los permisos POSIX no se aplican en Windows.")
+
+    db_path = tmp_path / "existing.sqlite3"
+    with sqlite3.connect(db_path) as connection:
+        connection.execute("CREATE TABLE fixture (value TEXT)")
+    os.chmod(db_path, 0o644)
+
+    with database.connect(db_path):
+        pass
+
+    assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+
+
+def test_connect_hardens_existing_database_file_without_following_symlinks(tmp_path):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los permisos POSIX y los enlaces simbólicos no son uniformes en Windows.")
+
+    target = tmp_path / "existing-shared.sqlite3"
+    with database.connect(target):
+        pass
+    os.chmod(target, 0o644)
+    link = tmp_path / "netsentinel.sqlite3"
+    link.symlink_to(target)
+
+    with database.connect(link):
+        pass
+
+    assert link.is_symlink()
+    assert stat.S_IMODE(target.stat().st_mode) == 0o644
+
 def test_connect_creates_new_nested_directories_with_private_permissions(tmp_path):
     import os
     import stat

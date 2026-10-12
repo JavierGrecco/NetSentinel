@@ -85,7 +85,6 @@ def _ensure_private_directory(directory: Path, *, enforce_existing_final: bool =
             pass
 
 
-@contextmanager
 def _harden_database_file(db_path: Path) -> None:
     """Restrict a regular SQLite file without changing a symlink target's mode."""
     if os.name != "posix":
