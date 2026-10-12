@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade Content Security Policy y Permissions-Policy: restringe recursos al origen local, impide framing/objetos y desactiva funciones del navegador no utilizadas. La excepción CDN de Swagger queda limitada a `/api/docs`; las cabeceras también se prueban en rechazos de Host.
 - Endurece el arranque: el CLI rechaza enlaces que no sean loopback hasta contar con autenticación y control de acceso; valida puertos TCP y genera URLs correctas para IPv6. Añade regresiones para hosts remotos y puertos inválidos.
 - Endurece la cadena de suministro: escaneo de secretos con Gitleaks, SBOM CycloneDX, checksums SHA-256 con detección de alteraciones y atestaciones Sigstore para releases etiquetadas; CI comprueba de forma regresiva el verificador de checksums.
 - Añade una primera vista unificada de hallazgos en `/api/findings` y exportación JSON: normaliza eventos de inventario e incidentes de monitorización con evidencia, procedencia, estado, severidad y confianza diferenciadas; omite duplicados de transiciones de monitorización y mantiene el proceso en solo lectura. Los tipos duplicados se excluyen en SQL antes de aplicar el límite, para que no oculten eventos de inventario anteriores.

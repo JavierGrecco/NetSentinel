@@ -112,8 +112,24 @@ _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
 _ACTIVITY_STATIC = _STATIC_DIR / "activity.html"
 
 
-def _apply_security_headers(response: Response) -> Response:
-    """Evita cachés de respuestas locales y aplica cabeceras defensivas uniformes."""
+_BASE_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+    "frame-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+)
+# FastAPI's Swagger UI currently loads its JavaScript and CSS from jsDelivr and uses
+# a remote favicon. Keep that exception limited to the documentation HTML route.
+_API_DOCS_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+    "frame-src 'none'; form-action 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'"
+)
+
+
+def _apply_security_headers(response: Response, *, api_docs: bool = False) -> Response:
+    """Evita cachés locales y aplica una política defensiva uniforme al navegador."""
     # El inventario, el historial y las exportaciones pueden revelar topología y
     # actividad sensibles. No permitimos que navegadores o proxies los almacenen.
     response.headers["Cache-Control"] = "no-store"
@@ -122,6 +138,11 @@ def _apply_security_headers(response: Response) -> Response:
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        _API_DOCS_CONTENT_SECURITY_POLICY if api_docs else _BASE_CONTENT_SECURITY_POLICY,
+    )
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
     return response
 
 
@@ -146,7 +167,10 @@ async def protect_local_app(request: Request, call_next):
             )
 
     response = await call_next(request)
-    return _apply_security_headers(response)
+    return _apply_security_headers(
+        response,
+        api_docs=request.url.path == "/api/docs" and response.status_code < 400,
+    )
 
 class DeviceUpdate(BaseModel):
     trusted: bool | None = None
