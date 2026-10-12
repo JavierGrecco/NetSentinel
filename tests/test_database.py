@@ -78,7 +78,7 @@ def test_inventory_csv_neutralizes_formula_cells_without_mutating_database(tmp_p
     assert updated["notes"] == formula_notes
 
     csv_text = database.export_csv(db)
-    rows = list(csv.DictReader(io.StringIO(csv_text.lstrip("\\ufeff"))))
+    rows = list(csv.DictReader(io.StringIO(csv_text.lstrip("\ufeff"))))
     exported = next(item for item in rows if item["id"] == str(device["id"]))
     assert exported["display_name"] == "'" + formula_name
     assert exported["notes"] == "'" + formula_notes
