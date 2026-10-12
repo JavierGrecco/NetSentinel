@@ -198,6 +198,19 @@ class ActivityRetentionUpdate(BaseModel):
     retention_days: int = Field(ge=1, le=90)
 
 
+class ActivityDeleteSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: int | None = Field(default=None, ge=1)
+    event_type: str | None = Field(default=None, max_length=32)
+    from_date: str | None = Field(default=None, min_length=10, max_length=10)
+    to_date: str | None = Field(default=None, min_length=10, max_length=10)
+
+
+class ActivityDeleteRequest(ActivityDeleteSelection):
+    confirmation: str = Field(min_length=1, max_length=40)
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -396,6 +409,36 @@ def import_family_activity(body: ActivityCSVImport) -> dict:
         return activity_tracking.import_csv(body.device_id, body.csv_data)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/delete/preview")
+def preview_family_activity_delete(body: ActivityDeleteSelection) -> dict:
+    """Cuenta el alcance elegido sin borrar registros."""
+    try:
+        return activity_tracking.preview_delete_activity(**body.model_dump())
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/activity/delete")
+def delete_family_activity(body: ActivityDeleteRequest) -> dict:
+    """Borra exclusivamente el alcance acotado y confirmado por el operador."""
+    try:
+        return activity_tracking.delete_activity(
+            device_id=body.device_id,
+            event_type=body.event_type,
+            from_date=body.from_date,
+            to_date=body.to_date,
+            confirmation=body.confirmation,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
