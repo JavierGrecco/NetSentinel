@@ -171,7 +171,9 @@ function clearStoredEvents() {
 function normalizeStoredState() {
   return enqueueStorageTask(async () => {
     const state = await loadState();
-    await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+    // Only cleanup the event list here. The popup owns settings writes, and a
+    // lifecycle cleanup must not race a user's concurrent settings change.
+    await chrome.storage.local.set({ [EVENTS_KEY]: state.events });
   });
 }
 
