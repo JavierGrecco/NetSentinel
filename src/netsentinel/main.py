@@ -112,34 +112,41 @@ _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
 _ACTIVITY_STATIC = _STATIC_DIR / "activity.html"
 
 
-@app.middleware("http")
-async def protect_local_app(request: Request, call_next):
-    """Mitigate DNS-rebinding and browser CSRF attempts against the local control panel."""
-    if not _host_is_allowed(request.url.hostname):
-        return JSONResponse(status_code=400, content={"detail": "Host no permitido para NetSentinel."})
-
-    if request.method.upper() in _MUTATING_METHODS:
-        fetch_site = request.headers.get("sec-fetch-site", "").lower()
-        if fetch_site == "cross-site":
-            return JSONResponse(status_code=403, content={"detail": "Solicitud entre sitios bloqueada."})
-        origin = request.headers.get("origin")
-        if origin and not _same_origin(origin, request):
-            return JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
-
-    response = await call_next(request)
-    if (
-        request.url.path in {"/activity", "/findings"}
-        or request.url.path.startswith("/api/activity")
-        or request.url.path in {"/api/findings", "/api/export/findings.json"}
-    ):
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Pragma"] = "no-cache"
+def _apply_security_headers(response: Response) -> Response:
+    """Evita cachés de respuestas locales y aplica cabeceras defensivas uniformes."""
+    # El inventario, el historial y las exportaciones pueden revelar topología y
+    # actividad sensibles. No permitimos que navegadores o proxies los almacenen.
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
     return response
 
+
+@app.middleware("http")
+async def protect_local_app(request: Request, call_next):
+    """Mitiga DNS rebinding/CSRF y aplica cabeceras a todas las respuestas."""
+    if not _host_is_allowed(request.url.hostname):
+        return _apply_security_headers(
+            JSONResponse(status_code=400, content={"detail": "Host no permitido para NetSentinel."})
+        )
+
+    if request.method.upper() in _MUTATING_METHODS:
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site == "cross-site":
+            return _apply_security_headers(
+                JSONResponse(status_code=403, content={"detail": "Solicitud entre sitios bloqueada."})
+            )
+        origin = request.headers.get("origin")
+        if origin and not _same_origin(origin, request):
+            return _apply_security_headers(
+                JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
+            )
+
+    response = await call_next(request)
+    return _apply_security_headers(response)
 
 class DeviceUpdate(BaseModel):
     trusted: bool | None = None

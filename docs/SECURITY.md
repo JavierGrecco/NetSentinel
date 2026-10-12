@@ -10,7 +10,7 @@ Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos
 
 ## Protección de la interfaz local
 
-El servidor valida `Host` para bloquear nombres arbitrarios, acepta loopback y direcciones privadas de LAN, y permite hostnames propios solo si se declaran en `NETSENTINEL_ALLOWED_HOSTS` (lista separada por comas). Las operaciones de modificación rechazan peticiones con origen diferente o marcadas como `cross-site`, y se agregan cabeceras HTTP defensivas.
+El servidor valida `Host` para bloquear nombres arbitrarios, acepta loopback y direcciones privadas de LAN, y permite hostnames propios solo si se declaran en `NETSENTINEL_ALLOWED_HOSTS` (lista separada por comas). Las operaciones de modificación rechazan peticiones con origen diferente o marcadas como `cross-site`, y se agregan cabeceras HTTP defensivas. Todas las respuestas incluyen `Cache-Control: no-store` y `Pragma: no-cache`, también las páginas, el inventario, los eventos, el historial, las exportaciones y los rechazos de solicitudes no permitidas.
 
 Estas medidas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no constituyen autenticación para acceso desde otros equipos. No expongas el panel sin controles adicionales. Si accedés por un hostname propio, configurá explícitamente `NETSENTINEL_ALLOWED_HOSTS`.
 
