@@ -43,6 +43,29 @@ jobs:
           python-version: '3.12'
       - name: Validate launcher and release helper shell syntax
         run: bash -n run.sh run-macos.command scripts/verify-sha256-manifest.sh
+      - name: Validate repository security policy is current
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root_policy = Path("SECURITY.md").read_text(encoding="utf-8")
+          technical_policy = Path("docs/SECURITY.md").read_text(encoding="utf-8")
+          required_root_phrases = (
+              "Report a vulnerability",
+              "solo permite direcciones loopback",
+              "docs/SECURITY.md",
+              "No publiques detalles explotables",
+          )
+          missing = [phrase for phrase in required_root_phrases if phrase not in root_policy]
+          assert not missing, f"Root security policy is missing required guidance: {missing}"
+          assert "0.7.3" not in root_policy, "Root security policy must not reference the obsolete version 0.7.3"
+          assert "abrí un issue con una descripción mínima" not in technical_policy, (
+              "Security vulnerability instructions must not direct users to public issues"
+          )
+          assert "solicita un canal privado" in technical_policy, (
+              "Technical security policy must provide a private reporting fallback"
+          )
+          PY
       - name: Test release checksum verification and tamper detection
         run: |
           tempdir="$(mktemp -d)"

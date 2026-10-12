@@ -68,7 +68,7 @@ Los checksums detectan cambios accidentales cuando se comparan con el manifiesto
 
 ## Reporte de vulnerabilidades
 
-No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.
+No publiques detalles explotables, credenciales, tokens, exportaciones ni datos de usuarios en issues, discusiones o pull requests públicos. Si GitHub ofrece **Security → Report a vulnerability** para este repositorio, utiliza ese canal privado. Si no aparece la opción, contacta al mantenedor mediante el canal público indicado en su [perfil de GitHub](https://github.com/JavierGrecco) y solicita un canal privado; no incluyas detalles explotables en el primer contacto. No se promete un SLA de respuesta. La política de entrada para reportes está en la [política de seguridad raíz](../SECURITY.md).
 
 
 ### Importación de correo
