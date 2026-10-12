@@ -407,13 +407,20 @@ def get_events(
     path: Path | None = None,
     limit: int = 50,
     acknowledged: bool | None = None,
+    exclude_event_types: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
-    """Lista eventos, opcionalmente filtrados por reconocimiento antes del límite."""
-    where = ""
+    """Lista eventos con filtros aplicados en SQL antes del límite de resultados."""
+    conditions: list[str] = []
     params: list[Any] = []
     if acknowledged is not None:
-        where = "WHERE e.acknowledged = ?"
+        conditions.append("e.acknowledged = ?")
         params.append(int(acknowledged))
+    excluded = tuple(dict.fromkeys(item for item in exclude_event_types if item))
+    if excluded:
+        placeholders = ", ".join("?" for _ in excluded)
+        conditions.append(f"e.event_type NOT IN ({placeholders})")
+        params.extend(excluded)
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
     params.append(max(1, min(int(limit), 200)))
     with connect(path) as db:
         rows = db.execute(
