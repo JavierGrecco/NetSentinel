@@ -698,7 +698,7 @@ def _activity_filter_values(
 
 def _csv_safe_text(value: Any) -> Any:
     """Neutralize spreadsheet formulas in text exported to CSV."""
-    if isinstance(value, str) and value.lstrip(" \\t\\r\\n").startswith(("=", "+", "-", "@")):
+    if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
         return "'" + value
     return value
 
@@ -766,7 +766,7 @@ def export_activity_csv(
             "email_subject": event["email_subject"],
         }
         writer.writerow({key: _csv_safe_text(value) for key, value in row.items()})
-    return "\\ufeff" + buffer.getvalue()
+    return "\ufeff" + buffer.getvalue()
 
 
 def get_activity(
