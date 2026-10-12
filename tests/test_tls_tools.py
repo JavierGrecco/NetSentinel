@@ -130,7 +130,14 @@ def test_tls_inspection_warns_about_certificate_expiring_soon(monkeypatch):
 )
 def test_tls_inspection_reports_certificate_verification_failure(monkeypatch, verify_code, expected_code):
     raw = _RawSocket()
-    error = ssl.SSLCertVerificationError(verify_code, "certificate verification failed")
+
+    class VerificationError(ssl.SSLCertVerificationError):
+        def __init__(self, code):
+            super().__init__("verification failed")
+            self.verify_code = code
+            self.verify_message = "certificate verification failed"
+
+    error = VerificationError(verify_code)
     context = _TLSContext(error=error)
     monkeypatch.setattr(tls_tools.socket, "create_connection", lambda *_args, **_kwargs: raw)
     monkeypatch.setattr(tls_tools.ssl, "create_default_context", lambda: context)
