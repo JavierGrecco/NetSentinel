@@ -38,6 +38,11 @@ IMPORT_DEDUP_FIELDS = (
     "protocol", "app_name", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject", "blocked",
 )
+CSV_PREVIEW_FIELDS = (
+    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
+    "protocol", "app_name", "page_url", "search_engine", "search_terms",
+    "email_provider", "email_from", "email_to", "email_subject", "blocked",
+)
 SENSITIVE_QUERY_KEY = re.compile(
     r"(?:access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|"
     r"username|email|phone|session|sid|csrf|nonce|signature|"
@@ -467,8 +472,8 @@ def ingest_event(
         return dict(db.execute("SELECT * FROM activity_events WHERE id=?", (cursor.lastrowid,)).fetchone())
 
 
-def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
-    """Importa un CSV local de metadatos, con esquema cerrado y hasta 1000 filas."""
+def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[str, Any]:
+    """Valida un CSV y, salvo en vista previa, importa hasta 1000 filas normalizadas."""
     if len(csv_data.encode("utf-8")) > 1_000_000:
         raise ValueError("El archivo CSV supera el máximo de 1 MB.")
     reader = csv.DictReader(io.StringIO(csv_data))
@@ -535,6 +540,15 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
         except ValueError as exc:
             raise ValueError(f"Fila {line}: {exc}") from exc
     if not normalized:
+        if preview:
+            return {
+                "device_id": device_id,
+                "valid_rows": 0,
+                "would_import": 0,
+                "skipped_duplicates": 0,
+                "preview_rows": [],
+                "note": "El CSV no contiene eventos. No se guardó ningún dato.",
+            }
         return {
             "device_id": device_id,
             "imported": 0,
@@ -552,28 +566,69 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
     )
     imported_count = 0
     skipped_duplicates = 0
+    seen_in_batch: set[tuple[Any, ...]] = set()
+    preview_rows: list[dict[str, Any]] = []
     with database.connect() as db:
-        _cleanup(db)
+        cutoff = None
+        if preview:
+            # A preview is read-only: mirror the cleanup boundary without deleting rows.
+            setting = db.execute(
+                "SELECT retention_days FROM activity_settings WHERE id = 1"
+            ).fetchone()
+            retention_days = int(setting["retention_days"]) if setting else 7
+            cutoff = _iso(_now() - timedelta(days=retention_days))
+            duplicate_sql = duplicate_sql.replace(
+                "source = 'manual_import' AND",
+                "source = 'manual_import' AND observed_at >= ? AND",
+            )
+        else:
+            _cleanup(db)
+
         for item in normalized:
             values = tuple(item[field] for field in IMPORT_DEDUP_FIELDS)
-            duplicate = db.execute(duplicate_sql, (device_id, *values)).fetchone()
-            if duplicate:
+            disposition = "new"
+            if values in seen_in_batch:
                 skipped_duplicates += 1
-                continue
-            db.execute(
-                """INSERT INTO activity_events
-                   (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                    destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
-                    email_provider, email_from, email_to, email_subject, blocked)
-                   VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    device_id, item["observed_at"], _iso(_now()), item["event_type"], item["domain"],
-                    item["destination_ip"], item["destination_port"], item["protocol"], item["app_name"],
-                    item["page_url"], item["search_engine"], item["search_terms"],
-                    item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
-                ),
-            )
-            imported_count += 1
+                disposition = "duplicate"
+            else:
+                seen_in_batch.add(values)
+                params = (device_id, cutoff, *values) if preview else (device_id, *values)
+                duplicate = db.execute(duplicate_sql, params).fetchone()
+                if duplicate:
+                    skipped_duplicates += 1
+                    disposition = "duplicate"
+                else:
+                    if not preview:
+                        db.execute(
+                            """INSERT INTO activity_events
+                               (session_id, device_id, observed_at, received_at, event_type, source, domain,
+                                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
+                                email_provider, email_from, email_to, email_subject, blocked)
+                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                            (
+                                device_id, item["observed_at"], _iso(_now()), item["event_type"], item["domain"],
+                                item["destination_ip"], item["destination_port"], item["protocol"], item["app_name"],
+                                item["page_url"], item["search_engine"], item["search_terms"],
+                                item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
+                            ),
+                        )
+                    imported_count += 1
+
+            if preview and len(preview_rows) < 10:
+                row = {field: item.get(field) for field in CSV_PREVIEW_FIELDS}
+                row["disposition"] = disposition
+                preview_rows.append(row)
+
+    if preview:
+        return {
+            "device_id": device_id,
+            "valid_rows": len(normalized),
+            "would_import": imported_count,
+            "skipped_duplicates": skipped_duplicates,
+            "preview_rows": preview_rows,
+            "note": "Vista previa únicamente: no se guardó ningún evento. Se muestran hasta 10 filas de ejemplo.",
+        }
+
     return {
         "device_id": device_id,
         "imported": imported_count,
@@ -584,6 +639,11 @@ def import_csv(device_id: int, csv_data: str) -> dict[str, Any]:
             "se omitieron."
         ),
     }
+
+
+def preview_csv(device_id: int, csv_data: str) -> dict[str, Any]:
+    """Valida y muestra una vista previa de CSV sin almacenar los eventos."""
+    return import_csv(device_id, csv_data, preview=True)
 
 
 def update_retention(retention_days: int) -> dict[str, Any]:

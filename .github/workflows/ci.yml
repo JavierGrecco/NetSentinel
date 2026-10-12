@@ -45,6 +45,18 @@ jobs:
         run: bash -n run.sh run-macos.command
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
+      - name: Validate embedded activity page JavaScript
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          html = Path("src/netsentinel/static/activity.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
+          assert scripts, "No embedded script found in activity.html"
+          Path("activity-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
+          PY
+          node --check activity-inline-check.js
       - name: Verify extension source files
         run: |
           python - <<'PY'
