@@ -55,7 +55,7 @@ def test_safe_page_url_redacts_sensitive_query_and_path_values(raw_url, expected
         "javascript:alert(1)",
         "file:///Users/example/private.txt",
         "https://alice:password@example.com/profile",
-        "https://example.com/with\\ncontrol",
+        "https://example.com/with" + chr(10) + "control",
     ],
 )
 def test_safe_page_url_rejects_non_http_or_credential_urls(raw_url):
