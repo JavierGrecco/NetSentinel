@@ -144,32 +144,48 @@ async function captureNavigation(details) {
   events = events.filter(event => Date.parse(event.observed_at) >= now - settings.retentionDays * 86400000).slice(-MAX_EVENTS);
   await chrome.storage.local.set({ [EVENTS_KEY]: events });
 }
-// Chrome can deliver multiple navigation events while storage reads/writes are
-// pending. Serialize the read-modify-write cycle so a later event cannot overwrite
-// an earlier one with a stale snapshot of chrome.storage.local.
+// Chrome can deliver several navigation events while storage operations are
+// pending. Popup cleanup/clear and lifecycle cleanup must use this same queue too:
+// chrome.storage.local has no transaction/CAS, so independent read-modify-write
+// cycles can overwrite newer events with stale snapshots.
 let navigationQueue = Promise.resolve();
 
-function enqueueNavigation(details) {
-  navigationQueue = navigationQueue
-    .catch(() => undefined)
-    .then(() => captureNavigation(details))
-    .catch(error => {
-      // Do not log URLs or event contents, which may contain sensitive metadata.
-      const name = error && typeof error.name === "string" ? error.name : "Error";
-      console.error("NetSentinel: no se pudo guardar un evento de navegación (" + name + ").");
-    });
-  return navigationQueue;
+function enqueueStorageTask(task) {
+  const result = navigationQueue.catch(() => undefined).then(task);
+  navigationQueue = result.catch(error => {
+    // Do not log URLs or event contents, which may contain sensitive metadata.
+    const name = error && typeof error.name === "string" ? error.name : "Error";
+    console.error("NetSentinel: fallo una operación de almacenamiento (" + name + ").");
+  });
+  return result;
 }
 
-chrome.webNavigation.onCompleted.addListener(details => { void enqueueNavigation(details); });
-chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueueNavigation(details); });
-chrome.runtime.onStartup.addListener(async () => {
-  const state = await loadState();
-  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
-});
-chrome.runtime.onInstalled.addListener(async () => {
-  const state = await loadState();
-  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+function enqueueNavigation(details) {
+  return enqueueStorageTask(() => captureNavigation(details));
+}
+
+function clearStoredEvents() {
+  return enqueueStorageTask(() => chrome.storage.local.set({ [EVENTS_KEY]: [] }));
+}
+
+function normalizeStoredState() {
+  return enqueueStorageTask(async () => {
+    const state = await loadState();
+    await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+  });
+}
+
+chrome.webNavigation.onCompleted.addListener(details => { void enqueueNavigation(details).catch(() => undefined); });
+chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueueNavigation(details).catch(() => undefined); });
+chrome.runtime.onStartup.addListener(() => { void normalizeStoredState().catch(() => undefined); });
+chrome.runtime.onInstalled.addListener(() => { void normalizeStoredState().catch(() => undefined); });
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!message || message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
+  void clearStoredEvents().then(
+    () => sendResponse({ ok: true }),
+    () => sendResponse({ ok: false })
+  );
+  return true;
 });
 
 if (typeof module !== "undefined" && module.exports) {
@@ -186,6 +202,8 @@ if (typeof module !== "undefined" && module.exports) {
     searchInfo,
     loadState,
     captureNavigation,
-    enqueueNavigation
+    enqueueNavigation,
+    clearStoredEvents,
+    enqueueStorageTask
   };
 }
