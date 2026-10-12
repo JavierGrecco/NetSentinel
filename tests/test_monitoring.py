@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from netsentinel import database
 from netsentinel.main import app
-from netsentinel.monitoring import validate_spec
+from netsentinel.monitoring import DEFAULT_MONITOR_HISTORY_DAYS, HISTORY_CLEANUP_INTERVAL_SECONDS, MonitorSupervisor, monitor_history_retention_days, validate_spec
 
 
 @pytest.fixture(autouse=True)
@@ -345,3 +345,36 @@ def test_monitor_page_exposes_incident_filter_and_historical_latency_exports(mon
     assert "appendHistoricalLatencyTrend" in page.text
     assert "/api/export/monitor-latency.csv" in page.text
     assert ".latency-history-bar" in css.text
+
+
+def test_monitor_history_retention_config_is_safe_and_explicit(monkeypatch):
+    monkeypatch.delenv("NETSENTINEL_MONITOR_HISTORY_DAYS", raising=False)
+    assert monitor_history_retention_days() == DEFAULT_MONITOR_HISTORY_DAYS == 90
+
+    monkeypatch.setenv("NETSENTINEL_MONITOR_HISTORY_DAYS", "30")
+    assert monitor_history_retention_days() == 30
+
+    for disabled in ("0", "off", "disabled", "none", "never"):
+        monkeypatch.setenv("NETSENTINEL_MONITOR_HISTORY_DAYS", disabled)
+        assert monitor_history_retention_days() is None
+
+    # Invalid values preserve all samples rather than risk an unintended deletion.
+    for invalid in ("invalid", "-1", "3651", "3.5"):
+        monkeypatch.setenv("NETSENTINEL_MONITOR_HISTORY_DAYS", invalid)
+        assert monitor_history_retention_days() is None
+
+
+def test_monitor_history_cleanup_runs_no_more_than_daily(monkeypatch):
+    cleaned = []
+    monkeypatch.setenv("NETSENTINEL_MONITOR_HISTORY_DAYS", "30")
+    monkeypatch.setattr(
+        "netsentinel.monitoring.database.cleanup_monitor_history",
+        lambda days: cleaned.append(days) or 4,
+    )
+    supervisor = MonitorSupervisor()
+
+    assert supervisor.cleanup_history_if_due(now=100) == 4
+    assert supervisor.cleanup_history_if_due(now=100 + 10) == 0
+    assert supervisor.cleanup_history_if_due(now=100 + HISTORY_CLEANUP_INTERVAL_SECONDS - 1) == 0
+    assert supervisor.cleanup_history_if_due(now=100 + HISTORY_CLEANUP_INTERVAL_SECONDS) == 4
+    assert cleaned == [30, 30]
