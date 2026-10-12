@@ -1,0 +1,9 @@
+# Minimum direct runtime and test versions declared in pyproject.toml.
+# Keep these pins aligned with the lower bounds in [project.dependencies]
+# and [project.optional-dependencies.test]; CI installs this set together.
+fastapi==0.115.0
+uvicorn==0.30.0
+psutil==6.0.0
+pytest==8.0.0
+httpx==0.27.0
+httpx2==1.0.0
