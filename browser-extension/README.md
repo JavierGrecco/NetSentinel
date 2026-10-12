@@ -34,6 +34,6 @@ La transferencia entre dispositivos es manual en esta versión. El CSV permanece
 
 ## Privacidad y límites
 
-Las URLs y los términos de búsqueda pueden revelar información personal sensible. Usá la extensión solo en dispositivos que administrás con autorización, informá apropiadamente el seguimiento familiar, configurá dominios excluidos y conserva los datos solo el tiempo necesario. El almacenamiento permanece local hasta que exportás o borrás registros.
+Las URLs y los términos de búsqueda pueden revelar información personal sensible. Usá la extensión solo en dispositivos que administrás con autorización, informá a las personas responsables y usuarias del dispositivo, según las políticas y autorizaciones aplicables, configurá dominios excluidos y conserva los datos solo el tiempo necesario. El almacenamiento permanece local hasta que exportás o borrás registros.
 
 Los filtros eliminan parámetros comunes sensibles y redactan tipos reconocibles de identificador en la ruta, pero ningún filtro genérico puede identificar todos los secretos que una web podría incluir en una ruta o en parámetros desconocidos. La CI incluye pruebas automatizadas para OAuth/tokens, claves doblemente codificadas, seguimiento, IPv6 y segmentos de ruta; siguen pendientes pruebas manuales con sitios reales. No intercepta HTTPS ni intenta descifrar TLS. La navegación observada describe el navegador, no demuestra quién estaba frente al dispositivo ni qué hizo dentro de una cuenta.

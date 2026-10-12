@@ -13,7 +13,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] Pruebas manuales de TLS con endpoints autorizados (certificado válido, próximo a vencer, no confiable, timeout y puerto no TLS) en Windows, macOS y Linux.
 - [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
 
-## Actividad familiar: estado de código
+## Actividad y telemetría autorizada: estado de código
 - [x] Historial de presencia por dispositivo (fecha/IP/fuente), claramente distinto de páginas visitadas.
 - [x] API/SQLite de sesiones acotadas, token temporal hasheado, CSV, retención y exportación JSON v4.
 - [x] Extensión Chromium visible, opt-in y apagada por defecto para registrar páginas futuras y búsquedas por URL en el dispositivo local.

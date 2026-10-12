@@ -10,7 +10,7 @@ NetSentinel reúne inventario de dispositivos, historial y monitorización en un
 - Consultar dispositivos con sus direcciones IP y MAC, buscar por cualquiera de sus direcciones IPv4/IPv6 y revisar la procedencia de cada observación.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
-- Revisar **actividad familiar** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
+- Revisar **actividad y telemetría autorizada** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
@@ -99,9 +99,9 @@ La [guía de monitorización](docs/MONITORING.md) explica los límites y la conf
 
 Desde el pie del inventario podés descargar una copia completa SQLite con el historial de dispositivos, eventos, lecturas y monitorización. A diferencia de la exportación JSON, esa copia es una base SQLite utilizable para recuperación. Para restaurarla, cerrá NetSentinel, guardá aparte la base actual y reemplazá `netsentinel.sqlite3` por el archivo descargado renombrado con ese nombre. La ruta predeterminada es `~/.netsentinel/netsentinel.sqlite3` (en Windows, dentro de tu carpeta de usuario); si configuraste `NETSENTINEL_DATA_DIR`, usá ese directorio en su lugar. Volvé a iniciar NetSentinel después de reemplazar el archivo. Los respaldos incluyen metadatos de tu red; almacenalos en un lugar seguro.
 
-## Historial y actividad familiar
+## Historial y telemetría autorizada
 
-Desde el inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad familiar** (`/activity`) permite consultar registros de red, navegación y metadatos de correo importados.
+Desde el inventario, **Historial** muestra cuándo se observó un dispositivo y qué IP tenía. La pantalla **Actividad y telemetría** (`/activity`) permite consultar registros de red, navegación y metadatos de correo importados.
 
 Para registrar **páginas y búsquedas del navegador**, instalá la extensión Chromium de [`browser-extension/`](browser-extension/README.md) en cada dispositivo/navegador a supervisar y activala expresamente. Guarda localmente visitas y búsquedas compatibles, exporta un CSV y permite importarlo en `/activity` asociándolo al dispositivo correcto. Está apagada por defecto, solo registra navegación futura y no lee formularios ni contraseñas. La transferencia es manual por CSV; la sincronización automática entre equipos sigue pendiente.
 
@@ -126,13 +126,13 @@ python -m pytest
 ## Documentación
 
 - [Arquitectura](docs/ARCHITECTURE.md)
-- [Seguimiento familiar de actividad](docs/FAMILY_ACTIVITY.md)
-- [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
+- [Guía de actividad y telemetría autorizada](docs/FAMILY_ACTIVITY.md)
 - [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
 - [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.
 - [Plan de implementación](docs/IMPLEMENTATION_PLAN.md)
+- [Dirección del producto y criterios de calidad empresarial](docs/PRODUCT_DIRECTION.md)
 - [Base local de fabricantes OUI](docs/OUI_DATABASE.md)
 - [Mantenimiento del repositorio](docs/GITHUB_SETUP.md)
 - [Historial de cambios](CHANGELOG.md)

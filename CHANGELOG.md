@@ -2,6 +2,9 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Documenta la dirección de producto, la priorización empresarial y los criterios de aceptación de seguridad, privacidad, UX, pruebas y releases.
+- Alinea la nomenclatura de actividad de navegador y red con telemetría autorizada, consentimiento, alcance visible y retención; elimina referencias de interfaz orientadas a vigilancia familiar.
+
 - Incorpora en Herramientas una inspección TLS puntual de endpoints autorizados: valida el certificado, informa vencimiento, nombres, versión TLS y cifrado negociado sin solicitar contenido HTTP ni guardar resultados.
 - Amplía la CI para validar la sintaxis JavaScript embebida en la página Herramientas.
 
