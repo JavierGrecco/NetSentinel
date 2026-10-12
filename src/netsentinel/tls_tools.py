@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import ipaddress
+import json
+from pathlib import Path
 import re
 import socket
 import ssl
+import subprocess
+import sys
 from typing import Any
 
 _MAX_TIMEOUT_SECONDS = 3.0
@@ -97,7 +101,7 @@ def _certificate_failure(host: str, port: int, exc: ssl.SSLCertVerificationError
     )
 
 
-def inspect_tls_endpoint(host: str, port: int = 443, timeout: float = _MAX_TIMEOUT_SECONDS) -> dict[str, Any]:
+def _inspect_tls_endpoint_direct(host: str, port: int = 443, timeout: float = _MAX_TIMEOUT_SECONDS) -> dict[str, Any]:
     """Valida un certificado TLS y muestra metadatos del handshake, sin hacer una petición HTTP."""
     normalised_host = _normalise_host(host)
     if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
@@ -218,3 +222,78 @@ def inspect_tls_endpoint(host: str, port: int = 443, timeout: float = _MAX_TIMEO
             "cipher_bits": cipher_info[2] if cipher_info and len(cipher_info) > 2 else None,
         },
     )
+
+
+
+def inspect_tls_endpoint(host: str, port: int = 443, timeout: float = _MAX_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Inspecciona TLS en un proceso terminable para limitar también una resolución DNS bloqueada."""
+    normalised_host = _normalise_host(host)
+    if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+        raise ValueError("El puerto debe ser un número entre 1 y 65535.")
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout <= _MAX_TIMEOUT_SECONDS:
+        raise ValueError("El tiempo límite debe ser mayor que cero y no superar 3 segundos.")
+
+    command = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--inspect-child",
+        normalised_host,
+        str(port),
+        str(float(timeout)),
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=float(timeout),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        summary = "La resolución DNS o la conexión TLS superó el límite total de tiempo."
+        return _result(
+            normalised_host, port, "timeout", summary,
+            findings=[{"code": "inspection_timeout", "severity": "warning", "title": "Tiempo agotado", "detail": summary}],
+        )
+    except OSError:
+        summary = "No se pudo iniciar el proceso aislado para inspeccionar TLS."
+        return _result(
+            normalised_host, port, "error", summary,
+            findings=[{"code": "inspection_unavailable", "severity": "warning", "title": "Herramienta no disponible", "detail": summary}],
+        )
+
+    try:
+        payload = json.loads(completed.stdout)
+    except (json.JSONDecodeError, TypeError):
+        payload = None
+    if completed.returncode != 0 or not isinstance(payload, dict):
+        summary = "La inspección TLS no devolvió un resultado válido."
+        return _result(
+            normalised_host, port, "error", summary,
+            findings=[{"code": "inspection_failed", "severity": "warning", "title": "No se pudo completar la inspección", "detail": summary}],
+        )
+    if payload.get("host") != normalised_host or payload.get("port") != port:
+        summary = "El resultado recibido no coincide con el endpoint consultado."
+        return _result(
+            normalised_host, port, "error", summary,
+            findings=[{"code": "inspection_result_mismatch", "severity": "warning", "title": "Resultado no válido", "detail": summary}],
+        )
+    return payload
+
+
+def _child_main() -> None:
+    """Punto de entrada privado del proceso hijo; el protocolo de salida es JSON."""
+    if len(sys.argv) != 5 or sys.argv[1] != "--inspect-child":
+        raise SystemExit(2)
+    try:
+        report = _inspect_tls_endpoint_direct(
+            sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
+        )
+    except (ValueError, TypeError):
+        raise SystemExit(2)
+    sys.stdout.write(json.dumps(report, ensure_ascii=False) + "\\n")
+
+
+if __name__ == "__main__":
+    _child_main()
