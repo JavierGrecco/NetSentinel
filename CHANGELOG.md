@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Canonicaliza `--host localhost` a `127.0.0.1` y rechaza aliases de hostname no literales para que el bind no dependa del resolvedor local; el lanzador Windows conserva y devuelve el código de salida real de la aplicación.
 - Aplica la retención configurada también a la ingestión en vivo: rechaza metadatos retrasados fuera de ventana en lugar de aceptarlos y eliminarlos inmediatamente en la siguiente lectura; agrega una regresión de API.
 - Limita la lectura CSV de actividad a 1.000 filas antes de materializar el lote y traduce campos/cabeceras demasiado grandes a errores de validación 422 en vez de errores internos; añade regresiones para importación y vista previa sin escrituras parciales.
 - Evita cambiar permisos del destino cuando `netsentinel.sqlite3` es un enlace simbólico: el endurecimiento de archivos regulares usa un descriptor abierto sin seguir el enlace, con una regresión POSIX específica.
