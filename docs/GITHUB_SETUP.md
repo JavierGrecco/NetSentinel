@@ -14,7 +14,6 @@ La configuración de GitHub no está incluida en los archivos del repositorio. E
 La regla de rama es una configuración de GitHub, no un archivo de código. Después de guardarla, volvé a consultar la protección de `main` y verificá que el merge de prueba no puede avanzar con un check obligatorio fallido. Los nombres concretos de checks pueden cambiar al modificar workflows; actualizá la regla si se renombran.
 
 ## Publicar una versión
-## Publicar una versión
 
 1. Actualizá la versión en `pyproject.toml` y `src/netsentinel/__init__.py`.
 2. Agregá los cambios al principio de `CHANGELOG.md`.
