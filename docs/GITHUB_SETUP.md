@@ -25,6 +25,10 @@ gh attestation verify netsentinel-sbom.cdx.json --repo JavierGrecco/NetSentinel
 
 El workflow también ejecuta Gitleaks con el historial completo para detectar secretos comprometidos. Si una credencial real se detecta o se publica accidentalmente, revocala/rotala inmediatamente; borrar el texto en un commit posterior no vuelve segura la credencial.
 
+## Integridad de los workflows
+
+Las acciones externas usadas por los workflows de CI, análisis de seguridad y cadena de suministro se fijan a SHA completos, no a etiquetas móviles. Dependabot tiene habilitadas actualizaciones semanales para GitHub Actions; revisá cada propuesta y su cambio de SHA antes de integrarla. La fijación reduce el riesgo de que una etiqueta se mueva de forma inesperada, pero las actualizaciones siguen requiriendo revisión y CI.
+
 ## Estructura básica
 
 - `src/netsentinel/`: código de la aplicación.
