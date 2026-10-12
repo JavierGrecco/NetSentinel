@@ -16,6 +16,7 @@ Estas medidas reducen riesgos de DNS rebinding y CSRF en navegadores, pero no co
 
 ## Operación segura
 
+- El CLI oficial ahora rechaza cualquier `--host` que no sea loopback, incluidos `0.0.0.0`, direcciones de LAN y hostnames remotos. Esta barrera evita una exposición accidental al usar `netsentinel`; no equivale a autenticación ni protege despliegues alternativos iniciados directamente con otro servidor ASGI. No desplegar NetSentinel en otras interfaces hasta implementar y revisar autenticación, autorización, protección CSRF/origen y transporte HTTPS.
 - Mantener el host en `127.0.0.1`. No exponer el servidor a otras interfaces sin autenticación, protección CSRF/origen, HTTPS y una revisión de seguridad específica.
 - El descubrimiento, el diagnóstico y las comprobaciones de monitorización generan tráfico cuando se solicitan o se habilitan expresamente. El panel rechaza descubrimientos simultáneos para no duplicar el sondeo de la LAN.
 - Los comandos se ejecutan con argumentos separados y no interpolan valores del inventario como comandos.
