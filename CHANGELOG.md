@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Corrige la selección de subredes duplicadas: la preferencia por interfaces físicas se aplica antes de deduplicar, para que el orden de enumeración del sistema no oculte una interfaz mejor.
 - Evita endurecer por accidente los permisos del destino de un enlace simbólico usado como `~/.netsentinel`: conserva la ruta predeterminada sin resolverla y prueba el flujo real de configuración, SQLite y permisos.
 - Evita que una resolución DNS bloqueada detenga la monitorización secuencial: TCP/HTTP se ejecutan en procesos terminables con plazo global y el webhook opcional queda limitado a 5 segundos. Añade regresiones para timeout, salida inválida y arranque del proceso hijo.
 - Evita que una resolución DNS A/AAAA o PTR bloquee indefinidamente una solicitud: las consultas interactivas se aíslan en un proceso terminable con límite de 3 segundos. Añade pruebas de timeout, errores del resolvedor y rechazo de salida malformada.

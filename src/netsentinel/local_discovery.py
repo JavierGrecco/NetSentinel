@@ -57,7 +57,6 @@ def detect_scan_subnets(
     addresses = interface_addresses if interface_addresses is not None else psutil.net_if_addrs()
     stats = interface_stats if interface_stats is not None else psutil.net_if_stats()
     candidates: list[tuple[int, str, ScanSubnet]] = []
-    seen_networks: set[str] = set()
 
     for interface, entries in addresses.items():
         name = interface.strip()
@@ -94,12 +93,9 @@ def detect_scan_subnets(
                 if limited
                 else actual_network
             )
-            key = str(target_network)
-            if key in seen_networks:
-                continue
-            seen_networks.add(key)
-
-            # Prefer common physical interface names where several adapters exist.
+            # Keep duplicates until after sorting: if a low-priority interface
+            # appears first, it must not hide a later physical adapter on the same
+            # subnet. Deduplicate once the preferred candidate is first.
             preferred = 0 if lowered.startswith(("en", "eth", "wlan", "wi-fi", "ethernet", "wlp", "eno", "ens")) else 1
             candidates.append((
                 preferred,
@@ -108,7 +104,16 @@ def detect_scan_subnets(
             ))
 
     candidates.sort(key=lambda item: (item[0], item[1]))
-    return [item[2] for item in candidates[:MAX_NETWORKS]]
+    selected: list[ScanSubnet] = []
+    seen_networks: set[ipaddress.IPv4Network] = set()
+    for _priority, _name, candidate in candidates:
+        if candidate.network in seen_networks:
+            continue
+        seen_networks.add(candidate.network)
+        selected.append(candidate)
+        if len(selected) >= MAX_NETWORKS:
+            break
+    return selected
 
 
 def _ping_once(address: str, system: str | None = None) -> bool:
