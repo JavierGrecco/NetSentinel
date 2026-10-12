@@ -568,6 +568,7 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
         if device is None:
             raise LookupError("No se encontró el dispositivo.")
     normalized: list[dict[str, Any]] = []
+    normalized_line_numbers: list[int] = []
     for line, row in enumerate(raw_rows, start=2):
         if row.get(None):
             raise ValueError(f"Fila {line}: contiene más columnas que las cabeceras del CSV.")
@@ -595,6 +596,7 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
             raise ValueError(f"Fila {line}: event_type es obligatorio para eventos no relacionados con correo.")
         try:
             normalized.append(normalize_event(mapped, source_override="manual_import"))
+            normalized_line_numbers.append(line)
         except ValueError as exc:
             raise ValueError(f"Fila {line}: {exc}") from exc
     if not normalized:
@@ -627,14 +629,29 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
     seen_in_batch: set[tuple[Any, ...]] = set()
     preview_rows: list[dict[str, Any]] = []
     with database.connect() as db:
-        cutoff = None
+        # Serialize imports with retention changes/cleanup so a file is never
+        # reported as imported only to have its rows immediately pruned.
+        if not preview:
+            db.execute("BEGIN IMMEDIATE")
+        setting = db.execute(
+            "SELECT retention_days FROM activity_settings WHERE id = 1"
+        ).fetchone()
+        retention_days = int(setting["retention_days"]) if setting else 7
+        cutoff = _iso(_now() - timedelta(days=retention_days))
+
+        # CSV dates can be up to one year old at the parser level, while the
+        # configured activity retention can be as short as one day. Reject the
+        # whole batch before any write if a row would be purged on the next read.
+        for line, item in zip(normalized_line_numbers, normalized):
+            if item["observed_at"] < cutoff:
+                raise ValueError(
+                    f"Fila {line}: la fecha queda fuera de la retención configurada "
+                    f"de {retention_days} día(s). Aumentá la retención antes de importar "
+                    "ese período y volvé a previsualizar el CSV."
+                )
+
         if preview:
-            # A preview is read-only: mirror the cleanup boundary without deleting rows.
-            setting = db.execute(
-                "SELECT retention_days FROM activity_settings WHERE id = 1"
-            ).fetchone()
-            retention_days = int(setting["retention_days"]) if setting else 7
-            cutoff = _iso(_now() - timedelta(days=retention_days))
+            # A preview is read-only: check duplicates only against retained data.
             duplicate_sql = duplicate_sql.replace(
                 "source = 'manual_import' AND",
                 "source = 'manual_import' AND observed_at >= ? AND",

@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita importaciones CSV contradictorias con la retención de actividad: previsualización e importación rechazan lotes con filas fuera del plazo configurado antes de escribir, con mensaje para ampliar la retención; la operación se serializa con cambios de política.
 - Añade retención configurable para comprobaciones detalladas de monitorización: 90 días por defecto, limpieza al inicio y diaria, opción de desactivación explícita y pruebas de que la limpieza no borra incidentes ni el estado actual.
 - Bloquea llamadas cross-site a endpoints GET que generan consultas DNS/PTR mediante Fetch Metadata y validación de `Origin`; añade regresiones que verifican que el resolvedor no se invoca y que las consultas de mismo origen siguen funcionando.
 - Serializa las mutaciones del listado de eventos Chromium (navegación, limpieza inicial y borrado explícito) en el service worker; el popup deja de escribir snapshots de eventos al renderizar. Añade regresiones para capturas simultáneas, orden de borrado y exclusión de IPv4-mapped IPv6/links locales IPv6 del registro de navegación.
