@@ -40,6 +40,16 @@ La inspección TLS de Herramientas se inicia explícitamente con un host/IP y pu
 
 Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloqueo de dispositivos y la interceptación de proxy requieren una revisión de autorización, alcance, límites de tasa, auditoría, almacenamiento de secretos, reversión de cambios y tratamiento de datos sensibles antes de implementarse.
 
+## Controles automatizados del repositorio
+
+El workflow `.github/workflows/security.yml` ejecuta dos controles:
+- **CodeQL** analiza estáticamente el código Python con consultas de seguridad ampliadas y publica resultados en GitHub Code Scanning.
+- **pip-audit** comprueba las dependencias de ejecución frente a avisos de vulnerabilidades conocidos; el job falla cuando detecta vulnerabilidades notificadas.
+
+El workflow se ejecuta en cambios a `main`, solicitudes de cambio y semanalmente. Sus permisos están limitados por job y las acciones externas se fijan a SHA completos para evitar depender de una etiqueta mutable. `.github/dependabot.yml` propone actualizaciones semanales para dependencias Python y GitHub Actions.
+
+Estos controles reducen riesgos conocidos, pero no demuestran que el software sea seguro ni reemplazan revisión manual, pruebas, gestión de versiones ni respuesta a vulnerabilidades. El análisis de dependencias depende de los avisos públicos disponibles en el momento de la ejecución.
+
 ## Reporte de vulnerabilidades
 
 No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.
