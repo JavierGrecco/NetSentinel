@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Corrige la ejecución del endurecimiento de permisos SQLite: el helper estaba decorado accidentalmente como administrador de contexto y no se ejecutaba al abrir la base. Añade regresiones para archivos existentes con permisos 0644 y para preservar el destino de enlaces simbólicos.
 - Aclara el alcance real del saneamiento de navegación en la UI, API y documentación: se guardan URLs normalizadas con host/ruta parcial, algunos identificadores se redactan, pero pueden persistir segmentos o parámetros desconocidos; añade pruebas del aviso de privacidad.
 - Centraliza el saneamiento de fórmulas de hojas de cálculo en un helper común y lo aplica al inventario, la actividad y los informes de monitorización; agrega una regresión que verifica la exportación segura sin modificar SQLite.
 - Canonicaliza `--host localhost` a `127.0.0.1` y rechaza aliases de hostname no literales para que el bind no dependa del resolvedor local; el lanzador Windows conserva y devuelve el código de salida real de la aplicación.
