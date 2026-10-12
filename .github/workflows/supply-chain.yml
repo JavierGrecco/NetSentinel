@@ -1,0 +1,116 @@
+name: Supply chain security
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "43 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Detect committed secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan history for hardcoded secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  sbom:
+    name: Build wheel, SBOM, and integrity manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Generate and validate CycloneDX SBOM for installed runtime
+        run: |
+          python -m pip install "cyclonedx-bom==7.3.1"
+          python -m venv .sbom-venv
+          .sbom-venv/bin/python -m pip install --disable-pip-version-check --no-input dist/*.whl
+          cyclonedx-py environment .sbom-venv/bin/python --pyproject pyproject.toml --mc-type application --sv 1.6 --output-reproducible --output-file dist/netsentinel-sbom.cdx.json
+          python -m json.tool dist/netsentinel-sbom.cdx.json > /dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          sbom = json.loads(Path("dist/netsentinel-sbom.cdx.json").read_text(encoding="utf-8"))
+          assert sbom.get("bomFormat") == "CycloneDX", "SBOM is not in CycloneDX format"
+          assert sbom.get("specVersion") == "1.6", "Unexpected CycloneDX specification version"
+          root = sbom.get("metadata", {}).get("component", {})
+          assert root.get("name", "").lower() == "netsentinel", f"Unexpected SBOM root component: {root!r}"
+          components = {item.get("name", "").lower() for item in sbom.get("components", [])}
+          required_runtime = {"fastapi", "uvicorn", "psutil"}
+          missing = required_runtime - components
+          assert not missing, f"Runtime dependencies missing from SBOM: {sorted(missing)}"
+          print(f"Validated SBOM for {root.get('name')} {root.get('version')}: {len(components)} components.")
+          PY
+      - name: Create and verify SHA-256 manifest
+        run: |
+          cd dist
+          sha256sum *.whl netsentinel-sbom.cdx.json > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - name: Upload wheel, SBOM, and checksums
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: netsentinel-supply-chain-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  attest-release:
+    name: Sign release artifact provenance
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: sbom
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: netsentinel-supply-chain-${{ github.sha }}
+          path: dist
+      - name: Verify artifact integrity before attestation
+        run: sha256sum --check dist/SHA256SUMS
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/netsentinel-sbom.cdx.json
+            dist/SHA256SUMS
+      - name: Bind the wheel to its SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/*.whl
+          sbom-path: dist/netsentinel-sbom.cdx.json
