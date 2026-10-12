@@ -240,6 +240,12 @@ def activity_page() -> FileResponse:
     return FileResponse(_ACTIVITY_STATIC)
 
 
+@app.get("/findings", include_in_schema=False)
+def findings_page() -> FileResponse:
+    """Muestra la bandeja local de hallazgos con evidencia."""
+    return FileResponse(_STATIC_DIR / "findings.html")
+
+
 @app.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
