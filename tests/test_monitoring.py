@@ -457,14 +457,14 @@ def test_ping_probe_keeps_platform_specific_terminated_command(monkeypatch):
     assert monitoring.probe("ping", "127.0.0.1", 1)["detail"] == "simulado"
 
 
-def test_tcp_probe_child_smoke_test_uses_loopback_only():
-    # A real loopback attempt verifies that the child bootstrap/import/protocol
-    # work in editable installs and CI without depending on an external network.
-    result = monitoring.probe("tcp", "127.0.0.1:1", 1)
+def test_tcp_probe_child_bootstrap_works_without_network():
+    # Invalid synthetic target exercises child bootstrap/import/JSON protocol
+    # without opening sockets or depending on the local or external network.
+    result = monitoring.probe("tcp", "synthetic-invalid-target", 3)
 
-    assert result["status"] in {"up", "down"}
-    assert isinstance(result["detail"], str)
-    assert result["detail"]
+    assert result["status"] == "down"
+    assert "ValueError" in result["detail"]
+    assert isinstance(result.get("elapsed_ms"), (int, float))
 
 
 def test_webhook_delivery_uses_bounded_child_and_limits_result_detail(monkeypatch):
