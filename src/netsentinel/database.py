@@ -39,15 +39,51 @@ def _elapsed_seconds(start: str | None, end: str | None = None) -> int | None:
         return None
 
 
+def _ensure_private_directory(directory: Path) -> None:
+    """Create missing data directories privately without changing existing paths."""
+    # NETSENTINEL_DATA_DIR may point to a shared/system directory. Change modes
+    # only on components created here, never on a pre-existing parent such as /tmp.
+    if os.name != "posix":
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return
+
+    missing: list[Path] = []
+    current = directory
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    for candidate in reversed(missing):
+        try:
+            candidate.mkdir(mode=0o700)
+        except FileExistsError:
+            # A concurrent process may have created it. Don't chmod something
+            # that this process did not create.
+            if not candidate.is_dir():
+                raise NotADirectoryError(f"El directorio de datos no es un directorio: {candidate}")
+        else:
+            try:
+                os.chmod(candidate, 0o700)
+            except OSError:
+                # mkdir(mode=0o700) remains restrictive under a normal umask.
+                pass
+
+    if not directory.is_dir():
+        raise NotADirectoryError(f"El directorio de datos no es un directorio: {directory}")
+
+
 @contextmanager
 def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
     db_path = path or database_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _ensure_private_directory(db_path.parent)
     connection = sqlite3.connect(db_path, timeout=10)
     if os.name == "posix":
         try:
-            os.chmod(db_path.parent, 0o700)
+            # Protect the database file, but never chmod an existing parent directory.
             os.chmod(db_path, 0o600)
         except OSError:
             pass
