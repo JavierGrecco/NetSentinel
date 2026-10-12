@@ -24,7 +24,8 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] Revisar sanitización de URL con OAuth, tokens, tracking, rutas con PII y codificación percent.
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Deduplicación idempotente de filas CSV manuales por dispositivo; las filas idénticas ya importadas se omiten y se contabilizan.
-- [ ] Filtros/exportaciones/borrado selectivo por dispositivo, fuente y rango temporal.
+- [x] Filtros de eventos por dispositivo, tipo y rango de fechas UTC; exportación CSV filtrada con neutralización de fórmulas, hasta 10.000 filas.
+- [ ] Borrado selectivo y filtros adicionales por fuente, con confirmación visible y pruebas de alcance.
 - [ ] Sincronización en vivo desde equipos supervisados, tras añadir autenticación, autorización por dispositivo, cifrado de transporte, revocación y protección contra reenvío. No exponer la API actual a la LAN como atajo.
 - [ ] Extensión Firefox u otros navegadores compatibles.
 - [ ] Adaptador de auditoría para un proveedor concreto de correo, tras verificar qué registros admite el tipo de cuenta y con permisos válidos.

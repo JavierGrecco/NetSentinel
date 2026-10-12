@@ -1,3 +1,5 @@
+import csv
+import io
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -34,6 +36,8 @@ def test_activity_page_and_empty_state_are_available(client):
     assert page.headers["cache-control"] == "no-store"
     assert "Actividad familiar" in page.text
     assert "Previsualizar CSV" in page.text
+    assert "Exportar CSV filtrado" in page.text
+    assert "filterEventType" in page.text
     assert "no captura tráfico por sí mismo" in page.text
 
     response = client.get("/api/activity")
@@ -447,6 +451,77 @@ def test_limits_unknown_device_and_invalid_retention(client):
         "/api/activity/sessions",
         json={"device_id": device_id(client), "duration_minutes": 721, "source_mode": "router_dns"},
     ).status_code == 422
+
+
+def test_activity_filters_by_type_and_inclusive_utc_dates(client):
+    selected = device_id(client)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    old = (now - timedelta(days=2)).isoformat()
+    today = now.isoformat()
+    csv_data = f"""observed_at,event_type,domain,search_engine,search_terms
+{old},dns_query,old.example,,
+{today},dns_query,today.example,,
+{today},search_query,www.google.com,Google,=1+1
+"""
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200, imported.text
+
+    today_filter = client.get(
+        "/api/activity",
+        params={
+            "device_id": selected,
+            "event_type": "dns_query",
+            "from_date": now.date().isoformat(),
+            "to_date": now.date().isoformat(),
+            "limit": 500,
+        },
+    )
+    assert today_filter.status_code == 200, today_filter.text
+    events = today_filter.json()["events"]
+    assert [event["domain"] for event in events] == ["today.example"]
+
+    invalid_range = client.get(
+        "/api/activity",
+        params={
+            "from_date": now.date().isoformat(),
+            "to_date": (now.date() - timedelta(days=1)).isoformat(),
+        },
+    )
+    assert invalid_range.status_code == 422
+
+
+def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    csv_data = f"""observed_at,event_type,domain,search_engine,search_terms
+{stamp},dns_query,ordinary.example,,
+{stamp},search_query,www.google.com,Google,=1+1
+"""
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200, imported.text
+
+    response = client.get(
+        "/api/activity/export.csv",
+        params={"device_id": selected, "event_type": "search_query"},
+    )
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["content-type"].startswith("text/csv")
+    payload = response.text.lstrip("\ufeff")
+    rows = list(csv.DictReader(io.StringIO(payload)))
+    assert len(rows) == 1
+    assert rows[0]["event_type"] == "search_query"
+    assert rows[0]["search_terms"] == "'=1+1"
+    assert "ordinary.example" not in payload
+
+    missing = client.get("/api/activity/export.csv", params={"device_id": 99999})
+    assert missing.status_code == 404
 
 
 def test_metadata_events_are_included_in_json_export(client):

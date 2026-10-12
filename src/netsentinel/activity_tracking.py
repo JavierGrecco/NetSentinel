@@ -656,7 +656,133 @@ def update_retention(retention_days: int) -> dict[str, Any]:
     return {"retention_days": int(row["retention_days"]), "deleted_events": deleted}
 
 
-def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, Any]:
+def _activity_filter_values(
+    event_type: str | None,
+    from_date: str | None,
+    to_date: str | None,
+) -> tuple[list[str], list[Any]]:
+    """Validate activity filters; calendar dates are inclusive and interpreted in UTC."""
+    clauses: list[str] = []
+    params: list[Any] = []
+    if event_type not in (None, ""):
+        normalized_type = str(event_type).strip().lower()
+        if normalized_type not in EVENT_TYPES:
+            raise ValueError("El tipo de evento no es válido.")
+        clauses.append("event_type = ?")
+        params.append(normalized_type)
+
+    parsed_from: datetime | None = None
+    parsed_to: datetime | None = None
+    for raw, name in ((from_date, "from_date"), (to_date, "to_date")):
+        if raw in (None, ""):
+            continue
+        try:
+            parsed = datetime.strptime(str(raw), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} debe tener formato AAAA-MM-DD.") from exc
+        if name == "from_date":
+            parsed_from = parsed
+        else:
+            parsed_to = parsed
+
+    if parsed_from and parsed_to and parsed_from > parsed_to:
+        raise ValueError("La fecha inicial no puede ser posterior a la fecha final.")
+    if parsed_from:
+        clauses.append("observed_at >= ?")
+        params.append(_iso(parsed_from))
+    if parsed_to:
+        clauses.append("observed_at < ?")
+        params.append(_iso(parsed_to + timedelta(days=1)))
+    return clauses, params
+
+
+def _csv_safe_text(value: Any) -> Any:
+    """Neutralize spreadsheet formulas in text exported to CSV."""
+    if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
+def export_activity_csv(
+    device_id: int | None = None,
+    event_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    limit: int = 10000,
+) -> str:
+    """Export up to 10,000 filtered activity metadata rows as formula-safe CSV."""
+    clauses, filter_params = _activity_filter_values(event_type, from_date, to_date)
+    if device_id is not None:
+        if int(device_id) < 1:
+            raise ValueError("device_id debe ser un entero positivo.")
+        clauses.insert(0, "e.device_id = ?")
+        filter_params.insert(0, int(device_id))
+    where_sql = " WHERE " + " AND ".join(clauses) if clauses else ""
+    with database.connect() as db:
+        _cleanup(db)
+        if device_id is not None and db.execute(
+            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
+        ).fetchone() is None:
+            raise LookupError("No se encontró el dispositivo.")
+        events = db.execute(
+            f"""SELECT e.*, d.display_name, d.ip_address
+                FROM activity_events e
+                JOIN devices d ON d.id = e.device_id
+                {where_sql}
+                ORDER BY e.observed_at DESC, e.id DESC
+                LIMIT ?""",
+            (*filter_params, max(1, min(int(limit), 10000))),
+        ).fetchall()
+
+    buffer = io.StringIO(newline="")
+    fields = [
+        "observed_at", "event_type", "device_id", "device_name", "ip_address", "source",
+        "domain", "page_url", "search_engine", "search_terms", "destination_ip",
+        "destination_port", "protocol", "app_name", "blocked", "email_provider",
+        "email_from", "email_to", "email_subject",
+    ]
+    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for event in events:
+        row = {
+            "observed_at": event["observed_at"],
+            "event_type": event["event_type"],
+            "device_id": event["device_id"],
+            "device_name": event["display_name"],
+            "ip_address": event["ip_address"],
+            "source": event["source"],
+            "domain": event["domain"],
+            "page_url": event["page_url"],
+            "search_engine": event["search_engine"],
+            "search_terms": event["search_terms"],
+            "destination_ip": event["destination_ip"],
+            "destination_port": event["destination_port"],
+            "protocol": event["protocol"],
+            "app_name": event["app_name"],
+            "blocked": event["blocked"],
+            "email_provider": event["email_provider"],
+            "email_from": event["email_from"],
+            "email_to": event["email_to"],
+            "email_subject": event["email_subject"],
+        }
+        writer.writerow({key: _csv_safe_text(value) for key, value in row.items()})
+    return "\ufeff" + buffer.getvalue()
+
+
+def get_activity(
+    device_id: int | None = None,
+    limit: int = 100,
+    event_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict[str, Any]:
+    event_clauses, event_params = _activity_filter_values(event_type, from_date, to_date)
+    if device_id is not None:
+        if int(device_id) < 1:
+            raise ValueError("device_id debe ser un entero positivo.")
+        event_clauses.insert(0, "e.device_id = ?")
+        event_params.insert(0, int(device_id))
+    event_filter = "WHERE " + " AND ".join(event_clauses) if event_clauses else ""
     with database.connect() as db:
         _cleanup(db)
         params: tuple[Any, ...] = (device_id,) if device_id is not None else ()
@@ -670,12 +796,11 @@ def get_activity(device_id: int | None = None, limit: int = 100) -> dict[str, An
                 {session_filter} ORDER BY s.started_at DESC, s.id DESC LIMIT 100""",
             params,
         ).fetchall()
-        event_filter = "WHERE e.device_id = ?" if device_id is not None else ""
         events = db.execute(
             f"""SELECT e.*, d.display_name, d.ip_address, d.mac_address
                 FROM activity_events e JOIN devices d ON d.id=e.device_id
                 {event_filter} ORDER BY e.observed_at DESC, e.id DESC LIMIT ?""",
-            (*params, max(1, min(int(limit), 500))),
+            (*event_params, max(1, min(int(limit), 500))),
         ).fetchall()
         domain_filter = "WHERE domain IS NOT NULL AND domain <> ''" if device_id is None else "WHERE device_id = ? AND domain IS NOT NULL AND domain <> ''"
         domain_params: tuple[Any, ...] = () if device_id is None else (device_id,)

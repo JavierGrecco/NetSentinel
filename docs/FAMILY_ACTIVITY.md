@@ -8,6 +8,7 @@
 - Validación estricta del CSV y rechazo de campos de cuerpo de mensaje, contenido y adjuntos.
 - Importación idempotente: se omiten y contabilizan filas normalizadas idénticas ya importadas para el mismo dispositivo, incluso si se repite el archivo completo.
 - Vista previa local de CSV antes de guardar: comprueba las filas completas, muestra hasta 10 ejemplos normalizados y estima cuántos eventos se agregarían o se omitirían sin escribir datos.
+- Filtros del historial por dispositivo, tipo y fechas UTC; exportación CSV filtrada de hasta 10.000 filas con neutralización de fórmulas.
 
 ## Páginas y búsquedas del navegador
 
@@ -37,7 +38,8 @@ El importador normaliza algunas cabeceras habituales de Google Workspace Email L
 3. En NetSentinel, abrí `/activity`, elegí el dispositivo y seleccioná el CSV.
 4. Usá **Previsualizar CSV** para validar el archivo antes de guardarlo. La vista previa no escribe eventos, muestra hasta 10 ejemplos de metadatos normalizados y señala duplicados. Después, elegí **Importar metadatos** para confirmar.
 5. La interfaz informa cuántos eventos agregó y cuántas filas duplicadas omitió; volver a cargar el mismo CSV no duplica los eventos idénticos.
-6. Para correo, prepará/importá el CSV a partir de un registro de auditoría autorizado. Asociá el registro con el dispositivo correspondiente solo si la fuente realmente lo permite; no inferir identidad por el mero destinatario.
+6. En **Eventos**, seleccioná dispositivo, tipo y fechas UTC y aplicá los filtros. **Exportar CSV filtrado** descarga hasta 10.000 coincidencias; el archivo puede contener búsquedas y metadatos de correo, así que guardalo con cuidado.
+7. Para correo, prepará/importá el CSV a partir de un registro de auditoría autorizado. Asociá el registro con el dispositivo correspondiente solo si la fuente realmente lo permite; no inferir identidad por el mero destinatario.
 
 La transferencia de los datos de la extensión a NetSentinel es manual. No hay sincronización central en vivo ni un conector de correo automático. Las sesiones de red del backend tampoco capturan tráfico por sí solas: necesitan una fuente compatible; aún no hay adaptador de router/AP ni agente de uso de aplicaciones.
 

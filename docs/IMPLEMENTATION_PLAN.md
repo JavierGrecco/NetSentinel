@@ -9,6 +9,7 @@
 - Sanitización URL en cliente y servidor; rechazo de columnas de cuerpo de correo, contenido y adjuntos.
 - Importaciones CSV manuales idempotentes: compara eventos normalizados del mismo dispositivo, omite duplicados exactos y muestra el recuento omitido.
 - Vista previa CSV de solo lectura: valida todas las filas, estima altas/duplicados y presenta hasta 10 filas de metadatos normalizados antes de guardar.
+- Filtros de actividad por dispositivo, tipo de evento y fechas UTC inclusivas; exportación CSV filtrada hasta 10.000 filas con neutralización de fórmulas de hoja de cálculo.
 - Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
 
 ## Límites actuales
@@ -28,8 +29,8 @@
 6. Probar instalación y flujo en Windows, macOS y Linux.
 
 ## P1 — Experiencia de importación
-1. Filtros por tipo, dispositivo, fuente y fechas; borrado/exportación selectiva.
-2. Tests adicionales de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
+1. Borrado selectivo por dispositivo/tipo/rango, con confirmación visible y pruebas de alcance.
+2. Filtros adicionales por fuente y tests de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
 3. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 
 ## P2 — Fuentes domésticas reales
