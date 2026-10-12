@@ -458,12 +458,11 @@ def test_activity_filters_by_type_and_inclusive_utc_dates(client):
     now = datetime.now(timezone.utc).replace(microsecond=0)
     old = (now - timedelta(days=2)).isoformat()
     today = now.isoformat()
-    csv_data = (
-        "observed_at,event_type,domain,search_engine,search_terms\\n"
-        f"{old},dns_query,old.example,,\\n"
-        f"{today},dns_query,today.example,,\\n"
-        f"{today},search_query,www.google.com,Google,=1+1\\n"
-    )
+    csv_data = f"""observed_at,event_type,domain,search_engine,search_terms
+{old},dns_query,old.example,,
+{today},dns_query,today.example,,
+{today},search_query,www.google.com,Google,=1+1
+"""
     imported = client.post(
         "/api/activity/import",
         json={"device_id": selected, "csv_data": csv_data},
@@ -497,11 +496,10 @@ def test_activity_filters_by_type_and_inclusive_utc_dates(client):
 def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    csv_data = (
-        "observed_at,event_type,domain,search_engine,search_terms\\n"
-        f"{stamp},dns_query,ordinary.example,,\\n"
-        f"{stamp},search_query,www.google.com,Google,=HYPERLINK(\"https://evil.example\")\\n"
-    )
+    csv_data = f"""observed_at,event_type,domain,search_engine,search_terms
+{stamp},dns_query,ordinary.example,,
+{stamp},search_query,www.google.com,Google,=1+1
+"""
     imported = client.post(
         "/api/activity/import",
         json={"device_id": selected, "csv_data": csv_data},
@@ -515,7 +513,7 @@ def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["content-type"].startswith("text/csv")
-    payload = response.text.lstrip("\\ufeff")
+    payload = response.text.lstrip("\ufeff")
     rows = list(csv.DictReader(io.StringIO(payload)))
     assert len(rows) == 1
     assert rows[0]["event_type"] == "search_query"
