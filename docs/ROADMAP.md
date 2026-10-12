@@ -58,13 +58,14 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] No realizar descifrado/proxy TLS general. Cualquier futura herramienta de diagnóstico TLS requiere diseño independiente, consentimiento visible, aislamiento y revisión de seguridad.
 
 ## Orden de trabajo recomendado
-1. Cerrar el fallo actual de CI y ejecutar toda la matriz; no declarar validada ninguna función antes de esa comprobación.
-2. Probar manualmente la extensión: navegación normal, SPA, Google/Bing/YouTube, exclusiones, pausa, retención, exportación e importación.
-3. Mejorar el importador con previsualización, validación, deduplicación y borrado/exportación selectiva.
-4. Elegir proveedor de correo y fuente concreta; primero solo auditoría de metadatos autorizada, nunca contenido.
-5. Elegir router/AP/resolvedor y desarrollar adaptador read-only con fixtures.
-6. Diseñar sincronización segura entre equipos; no exponer la API de ingestión en LAN sin autenticación.
-7. Añadir agente de uso de aplicaciones/tiempo de pantalla por SO.
+
+1. **Validación real y confianza en los resultados.** Ejecutar flujos manuales en Windows, macOS y Linux: inventario, DNS, monitorización, informes, extensión Chromium/Edge, importación/exportación y borrado selectivo. Probar TLS con certificados válidos, próximos a vencer, no confiables, puertos sin TLS y timeouts. La CI verde no sustituye estas comprobaciones.
+2. **Motor de hallazgos de seguridad.** Unificar cambios del inventario, dispositivos nuevos o modificados, monitores e inspecciones TLS en hallazgos con severidad, evidencia, procedencia, confianza y remediación sugerida. Separar hechos medidos de inferencias; no marcar como comprometido un equipo solo por ser desconocido.
+3. **Adaptador de infraestructura de solo lectura.** Elegir un router/AP/resolvedor concreto según hardware y APIs disponibles; incorporar DHCP, DNS o flujos realmente soportados con límites de tiempo, fixtures, origen de datos y pruebas sin equipo real. No prometer visibilidad completa sin una fuente que la provea.
+4. **Sincronización remota segura.** Antes de exponer NetSentinel a una LAN o desplegarlo en varias sedes, implementar autenticación, autorización por equipo/rol, alta explícita, credenciales revocables, transporte cifrado, protección contra repetición, límites de tasa y registro de auditoría.
+5. **Informes e integración SOC.** Añadir informes de hallazgos con evidencia y recomendaciones; después métricas Prometheus e integración SIEM. Una matriz de cobertura frente a NIST CSF 2.0/CISA CPG debe mostrar evidencia y brechas, nunca una certificación automática.
+6. **Ampliación de fuentes.** Incorporar enriquecimiento DNS opcional con fecha/procedencia, adaptador de auditoría de correo para un proveedor elegido y exportaciones selectivas. Priorizar Firefox y agente voluntario de uso de aplicaciones después de validar las funciones actuales y la política de datos.
+7. **Cierre de calidad.** Cada módulo requiere tests deterministas, CI multiplataforma, pruebas manuales cuando dependa de SO/navegador/router, documentación de permisos/retención y un mecanismo de desactivación y eliminación.
 
 ## Criterios para cerrar tareas
 1. Código integrado y revisado.
