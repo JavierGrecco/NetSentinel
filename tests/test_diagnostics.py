@@ -65,6 +65,7 @@ def test_dns_resolver_runs_isolated_process_with_explicit_timeout(monkeypatch):
     assert error is None
     assert calls["command"][0] == diagnostics.sys.executable
     assert calls["command"][1] == "-c"
+    compile(calls["command"][2], "<dns-resolver>", "exec")
     assert calls["command"][-1] == "example.com"
     assert calls["kwargs"]["timeout"] == 1.25
     assert calls["kwargs"]["capture_output"] is True
