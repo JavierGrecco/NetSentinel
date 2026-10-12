@@ -8,7 +8,8 @@ test("popup remains opt-in and manifest uses the narrow MV3 permission set", () 
   assert.equal(DEFAULTS.enabled, false);
   assert.equal(manifest.background.service_worker, "service-worker.js");
   assert.deepEqual([...manifest.permissions].sort(), ["storage", "webNavigation"].sort());
-  assert.deepEqual(manifest.host_permissions, ["http://*/*", "https://*/*"]);
+  assert.equal(Object.hasOwn(manifest, "host_permissions"), false);
+  assert.equal(Object.hasOwn(manifest, "optional_host_permissions"), false);
   assert.equal(Object.hasOwn(manifest, "incognito"), false);
   assert.ok(!manifest.permissions.includes("cookies"));
   assert.ok(!manifest.permissions.includes("history"));

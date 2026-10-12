@@ -2,6 +2,11 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Reduce los permisos de la extensión Chromium: elimina el acceso de host global innecesario y comprueba que no vuelva a solicitarse en las pruebas.
+- Añade guía de primer uso a la pantalla principal, con pasos simples para descubrir dispositivos, reconocerlos y revisar la confianza.
+- Distingue una búsqueda sin coincidencias de un inventario vacío para evitar mensajes confusos.
+- Incorpora validación sintáctica del JavaScript embebido del panel principal en GitHub Actions y actualiza la documentación de DNS y seguridad.
+
 - Añade pruebas del CSV del popup para fórmulas/escapado y validación CI de Manifest V3, permisos mínimos y apagado por defecto.
 - Amplía las pruebas Node del service worker para estados opt-in, frames/privado, exclusiones, toggles, retención y deduplicación de navegación.
 - Refuerza el saneamiento de URLs en extensión y backend con detección de OAuth/redirect, claves doblemente codificadas, más tracking, IPv6 canónico y redacción heurística de segmentos reconocibles; añade pruebas Python/Node a la CI.
@@ -21,7 +26,7 @@
 - Añade retención configurable entre 1 y 90 días, un resumen de dominios observados y límites de 1.000 eventos/1 MB por importación CSV.
 - Rechaza URLs/rutas y campos no admitidos, incluidos usuario, contraseña, tokens, cookies y payloads; el token de ingestión se almacena como hash.
 - Amplía la exportación JSON a `netsentinel-data-export-v4` para incluir sesiones y eventos de actividad sin exportar el hash del token.
-- Añade pruebas de API, fuente, sesión, importación, retención y redacción de credenciales; la CI todavía debe confirmar la ejecución de la suite.
+- Añade pruebas de API, fuente, sesión, importación, retención y redacción de credenciales; la suite se ejecuta en la matriz de CI multiplataforma.
 - Añade una ruta PTR por dispositivo bajo demanda y una acción en la tabla de inventario; no modifica los datos guardados y maneja dispositivos inexistentes o sin direcciones. La interfaz aclara que el nombre DNS no verifica identidad.
 - Valida nombres de host y devuelve direcciones IPv4/IPv6 deduplicadas.
 - Añade rutas API para consulta A/AAAA y DNS inverso PTR bajo demanda, con pruebas unitarias simuladas.

@@ -15,6 +15,21 @@
       <div class="actions"><button id="refreshBtn" class="quiet">↻ Actualizar</button><button id="diagBtn" class="quiet">◉ Diagnóstico</button><button id="scanBtn" class="primary">⌕ Descubrir dispositivos</button></div>
     </header>
     <div class="notice"><strong>Descubrimiento local bajo demanda.</strong> Al pulsar «Descubrir dispositivos», NetSentinel detecta automáticamente hasta dos subredes IPv4 privadas y envía un ping por dirección para ayudar a poblar la tabla local. No escanea Internet ni modifica dispositivos. Que un equipo no aparezca no significa que esté desconectado.</div>
+    <section class="getting-started" id="gettingStarted" aria-labelledby="gettingStartedTitle">
+      <div class="getting-started-head">
+        <div>
+          <h2 id="gettingStartedTitle">Empezá por acá</h2>
+          <p>Conocé los equipos que esta computadora alcanza a ver, sin cambiar la configuración de tu red.</p>
+        </div>
+        <button type="button" id="gettingStartedScanBtn" class="primary">Descubrir dispositivos</button>
+      </div>
+      <ol class="getting-started-steps">
+        <li><strong>Hacé una lectura</strong><span>Pulsá «Descubrir dispositivos». NetSentinel consulta una cantidad limitada de direcciones de tu red local.</span></li>
+        <li><strong>Reconocé tus equipos</strong><span>Buscá por IP o fabricante y asigná nombres claros, como “Notebook” o “Televisor”.</span></li>
+        <li><strong>Marcá los conocidos</strong><span>La marca de confianza refleja tu decisión; no es un análisis automático de seguridad.</span></li>
+      </ol>
+      <p class="getting-started-note">Si no aparece un equipo, no significa necesariamente que esté desconectado: algunos dispositivos no responden a las comprobaciones.</p>
+    </section>
     <section class="metrics" aria-label="Resumen">
       <div class="metric"><div class="metric-label">Dispositivos registrados</div><div class="metric-value" id="totalMetric">—</div><div class="metric-help">MAC únicas vistas</div></div>
       <div class="metric"><div class="metric-label">De confianza</div><div class="metric-value" id="trustedMetric">—</div><div class="metric-help">Confirmados por vos</div></div>
@@ -68,12 +83,21 @@
       state.devices=devices;state.events=events;state.scans=scans;
       $('totalMetric').textContent=summary.devices_total;$('trustedMetric').textContent=summary.devices_trusted;$('unknownMetric').textContent=summary.devices_untrusted;$('eventsMetric').textContent=summary.events_pending;
       $('lastScanMetric').textContent=summary.last_scan?`Última lectura: ${dateTime(summary.last_scan)}`:'Última lectura: todavía ninguna';
+      $('gettingStarted').hidden=Number(summary.devices_total)>0;
       renderDevices();renderEvents();renderScans();
     } catch(error) { toast(`No se pudo actualizar: ${error.message}`); }
   }
   function renderDevices() {
     const tbody=$('devicesBody');$('deviceCount').textContent=`${state.devices.length} dispositivo${state.devices.length===1?'':'s'}`;
-    if(!state.devices.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><strong>Inventario vacío</strong>Leé las tablas de vecinos o conectá el equipo a una red y generá tráfico normal para que el sistema aprenda vecinos.</div></td></tr>';return;}
+    if(!state.devices.length){
+      const searching=$('searchInput').value.trim().length>0;
+      const title=searching?'No encontramos coincidencias':'Todavía no hay dispositivos';
+      const message=searching
+        ?'Probá con otra IP, dirección MAC, fabricante o nombre.'
+        :'Conectá tus equipos a la red y pulsá «Descubrir dispositivos». La búsqueda es local y algunos equipos no responden.';
+      tbody.innerHTML='<tr><td colspan="6"><div class="empty"><strong>'+title+'</strong>'+message+'</div></td></tr>';
+      return;
+    }
     const localAddresses=latestLocalAddresses();
     tbody.innerHTML=state.devices.map(d=>`<tr><td><div class="device-name">${escapeHtml(d.display_name||d.ip_address||'Dispositivo')}</div><div class="device-meta">IP principal: ${escapeHtml(d.ip_address)} · visto ${escapeHtml(dateTime(d.first_seen))}</div>${localAddresses.has(d.ip_address)?'<div class="device-meta">IP local de esta computadora según la última lectura</div>':''}<details><summary>${(d.addresses||[]).length||1} dirección(es) observada(s)</summary><div>${(d.addresses||[]).map(a=>`<div class="device-meta">${escapeHtml(a.ip_address)} · última: ${escapeHtml(dateTime(a.last_seen))} · ${escapeHtml(a.source||'origen desconocido')}</div>`).join('')}</div></details></td><td><code>${escapeHtml(d.mac_address)}</code><div class="device-meta" title="${escapeHtml(d.manufacturer_source||'No se configuró una base OUI local')}${d.manufacturer_checked_at?' · consultada: '+escapeHtml(dateTime(d.manufacturer_checked_at)):''}">${escapeHtml(d.manufacturer||'Fabricante sin identificar')}${d.mac_locally_administered?' · MAC local (posiblemente aleatoria)':''}</div></td><td>${escapeHtml(d.interface||'—')}${['awdl0','llw0'].includes(String(d.interface||'').toLowerCase())?'<div class="device-meta">Interfaz Apple de enlace local (virtual)</div>':''}</td><td><span class="pill ${d.trusted?'good':'warn'}">${d.trusted?'✓ De confianza':'! Pendiente'}</span></td><td>${escapeHtml(dateTime(d.last_seen))}</td><td><div style="display:flex;gap:5px"><button class="tiny quiet" data-history="${d.id}">Historial</button><button class="tiny quiet" data-edit="${d.id}">Editar</button><button class="tiny quiet" data-ptr="${d.id}" title="Consultar DNS inverso bajo demanda">DNS PTR</button><button class="tiny ${d.trusted?'quiet':'primary'}" data-trust="${d.id}" data-next="${!d.trusted}">${d.trusted?'Revocar confianza':'Marcar conocido'}</button></div></td></tr>`).join('');
     tbody.querySelectorAll('[data-ptr]').forEach(button=>button.addEventListener('click',async()=>{
@@ -122,6 +146,7 @@
       return `<div class="event"><div class="dot ${scan.errors&&scan.errors.length?'':'info'}"></div><div><div class="event-title">Lectura #${scan.id} · ${Number(scan.devices_found)} dispositivo(s)</div><div class="event-meta">${escapeHtml(dateTime(scan.started_at))} · Fuente: ${escapeHtml(scan.source||'—')}</div>${networks?`<div class="event-message">Redes detectadas: ${networks}</div>`:''}${summary?`<div class="event-message">${escapeHtml(summary)}</div>`:''}${duration?`<div class="event-message">${escapeHtml(duration)}</div>`:''}<div class="event-message">${scan.errors&&scan.errors.length?escapeHtml(scan.errors.join(' · ')):'Sin errores informados por las fuentes disponibles.'}</div></div></div>`;
     }).join('');
   }
+  $('gettingStartedScanBtn').addEventListener('click',()=>$('scanBtn').click());
   $('scanBtn').addEventListener('click',async()=>{if(!window.confirm('NetSentinel detectará automáticamente hasta dos subredes IPv4 privadas y consultará hasta 254 direcciones por subred con un solo ping por dirección. Esto genera tráfico en tu red local, sin modificar equipos ni explorar Internet. ¿Querés continuar?'))return;const button=$('scanBtn');button.disabled=true;button.textContent='Buscando…';try{const result=await api('/api/scan',{method:'POST'});const errors=(result.errors||[]).length?` Avisos: ${result.errors.join(' · ')}`:'';const scope=result.discovery?.networks||[];const networkText=scope.length?' Redes: '+scope.map(n=>n.network+' ('+n.interface+')').join(', ')+'. Direcciones consultadas: '+(result.discovery.addresses_checked||0)+'; respuestas ping: '+(result.discovery.ping_responses||0)+'.':'';toast(`${result.message} Equipos: ${result.devices_found}; direcciones: ${result.addresses_found}; nuevos: ${result.new_devices}.${networkText}${errors}`);await refresh();}catch(error){toast(`Falló el descubrimiento: ${error.message}`);}finally{button.disabled=false;button.textContent='⌕ Descubrir dispositivos';}});
   $('closeHistory').addEventListener('click',()=>$('historyDialog').close());
   $('cancelEdit').addEventListener('click',()=>$('editDialog').close());

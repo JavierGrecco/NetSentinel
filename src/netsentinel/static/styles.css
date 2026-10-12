@@ -10,3 +10,17 @@
 .diagnosis-steps li+li{margin-top:4px}
 
 .scan-scope{font-size:12px;line-height:1.6}
+
+
+/* First-run guidance: progressive disclosure, clear steps, compact layout. */
+.getting-started{border:1px solid #29465e;background:linear-gradient(145deg,rgba(18,39,59,.96),rgba(16,26,42,.96));border-radius:15px;padding:18px;margin-bottom:22px}
+.getting-started[hidden]{display:none}
+.getting-started-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.getting-started-head h2{font-size:17px;margin:0;letter-spacing:-.02em}
+.getting-started-head p{color:var(--muted);font-size:12px;line-height:1.5;margin:5px 0 0}
+.getting-started-steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0;margin:16px 0 0}
+.getting-started-steps li{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:11px;background:rgba(6,15,27,.34)}
+.getting-started-steps li strong{font-size:12px;color:var(--text)}
+.getting-started-steps li span{font-size:11px;line-height:1.55;color:var(--muted)}
+.getting-started-note{font-size:11px;line-height:1.5;color:#b9c8db;margin:12px 0 0}
+@media(max-width:700px){.getting-started-head{align-items:stretch;flex-direction:column}.getting-started-head button{width:100%}.getting-started-steps{grid-template-columns:1fr}.getting-started-steps li{padding:10px}}
