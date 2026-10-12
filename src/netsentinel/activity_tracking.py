@@ -514,6 +514,20 @@ def ingest_event(
             raise PermissionError("La sesión no está activa; iniciá otra ventana de seguimiento.")
         if event["source"] != session["source_mode"]:
             raise ValueError("La fuente del evento no coincide con la fuente elegida para esta sesión.")
+
+        # Live collectors can deliver delayed telemetry. Do not accept an event
+        # older than the active retention window only to delete it on the next read.
+        retention_row = db.execute(
+            "SELECT retention_days FROM activity_settings WHERE id = 1"
+        ).fetchone()
+        retention_days = int(retention_row["retention_days"]) if retention_row else 7
+        retention_cutoff = _iso(_now() - timedelta(days=retention_days))
+        if event["observed_at"] < retention_cutoff:
+            raise ValueError(
+                f"La fecha queda fuera de la retención configurada de {retention_days} día(s). "
+                "No se guardó el evento."
+            )
+
         cursor = db.execute(
             """INSERT INTO activity_events
                (session_id, device_id, observed_at, received_at, event_type, source, domain,

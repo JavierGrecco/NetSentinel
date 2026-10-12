@@ -108,6 +108,34 @@ def test_session_accepts_valid_metadata_only_during_active_window(client):
     assert bad_token.status_code == 403
 
 
+def test_live_ingest_rejects_events_outside_configured_retention(client):
+    selected = device_id(client)
+    retention = client.put("/api/activity/retention", json={"retention_days": 1})
+    assert retention.status_code == 200
+
+    session = client.post(
+        "/api/activity/sessions",
+        json={"device_id": selected, "duration_minutes": 30, "source_mode": "router_dns"},
+    ).json()
+    old_timestamp = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(timespec="seconds")
+    response = client.post(
+        "/api/activity/ingest",
+        json={
+            "session_id": session["id"],
+            "collector_token": session["collector_token"],
+            "device_id": selected,
+            "event_type": "dns_query",
+            "source": "router_dns",
+            "domain": "delayed.example",
+            "observed_at": old_timestamp,
+        },
+    )
+
+    assert response.status_code == 422
+    assert "retención configurada de 1 día(s)" in response.json()["detail"]
+    assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+
 def test_ingest_rejects_wrong_source_unknown_session_and_inactive_session(client):
     selected = device_id(client)
     session = client.post(
