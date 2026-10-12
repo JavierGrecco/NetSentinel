@@ -3,6 +3,7 @@
 ## Próxima versión — 0.10.0 (en desarrollo)
 
 - Bloquea llamadas cross-site a endpoints GET que generan consultas DNS/PTR mediante Fetch Metadata y validación de `Origin`; añade regresiones que verifican que el resolvedor no se invoca y que las consultas de mismo origen siguen funcionando.
+- Serializa las mutaciones del listado de eventos Chromium (navegación, limpieza inicial y borrado explícito) en el service worker; el popup deja de escribir snapshots de eventos al renderizar. Añade regresiones para capturas simultáneas, orden de borrado y exclusión de IPv4-mapped IPv6/links locales IPv6 del registro de navegación.
 - Elimina la última excepción `script-src unsafe-inline`: reemplaza la ruta autogenerada de Swagger UI por un endpoint explícito que calcula una CSP con hash SHA-256 del inicializador de cada respuesta, manteniendo el CDN restringido a `/api/docs`.
 - Retira `style-src unsafe-inline` de las cinco pantallas principales y de `/api/docs`: externaliza el CSS específico de Actividad, Herramientas y Hallazgos, sustituye estilos inline por clases y verifica las nuevas hojas en el wheel.
 - Elimina `unsafe-inline` de `script-src` en las cinco pantallas principales: autoriza los scripts inline mediante hashes SHA-256 específicos por página y agrega pruebas para evitar handlers inline. El inicializador dinámico de Swagger UI queda como la única excepción pendiente para esa política.

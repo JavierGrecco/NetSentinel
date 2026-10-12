@@ -20,7 +20,8 @@ async function getState() {
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
     .filter(event => Date.parse(event.observed_at) >= cutoff).slice(-1000);
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings, [EVENTS_KEY]: events });
+  // Reading/rendering must not write a stale event snapshot back over new
+  // navigation events created by the service worker in another extension context.
   return { settings, events };
 }
 function renderRecent(events) {
@@ -94,8 +95,13 @@ function initializePopup() {
   $("export").addEventListener("click", async () => { const { events } = await getState(); if (events.length) exportCsv(events); });
   $("clear").addEventListener("click", async () => {
     if (!window.confirm("Se borrarán todos los registros que esta extensión conserva en este navegador. ¿Continuar?")) return;
-    await chrome.storage.local.set({ [EVENTS_KEY]: [] });
-    await render();
+    try {
+      const response = await chrome.runtime.sendMessage({ type: "NETSENTINEL_CLEAR_EVENTS" });
+      if (!response || response.ok !== true) throw new Error("clear failed");
+      await render();
+    } catch {
+      $("statusText").textContent = "No se pudieron borrar los registros. Volvé a intentarlo.";
+    }
   });
   void render();
 }
