@@ -1,3 +1,5 @@
+import subprocess
+
 from netsentinel import diagnostics
 
 
@@ -43,3 +45,61 @@ def test_assessment_recognizes_icmp_may_be_filtered():
     result = diagnostics.build_assessment(_checks(router="warning"))
     assert result["status"] == "ok"
     assert "bloquear ICMP" in result["summary"]
+
+
+
+def test_dns_resolver_runs_isolated_process_with_explicit_timeout(monkeypatch):
+    calls = {}
+
+    def fake_run(command, **kwargs):
+        calls["command"] = command
+        calls["kwargs"] = kwargs
+        return subprocess.CompletedProcess(
+            command, 0, stdout='["192.0.2.10", "2001:db8::10"]', stderr=""
+        )
+
+    monkeypatch.setattr(diagnostics.subprocess, "run", fake_run)
+    addresses, error = diagnostics._resolve_hostname("example.com", timeout=1.25)
+
+    assert addresses == ["192.0.2.10", "2001:db8::10"]
+    assert error is None
+    assert calls["command"][0] == diagnostics.sys.executable
+    assert calls["command"][1] == "-c"
+    assert calls["command"][-1] == "example.com"
+    assert calls["kwargs"]["timeout"] == 1.25
+    assert calls["kwargs"]["capture_output"] is True
+
+
+def test_dns_resolver_reports_timeout_without_waiting_indefinitely(monkeypatch):
+    def timeout_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(diagnostics.subprocess, "run", timeout_run)
+    addresses, error = diagnostics._resolve_hostname("example.com", timeout=0.5)
+
+    assert addresses == []
+    assert error == "timeout"
+
+
+def test_dns_resolver_rejects_failed_child_response(monkeypatch):
+    monkeypatch.setattr(
+        diagnostics.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(
+            command, 1, stdout='{"error":"gaierror"}', stderr=""
+        ),
+    )
+
+    addresses, error = diagnostics._resolve_hostname("example.com")
+
+    assert addresses == []
+    assert error == "error"
+
+
+def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
+    result = diagnostics.build_assessment(_checks(dns="timeout", external="ok"))
+
+    assert result["status"] == "warning"
+    assert result["title"] == "La consulta DNS tardó demasiado"
+    assert "no confirma una avería permanente" in result["summary"]
+    assert any("No cambies" in step for step in result["next_steps"])

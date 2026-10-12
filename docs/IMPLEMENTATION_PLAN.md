@@ -46,7 +46,7 @@
 4. Añadir agente opcional de uso de aplicaciones/tiempo de pantalla por SO, sin keylogging ni captura de contenido.
 
 ## P3 — Resto del plan conservado
-- DNS: timeout propio, pruebas multiplataforma y enriquecimiento opcional del inventario.
+- DNS: el diagnóstico ahora aplica un timeout cancelable a la resolución; queda pendiente el enriquecimiento opcional del inventario con procedencia, fecha y control de desactivación.
 - Infraestructura: adaptadores DHCP/router/SNMP y gestión segura de secretos.
 - Observabilidad: topología, métricas Prometheus y perfiles multired.
 - Extensión Firefox y otros navegadores compatibles.

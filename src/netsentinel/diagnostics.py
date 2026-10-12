@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import platform
 import re
-import socket
 import subprocess
+import sys
 from datetime import datetime, timezone
 from typing import Any
 
@@ -40,6 +41,47 @@ def find_default_gateway() -> str | None:
     return None
 
 
+def _resolve_hostname(hostname: str, timeout: float = 3.0) -> tuple[list[str], str | None]:
+    """Resolve a host in a killable child process with a strict timeout.
+
+    A timeout in the calling thread does not stop the operating system resolver.
+    The child process can be terminated when the deadline expires.
+    """
+    resolver_script = chr(10).join(
+        [
+            "import json, socket, sys",
+            "try:",
+            "    addresses = sorted({item[4][0] for item in socket.getaddrinfo(sys.argv[1], 443, type=socket.SOCK_STREAM)})",
+            "    print(json.dumps(addresses))",
+            "except OSError as exc:",
+            "    print(json.dumps({'error': type(exc).__name__}))",
+            "    sys.exit(1)",
+        ]
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", resolver_script, hostname],
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return [], "timeout"
+    except OSError:
+        return [], "unavailable"
+
+    try:
+        payload = json.loads(result.stdout.strip())
+    except (json.JSONDecodeError, TypeError):
+        return [], "error"
+    if result.returncode != 0 or not isinstance(payload, list):
+        return [], "error"
+    if not all(isinstance(address, str) for address in payload):
+        return [], "error"
+    return sorted(set(payload)), None
+
 
 def _ping_command(target: str) -> list[str]:
     """Construye el ping con flags y unidades apropiadas al sistema operativo."""
@@ -60,7 +102,30 @@ def build_assessment(checks: list[dict[str, Any]]) -> dict[str, Any]:
     dns = statuses.get("Resolución DNS")
     external = statuses.get("Conectividad IP externa")
 
-    if dns == "ok" and external == "ok":
+    if dns == "timeout":
+        title = "La consulta DNS tardó demasiado"
+        if external == "ok":
+            summary = (
+                "La prueba IP externa respondió, pero la consulta DNS superó el límite de espera. "
+                "Puede ser un resolvedor lento o un problema temporal; no confirma una avería permanente."
+            )
+            next_steps = [
+                "Volvé a ejecutar el diagnóstico una vez para comprobar si fue algo transitorio.",
+                "Probá abrir un sitio HTTPS desde el navegador.",
+                "No cambies la configuración DNS hasta tener una segunda señal del problema.",
+            ]
+        else:
+            summary = (
+                "La consulta DNS superó el límite de espera y la prueba de ping externa tampoco respondió. "
+                "Con estos datos no se puede determinar una causa única."
+            )
+            next_steps = [
+                "Confirmá que Wi-Fi o Ethernet estén conectados y probá abrir un sitio HTTPS.",
+                "Si el problema continúa, revisá la VPN o consultá al administrador de la red.",
+                "Volvé a ejecutar el diagnóstico antes de modificar DNS o firewall.",
+            ]
+        status = "warning"
+    elif dns == "ok" and external == "ok":
         if router == "warning":
             title = "La conectividad funciona; el router no respondió al ping"
             summary = (
@@ -164,11 +229,25 @@ def run_diagnostics() -> dict[str, Any]:
     else:
         checks.append({"name": "Respuesta del router", "status": "skipped", "detail": "No se encontró la puerta de enlace para probarla."})
 
-    try:
-        addresses = sorted({result[4][0] for result in socket.getaddrinfo("example.com", 443, type=socket.SOCK_STREAM)})
-        checks.append({"name": "Resolución DNS", "status": "ok", "detail": f"example.com resolvió a {', '.join(addresses[:3])}."})
-    except socket.gaierror as exc:
-        checks.append({"name": "Resolución DNS", "status": "warning", "detail": f"No se pudo resolver example.com: {exc}"})
+    addresses, dns_error = _resolve_hostname("example.com", timeout=3.0)
+    if dns_error == "timeout":
+        checks.append({
+            "name": "Resolución DNS",
+            "status": "timeout",
+            "detail": "La consulta superó el límite de 3 segundos. La espera se detuvo para que el diagnóstico pueda continuar.",
+        })
+    elif dns_error:
+        checks.append({
+            "name": "Resolución DNS",
+            "status": "warning",
+            "detail": "El resolvedor no pudo completar la consulta de example.com. Puede ser un problema temporal o de configuración.",
+        })
+    else:
+        checks.append({
+            "name": "Resolución DNS",
+            "status": "ok",
+            "detail": f"example.com resolvió a {', '.join(addresses[:3])}.",
+        })
 
     ping_target = "1.1.1.1"
     result = _run(_ping_command(ping_target), timeout=3.5)
