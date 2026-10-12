@@ -6,7 +6,7 @@ NetSentinel comprueba tres tipos de objetivo:
 - **TCP:** comprueba si se puede establecer una conexión con un puerto.
 - **HTTP/HTTPS:** realiza una petición GET al endpoint indicado sin seguir redirecciones.
 
-Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 segundos. Cada resultado guarda fecha, estado, detalle y latencia cuando está disponible. El primer fallo abre un incidente. Los fallos siguientes actualizan ese incidente; el primer resultado correcto lo resuelve.
+Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 segundos. Cada resultado guarda fecha, estado, detalle y latencia cuando está disponible. El primer fallo abre un incidente. Los fallos siguientes actualizan ese incidente; el primer resultado correcto lo resuelve. Si una comprobación falla por una excepción interna (por ejemplo, una carrera al eliminar el monitor o un error de almacenamiento), el supervisor registra el fallo y continúa con los demás monitores. Solo ese monitor entra en reintento exponencial de 2 a 60 segundos, para evitar bloquear la cola y generar logs continuamente.
 
 Las comprobaciones TCP y HTTP/HTTPS se ejecutan en un proceso hijo terminable, con un límite total de `timeout_seconds + 1` segundo de margen para iniciar Python. Esto cubre también una resolución DNS del sistema bloqueada, que no siempre queda contenida por el timeout del socket. Un resultado agotado se registra como caída sin exponer URLs completas ni detalles del resolvedor. Ping mantiene su proceso y timeout nativo por sistema operativo. El webhook opcional usa otro proceso aislado con límite total de 5 segundos, para que un DNS HTTPS o servidor lento no congele el supervisor secuencial.
 
