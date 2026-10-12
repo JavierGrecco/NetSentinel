@@ -231,10 +231,14 @@ async def protect_local_app(request: Request, call_next):
             )
 
     if request.method.upper() in _MUTATING_METHODS:
-        fetch_site = request.headers.get("sec-fetch-site", "").lower()
-        if fetch_site == "cross-site":
+        fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+        # Reject same-site as well as cross-site requests. A malicious sibling
+        # origin may be "same-site" without being the exact UI origin; browser
+        # Fetch Metadata is available even when an Origin header is omitted.
+        non_same_origin_fetch = fetch_site and fetch_site not in {"same-origin", "none"}
+        if non_same_origin_fetch:
             return _apply_security_headers(
-                JSONResponse(status_code=403, content={"detail": "Solicitud entre sitios bloqueada."})
+                JSONResponse(status_code=403, content={"detail": "Solicitud desde otro origen bloqueada."})
             )
         origin = request.headers.get("origin")
         if origin and not _same_origin(origin, request):

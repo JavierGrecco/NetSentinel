@@ -155,12 +155,22 @@ def test_csrf_guard_rejects_cross_origin_mutations(monkeypatch, tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         origin_response = client.post("/api/scan", headers={"Origin": "http://attacker.example"})
         fetch_response = client.post("/api/scan", headers={"Sec-Fetch-Site": "cross-site"})
+        same_site_response = client.patch("/api/devices/999", json={"trusted": True}, headers={"Sec-Fetch-Site": "same-site"})
         malformed_response = client.post("/api/scan", headers={"Origin": "http://["})
+        same_origin_response = client.patch(
+            "/api/devices/999",
+            json={"trusted": True},
+            headers={"Sec-Fetch-Site": "same-origin", "Origin": "http://127.0.0.1"},
+        )
     assert origin_response.status_code == 403
     assert fetch_response.status_code == 403
+    assert same_site_response.status_code == 403
     assert malformed_response.status_code == 403
+    # A legitimate same-origin browser request is not rejected by Fetch Metadata.
+    assert same_origin_response.status_code == 404
     assert origin_response.json()["detail"] == "Origen no permitido para esta operación."
-    assert fetch_response.json()["detail"] == "Solicitud entre sitios bloqueada."
+    assert fetch_response.json()["detail"] == "Solicitud desde otro origen bloqueada."
+    assert same_site_response.json()["detail"] == "Solicitud desde otro origen bloqueada."
     assert malformed_response.json()["detail"] == "Origen no permitido para esta operación."
 
 
