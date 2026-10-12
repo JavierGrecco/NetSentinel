@@ -40,7 +40,10 @@ _DUPLICATE_MONITOR_EVENT_TYPES = ("monitor_down", "monitor_recovered")
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     database.initialize()
     scheduler_disabled = os.environ.get("NETSENTINEL_DISABLE_SCHEDULER", "").strip().lower() in {"1", "true", "yes"}
-    if not scheduler_disabled:
+    if scheduler_disabled:
+        # Keep retention deterministic in local/test deployments that disable the scheduler.
+        _supervisor.cleanup_history_if_due(force=True)
+    else:
         _supervisor.start()
     try:
         yield

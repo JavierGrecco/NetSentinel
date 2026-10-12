@@ -95,6 +95,8 @@ En el panel, elegí **Monitorización** y agregá un control:
 
 Los intervalos permitidos van de 15 segundos a 24 horas. Al detectar una caída se abre un incidente; los fallos siguientes actualizan ese mismo incidente y el primer resultado correcto lo cierra.
 
+El historial detallado de comprobaciones se conserva 90 días por defecto. Podés ajustar la política con `NETSENTINEL_MONITOR_HISTORY_DAYS` (1–3650 días) o usar `0` para desactivar la limpieza y conservarlo indefinidamente. La limpieza elimina solo muestras antiguas de comprobación, no incidentes, estados actuales ni el inventario. Consultá la [guía de monitorización](docs/MONITORING.md) para ejemplos y límites.
+
 ### Avisos opcionales
 
 NetSentinel funciona sin notificaciones externas. Para enviar avisos de caída y recuperación, configurá la variable `NETSENTINEL_WEBHOOK_URL` con la URL HTTPS de tu webhook antes de iniciar el programa. Tratá esa URL como una contraseña y no la subas al repositorio.

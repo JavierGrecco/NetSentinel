@@ -6,6 +6,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Inventario local, observaciones, historial de direcciones, etiquetas de confianza y eventos.
 - [x] Descubrimiento local explícito y acotado a subredes privadas.
 - [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
+- [x] Retención configurable de muestras detalladas de monitorización (90 días por defecto, 1–3650 configurable, o desactivación explícita); limpieza diaria que preserva incidentes, estado actual e inventario, con pruebas deterministas.
 - [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
 - [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
 - [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
