@@ -232,3 +232,47 @@ def test_monitor_history_retention_rejects_unsafe_days(tmp_path: Path):
             pass
         else:
             raise AssertionError(f"Invalid retention value should be rejected: {value!r}")
+
+
+
+def test_connect_never_changes_permissions_of_an_existing_parent(tmp_path, monkeypatch):
+    import os
+
+    shared_parent = tmp_path / "shared"
+    shared_parent.mkdir()
+    db_path = shared_parent / "netsentinel.sqlite3"
+    real_chmod = os.chmod
+    chmod_calls = []
+
+    def tracked_chmod(path, mode):
+        chmod_calls.append((Path(path), mode))
+        return real_chmod(path, mode)
+
+    monkeypatch.setattr(database.os, "chmod", tracked_chmod)
+    with database.connect(db_path):
+        pass
+
+    assert (shared_parent, 0o700) not in chmod_calls
+    if os.name == "posix":
+        assert (db_path, 0o600) in chmod_calls
+    else:
+        assert chmod_calls == []
+
+
+def test_connect_creates_new_nested_directories_with_private_permissions(tmp_path):
+    import os
+    import stat
+
+    shared_parent = tmp_path / "shared"
+    shared_parent.mkdir()
+    destination = shared_parent / "nested" / "netsentinel-data"
+    db_path = destination / "netsentinel.sqlite3"
+
+    with database.connect(db_path):
+        pass
+
+    assert db_path.is_file()
+    if os.name == "posix":
+        assert stat.S_IMODE((shared_parent / "nested").stat().st_mode) == 0o700
+        assert stat.S_IMODE(destination.stat().st_mode) == 0o700
+        assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
