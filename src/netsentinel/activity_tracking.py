@@ -660,8 +660,9 @@ def _activity_filter_values(
     event_type: str | None,
     from_date: str | None,
     to_date: str | None,
+    source: str | None = None,
 ) -> tuple[list[str], list[Any]]:
-    """Validate activity filters; calendar dates are inclusive and interpreted in UTC."""
+    """Validate event type/source and inclusive UTC calendar-date filters."""
     clauses: list[str] = []
     params: list[Any] = []
     if event_type not in (None, ""):
@@ -670,6 +671,13 @@ def _activity_filter_values(
             raise ValueError("El tipo de evento no es válido.")
         clauses.append("event_type = ?")
         params.append(normalized_type)
+
+    if source not in (None, ""):
+        normalized_source = str(source).strip().lower()
+        if normalized_source not in EVENT_SOURCES and normalized_source != "manual_import":
+            raise ValueError("La fuente de actividad no es válida.")
+        clauses.append("source = ?")
+        params.append(normalized_source)
 
     parsed_from: datetime | None = None
     parsed_to: datetime | None = None
@@ -708,11 +716,12 @@ def _activity_delete_scope(
     event_type: str | None,
     from_date: str | None,
     to_date: str | None,
+    source: str | None = None,
 ) -> tuple[str, tuple[Any, ...]]:
     """Build a scoped DELETE/COUNT predicate; an unbounded operation is never allowed."""
-    if device_id is None and event_type in (None, "") and from_date in (None, "") and to_date in (None, ""):
-        raise ValueError("Elegí al menos un alcance: dispositivo, tipo de evento o fechas.")
-    clauses, params = _activity_filter_values(event_type, from_date, to_date)
+    if device_id is None and event_type in (None, "") and from_date in (None, "") and to_date in (None, "") and source in (None, ""):
+        raise ValueError("Elegí al menos un alcance: dispositivo, tipo de evento, fuente o fechas.")
+    clauses, params = _activity_filter_values(event_type, from_date, to_date, source)
     if device_id is not None:
         if int(device_id) < 1:
             raise ValueError("device_id debe ser un entero positivo.")
@@ -726,9 +735,10 @@ def preview_delete_activity(
     event_type: str | None = None,
     from_date: str | None = None,
     to_date: str | None = None,
+    source: str | None = None,
 ) -> dict[str, Any]:
     """Count matching activity rows without writing or running retention cleanup."""
-    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date)
+    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date, source)
     with database.connect() as db:
         if device_id is not None and db.execute(
             "SELECT 1 FROM devices WHERE id = ?", (device_id,)
@@ -742,6 +752,7 @@ def preview_delete_activity(
         "event_type": event_type or None,
         "from_date": from_date or None,
         "to_date": to_date or None,
+        "source": source or None,
         "matching_events": count,
         "confirmation_required": f"BORRAR {count}",
         "deleted": False,
@@ -755,9 +766,10 @@ def delete_activity(
     from_date: str | None,
     to_date: str | None,
     confirmation: str,
+    source: str | None = None,
 ) -> dict[str, Any]:
     """Delete only a scoped selection after matching the exact current count."""
-    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date)
+    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date, source)
     if not isinstance(confirmation, str) or len(confirmation) > 40:
         raise PermissionError("La frase de confirmación no es válida.")
 
@@ -786,6 +798,7 @@ def delete_activity(
         "event_type": event_type or None,
         "from_date": from_date or None,
         "to_date": to_date or None,
+        "source": source or None,
         "note": "Se borraron únicamente los eventos que coincidían con el alcance confirmado.",
     }
 
@@ -796,9 +809,10 @@ def export_activity_csv(
     from_date: str | None = None,
     to_date: str | None = None,
     limit: int = 10000,
+    source: str | None = None,
 ) -> str:
     """Export up to 10,000 filtered activity metadata rows as formula-safe CSV."""
-    clauses, filter_params = _activity_filter_values(event_type, from_date, to_date)
+    clauses, filter_params = _activity_filter_values(event_type, from_date, to_date, source)
     if device_id is not None:
         if int(device_id) < 1:
             raise ValueError("device_id debe ser un entero positivo.")
@@ -862,8 +876,9 @@ def get_activity(
     event_type: str | None = None,
     from_date: str | None = None,
     to_date: str | None = None,
+    source: str | None = None,
 ) -> dict[str, Any]:
-    event_clauses, event_params = _activity_filter_values(event_type, from_date, to_date)
+    event_clauses, event_params = _activity_filter_values(event_type, from_date, to_date, source)
     if device_id is not None:
         if int(device_id) < 1:
             raise ValueError("device_id debe ser un entero positivo.")
@@ -920,6 +935,7 @@ def get_activity(
         "active_sessions": int(active_count),
         "total_events": int(event_count),
         "sources": sorted(SESSION_SOURCES),
+        "activity_sources": sorted(EVENT_SOURCES | {"manual_import"}),
         "event_types": sorted(EVENT_TYPES),
         "note": (
             "La aplicación no captura tráfico por sí misma. El correo solo se incorpora como metadatos importados "
