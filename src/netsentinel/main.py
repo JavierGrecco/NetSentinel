@@ -203,6 +203,7 @@ class ActivityDeleteSelection(BaseModel):
 
     device_id: int | None = Field(default=None, ge=1)
     event_type: str | None = Field(default=None, max_length=32)
+    source: str | None = Field(default=None, max_length=32)
     from_date: str | None = Field(default=None, min_length=10, max_length=10)
     to_date: str | None = Field(default=None, min_length=10, max_length=10)
 
@@ -312,13 +313,14 @@ def get_family_activity(
     device_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=100, ge=1, le=500),
     event_type: str | None = Query(default=None),
+    source: str | None = Query(default=None, max_length=32),
     from_date: str | None = Query(default=None, min_length=10, max_length=10),
     to_date: str | None = Query(default=None, min_length=10, max_length=10),
 ) -> dict:
     """Devuelve sesiones y metadatos, aplicando filtros solo a la lista de eventos."""
     try:
         return activity_tracking.get_activity(
-            device_id=device_id, limit=limit, event_type=event_type,
+            device_id=device_id, limit=limit, event_type=event_type, source=source,
             from_date=from_date, to_date=to_date,
         )
     except LookupError as exc:
@@ -338,7 +340,7 @@ def export_family_activity_csv(
     """Exporta metadatos filtrados sin fórmulas activas en texto CSV."""
     try:
         content = activity_tracking.export_activity_csv(
-            device_id=device_id, event_type=event_type,
+            device_id=device_id, event_type=event_type, source=source,
             from_date=from_date, to_date=to_date, limit=limit,
         )
     except LookupError as exc:
@@ -434,6 +436,7 @@ def delete_family_activity(body: ActivityDeleteRequest) -> dict:
             from_date=body.from_date,
             to_date=body.to_date,
             confirmation=body.confirmation,
+            source=body.source,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
