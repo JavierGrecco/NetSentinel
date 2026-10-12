@@ -165,10 +165,67 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
         "connect-src 'self'",
     ):
         assert directive in policy
-    # App screens currently contain inline JS/CSS, so unsafe-inline remains an
-    # explicit compatibility constraint until those assets can be externalized.
-    assert "script-src 'self' 'unsafe-inline'" in policy
+    script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
+    assert "'unsafe-inline'" not in script_policy
     assert "https://cdn.jsdelivr.net" not in policy
+    assert "style-src 'self' 'unsafe-inline'" in policy  # Inline style attributes remain pending CSS externalization
+
+
+@pytest.mark.parametrize(
+    ("route", "asset"),
+    [
+        ("/", "index.html"),
+        ("/monitors", "monitors.html"),
+        ("/activity", "activity.html"),
+        ("/tools", "tools.html"),
+        ("/findings", "findings.html"),
+    ],
+)
+def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_path, route, asset):
+    import base64
+    import hashlib
+    import re
+    from pathlib import Path
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(route)
+
+    assert response.status_code == 200
+    # HTML parsing normalizes CRLF/CR to LF before CSP hashing; mirror that
+    # behavior so these regression checks are stable on Windows checkouts too.
+    scripts = [
+        match.group(1).replace("\r\n", "\n").replace("\r", "\n")
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
+        if match.group(1).strip()
+    ]
+    assert scripts, f"{route} should have a known inline script fixture"
+
+    expected = {
+        "'sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii") + "'"
+        for script in scripts
+    }
+    policy = response.headers["content-security-policy"]
+    script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
+    observed = {token for token in script_policy.split()[1:] if token.startswith("'sha256-")}
+
+    assert expected == observed
+    assert "'unsafe-inline'" not in script_policy
+    assert "https://cdn.jsdelivr.net" not in script_policy
+    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
+        "src/netsentinel/static", asset
+    ).read_text(encoding="utf-8")
+
+
+def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
+    import re
+    from pathlib import Path
+
+    for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
+        content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
+        assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
+            f"{asset} contains an inline event handler incompatible with hash-only script CSP"
+        )
 
 
 def test_api_docs_content_security_policy_allows_only_required_cdn(monkeypatch, tmp_path):
@@ -191,6 +248,11 @@ def test_security_headers_are_present_on_host_rejections(monkeypatch, tmp_path):
     assert "default-src 'self'" in response.headers["content-security-policy"]
     assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
     assert response.headers["cache-control"] == "no-store"
+    script_policy = next(
+        item for item in response.headers["content-security-policy"].split("; ")
+        if item.startswith("script-src ")
+    )
+    assert not any(token.startswith("'sha256-") for token in script_policy.split())
 
 
 def test_device_history_returns_observations_for_selected_device(monkeypatch, tmp_path):
