@@ -57,7 +57,7 @@ _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # These GET routes initiate DNS traffic. They must not be triggerable by pages
 # from another origin merely by embedding a local URL in an image/link/script.
 _NETWORK_SIDE_EFFECT_GET_PATHS = {"/api/tools/dns/lookup", "/api/tools/dns/reverse"}
-_DEVICE_DNS_REVERSE_PATH = re.compile(r"^/api/devices/\\d+/dns-reverse$")
+_DEVICE_DNS_REVERSE_PATH = re.compile(r"^/api/devices/\d+/dns-reverse$")
 
 
 def _host_is_allowed(host: str | None) -> bool:
