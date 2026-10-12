@@ -333,6 +333,7 @@ def get_family_activity(
 def export_family_activity_csv(
     device_id: int | None = Query(default=None, ge=1),
     event_type: str | None = Query(default=None),
+    source: str | None = Query(default=None, max_length=32),
     from_date: str | None = Query(default=None, min_length=10, max_length=10),
     to_date: str | None = Query(default=None, min_length=10, max_length=10),
     limit: int = Query(default=10000, ge=1, le=10000),
