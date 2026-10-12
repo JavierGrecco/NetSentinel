@@ -122,7 +122,7 @@ def test_findings_api_acknowledged_and_resolved_states_and_json_export(monkeypat
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     database.record_scan([Neighbor("192.168.5.3", "AA:BB:CC:DD:EE:02", "en0")])
-    event = database.get_events(limit=10)[0]
+    event = next(item for item in database.get_events(limit=10) if item["event_type"] == "new_device")
     monitor = database.create_monitor("Servicio recuperable", "tcp", "192.168.5.11:443")
     database.record_monitor_check(monitor["id"], "down", None, "No responde")
     incident_id = database.get_incidents(status="open")[0]["id"]
