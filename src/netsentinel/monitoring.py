@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -31,6 +32,10 @@ _LATENCY = re.compile(r"(?:time|tiempo)\s*[=<]\s*([\d.,]+)\s*ms", re.IGNORECASE)
 DEFAULT_MONITOR_HISTORY_DAYS = 90
 MAX_MONITOR_HISTORY_DAYS = 3650
 HISTORY_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+# Give Python startup a small grace period, while keeping the complete network
+# operation bounded even if the operating-system DNS resolver stalls.
+_PROBE_PROCESS_STARTUP_GRACE_SECONDS = 1.0
+_WEBHOOK_TOTAL_TIMEOUT_SECONDS = 5.0
 
 
 def monitor_history_retention_days() -> int | None:
@@ -121,7 +126,7 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 _NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirectHandler())
 
 
-def probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
+def _probe_direct(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
     """Ejecuta una comprobación con tiempo límite y devuelve un resultado sin secretos."""
     started = time.monotonic()
     try:
@@ -191,7 +196,97 @@ def probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
         return {"status": "down", "latency_ms": None, "detail": detail, "elapsed_ms": elapsed}
 
 
-def send_webhook(transition: dict[str, Any]) -> tuple[bool, str]:
+
+_PROBE_CHILD_SCRIPT = """
+import json
+import sys
+from netsentinel.monitoring import _probe_direct
+
+try:
+    payload = json.load(sys.stdin)
+    result = _probe_direct(payload["kind"], payload["target"], int(payload["timeout_seconds"]))
+    print(json.dumps(result, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({
+        "status": "down",
+        "latency_ms": None,
+        "detail": "No se pudo completar la comprobación aislada (" + type(exc).__name__ + ")."
+    }, ensure_ascii=False))
+"""
+
+
+def probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
+    """Bound TCP/HTTP probes even when libc or the OS DNS resolver hangs."""
+    if kind == "ping":
+        # ping is already a separately terminated subprocess; keep its native
+        # platform-specific timeout and avoid an unnecessary extra process.
+        return _probe_direct(kind, target, timeout_seconds)
+
+    started = time.monotonic()
+    payload = json.dumps(
+        {"kind": kind, "target": target, "timeout_seconds": int(timeout_seconds)},
+        ensure_ascii=False,
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", _PROBE_CHILD_SCRIPT],
+            input=payload,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=float(timeout_seconds) + _PROBE_PROCESS_STARTUP_GRACE_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        elapsed = round((time.monotonic() - started) * 1000, 2)
+        return {
+            "status": "down",
+            "latency_ms": None,
+            "detail": "La comprobación superó el límite total, incluida la resolución del nombre.",
+            "elapsed_ms": elapsed,
+        }
+    except OSError as exc:
+        elapsed = round((time.monotonic() - started) * 1000, 2)
+        return {
+            "status": "down",
+            "latency_ms": None,
+            "detail": f"No se pudo iniciar el proceso aislado ({type(exc).__name__}).",
+            "elapsed_ms": elapsed,
+        }
+
+    try:
+        result = json.loads(completed.stdout)
+    except (json.JSONDecodeError, TypeError):
+        result = None
+    if (
+        completed.returncode != 0
+        or not isinstance(result, dict)
+        or result.get("status") not in {"up", "down"}
+        or not isinstance(result.get("detail"), str)
+    ):
+        elapsed = round((time.monotonic() - started) * 1000, 2)
+        return {
+            "status": "down",
+            "latency_ms": None,
+            "detail": "La comprobación aislada no devolvió un resultado válido.",
+            "elapsed_ms": elapsed,
+        }
+
+    latency = result.get("latency_ms")
+    if isinstance(latency, bool) or (latency is not None and not isinstance(latency, (int, float))):
+        latency = None
+    output = {
+        "status": result["status"],
+        "latency_ms": latency,
+        "detail": result["detail"][:500],
+    }
+    elapsed_child = result.get("elapsed_ms")
+    if isinstance(elapsed_child, (int, float)) and not isinstance(elapsed_child, bool):
+        output["elapsed_ms"] = max(0.0, min(float(elapsed_child), 600_000.0))
+    return output
+
+
+def _send_webhook_direct(transition: dict[str, Any]) -> tuple[bool, str]:
     """Envía solo transiciones de estado; URL secreta configurada por variable de entorno."""
     webhook_url = os.environ.get("NETSENTINEL_WEBHOOK_URL", "").strip()
     if not webhook_url:
@@ -221,6 +316,56 @@ def send_webhook(transition: dict[str, Any]) -> tuple[bool, str]:
             return False, f"HTTP {response.status}"
     except Exception as exc:  # webhook is optional; don't disrupt monitoring
         return False, f"Error de entrega: {type(exc).__name__}"
+
+
+
+_WEBHOOK_CHILD_SCRIPT = """
+import json
+import sys
+from netsentinel.monitoring import _send_webhook_direct
+
+try:
+    transition = json.load(sys.stdin)
+    success, detail = _send_webhook_direct(transition)
+    print(json.dumps({"ok": bool(success), "detail": str(detail)[:160]}, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({
+        "ok": False,
+        "detail": "Error de entrega: " + type(exc).__name__
+    }, ensure_ascii=False))
+"""
+
+
+def send_webhook(transition: dict[str, Any]) -> tuple[bool, str]:
+    """Deliver optional notifications in a child with a hard total deadline."""
+    if not os.environ.get("NETSENTINEL_WEBHOOK_URL", "").strip():
+        return False, "Webhook no configurado"
+
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", _WEBHOOK_CHILD_SCRIPT],
+            input=json.dumps(transition, ensure_ascii=False),
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=_WEBHOOK_TOTAL_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "Error de entrega: se superó el límite total de 5 segundos"
+    except OSError as exc:
+        return False, f"Error de entrega: proceso no disponible ({type(exc).__name__})"
+
+    try:
+        result = json.loads(completed.stdout)
+    except (json.JSONDecodeError, TypeError):
+        result = None
+    if completed.returncode != 0 or not isinstance(result, dict) or not isinstance(result.get("ok"), bool):
+        return False, "Error de entrega: el proceso no devolvió un resultado válido"
+    detail = result.get("detail")
+    if not isinstance(detail, str):
+        return False, "Error de entrega: el resultado no contiene detalle"
+    return result["ok"], detail[:160]
 
 
 def check_once(monitor: dict[str, Any], *, path=None) -> dict[str, Any]:
