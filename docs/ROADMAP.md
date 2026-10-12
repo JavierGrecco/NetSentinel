@@ -44,6 +44,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Parser de importación CSV acotado: rechaza la fila 1001 antes de acumular más objetos y convierte errores de límite de campo a validación, sin escrituras parciales.
+- [x] Ingestión en vivo respeta la retención de actividad configurada y rechaza eventos retrasados que desaparecerían al consultar el historial.
 - [x] La previsualización/importación CSV rechaza el lote si alguna fila supera la retención configurada, antes de guardar datos; pruebas cubren la ampliación del período y la ausencia de escrituras parciales.
 - [x] Deduplicación idempotente de filas CSV manuales por dispositivo; las filas idénticas ya importadas se omiten y se contabilizan.
 - [x] Filtros de eventos por dispositivo, tipo y rango de fechas UTC; exportación CSV filtrada con neutralización de fórmulas, hasta 10.000 filas.
