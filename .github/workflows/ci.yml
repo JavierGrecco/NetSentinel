@@ -47,10 +47,10 @@ jobs:
         run: |
           tempdir="$(mktemp -d)"
           trap 'rm -rf "$tempdir"' EXIT
-          printf 'fixture wheel bytes\\n' > "$tempdir/sample.whl"
+          printf '%s\n' 'fixture wheel bytes' > "$tempdir/sample.whl"
           (cd "$tempdir" && sha256sum sample.whl > SHA256SUMS)
           bash scripts/verify-sha256-manifest.sh "$tempdir/SHA256SUMS"
-          printf 'tampered bytes\\n' > "$tempdir/sample.whl"
+          printf '%s\n' 'tampered bytes' > "$tempdir/sample.whl"
           if bash scripts/verify-sha256-manifest.sh "$tempdir/SHA256SUMS" >/dev/null 2>&1; then
             echo "Checksum verifier accepted a modified artifact." >&2
             exit 1
