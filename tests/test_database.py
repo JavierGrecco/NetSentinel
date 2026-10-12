@@ -201,7 +201,10 @@ def test_connect_never_changes_permissions_of_an_existing_parent(tmp_path, monke
         pass
 
     assert (shared_parent, 0o700) not in chmod_calls
-    assert (db_path, 0o600) in chmod_calls
+    if os.name == "posix":
+        assert (db_path, 0o600) in chmod_calls
+    else:
+        assert chmod_calls == []
 
 
 def test_connect_creates_new_nested_directories_with_private_permissions(tmp_path):
