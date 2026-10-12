@@ -63,6 +63,11 @@ def test_monitor_api_and_static_css(monkeypatch, tmp_path):
         assert monitor_css.status_code == 200
         assert ".check-mark.up" in monitor_css.text
         assert ".check-mark.down" in monitor_css.text
+        page_source = page.text
+        assert "bar.style.height" not in page_source, "CSP blocks inline style changes in the browser"
+        assert "bar.dataset.height" in page_source, "Chart height must be represented by a data attribute"
+        assert '.latency-bar.up[data-height="13"]' in monitor_css.text
+        assert '.latency-history-bar[data-height="13"]' in monitor_css.text
         created = client.post("/api/monitors", json={
             "name": "Endpoint local", "kind": "http", "target": "https://example.com/health",
             "interval_seconds": 60, "timeout_seconds": 3,
