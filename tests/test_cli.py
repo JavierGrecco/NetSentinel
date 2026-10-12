@@ -38,8 +38,9 @@ def test_cli_rejects_non_loopback_host_before_starting_server(monkeypatch, capsy
         main()
 
     assert exc.value.code == 2
-    assert "por seguridad" in capsys.readouterr().err
-    assert "otros hostnames" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "por seguridad" in error
+    assert "otros hostnames" in error
 
 
 def test_cli_canonicalizes_localhost_to_literal_ipv4_loopback(monkeypatch, capsys):
