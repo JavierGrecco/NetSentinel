@@ -13,15 +13,41 @@ function normalizedDomain(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 }
 function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
-function privateOrLocalHost(hostname) {
-  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
-  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
-  if (host.includes(":")) return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:");
-  const parts = host.split(".");
+function isPrivateOrLocalIPv4(host) {
+  const parts = String(host || "").split(".");
   if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return false;
   const [a, b] = parts.map(Number);
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
+function mappedIPv4FromIPv6(host) {
+  const value = String(host || "").replace(/^\[|\]$/g, "").toLowerCase();
+  if (!value.startsWith("::ffff:")) return null;
+  const suffix = value.slice("::ffff:".length);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(suffix)) {
+    const octets = suffix.split(".").map(Number);
+    return octets.every(part => part >= 0 && part <= 255) ? octets.join(".") : null;
+  }
+  const groups = suffix.split(":");
+  if (groups.length !== 2 || groups.some(group => !/^[0-9a-f]{1,4}$/.test(group))) return null;
+  const high = Number.parseInt(groups[0], 16);
+  const low = Number.parseInt(groups[1], 16);
+  return [high >> 8, high & 255, low >> 8, low & 255].join(".");
+}
+
+function privateOrLocalHost(hostname) {
+  const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
+  if (!host.includes(":")) return isPrivateOrLocalIPv4(host);
+
+  // IPv4-mapped IPv6 literals can still point at localhost or an RFC1918 host.
+  const mappedIPv4 = mappedIPv4FromIPv6(host);
+  if (mappedIPv4 !== null) return isPrivateOrLocalIPv4(mappedIPv4);
+  // Exclude unspecified/loopback, unique-local fc00::/7, and the full
+  // fe80::/10 link-local range (fe80 through febf), not only fe80::/16.
+  return host === "::" || host === "::1" || host.startsWith("fc") || host.startsWith("fd") ||
+    /^fe[89ab]/.test(host);
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
@@ -144,15 +170,50 @@ async function captureNavigation(details) {
   events = events.filter(event => Date.parse(event.observed_at) >= now - settings.retentionDays * 86400000).slice(-MAX_EVENTS);
   await chrome.storage.local.set({ [EVENTS_KEY]: events });
 }
-chrome.webNavigation.onCompleted.addListener(details => { void captureNavigation(details); });
-chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void captureNavigation(details); });
-chrome.runtime.onStartup.addListener(async () => {
-  const state = await loadState();
-  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
-});
-chrome.runtime.onInstalled.addListener(async () => {
-  const state = await loadState();
-  await chrome.storage.local.set({ [SETTINGS_KEY]: state.settings, [EVENTS_KEY]: state.events });
+// Chrome can deliver several navigation events while storage operations are
+// pending. Popup cleanup/clear and lifecycle cleanup must use this same queue too:
+// chrome.storage.local has no transaction/CAS, so independent read-modify-write
+// cycles can overwrite newer events with stale snapshots.
+let navigationQueue = Promise.resolve();
+
+function enqueueStorageTask(task) {
+  const result = navigationQueue.catch(() => undefined).then(task);
+  navigationQueue = result.catch(error => {
+    // Do not log URLs or event contents, which may contain sensitive metadata.
+    const name = error && typeof error.name === "string" ? error.name : "Error";
+    console.error("NetSentinel: fallo una operación de almacenamiento (" + name + ").");
+  });
+  return result;
+}
+
+function enqueueNavigation(details) {
+  return enqueueStorageTask(() => captureNavigation(details));
+}
+
+function clearStoredEvents() {
+  return enqueueStorageTask(() => chrome.storage.local.set({ [EVENTS_KEY]: [] }));
+}
+
+function normalizeStoredState() {
+  return enqueueStorageTask(async () => {
+    const state = await loadState();
+    // Only cleanup the event list here. The popup owns settings writes, and a
+    // lifecycle cleanup must not race a user's concurrent settings change.
+    await chrome.storage.local.set({ [EVENTS_KEY]: state.events });
+  });
+}
+
+chrome.webNavigation.onCompleted.addListener(details => { void enqueueNavigation(details).catch(() => undefined); });
+chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueueNavigation(details).catch(() => undefined); });
+chrome.runtime.onStartup.addListener(() => { void normalizeStoredState().catch(() => undefined); });
+chrome.runtime.onInstalled.addListener(() => { void normalizeStoredState().catch(() => undefined); });
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!message || message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
+  void clearStoredEvents().then(
+    () => sendResponse({ ok: true }),
+    () => sendResponse({ ok: false })
+  );
+  return true;
 });
 
 if (typeof module !== "undefined" && module.exports) {
@@ -168,6 +229,9 @@ if (typeof module !== "undefined" && module.exports) {
     cleanUrl,
     searchInfo,
     loadState,
-    captureNavigation
+    captureNavigation,
+    enqueueNavigation,
+    clearStoredEvents,
+    enqueueStorageTask
   };
 }
