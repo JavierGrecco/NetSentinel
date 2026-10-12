@@ -56,8 +56,8 @@ TRACKING_QUERY_KEYS = {
     "fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid", "ttclid",
     "twclid", "li_fat_id", "mkt_tok", "vero_id", "s_cid", "_ga", "_gl", "_hsenc", "_hsmi",
 }
-_PATH_EMAIL = re.compile(r"^[^/\\s@]+@[^/\\s@]+\\.[^/\\s@]+$")
-_PATH_PHONE = re.compile(r"^[+()0-9.\\-\\s]+$")
+_PATH_EMAIL = re.compile(r"^[^/\s@]+@[^/\s@]+\.[^/\s@]+$")
+_PATH_PHONE = re.compile(r"^[+()0-9.\-\s]+$")
 _PATH_UUID = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
