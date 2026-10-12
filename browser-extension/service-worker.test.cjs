@@ -21,7 +21,7 @@ global.chrome = {
     }
   },
   webNavigation: { onCompleted: listenerSlot(), onHistoryStateUpdated: listenerSlot() },
-  runtime: { onStartup: listenerSlot(), onInstalled: listenerSlot() },
+  runtime: { onStartup: listenerSlot(), onInstalled: listenerSlot(), onMessage: listenerSlot() },
   extension: { inIncognitoContext: false }
 };
 
@@ -34,6 +34,7 @@ const {
   isExcluded,
   loadState,
   enqueueNavigation,
+  clearStoredEvents,
   privateOrLocalHost,
   searchInfo
 } = require("./service-worker.js");
@@ -240,4 +241,30 @@ test("concurrent navigation notifications are serialized without losing events",
       "https://example.org/third"
     ])
   );
+});
+
+
+test("event clearing shares the queue with navigation writes", async () => {
+  setState(enabledSettings(), []);
+  const baseTime = Date.now();
+
+  await Promise.all([
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 401,
+      url: "https://example.com/before-clear",
+      timeStamp: baseTime
+    }),
+    clearStoredEvents(),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 402,
+      url: "https://example.net/after-clear",
+      timeStamp: baseTime + 1
+    })
+  ]);
+
+  const pages = mockStore[EVENTS_KEY].filter(event => event.event_type === "page_visit");
+  assert.equal(pages.length, 1);
+  assert.equal(pages[0].page_url, "https://example.net/after-clear");
 });
