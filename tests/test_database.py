@@ -255,8 +255,11 @@ def test_connect_never_changes_permissions_of_an_existing_parent(tmp_path, monke
         pass
 
     assert (shared_parent, 0o700) not in chmod_calls
+    # The file mode is applied through a no-follow file descriptor, not chmod(path).
     if os.name == "posix":
-        assert (db_path, 0o600) in chmod_calls
+        import stat
+        assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+        assert chmod_calls == []
     else:
         assert chmod_calls == []
 
@@ -301,6 +304,28 @@ def test_connect_hardens_existing_default_application_directory(tmp_path, monkey
     assert stat.S_IMODE(app_data.stat().st_mode) == 0o700
     assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
 
+
+
+def test_connect_does_not_chmod_target_of_database_file_symlink(tmp_path):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los modos POSIX y los enlaces simbólicos no son uniformes en Windows.")
+
+    target = tmp_path / "shared-database.sqlite3"
+    with database.connect(target):
+        pass
+    os.chmod(target, 0o644)
+
+    link = tmp_path / "netsentinel.sqlite3"
+    link.symlink_to(target)
+
+    with database.connect(link):
+        pass
+
+    assert link.is_symlink()
+    assert stat.S_IMODE(target.stat().st_mode) == 0o644
 
 
 def test_connect_does_not_chmod_target_of_default_directory_symlink(tmp_path, monkeypatch):

@@ -85,18 +85,48 @@ def _ensure_private_directory(directory: Path, *, enforce_existing_final: bool =
 
 
 @contextmanager
+def _harden_database_file(db_path: Path) -> None:
+    """Restrict a regular SQLite file without changing a symlink target's mode."""
+    if os.name != "posix":
+        return
+
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        # On POSIX systems without O_NOFOLLOW, prefer preserving a symlink target
+        # to following it with chmod. Most supported macOS/Linux systems have it.
+        if db_path.is_symlink():
+            return
+        try:
+            os.chmod(db_path, 0o600)
+        except OSError:
+            pass
+        return
+
+    try:
+        # Operate on an opened descriptor instead of chmod(path): O_NOFOLLOW
+        # makes the final path component fail closed if it is a symlink.
+        descriptor = os.open(db_path, os.O_RDONLY | nofollow)
+    except OSError:
+        # SQLite may intentionally use a symlink here. Do not silently change
+        # permissions of its target; the operator must protect that target.
+        return
+
+    try:
+        os.fchmod(descriptor, 0o600)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+@contextmanager
 def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
     db_path = path or database_path()
     use_default_data_directory = path is None and not os.environ.get("NETSENTINEL_DATA_DIR")
     _ensure_private_directory(db_path.parent, enforce_existing_final=use_default_data_directory)
     connection = sqlite3.connect(db_path, timeout=10)
-    if os.name == "posix":
-        try:
-            # Protect the database file, but never chmod an existing parent directory.
-            os.chmod(db_path, 0o600)
-        except OSError:
-            pass
+    _harden_database_file(db_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     try:
