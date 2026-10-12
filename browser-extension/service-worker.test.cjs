@@ -21,7 +21,7 @@ global.chrome = {
     }
   },
   webNavigation: { onCompleted: listenerSlot(), onHistoryStateUpdated: listenerSlot() },
-  runtime: { onStartup: listenerSlot(), onInstalled: listenerSlot() },
+  runtime: { onStartup: listenerSlot(), onInstalled: listenerSlot(), onMessage: listenerSlot() },
   extension: { inIncognitoContext: false }
 };
 
@@ -33,6 +33,8 @@ const {
   cleanUrl,
   isExcluded,
   loadState,
+  enqueueNavigation,
+  clearStoredEvents,
   privateOrLocalHost,
   searchInfo
 } = require("./service-worker.js");
@@ -97,10 +99,16 @@ test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
   assert.equal(cleanUrl("https://alice:password@example.com/profile"), null);
 });
 
-test("excludes local/private hosts and applies domain exclusions to trailing-dot hostnames", () => {
+test("excludes local/private IPv4, IPv6 and mapped IPv6 hosts", () => {
   assert.equal(privateOrLocalHost("router.local."), true);
   assert.equal(privateOrLocalHost("[::1]"), true);
+  assert.equal(privateOrLocalHost("::"), true);
   assert.equal(privateOrLocalHost("fd12::1"), true);
+  assert.equal(privateOrLocalHost("fe81::1"), true, "the complete fe80::/10 link-local range is excluded");
+  assert.equal(privateOrLocalHost("febf::1"), true, "the upper bound of the link-local range is excluded");
+  assert.equal(privateOrLocalHost("[::ffff:c0a8:101]"), true, "mapped 192.168.1.1 must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:7f00:1]"), true, "mapped 127.0.0.1 must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:0808:0808]"), false, "mapped public 8.8.8.8 is not classified as private");
   assert.equal(isExcluded("sub.example.com.", ["example.com"]), true);
   assert.equal(isExcluded("public.example.net", ["example.com"]), false);
 });
@@ -201,4 +209,68 @@ test("stored event retention and event limit are enforced when loading state", a
   assert.equal(state.settings.retentionDays, 1);
   assert.equal(state.events.length, MAX_EVENTS);
   assert.equal(state.events.some(event => event === old), false);
+});
+
+
+test("concurrent navigation notifications are serialized without losing events", async () => {
+  setState(enabledSettings(), []);
+  const baseTime = Date.now();
+
+  await Promise.all([
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 101,
+      url: "https://example.com/first",
+      timeStamp: baseTime
+    }),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 202,
+      url: "https://example.net/second",
+      timeStamp: baseTime + 1
+    }),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 303,
+      url: "https://example.org/third",
+      timeStamp: baseTime + 2
+    })
+  ]);
+
+  const pages = mockStore[EVENTS_KEY].filter(event => event.event_type === "page_visit");
+  assert.equal(pages.length, 3, "each distinct navigation must survive concurrent storage updates");
+  assert.deepEqual(
+    new Set(pages.map(event => event.page_url)),
+    new Set([
+      "https://example.com/first",
+      "https://example.net/second",
+      "https://example.org/third"
+    ])
+  );
+});
+
+
+test("event clearing shares the queue with navigation writes", async () => {
+  setState(enabledSettings(), []);
+  const baseTime = Date.now();
+
+  await Promise.all([
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 401,
+      url: "https://example.com/before-clear",
+      timeStamp: baseTime
+    }),
+    clearStoredEvents(),
+    enqueueNavigation({
+      frameId: 0,
+      tabId: 402,
+      url: "https://example.net/after-clear",
+      timeStamp: baseTime + 1
+    })
+  ]);
+
+  const pages = mockStore[EVENTS_KEY].filter(event => event.event_type === "page_visit");
+  assert.equal(pages.length, 1);
+  assert.equal(pages[0].page_url, "https://example.net/after-clear");
 });
