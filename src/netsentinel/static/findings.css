@@ -1,0 +1,36 @@
+/* NetSentinel findings page styles. Kept external for CSP compatibility. */
+.findings-controls{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+    .findings-controls label{display:grid;gap:5px;color:var(--muted);font-size:12px;font-weight:700}
+    .findings-controls select{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#0b1423;color:var(--text);padding:8px 10px;font:inherit}
+    .findings-controls a{display:inline-flex;align-items:center;min-height:39px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;color:var(--text);text-decoration:none;font-size:12px;font-weight:700}
+    .findings-controls a:hover{border-color:var(--accent);color:var(--accent)}
+    .findings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+    .finding-metric{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#0d1727}
+    .finding-metric span{display:block;font-size:11px;color:var(--muted);font-weight:700}
+    .finding-metric strong{display:block;margin-top:5px;font-size:25px;letter-spacing:-.03em}
+    .findings-list{display:grid;gap:12px}
+    .finding-card{border:1px solid var(--line);border-radius:13px;background:rgba(10,20,35,.65);padding:16px;min-width:0}
+    .finding-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .finding-title{margin:0;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+    .finding-summary{font-size:13px;line-height:1.6;color:#c7d3e4;margin:10px 0;overflow-wrap:anywhere}
+    .finding-meta{font-size:11px;color:var(--muted);line-height:1.65;overflow-wrap:anywhere}
+    .finding-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .finding-tag{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:99px;padding:4px 8px;font-size:10px;font-weight:750;color:#d8e4f3}
+    .finding-tag.active,.finding-tag.warning{border-color:#6f5525;background:#3a2d13;color:var(--yellow)}
+    .finding-tag.acknowledged{border-color:#345473;background:#142c44;color:#bae6fd}
+    .finding-tag.resolved{border-color:#235b45;background:#103426;color:var(--green)}
+    .finding-section{margin-top:12px;padding-top:11px;border-top:1px solid #253247}
+    .finding-section h3{margin:0 0 6px;font-size:11px;color:#c7d3e4;text-transform:uppercase;letter-spacing:.06em}
+    .finding-section p,.finding-section li{font-size:12px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+    .finding-section p{margin:4px 0}
+    .finding-section ul{margin:5px 0 0;padding-left:19px}
+    .finding-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .finding-actions button{font-size:11px;padding:7px 10px}
+    .statusline{margin:12px 0;color:var(--muted);font-size:12px;line-height:1.6}
+    .scope-note{border:1px solid #375b7b;background:#13263c;border-radius:12px;padding:13px 15px;margin:15px 0;font-size:12px;line-height:1.6;color:#c7dff1}
+    .scope-note strong{color:#e0f2fe}
+    .empty-state{padding:36px 18px;text-align:center;color:var(--muted);border:1px dashed #38516e;border-radius:12px;line-height:1.6}
+    .empty-state strong{display:block;color:var(--text);margin-bottom:4px}
+    .section-label{margin:0;font-size:17px}
+    button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+    @media(max-width:650px){.findings-grid{grid-template-columns:1fr}.finding-head{flex-direction:column}.findings-controls{align-items:stretch}.findings-controls label,.findings-controls select,.findings-controls a{width:100%}.finding-card{padding:13px}}

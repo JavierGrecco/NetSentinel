@@ -168,7 +168,8 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
     script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
     assert "'unsafe-inline'" not in script_policy
     assert "https://cdn.jsdelivr.net" not in policy
-    assert "style-src 'self' 'unsafe-inline'" in policy  # Inline style attributes remain pending CSS externalization
+    style_policy = next(item for item in policy.split("; ") if item.startswith("style-src "))
+    assert "'unsafe-inline'" not in style_policy
 
 
 @pytest.mark.parametrize(
@@ -226,6 +227,59 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
         assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
             f"{asset} contains an inline event handler incompatible with hash-only script CSP"
         )
+
+
+@pytest.mark.parametrize(
+    ("route", "asset"),
+    [
+        ("/", "index.html"),
+        ("/monitors", "monitors.html"),
+        ("/activity", "activity.html"),
+        ("/tools", "tools.html"),
+        ("/findings", "findings.html"),
+    ],
+)
+def test_application_pages_use_external_styles_without_inline_style(monkeypatch, tmp_path, route, asset):
+    import re
+    from pathlib import Path
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(route)
+
+        assert response.status_code == 200
+        html = response.text.replace("\r\n", "\n").replace("\r", "\n")
+        assert html == Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
+        assert not re.search(r"<style(?:\s[^>]*)?>", html, re.IGNORECASE), (
+            f"{asset} must not contain a style element"
+        )
+        assert not re.search(r"\sstyle\s*=", html, re.IGNORECASE), (
+            f"{asset} must not contain style attributes, including generated templates"
+        )
+
+        policy = response.headers["content-security-policy"]
+        style_policy = next(item for item in policy.split("; ") if item.startswith("style-src "))
+        assert "'unsafe-inline'" not in style_policy
+
+        stylesheets = set(re.findall(r'href="(/static/[^"]+\.css)"', html, re.IGNORECASE))
+        assert stylesheets, f"{asset} must load at least one local stylesheet"
+        for stylesheet in stylesheets:
+            css_response = client.get(stylesheet)
+            assert css_response.status_code == 200, f"Missing stylesheet: {stylesheet}"
+            assert "text/css" in css_response.headers["content-type"]
+
+
+def test_api_docs_style_policy_does_not_allow_inline_styles(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/docs")
+    assert response.status_code == 200
+    style_policy = next(
+        item for item in response.headers["content-security-policy"].split("; ")
+        if item.startswith("style-src ")
+    )
+    assert "'unsafe-inline'" not in style_policy
+    assert "https://cdn.jsdelivr.net" in style_policy
 
 
 def test_api_docs_content_security_policy_allows_only_required_cdn(monkeypatch, tmp_path):

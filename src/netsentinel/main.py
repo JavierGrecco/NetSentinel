@@ -147,7 +147,7 @@ def _base_content_security_policy(path: str) -> str:
     return (
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
         "frame-src 'none'; form-action 'self'; "
-        f"script-src {script_sources}; style-src 'self' 'unsafe-inline'; "
+        f"script-src {script_sources}; style-src 'self'; "
         "img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
     )
 
@@ -158,7 +158,7 @@ _API_DOCS_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
     "frame-src 'none'; form-action 'self'; "
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' https://cdn.jsdelivr.net; "
     "img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'"
 )
 

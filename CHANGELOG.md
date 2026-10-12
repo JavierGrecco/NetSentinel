@@ -2,7 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Elimina `unsafe-inline` de `script-src` en las cinco pantallas principales: autoriza los scripts inline mediante hashes SHA-256 específicos por página y agrega pruebas para evitar handlers inline. `style-src unsafe-inline` queda documentado como deuda separada.
+- Retira `style-src unsafe-inline` de las cinco pantallas principales y de `/api/docs`: externaliza el CSS específico de Actividad, Herramientas y Hallazgos, sustituye estilos inline por clases y verifica las nuevas hojas en el wheel.
+- Elimina `unsafe-inline` de `script-src` en las cinco pantallas principales: autoriza los scripts inline mediante hashes SHA-256 específicos por página y agrega pruebas para evitar handlers inline. El inicializador dinámico de Swagger UI queda como la única excepción pendiente para esa política.
 - Añade Content Security Policy y Permissions-Policy: restringe recursos al origen local, impide framing/objetos y desactiva funciones del navegador no utilizadas. La excepción CDN de Swagger queda limitada a `/api/docs`; las cabeceras también se prueban en rechazos de Host.
 - Endurece el arranque: el CLI rechaza enlaces que no sean loopback hasta contar con autenticación y control de acceso; valida puertos TCP y genera URLs correctas para IPv6. Añade regresiones para hosts remotos y puertos inválidos.
 - Endurece la cadena de suministro: escaneo de secretos con Gitleaks, SBOM CycloneDX, checksums SHA-256 con detección de alteraciones y atestaciones Sigstore para releases etiquetadas; CI comprueba de forma regresiva el verificador de checksums.
