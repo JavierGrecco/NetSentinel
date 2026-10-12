@@ -110,6 +110,7 @@ def test_findings_api_combines_inventory_and_monitor_incident_without_duplicate(
     assert response.status_code == 200
     report = response.json()
     findings = report["findings"]
+    assert response.headers["cache-control"] == "no-store"
     assert {item["category"] for item in findings} == {"inventory", "availability"}
     assert any(item["id"].startswith("event:") for item in findings)
     assert any(item["id"].startswith("incident:") for item in findings)
