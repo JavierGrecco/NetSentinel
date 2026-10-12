@@ -118,7 +118,7 @@ El backend por sí solo no ve todas las conexiones de otros equipos ni conoce la
 
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
 
-Leé la [política de seguridad](docs/SECURITY.md) antes de habilitar integraciones o supervisar sistemas compartidos.
+Leé la [política de seguridad](SECURITY.md) y la [guía técnica de seguridad](docs/SECURITY.md) antes de habilitar integraciones o supervisar sistemas compartidos. No reportes vulnerabilidades mediante issues públicos.
 
 ## Pruebas
 
