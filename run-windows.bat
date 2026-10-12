@@ -34,11 +34,15 @@ if errorlevel 1 goto install_error
 echo.
 echo NetSentinel se abrira en http://127.0.0.1:8765
 ".venv\Scripts\python.exe" -m netsentinel
+set "NETSENTINEL_EXIT_CODE=%ERRORLEVEL%"
 echo.
-echo NetSentinel se detuvo.
+if "%NETSENTINEL_EXIT_CODE%"=="0" (
+    echo NetSentinel se detuvo correctamente.
+) else (
+    echo NetSentinel finalizo con error (codigo %NETSENTINEL_EXIT_CODE%).
+)
 pause
-endlocal
-exit /b 0
+endlocal & exit /b %NETSENTINEL_EXIT_CODE%
 
 :python_error
 echo NetSentinel requiere Python 3.10 o posterior.
