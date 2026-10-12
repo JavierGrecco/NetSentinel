@@ -793,6 +793,21 @@ def create_monitor(
     return result
 
 
+def cleanup_monitor_history(retention_days: int, path: Path | None = None) -> int:
+    """Remove detailed monitor checks older than the configured retention window.
+
+    This deliberately leaves monitor state, incidents, events, scans, and inventory
+    observations untouched. The latter are lower-volume and have separate product
+    semantics; only high-volume raw check samples are pruned here.
+    """
+    if isinstance(retention_days, bool) or not isinstance(retention_days, int) or not 1 <= retention_days <= 3650:
+        raise ValueError("La retención del historial de monitores debe estar entre 1 y 3650 días.")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat(timespec="seconds")
+    with connect(path) as db:
+        cursor = db.execute("DELETE FROM monitor_checks WHERE checked_at < ?", (cutoff,))
+        return int(cursor.rowcount)
+
+
 def list_monitors(path: Path | None = None) -> list[dict[str, Any]]:
     with connect(path) as db:
         rows = db.execute(
