@@ -1,4 +1,4 @@
-# Seguimiento familiar: páginas, búsquedas y metadatos de correo
+# Actividad y telemetría autorizada: páginas, búsquedas y metadatos de correo
 
 ## Implementado en esta rama
 
@@ -50,3 +50,6 @@ La transferencia de los datos de la extensión a NetSentinel es manual. No hay s
 NetSentinel usa siete días por defecto y permite retención de 1 a 90 días. La extensión también tiene retención local de 1 a 90 días y un máximo de 1.000 eventos. Los CSV y respaldos SQLite pueden revelar hábitos, intereses y relaciones; protegé los archivos y borrá los datos cuando ya no hagan falta.
 
 Una visita o una fila de auditoría describe el evento reportado por su fuente, pero no prueba por sí sola quién estaba frente a la pantalla ni qué hizo dentro de una cuenta.
+
+
+Antes de habilitar una fuente, obtené autorización de la persona responsable del dispositivo, informá qué metadatos se registran, limitá la retención y documentá quién puede acceder a la exportación. No uses esta función para recopilar información a escondidas.
