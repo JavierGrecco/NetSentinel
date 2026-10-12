@@ -43,6 +43,36 @@ jobs:
           python-version: '3.12'
       - name: Validate launcher and release helper shell syntax
         run: bash -n run.sh run-macos.command scripts/verify-sha256-manifest.sh
+      - name: Keep CodeQL initialization and analysis versions in sync
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/security.yml").read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"uses:\s*github/codeql-action/(init|analyze)@([0-9a-f]{40})\s+#\s*(v[0-9.]+)"
+          )
+          refs = pattern.findall(workflow)
+          assert len(refs) == 2, (
+              "Expected exactly one SHA-pinned CodeQL init and analyze action, found: "
+              f"{refs!r}"
+          )
+          actions = {name: (sha, version) for name, sha, version in refs}
+          assert set(actions) == {"init", "analyze"}, (
+              "The security workflow must use both CodeQL init and analyze actions."
+          )
+          assert actions["init"] == actions["analyze"], (
+              "CodeQL init and analyze must use the same full commit SHA and release tag; "
+              f"found {actions!r}"
+          )
+
+          dependabot = Path(".github/dependabot.yml").read_text(encoding="utf-8")
+          assert "codeql-actions:" in dependabot and '"github/codeql-action/*"' in dependabot, (
+              "Dependabot must group CodeQL actions so init/analyze are upgraded together."
+          )
+          print(f"Validated coordinated CodeQL action version {actions['init'][1]}.")
+          PY
       - name: Validate repository security policy is current
         run: |
           python - <<'PY'
