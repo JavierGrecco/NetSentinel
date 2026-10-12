@@ -517,7 +517,7 @@ def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
     rows = list(csv.DictReader(io.StringIO(payload)))
     assert len(rows) == 1
     assert rows[0]["event_type"] == "search_query"
-    assert rows[0]["search_terms"].startswith("'=HYPERLINK(")
+    assert rows[0]["search_terms"] == "'=1+1"
     assert "ordinary.example" not in payload
 
     missing = client.get("/api/activity/export.csv", params={"device_id": 99999})
