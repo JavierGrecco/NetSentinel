@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const manifest = require("./manifest.json");
-const { DEFAULTS, escapeCsv, buildCsv } = require("./popup.js");
+const { DEFAULTS, escapeCsv, buildCsv, getState } = require("./popup.js");
 
 test("popup remains opt-in and manifest uses the narrow MV3 permission set", () => {
   assert.equal(manifest.manifest_version, 3);
