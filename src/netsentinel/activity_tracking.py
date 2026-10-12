@@ -16,7 +16,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from email.utils import getaddresses
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, unquote_plus, urlencode, urlsplit, urlunsplit
 
 from . import database
 
@@ -44,13 +44,25 @@ CSV_PREVIEW_FIELDS = (
     "email_provider", "email_from", "email_to", "email_subject", "blocked",
 )
 SENSITIVE_QUERY_KEY = re.compile(
-    r"(?:access.?token|refresh.?token|id.?token|password|passwd|secret|authorization|"
+    r"(?:access.?token|refresh.?token|id.?token|client.?secret|client.?assertion|"
+    r"password|passwd|secret|authorization|bearer|api.?key|private.?key|"
     r"username|email|phone|session|sid|csrf|nonce|signature|"
-    r"(^|_)(?:token|auth|code|state|otp|jwt|key|user|account|customer)(_|$))",
+    r"redirect.?uri|return.?url|return.?to|returnto|relay.?state|saml.?request|callback|"
+    r"(^|_)(?:token|auth|code|state|otp|jwt|key|user|account|customer|continue|next)(_|$))",
     re.IGNORECASE,
 )
 SEARCH_QUERY_KEYS = {"q", "query", "text", "wd", "word", "search_query", "search"}
-TRACKING_QUERY_KEYS = {"fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid"}
+TRACKING_QUERY_KEYS = {
+    "fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid", "ttclid",
+    "twclid", "li_fat_id", "mkt_tok", "vero_id", "s_cid", "_ga", "_gl", "_hsenc", "_hsmi",
+}
+_PATH_EMAIL = re.compile(r"^[^/\\s@]+@[^/\\s@]+\\.[^/\\s@]+$")
+_PATH_PHONE = re.compile(r"^[+()0-9.\\-\\s]+$")
+_PATH_UUID = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+_PATH_OPAQUE = re.compile(r"^[A-Za-z0-9._~-]+$")
 SENSITIVE_HEADERS = {
     "url", "full_url", "path", "query_string", "username", "user",
     "password", "passwd", "token", "cookie", "authorization", "payload",
@@ -171,8 +183,49 @@ def _domain(value: str | None) -> str | None:
     return normalized
 
 
+def _normalized_query_key(value: str) -> str:
+    """Normalize repeatedly encoded parameter names before sensitive-key checks."""
+    normalized = value.lower()
+    for _ in range(3):
+        decoded = unquote_plus(normalized)
+        if decoded == normalized:
+            break
+        normalized = decoded
+    return re.sub(r"[^a-z0-9_]", "", normalized)
+
+
+def _sensitive_path_segment(value: str) -> bool:
+    """Redact common high-confidence PII/token path segments, not arbitrary usernames."""
+    decoded = value
+    for _ in range(3):
+        expanded = unquote(decoded)
+        if expanded == decoded:
+            break
+        decoded = expanded
+    if _PATH_EMAIL.fullmatch(decoded) or _PATH_UUID.fullmatch(decoded):
+        return True
+    if _PATH_PHONE.fullmatch(decoded) and sum(ch.isdigit() for ch in decoded) >= 10:
+        return True
+    if (
+        len(decoded) >= 32
+        and _PATH_OPAQUE.fullmatch(decoded)
+        and any(ch.isalpha() for ch in decoded)
+        and any(ch.isdigit() for ch in decoded)
+    ):
+        return True
+    return False
+
+
+def _safe_url_path(path: str) -> str:
+    """Replace recognizable email/phone/UUID/opaque-token segments with a marker."""
+    if not path:
+        return "/"
+    segments = path.split("/")
+    return "/".join("%5Bredacted%5D" if _sensitive_path_segment(segment) else segment for segment in segments)
+
+
 def _safe_page_url(value: str | None) -> str | None:
-    """Normalize an HTTP(S) URL; remove fragments, search terms and secret-like parameters."""
+    """Normalize HTTP(S) URLs and redact known sensitive query keys and recognizable path identifiers."""
     if value is None or not str(value).strip():
         return None
     raw = str(value).strip()
@@ -188,8 +241,7 @@ def _safe_page_url(value: str | None) -> str | None:
     if scheme not in {"http", "https"} or not hostname or parsed.username is not None or parsed.password is not None:
         raise ValueError("page_url debe ser una URL HTTP(S) sin credenciales embebidas.")
     try:
-        ipaddress.ip_address(hostname)
-        normalized_host = hostname.lower()
+        normalized_host = str(ipaddress.ip_address(hostname)).lower()
     except ValueError:
         try:
             normalized_host = hostname.encode("idna").decode("ascii").lower()
@@ -200,16 +252,22 @@ def _safe_page_url(value: str | None) -> str | None:
     netloc = f"[{normalized_host}]" if ":" in normalized_host else normalized_host
     if port is not None and port != (443 if scheme == "https" else 80):
         netloc += f":{port}"
-    query_pairs = parse_qsl(parsed.query, keep_blank_values=True, max_num_fields=200)
+    try:
+        query_pairs = parse_qsl(parsed.query, keep_blank_values=True, max_num_fields=200)
+    except ValueError as exc:
+        raise ValueError("page_url contiene demasiados parámetros de consulta.") from exc
     safe_pairs = []
     for key, item_value in query_pairs:
-        normalized_key = re.sub(r"[^a-z0-9_]", "", key.lower())
-        if SENSITIVE_QUERY_KEY.search(normalized_key) or normalized_key in TRACKING_QUERY_KEYS or normalized_key.startswith("utm_"):
-            continue
-        if normalized_key in SEARCH_QUERY_KEYS:
+        normalized_key = _normalized_query_key(key)
+        if (
+            SENSITIVE_QUERY_KEY.search(normalized_key)
+            or normalized_key in TRACKING_QUERY_KEYS
+            or normalized_key.startswith("utm_")
+            or normalized_key in SEARCH_QUERY_KEYS
+        ):
             continue
         safe_pairs.append((key, item_value))
-    safe = urlunsplit((scheme, netloc, parsed.path or "/", urlencode(safe_pairs, doseq=True), ""))
+    safe = urlunsplit((scheme, netloc, _safe_url_path(parsed.path), urlencode(safe_pairs, doseq=True), ""))
     if len(safe) > 2048:
         raise ValueError("page_url supera los 2048 caracteres permitidos.")
     return safe
