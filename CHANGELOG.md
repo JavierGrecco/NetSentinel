@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Limita la lectura CSV de actividad a 1.000 filas antes de materializar el lote y traduce campos/cabeceras demasiado grandes a errores de validación 422 en vez de errores internos; añade regresiones para importación y vista previa sin escrituras parciales.
 - Evita cambiar permisos del destino cuando `netsentinel.sqlite3` es un enlace simbólico: el endurecimiento de archivos regulares usa un descriptor abierto sin seguir el enlace, con una regresión POSIX específica.
 - Endurece la protección CSRF de operaciones de modificación: bloquea Fetch Metadata `same-site` además de `cross-site` cuando no es el origen exacto de la interfaz, incluso si falta `Origin`; agrega regresiones de rechazo y compatibilidad same-origin.
 - Corrige la selección de subredes duplicadas: la preferencia por interfaces físicas se aplica antes de deduplicar, para que el orden de enumeración del sistema no oculte una interfaz mejor.
