@@ -50,6 +50,21 @@ El workflow se ejecuta en cambios a `main`, solicitudes de cambio y semanalmente
 
 Estos controles reducen riesgos conocidos, pero no demuestran que el software sea seguro ni reemplazan revisión manual, pruebas, gestión de versiones ni respuesta a vulnerabilidades. El análisis de dependencias depende de los avisos públicos disponibles en el momento de la ejecución.
 
+## Cadena de suministro y detección de secretos
+
+El workflow `.github/workflows/supply-chain.yml` ejecuta Gitleaks contra el historial completo del repositorio en pull requests, cambios en `main`, etiquetas `v*` y una revisión semanal. Los comentarios automáticos y la carga de artefactos que pudieran contener fragmentos de secretos están desactivados. Si se detecta una credencial real, revocala o rotala inmediatamente; quitarla de la versión actual no invalida una credencial que ya se publicó en el historial. No copies valores secretos en issues públicos.
+
+El mismo workflow construye el wheel y genera un SBOM CycloneDX 1.6 desde un entorno aislado que instala ese wheel y sus dependencias de ejecución resueltas. Comprueba que el SBOM contiene el producto y las dependencias principales, genera `SHA256SUMS` y verifica el manifiesto antes de publicar un artefacto de CI. El SBOM describe las versiones resueltas durante esa compilación; no sustituye un archivo de bloqueo ni garantiza que una dependencia sea segura.
+
+Para etiquetas de versión que comienzan con `v`, GitHub Actions verifica los checksums y crea atestaciones firmadas con Sigstore para la procedencia de compilación y la relación entre wheel y SBOM. Una vez publicada una versión, se puede comprobar la atestación con GitHub CLI:
+
+```bash
+gh attestation verify netsentinel-<version>-py3-none-any.whl --repo JavierGrecco/NetSentinel
+gh attestation verify netsentinel-sbom.cdx.json --repo JavierGrecco/NetSentinel
+```
+
+Los checksums detectan cambios accidentales cuando se comparan con el manifiesto de origen; no autentican el origen por sí solos. Para autenticidad y procedencia se debe verificar la atestación. La generación y atestación de versiones etiquetadas depende de que el flujo se ejecute con permisos de GitHub Actions compatibles y de que se publique la etiqueta de versión esperada.
+
 ## Reporte de vulnerabilidades
 
 No publiques credenciales, tokens ni detalles explotables en issues públicos. Hasta contar con un canal privado dedicado, abrí un issue con una descripción mínima y sin secretos.
