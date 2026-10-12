@@ -55,5 +55,14 @@
 - Extensión Firefox y otros navegadores compatibles.
 - La auditoría TLS inicial ya existe como conexión puntual validada; cualquier seguimiento persistente o alerta automática necesita diseño independiente y no debe capturar credenciales ni contenido privado.
 
+## P4 — Seguridad empresarial y preparación para varias sedes
+
+- **Motor de hallazgos:** correlacionar inventario, cambios, incidentes e inspecciones TLS con evidencia explícita, fecha, fuente, severidad y grado de confianza; evitar puntuaciones opacas y afirmaciones no respaldadas por datos.
+- **Adaptador de infraestructura:** seleccionar primero un router/AP/resolvedor concreto; mantenerlo de solo lectura, con límites estrictos, secretos fuera de logs y fixtures documentados.
+- **Agente/collector remoto:** no abrir la API de ingestión en LAN hasta contar con autenticación, autorización por dispositivo y rol, TLS, enrolamiento y revocación de credenciales, protección contra repetición, rate limiting, auditoría y aislamiento entre ubicaciones.
+- **Operación SOC:** informes reproducibles, exportación selectiva, métricas Prometheus y luego integración SIEM/webhooks con datos sensibles mínimos. La matriz NIST CSF 2.0/CISA CPG debe señalar evidencia y brechas, sin presentarse como certificación.
+- **Límites del producto:** el inventario actual no es un escáner de vulnerabilidades de software ni un EDR. Esas etiquetas requieren inventario de software/servicios, versiones, validación de vulnerabilidades o telemetría endpoint suficiente.
+- **Puerta a producción:** pruebas manuales en sistemas reales admitidos, revisión de seguridad de endpoints remotos, política de retención, exportación/borrado y evaluación de falsos positivos.
+
 ## Criterio de finalización
 Una tarea no se da por terminada solo por escribir el código o marcarla en el roadmap. Requiere tests verdes, empaquetado comprobado, pruebas manuales aplicables, documentación precisa y un mecanismo para desactivar/eliminar los datos.
