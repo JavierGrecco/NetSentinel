@@ -11,7 +11,7 @@ def data_dir() -> Path:
     override = os.environ.get("NETSENTINEL_DATA_DIR")
     if override:
         return Path(override).expanduser().resolve()
-    return (Path.home() / ".netsentinel").resolve()
+    # Do not resolve the default path: preserving a final symlink lets the\n    # permission guard detect it instead of chmod-ing its destination.\n    return Path.home() / ".netsentinel"
 
 
 def database_path() -> Path:
