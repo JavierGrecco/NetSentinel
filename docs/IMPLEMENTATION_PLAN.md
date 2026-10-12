@@ -10,6 +10,7 @@
 - Importaciones CSV manuales idempotentes: compara eventos normalizados del mismo dispositivo, omite duplicados exactos y muestra el recuento omitido.
 - Vista previa CSV de solo lectura: valida todas las filas, estima altas/duplicados y presenta hasta 10 filas de metadatos normalizados antes de guardar.
 - Filtros de actividad por dispositivo, fuente, tipo de evento y fechas UTC inclusivas; exportación CSV filtrada hasta 10.000 filas con neutralización de fórmulas de hoja de cálculo.
+- Saneamiento URL reforzado en extensión y backend: OAuth/redirect, claves doblemente codificadas, más claves de seguimiento, IPv6 canónico y redacción heurística de rutas reconocibles; pruebas Python y Node.
 - Borrado selectivo de eventos por dispositivo, fuente, tipo o fechas con previsualización de alcance, prohibición de alcance vacío, confirmación exacta basada en el recuento actual y borrado transaccional; no elimina sesiones ni registros de inventario.
 - Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
 
@@ -30,7 +31,7 @@
 6. Probar instalación y flujo en Windows, macOS y Linux.
 
 ## P1 — Experiencia de importación
-1. Tests adicionales de saneamiento URL: OAuth, tokens, tracking, IPv6 y rutas con identificadores personales.
+1. Validación manual del saneamiento URL con casos reales y evaluación de falsos positivos en rutas largas.
 2. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
 3. Pruebas manuales del flujo de borrado y revisión de usabilidad multi-SO/navegador.
 
