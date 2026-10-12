@@ -385,6 +385,46 @@ def test_monitor_history_cleanup_runs_no_more_than_daily(monkeypatch):
     assert cleaned == [30, 30]
 
 
+def test_run_due_once_continues_after_monitor_failure_and_backs_off(monkeypatch):
+    import time
+
+    supervisor = MonitorSupervisor()
+    monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
+    monitors = [
+        {"id": 1, "name": "First", "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 2, "name": "Failing", "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 3, "name": "Third", "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+    ]
+    monkeypatch.setattr(monitoring.database, "list_monitors", lambda: monitors)
+    attempted = []
+
+    def check(monitor):
+        attempted.append(monitor["id"])
+        if monitor["id"] == 2:
+            raise RuntimeError("synthetic storage race")
+        return {"status": "up"}
+
+    monkeypatch.setattr(monitoring, "check_once", check)
+
+    assert supervisor.run_due_once() == 2
+    assert attempted == [1, 2, 3]
+    assert supervisor._consecutive_errors[2] == 1
+    assert supervisor._retry_after[2] > time.monotonic()
+
+    # Backoff applies only to the failed monitor; the rest of the queue still runs.
+    supervisor._retry_after[2] = float("inf")
+    attempted.clear()
+    assert supervisor.run_due_once() == 2
+    assert attempted == [1, 3]
+
+    # A later successful check clears the retry state.
+    supervisor._retry_after[2] = 0.0
+    monkeypatch.setattr(monitoring, "check_once", lambda monitor: attempted.append(monitor["id"]) or {"status": "up"})
+    assert supervisor.run_due_once() == 3
+    assert 2 not in supervisor._consecutive_errors
+    assert 2 not in supervisor._retry_after
+
+
 def test_run_due_once_stops_scheduling_after_shutdown_is_requested(monkeypatch):
     supervisor = MonitorSupervisor()
     monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
