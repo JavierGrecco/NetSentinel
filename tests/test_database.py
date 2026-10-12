@@ -178,3 +178,46 @@ def test_uses_local_oui_file_and_records_lookup_provenance(tmp_path: Path, monke
     assert device["manufacturer"] == "Proveedor de ejemplo"
     assert device["manufacturer_source"] == "oui.csv (base local)"
     assert device["manufacturer_checked_at"]
+
+
+
+def test_connect_never_changes_permissions_of_an_existing_parent(tmp_path, monkeypatch):
+    import os
+
+    shared_parent = tmp_path / "shared"
+    shared_parent.mkdir()
+    db_path = shared_parent / "netsentinel.sqlite3"
+    real_chmod = os.chmod
+    chmod_calls = []
+
+    def tracked_chmod(path, mode):
+        chmod_calls.append((Path(path), mode))
+        return real_chmod(path, mode)
+
+    monkeypatch.setattr(database.os, "chmod", tracked_chmod)
+    with database.connect(db_path):
+        pass
+
+    assert (shared_parent, 0o700) not in chmod_calls
+    assert (db_path, 0o600) in chmod_calls
+
+
+def test_connect_creates_new_nested_directories_with_private_permissions(tmp_path):
+    import os
+    import stat
+
+    if os.name != "posix":
+        pytest.skip("Los modos POSIX no se aplican en Windows.")
+
+    shared_parent = tmp_path / "shared"
+    shared_parent.mkdir(mode=0o755)
+    destination = shared_parent / "nested" / "netsentinel-data"
+    db_path = destination / "netsentinel.sqlite3"
+
+    with database.connect(db_path):
+        pass
+
+    assert stat.S_IMODE(shared_parent.stat().st_mode) != 0o000
+    assert stat.S_IMODE((shared_parent / "nested").stat().st_mode) == 0o700
+    assert stat.S_IMODE(destination.stat().st_mode) == 0o700
+    assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
