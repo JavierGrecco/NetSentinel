@@ -79,6 +79,10 @@ Las consultas DNS A/AAAA por nombre y PTR inverso por IP están disponibles en `
 
 En **Herramientas** podés comprobar un único host/IP y puerto TLS. La herramienta valida el certificado con el almacén de confianza del sistema e informa fechas de validez, nombre del certificado, versión TLS y cifrado negociado. Solo realiza el handshake TLS; no solicita páginas, no lee contenido HTTP y no guarda el resultado. Usala únicamente sobre endpoints que administrás o tenés autorización para evaluar. No reemplaza una auditoría completa de TLS.
 
+## Hallazgos con evidencia
+
+La API local `GET /api/findings` presenta en un contrato común los cambios observados del inventario y los incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas. Admite `state=active|acknowledged|resolved|all` y un `limit` de hasta 200. `GET /api/export/findings.json` exporta la misma vista en JSON sin modificar los datos. Esta primera iteración no correlaciona causas raíz ni incluye resultados puntuales DNS/TLS, porque esas inspecciones no se persisten. No es un SIEM ni confirma por sí sola una intrusión.
+
 ## Monitorización
 
 En el panel, elegí **Monitorización** y agregá un control:
