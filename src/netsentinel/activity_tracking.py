@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import parse_qsl, unquote, unquote_plus, urlencode, urlsplit, urlunsplit
 
 from . import database
+from .csv_safety import spreadsheet_safe_text as _csv_safe_text
 
 class InvalidCollectorToken(PermissionError):
     """El secreto de una sesión de recopilación no coincide."""
@@ -803,13 +804,6 @@ def _activity_filter_values(
         clauses.append("observed_at < ?")
         params.append(_iso(parsed_to + timedelta(days=1)))
     return clauses, params
-
-
-def _csv_safe_text(value: Any) -> Any:
-    """Neutralize spreadsheet formulas in text exported to CSV."""
-    if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
-        return "'" + value
-    return value
 
 
 def _activity_delete_scope(

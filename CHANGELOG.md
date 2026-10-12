@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Centraliza el saneamiento de fórmulas de hojas de cálculo en un helper común y lo aplica al inventario, la actividad y los informes de monitorización; agrega una regresión que verifica la exportación segura sin modificar SQLite.
 - Canonicaliza `--host localhost` a `127.0.0.1` y rechaza aliases de hostname no literales para que el bind no dependa del resolvedor local; el lanzador Windows conserva y devuelve el código de salida real de la aplicación.
 - Aplica la retención configurada también a la ingestión en vivo: rechaza metadatos retrasados fuera de ventana en lugar de aceptarlos y eliminarlos inmediatamente en la siguiente lectura; agrega una regresión de API.
 - Limita la lectura CSV de actividad a 1.000 filas antes de materializar el lote y traduce campos/cabeceras demasiado grandes a errores de validación 422 en vez de errores internos; añade regresiones para importación y vista previa sin escrituras parciales.
