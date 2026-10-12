@@ -145,7 +145,7 @@ def test_tls_inspection_reports_certificate_verification_failure(monkeypatch, ve
     monkeypatch.setattr(tls_tools.socket, "create_connection", lambda *_args, **_kwargs: raw)
     monkeypatch.setattr(tls_tools.ssl, "create_default_context", lambda: context)
 
-    result = tls_tools.inspect_tls_endpoint("example.com")
+    result = tls_tools._inspect_tls_endpoint_direct("example.com")
 
     assert result["status"] == "warning"
     assert result["findings"][0]["code"] == expected_code
@@ -158,7 +158,7 @@ def test_tls_inspection_reports_timeout_without_raw_exception(monkeypatch):
         lambda *_args, **_kwargs: (_ for _ in ()).throw(TimeoutError("secret technical detail")),
     )
 
-    result = tls_tools.inspect_tls_endpoint("example.com")
+    result = tls_tools._inspect_tls_endpoint_direct("example.com")
 
     assert result["status"] == "timeout"
     assert result["findings"][0]["code"] == "connection_timeout"
@@ -174,7 +174,7 @@ def test_tls_inspection_rejects_invalid_port(port):
 def test_tls_inspection_supports_ip_addresses(monkeypatch):
     calls, context, _raw = _mock_success(monkeypatch, certificate=_certificate())
 
-    result = tls_tools.inspect_tls_endpoint("192.0.2.10")
+    result = tls_tools._inspect_tls_endpoint_direct("192.0.2.10")
 
     assert result["host"] == "192.0.2.10"
     assert calls["address"] == ("192.0.2.10", 443)
