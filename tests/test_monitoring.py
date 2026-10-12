@@ -386,6 +386,8 @@ def test_monitor_history_cleanup_runs_no_more_than_daily(monkeypatch):
 
 
 def test_run_due_once_continues_after_monitor_failure_and_backs_off(monkeypatch):
+    import time
+
     supervisor = MonitorSupervisor()
     monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
     monitors = [
