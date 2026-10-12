@@ -115,6 +115,33 @@ def test_sqlite_backup_download_is_openable(monkeypatch, tmp_path):
         assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
 
+def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+
+    def fail_summary():
+        raise RuntimeError("private backend detail must not reach the client")
+
+    monkeypatch.setattr(main_module.database, "get_summary", fail_summary)
+    with TestClient(
+        app,
+        base_url="http://127.0.0.1",
+        raise_server_exceptions=False,
+    ) as client:
+        response = client.get("/api/summary")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Error interno de NetSentinel."}
+    assert "private backend detail" not in response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["pragma"] == "no-cache"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+    assert response.headers["cross-origin-resource-policy"] == "same-origin"
+    assert "default-src 'self'" in response.headers["content-security-policy"]
+    assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
+
 def test_host_guard_rejects_unknown_hostname(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     with TestClient(app, base_url="http://untrusted.example") as client:
