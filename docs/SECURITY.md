@@ -4,6 +4,8 @@
 
 NetSentinel es una herramienta de observación local. El panel escucha en `127.0.0.1` de forma predeterminada y la base SQLite permanece en la computadora del usuario. La lectura pasiva de tablas de vecinos solo muestra direcciones que el sistema ya conoce; el descubrimiento activo comienza únicamente cuando se solicita desde el panel.
 
+En sistemas POSIX, los directorios de datos que NetSentinel crea se restringen a permisos de usuario y el archivo SQLite se ajusta a `0600` cuando el sistema lo permite. Por seguridad, no se cambian los permisos de directorios que ya existían: si configurás `NETSENTINEL_DATA_DIR`, elegí una carpeta dedicada de la aplicación, no un directorio compartido como `/tmp`. En Windows, protegé la carpeta de datos con los permisos de tu cuenta.
+
 El descubrimiento activo solo examina subredes IPv4 privadas RFC 1918: `10.0.0.0/8`, `172.16.0.0/12` y `192.168.0.0/16`. Analiza como máximo dos subredes y, si una es mayor que /24, reduce el alcance a un /24. Envía como máximo un ping por dirección y acepta una sola ejecución de descubrimiento simultánea. No explora Internet ni modifica la configuración de los equipos. Un equipo puede no responder al ping, por lo que los resultados no garantizan un inventario completo y no cubren redes exclusivamente IPv6.
 
 Las interfaces Apple de enlace local como AWDL/LLW no se consideran dispositivos de una LAN convencional en nuevas lecturas. Los registros históricos se conservan automáticamente; las observaciones antiguas de AWDL/LLW se etiquetan como interfaces locales virtuales sin borrarlas. Una MAC puede aleatorizarse o suplantarse, y un dispositivo desconocido no demuestra una intrusión.
