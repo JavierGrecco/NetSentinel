@@ -39,8 +39,8 @@ def _elapsed_seconds(start: str | None, end: str | None = None) -> int | None:
         return None
 
 
-def _ensure_private_directory(directory: Path) -> None:
-    """Create missing data directories privately without changing existing paths."""
+def _ensure_private_directory(directory: Path, *, enforce_existing_final: bool = False) -> None:
+    """Create missing paths privately; optionally harden a known app-owned final directory."""
     # NETSENTINEL_DATA_DIR may point to a shared/system directory. Change modes
     # only on components created here, never on a pre-existing parent such as /tmp.
     if os.name != "posix":
@@ -74,12 +74,22 @@ def _ensure_private_directory(directory: Path) -> None:
     if not directory.is_dir():
         raise NotADirectoryError(f"El directorio de datos no es un directorio: {directory}")
 
+    # The default ~/.netsentinel directory is application-owned by convention.
+    # It is safe to harden that known location even when it already exists;
+    # custom NETSENTINEL_DATA_DIR paths are not assumed to be dedicated.
+    if enforce_existing_final:
+        try:
+            os.chmod(directory, 0o700)
+        except OSError:
+            pass
+
 
 @contextmanager
 def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
     db_path = path or database_path()
-    _ensure_private_directory(db_path.parent)
+    use_default_data_directory = path is None and not os.environ.get("NETSENTINEL_DATA_DIR")
+    _ensure_private_directory(db_path.parent, enforce_existing_final=use_default_data_directory)
     connection = sqlite3.connect(db_path, timeout=10)
     if os.name == "posix":
         try:
