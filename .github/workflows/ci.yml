@@ -45,8 +45,23 @@ jobs:
         run: bash -n run.sh run-macos.command
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
-      - name: Test Chromium extension URL sanitizer
-        run: node --test browser-extension/service-worker.test.cjs
+      - name: Test Chromium extension URL sanitizer, capture lifecycle and popup CSV
+        run: node --test browser-extension/service-worker.test.cjs browser-extension/popup.test.cjs
+      - name: Validate extension manifest and opt-in defaults
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("browser-extension/manifest.json").read_text(encoding="utf-8"))
+          assert manifest["manifest_version"] == 3, "Chromium extension must use Manifest V3"
+          assert set(manifest["permissions"]) == {"storage", "webNavigation"}
+          assert manifest["host_permissions"] == ["http://*/*", "https://*/*"]
+          assert "incognito" not in manifest, "Do not enable private browsing by default"
+          for path in ("browser-extension/service-worker.js", "browser-extension/popup.js"):
+              source = Path(path).read_text(encoding="utf-8")
+              assert "enabled: false" in source, f"Tracking default must remain off in {path}"
+          PY
       - name: Validate embedded activity page JavaScript
         run: |
           python - <<'PY'

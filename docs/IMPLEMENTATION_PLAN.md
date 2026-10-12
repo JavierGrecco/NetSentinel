@@ -12,6 +12,7 @@
 - Filtros de actividad por dispositivo, fuente, tipo de evento y fechas UTC inclusivas; exportación CSV filtrada hasta 10.000 filas con neutralización de fórmulas de hoja de cálculo.
 - Saneamiento URL reforzado en extensión y backend: OAuth/redirect, claves doblemente codificadas, más claves de seguimiento, IPv6 canónico y redacción heurística de rutas reconocibles; pruebas Python y Node.
 - Pruebas Node del ciclo del service worker para apagado por defecto, opt-in, navegación de subframe/privada, exclusiones, toggles de página/búsqueda, retención y deduplicación.
+- Pruebas puras de CSV del popup (quoting, fórmulas, delimitadores, saltos de línea y BOM) más validación CI de Manifest V3, permisos explícitos y seguimiento desactivado por defecto.
 - Borrado selectivo de eventos por dispositivo, fuente, tipo o fechas con previsualización de alcance, prohibición de alcance vacío, confirmación exacta basada en el recuento actual y borrado transaccional; no elimina sesiones ni registros de inventario.
 - Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
 

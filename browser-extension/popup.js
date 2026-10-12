@@ -70,12 +70,15 @@ async function saveSettings({ confirmEnable = false } = {}) {
   await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
   await render();
 }
-function exportCsv(events) {
+function buildCsv(events) {
   const columns = ["observed_at", "event_type", "domain", "destination_ip", "destination_port",
     "protocol", "app_name", "blocked", "page_url", "search_engine", "search_terms"];
   const rows = [columns.map(escapeCsv).join(",")];
   for (const event of events) rows.push(columns.map(column => escapeCsv(event[column] ?? "")).join(","));
-  const blob = new Blob(["\ufeff" + rows.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+  return "\ufeff" + rows.join("\r\n") + "\r\n";
+}
+function exportCsv(events) {
+  const blob = new Blob([buildCsv(events)], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -83,14 +86,21 @@ function exportCsv(events) {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$("enabled").addEventListener("change", () => { void saveSettings({ confirmEnable: true }); });
-$("capturePages").addEventListener("change", () => { void saveSettings(); });
-$("captureSearches").addEventListener("change", () => { void saveSettings(); });
-$("saveSettings").addEventListener("click", () => { void saveSettings(); });
-$("export").addEventListener("click", async () => { const { events } = await getState(); if (events.length) exportCsv(events); });
-$("clear").addEventListener("click", async () => {
-  if (!window.confirm("Se borrarán todos los registros que esta extensión conserva en este navegador. ¿Continuar?")) return;
-  await chrome.storage.local.set({ [EVENTS_KEY]: [] });
-  await render();
-});
-void render();
+function initializePopup() {
+  $("enabled").addEventListener("change", () => { void saveSettings({ confirmEnable: true }); });
+  $("capturePages").addEventListener("change", () => { void saveSettings(); });
+  $("captureSearches").addEventListener("change", () => { void saveSettings(); });
+  $("saveSettings").addEventListener("click", () => { void saveSettings(); });
+  $("export").addEventListener("click", async () => { const { events } = await getState(); if (events.length) exportCsv(events); });
+  $("clear").addEventListener("click", async () => {
+    if (!window.confirm("Se borrarán todos los registros que esta extensión conserva en este navegador. ¿Continuar?")) return;
+    await chrome.storage.local.set({ [EVENTS_KEY]: [] });
+    await render();
+  });
+  void render();
+}
+if (typeof document !== "undefined" && typeof chrome !== "undefined") initializePopup();
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { DEFAULTS, escapeCsv, buildCsv, getState };
+}

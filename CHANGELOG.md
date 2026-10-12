@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade pruebas del CSV del popup para fórmulas/escapado y validación CI de Manifest V3, permisos mínimos y apagado por defecto.
 - Amplía las pruebas Node del service worker para estados opt-in, frames/privado, exclusiones, toggles, retención y deduplicación de navegación.
 - Refuerza el saneamiento de URLs en extensión y backend con detección de OAuth/redirect, claves doblemente codificadas, más tracking, IPv6 canónico y redacción heurística de segmentos reconocibles; añade pruebas Python/Node a la CI.
 - Añade filtros de historial, exportación CSV y borrado selectivo por fuente, además del dispositivo, tipo de evento y fechas.
