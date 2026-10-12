@@ -12,15 +12,18 @@ import uvicorn
 from . import __version__
 
 
-def _is_loopback_host(host: str) -> bool:
-    """Accept only loopback addresses; remote exposure is unsupported without auth."""
+def _normalize_loopback_host(host: str) -> str | None:
+    """Return a literal loopback bind address; never bind through hostname resolution."""
     normalized = host.strip().rstrip(".").lower()
-    if normalized in {"localhost", "localhost.localdomain"}:
-        return True
+    if normalized == "localhost":
+        # Avoid relying on resolver/hosts-file configuration when choosing the
+        # network interface on which the unauthenticated local dashboard listens.
+        return "127.0.0.1"
     try:
-        return ipaddress.ip_address(normalized).is_loopback
+        address = ipaddress.ip_address(normalized)
     except ValueError:
-        return False
+        return None
+    return str(address) if address.is_loopback else None
 
 
 def _parse_port(value: str) -> int:
@@ -46,11 +49,15 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true", help="No abrir el navegador automáticamente.")
     args = parser.parse_args()
 
-    if not _is_loopback_host(args.host):
+    bind_host = _normalize_loopback_host(args.host)
+    if bind_host is None:
         parser.error(
-            "por seguridad, --host debe ser una dirección loopback (127.0.0.1, localhost o ::1). "
-            "El acceso remoto no está disponible hasta implementar autenticación y control de acceso."
+            "por seguridad, --host debe ser una dirección loopback literal "
+            "(127.0.0.1, localhost o ::1). No se aceptan otros hostnames porque su "
+            "resolución podría enlazar el servidor a una interfaz remota."
         )
+    # Uvicorn recibe IP literal, no un hostname que dependa del resolvedor.
+    args.host = bind_host
 
     # URLs IPv6 requieren corchetes; Uvicorn debe recibir el host sin ellos.
     url_host = f"[{args.host}]" if ":" in args.host else args.host
