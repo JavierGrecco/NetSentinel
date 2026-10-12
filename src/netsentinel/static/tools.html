@@ -54,6 +54,20 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
 <div id="ptr-status" class="status" role="status" aria-live="polite"></div>
 <p class="warning">Un PTR puede faltar o estar desactualizado. El nombre devuelto no confirma quién controla la dirección ni que el equipo sea confiable.</p>
 </section>
+<section class="panel" aria-labelledby="tls-title">
+<h2 id="tls-title">Inspección de certificado TLS</h2>
+<p>Verifica un único endpoint HTTPS/TLS: validez del certificado, vencimiento, versión TLS y cifrado negociado.</p>
+<form id="tls-form">
+<label for="tls-host">Nombre de host o dirección IP</label>
+<input id="tls-host" name="host" maxlength="253" autocomplete="off" spellcheck="false" placeholder="ejemplo.com" required>
+<label for="tls-port">Puerto TLS</label>
+<input id="tls-port" name="port" type="number" min="1" max="65535" value="443" required>
+<button id="tls-submit" type="submit">Inspeccionar TLS</button>
+</form>
+<div id="tls-status" class="status" role="status" aria-live="polite"></div>
+<div id="tls-results" class="results"></div>
+<p class="warning">Usá únicamente endpoints que administrás o tenés autorización para evaluar. La prueba realiza una conexión TLS puntual: no solicita páginas, no lee mensajes ni credenciales y no guarda el resultado.</p>
+</section>
 <section class="panel" aria-labelledby="config-title">
 <h2 id="config-title">DNS configurado en esta computadora</h2>
 <p>Vista de solo lectura de los servidores DNS que el sistema expone a NetSentinel. No se cambia ninguna configuración.</p>
@@ -150,6 +164,89 @@ button{margin-top:12px;padding:11px 17px;border:0;border-radius:8px;background:#
       ptrStatus.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta PTR.";
     } finally {
       ptrButton.disabled = false;
+    }
+  });
+  const tlsForm = document.getElementById("tls-form");
+  const tlsHost = document.getElementById("tls-host");
+  const tlsPort = document.getElementById("tls-port");
+  const tlsButton = document.getElementById("tls-submit");
+  const tlsStatus = document.getElementById("tls-status");
+  const tlsResults = document.getElementById("tls-results");
+
+  function appendTLSValue(label, value) {
+    if (value === null || value === undefined || value === "") return;
+    const row = document.createElement("div");
+    row.className = "address";
+    const key = document.createElement("strong");
+    key.textContent = label;
+    const text = document.createElement("span");
+    text.className = "tag";
+    text.textContent = String(value);
+    row.append(key, text);
+    tlsResults.append(row);
+  }
+
+  tlsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const host = tlsHost.value.trim();
+    const port = Number(tlsPort.value);
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return;
+    tlsButton.disabled = true;
+    tlsStatus.textContent = "Conectando al endpoint y validando el certificado…";
+    tlsResults.replaceChildren();
+    try {
+      const response = await fetch("/api/tools/tls/inspect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ host, port }),
+        cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo inspeccionar el endpoint TLS.");
+      tlsStatus.textContent = data.summary || "Inspección TLS completada.";
+      appendTLSValue("Endpoint", data.host + ":" + data.port);
+      appendTLSValue("Estado", data.status);
+      if (data.certificate) {
+        appendTLSValue("Sujeto", data.certificate.subject);
+        appendTLSValue("Emisor", data.certificate.issuer);
+        appendTLSValue("Válido desde", data.certificate.valid_from);
+        appendTLSValue("Vence", data.certificate.valid_until);
+        appendTLSValue("Días hasta el vencimiento", data.certificate.days_remaining);
+        if (data.certificate.dns_names && data.certificate.dns_names.length) {
+          appendTLSValue("Nombres del certificado", data.certificate.dns_names.join(", "));
+        }
+      }
+      if (data.tls) {
+        appendTLSValue("Versión TLS", data.tls.version);
+        appendTLSValue("Cifrado negociado", data.tls.cipher);
+        appendTLSValue("Tamaño de clave del cifrado (bits)", data.tls.cipher_bits);
+      }
+      for (const finding of data.findings || []) {
+        const row = document.createElement("div");
+        row.className = "address";
+        const content = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = finding.title || finding.code || "Hallazgo";
+        const detail = document.createElement("div");
+        detail.className = "tag";
+        detail.textContent = finding.detail || "";
+        content.append(title, detail);
+        const severity = document.createElement("span");
+        severity.className = "tag";
+        severity.textContent = finding.severity || "info";
+        row.append(content, severity);
+        tlsResults.append(row);
+      }
+      if (data.notice) {
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = data.notice;
+        tlsResults.append(note);
+      }
+    } catch (error) {
+      tlsStatus.textContent = error instanceof Error ? error.message : "No se pudo completar la inspección TLS.";
+    } finally {
+      tlsButton.disabled = false;
     }
   });
 })();
