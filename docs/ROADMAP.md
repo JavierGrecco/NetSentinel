@@ -46,6 +46,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Parser de importación CSV acotado: rechaza la fila 1001 antes de acumular más objetos y convierte errores de límite de campo a validación, sin escrituras parciales.
 - [x] Saneamiento común de celdas CSV frente a fórmulas de hojas de cálculo, incluido el inventario editable; las pruebas verifican que exportar no modifica los valores almacenados.
+- [x] Alinea el aviso de privacidad de navegación con el comportamiento real del saneador: host/ruta normalizada, redacción heurística y riesgo residual de parámetros o segmentos desconocidos.
 - [x] Ingestión en vivo respeta la retención de actividad configurada y rechaza eventos retrasados que desaparecerían al consultar el historial.
 - [x] La previsualización/importación CSV rechaza el lote si alguna fila supera la retención configurada, antes de guardar datos; pruebas cubren la ampliación del período y la ausencia de escrituras parciales.
 - [x] Deduplicación idempotente de filas CSV manuales por dispositivo; las filas idénticas ya importadas se omiten y se contabilizan.
