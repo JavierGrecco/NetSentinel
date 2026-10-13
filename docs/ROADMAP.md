@@ -13,7 +13,7 @@
 - **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159672).
 - **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159674).
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
-- **Pruebas manuales de instalación y uso:** pendientes de registrar en la matriz enlazada arriba.
+- **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
 
 Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
