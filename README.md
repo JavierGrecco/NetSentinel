@@ -4,6 +4,27 @@
 
 NetSentinel reúne inventario de dispositivos, historial y monitorización en un panel web. Se ejecuta en tu computadora; no necesita una cuenta ni un servidor externo.
 
+## Primeros pasos
+
+1. **Iniciá NetSentinel.** En Windows, ejecutá `run-windows.bat`; en macOS, abrí `run-macos.command`; en Linux, ejecutá `./run.sh`. La [sección de instalación](#instalación-y-primer-inicio) explica cada opción.
+2. **Abrí el panel.** Entrá en [http://127.0.0.1:8765](http://127.0.0.1:8765). En el primer inicio necesitás conexión a Internet para instalar las dependencias que falten.
+3. **Conocé tu red.** Pulsá **Descubrir dispositivos**, revisá los resultados y marcá como conocidos los equipos que reconocés. Después podés crear un control en **Monitorización** para comprobar un servicio.
+
+La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el tráfico. Usá NetSentinel únicamente en redes que administrás o tenés autorización para revisar. Un equipo que no aparece no está necesariamente desconectado.
+
+## Índice
+
+- [Qué podés hacer](#qué-podés-hacer)
+- [Instalación y primer inicio](#instalación-y-primer-inicio)
+- [Descubrimiento de la red](#descubrimiento-de-la-red)
+- [Herramientas DNS](#herramientas-dns) y [inspección TLS](#inspección-tls)
+- [Hallazgos con evidencia](#hallazgos-con-evidencia)
+- [Monitorización](#monitorización)
+- [Copias de seguridad y datos](#copias-de-seguridad-y-datos)
+- [Actividad y privacidad](#historial-y-telemetría-autorizada)
+- [Preguntas frecuentes](docs/FAQ.md)
+- [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
+
 ## Qué podés hacer
 
 - Detectar automáticamente subredes IPv4 privadas RFC 1918 activas (10/8, 172.16/12 y 192.168/16) y buscar dispositivos en ellas, sin que tengas que conocer el rango de IPs.
@@ -115,7 +136,8 @@ Para registrar **páginas y búsquedas del navegador**, instalá la extensión C
 
 Para **correo electrónico**, NetSentinel acepta una importación manual de metadatos de registros de auditoría autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional. No se conecta a bandejas, no captura mensajes ni adjuntos y rechaza columnas de cuerpo/contenido. No hay todavía un adaptador específico para Google Workspace, Microsoft 365 ni cuentas personales; eso depende de las capacidades y permisos del proveedor.
 
-El backend por sí solo no ve todas las conexiones de otros equipos ni conoce las páginas que se abren. La extensión no registra búsquedas internas de aplicaciones nativas ni formatos que no aparecen en una URL compatible. No recolectamos contraseñas, cookies ni contenido de páginas, y no intentamos interceptar TLS. Consultá la [guía de actividad familiar](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
+El backend por sí solo no ve todas las conexiones de otros equipos ni conoce las páginas que se abren. La extensión no registra búsquedas internas de aplicaciones nativas ni formatos que no aparecen en una URL compatible. No recolectamos contraseñas, cookies ni contenido de páginas, y no intentamos interceptar TLS. Consultá la [guía de actividad y telemetría autorizada](docs/FAMILY_ACTIVITY.md) y la [guía de la extensión](browser-extension/README.md).
+
 ## Datos y privacidad
 
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
@@ -133,6 +155,7 @@ python -m pytest
 
 ## Documentación
 
+- [Preguntas frecuentes y solución de problemas](docs/FAQ.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Guía de actividad y telemetría autorizada](docs/FAMILY_ACTIVITY.md)
 - [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
