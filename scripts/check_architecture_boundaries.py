@@ -42,6 +42,7 @@ DATABASE_FORBIDDEN_IMPORTS = {
     "netsentinel.api",
     "netsentinel.api.tools",
     "netsentinel.activity_tracking",
+    "netsentinel.activity_repository",
     "netsentinel.monitoring",
     "netsentinel.discovery",
     "netsentinel.local_discovery",
@@ -61,8 +62,16 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 
+REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    # El repositorio de actividad solo usa la fábrica SQLite compartida.
+    "netsentinel.activity_repository": {
+        "netsentinel.database",
+    },
+}
+
 DOMAIN_MODULES_INDEPENDENT_OF_HTTP = {
     "netsentinel.activity_tracking",
+    "netsentinel.activity_repository",
     "netsentinel.database",
     "netsentinel.diagnostics",
     "netsentinel.discovery",
@@ -217,6 +226,13 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
             if dependency not in allowed:
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed service dependency."
+                )
+
+    for source, allowed in sorted(REPOSITORY_ALLOWED_INTERNAL_IMPORTS.items()):
+        for dependency in sorted(graph.get(source, set())):
+            if dependency not in allowed:
+                violations.append(
+                    f"{source} imports {dependency}, which is not an allowed repository dependency."
                 )
 
     for dependency in sorted(graph.get("netsentinel.database", set())):

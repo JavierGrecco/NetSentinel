@@ -21,7 +21,7 @@ from email.utils import getaddresses
 from typing import Any
 from urllib.parse import parse_qsl, unquote, unquote_plus, urlencode, urlsplit, urlunsplit
 
-from . import database
+from . import activity_repository, database
 from .csv_safety import spreadsheet_safe_text as _csv_safe_text
 
 class InvalidCollectorToken(PermissionError):
@@ -423,19 +423,8 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
 
 
 def _cleanup(db) -> int:
-    row = db.execute("SELECT retention_days FROM activity_settings WHERE id = 1").fetchone()
-    retention_days = int(row["retention_days"]) if row else 7
-    cutoff = _iso(_now() - timedelta(days=retention_days))
-    cursor = db.execute("DELETE FROM activity_events WHERE observed_at < ?", (cutoff,))
-    db.execute(
-        "UPDATE activity_sessions SET status = 'expired' WHERE status = 'active' AND ends_at <= ?",
-        (_iso(_now()),),
-    )
-    db.execute(
-        "DELETE FROM activity_sessions WHERE status != 'active' AND ends_at < ?",
-        (_iso(_now() - timedelta(days=90)),),
-    )
-    return cursor.rowcount
+    """Delegación temporal al repositorio mientras se migra el resto del dominio."""
+    return activity_repository.cleanup(db, now=_now())
 
 
 def start_session(device_id: int, duration_minutes: int, source_mode: str) -> dict[str, Any]:
@@ -521,10 +510,7 @@ def ingest_event(
 
         # Live collectors can deliver delayed telemetry. Do not accept an event
         # older than the active retention window only to delete it on the next read.
-        retention_row = db.execute(
-            "SELECT retention_days FROM activity_settings WHERE id = 1"
-        ).fetchone()
-        retention_days = int(retention_row["retention_days"]) if retention_row else 7
+        retention_days = activity_repository.get_retention_days(db)
         retention_cutoff = _iso(_now() - timedelta(days=retention_days))
         if event["observed_at"] < retention_cutoff:
             raise ValueError(
@@ -754,11 +740,7 @@ def preview_csv(device_id: int, csv_data: str) -> dict[str, Any]:
 def update_retention(retention_days: int) -> dict[str, Any]:
     if not 1 <= int(retention_days) <= 90:
         raise ValueError("La retención debe ser de 1 a 90 días.")
-    with database.connect() as db:
-        db.execute("UPDATE activity_settings SET retention_days = ? WHERE id = 1", (int(retention_days),))
-        deleted = _cleanup(db)
-        row = db.execute("SELECT retention_days FROM activity_settings WHERE id = 1").fetchone()
-    return {"retention_days": int(row["retention_days"]), "deleted_events": deleted}
+    return activity_repository.update_retention(int(retention_days), now=_now())
 
 
 def _activity_filter_values(
@@ -1015,7 +997,7 @@ def get_activity(
             "SELECT COUNT(*) FROM activity_events WHERE blocked = 1" + ("" if device_id is None else " AND device_id = ?"),
             blocked_params,
         ).fetchone()[0]
-        setting = db.execute("SELECT retention_days FROM activity_settings WHERE id=1").fetchone()
+        retention_days = activity_repository.get_retention_days(db)
         session_count_sql = "SELECT COUNT(*) FROM activity_sessions WHERE status='active'" + ("" if device_id is None else " AND device_id = ?")
         event_count_sql = "SELECT COUNT(*) FROM activity_events" + ("" if device_id is None else " WHERE device_id = ?")
         active_count = db.execute(session_count_sql, blocked_params).fetchone()[0]
@@ -1029,7 +1011,7 @@ def get_activity(
         "top_domains": [dict(row) for row in top_domains],
         "blocked_events": int(blocked_count),
         "devices": [dict(row) for row in devices],
-        "retention_days": int(setting["retention_days"]) if setting else 7,
+        "retention_days": retention_days,
         "active_sessions": int(active_count),
         "total_events": int(event_count),
         "sources": sorted(SESSION_SOURCES),

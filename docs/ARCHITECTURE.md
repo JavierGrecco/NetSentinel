@@ -6,7 +6,7 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 
 - **Composición y API:** `main.py` crea la aplicación y sus controles transversales. Los routers `api/activity.py`, `api/findings.py` y `api/tools.py` agrupan actividad autorizada, hallazgos y herramientas DNS/TLS. `findings_service.py` coordina la consulta de evidencia para los hallazgos sin depender del transporte HTTP.
 - **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios. Los tipos de observación que comparten descubrimiento e inventario se definen en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
-- **Actividad:** `api/activity.py` define los contratos HTTP de sesiones, ingesta, importación, retención y borrado; `activity_tracking.py` centraliza las reglas de privacidad, normalización, saneamiento de URL, metadatos de correo, importación, retención y exportación.
+- **Actividad:** `api/activity.py` define los contratos HTTP. `activity_tracking.py` conserva las reglas de privacidad, normalización, importación y exportación; `activity_repository.py` empieza a concentrar las consultas SQLite de retención y limpieza. La extracción es incremental: otros flujos de actividad todavía usan la conexión compartida y no se consideran migrados.
 - **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
 - **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
 - **Interfaz:** páginas HTML y estilos están separados por pantalla; la extensión vive en `browser-extension/`.
@@ -31,7 +31,7 @@ Estos límites son una dirección de diseño, no una afirmación de que todas la
 
 ## Reglas verificadas automáticamente
 
-El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que los routers y servicios declaren sus dependencias internas permitidas, que la persistencia no dependa de la API ni coordine otros dominios, y que los módulos de dominio/infraestructura definidos en la política no importen FastAPI o Starlette. Estas reglas cubren las fronteras implementadas hoy; se amplían a medida que se extraen servicios y repositorios, en lugar de afirmar que todo el backend ya está desacoplado.
+El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que los routers, servicios y el repositorio de actividad declaren sus dependencias internas permitidas, que la persistencia no dependa de la API ni coordine otros dominios, y que los módulos de dominio/infraestructura definidos en la política no importen FastAPI o Starlette. Estas reglas cubren las fronteras implementadas hoy; se amplían a medida que se extraen servicios y repositorios, en lugar de afirmar que todo el backend ya está desacoplado.
 
 ## Cómo se comunican los módulos
 
