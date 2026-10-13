@@ -9,9 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIREMENT = re.compile(
-    r"^\\s*([A-Za-z0-9_.-]+)(?:\\[[^]]+\\])?\\s*>=\\s*([0-9]+(?:\\.[0-9]+)*)"
+    r"^\s*([A-Za-z0-9_.-]+)(?:\[[^]]+\])?\s*>=\s*([0-9]+(?:\.[0-9]+)*)"
 )
-PIN = re.compile(r"^\\s*([A-Za-z0-9_.-]+)\\s*==\\s*([0-9]+(?:\\.[0-9]+)*)\\s*$")
+PIN = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*==\s*([0-9]+(?:\.[0-9]+)*)\s*$")
 
 
 def normalized_name(name: str) -> str:
