@@ -441,49 +441,24 @@ def start_session(device_id: int, duration_minutes: int, source_mode: str) -> di
     token_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
     with database.connect() as db:
         _cleanup(db)
-        device = db.execute("SELECT id FROM devices WHERE id = ?", (device_id,)).fetchone()
-        if device is None:
-            raise LookupError("No se encontró el dispositivo.")
-        db.execute(
-            "UPDATE activity_sessions SET status = 'stopped', stopped_at = ?, ends_at = ? WHERE device_id = ? AND status = 'active'",
-            (started_at, started_at, device_id),
+        result = activity_repository.start_session(
+            db,
+            device_id=device_id,
+            source_mode=source_mode,
+            started_at=started_at,
+            ends_at=ends_at,
+            token_hash=token_hash,
         )
-        cursor = db.execute(
-            """INSERT INTO activity_sessions
-               (device_id, source_mode, started_at, ends_at, status, collector_token_hash)
-               VALUES (?, ?, ?, ?, 'active', ?)""",
-            (device_id, source_mode, started_at, ends_at, token_hash),
-        )
-        row = db.execute(
-            """SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
-                      d.display_name, d.ip_address, d.mac_address
-               FROM activity_sessions s JOIN devices d ON d.id=s.device_id WHERE s.id=?""",
-            (cursor.lastrowid,),
-        ).fetchone()
-        result = dict(row)
-        result["collector_token"] = collector_token
-        result["token_note"] = "Copiá este token ahora. Solo se almacena su hash y no volverá a mostrarse."
-        return result
+    result["collector_token"] = collector_token
+    result["token_note"] = "Copiá este token ahora. Solo se almacena su hash y no volverá a mostrarse."
+    return result
 
 
 def stop_session(session_id: int) -> dict[str, Any] | None:
     now = _iso(_now())
     with database.connect() as db:
         _cleanup(db)
-        row = db.execute("SELECT id FROM activity_sessions WHERE id = ?", (session_id,)).fetchone()
-        if row is None:
-            return None
-        status = db.execute("SELECT status FROM activity_sessions WHERE id=?", (session_id,)).fetchone()["status"]
-        if status == "active":
-            db.execute(
-                "UPDATE activity_sessions SET status='stopped', stopped_at=?, ends_at=? WHERE id=?",
-                (now, now, session_id),
-            )
-        return dict(db.execute(
-            """SELECT id, device_id, source_mode, started_at, ends_at, stopped_at, status
-               FROM activity_sessions WHERE id=?""",
-            (session_id,),
-        ).fetchone())
+        return activity_repository.stop_session(db, session_id, now=now)
 
 
 def ingest_event(
@@ -495,10 +470,7 @@ def ingest_event(
     supplied_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
     with database.connect() as db:
         _cleanup(db)
-        session = db.execute(
-            "SELECT * FROM activity_sessions WHERE id = ? AND device_id = ?",
-            (session_id, device_id),
-        ).fetchone()
+        session = activity_repository.get_session_for_device(db, session_id, device_id)
         if session is None:
             raise LookupError("No existe una sesión para ese dispositivo.")
         if not hmac.compare_digest(session["collector_token_hash"], supplied_hash):
@@ -518,20 +490,9 @@ def ingest_event(
                 "No se guardó el evento."
             )
 
-        cursor = db.execute(
-            """INSERT INTO activity_events
-               (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
-                email_provider, email_from, email_to, email_subject, blocked)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                session_id, device_id, event["observed_at"], now, event["event_type"], event["source"],
-                event["domain"], event["destination_ip"], event["destination_port"], event["protocol"],
-                event["app_name"], event["page_url"], event["search_engine"], event["search_terms"],
-                event["email_provider"], event["email_from"], event["email_to"], event["email_subject"], event["blocked"],
-            ),
+        return activity_repository.insert_event(
+            db, session_id, device_id, event, received_at=now
         )
-        return dict(db.execute("SELECT * FROM activity_events WHERE id=?", (cursor.lastrowid,)).fetchone())
 
 
 def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[str, Any]:
