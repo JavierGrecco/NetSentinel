@@ -1,13 +1,14 @@
 from fastapi.testclient import TestClient
 
 import netsentinel.main as main_module
+import netsentinel.api.tools as tools_api
 from netsentinel.main import app
 
 
 def test_dns_reverse_api_returns_ptr_result(monkeypatch):
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "cached_reverse_lookup_ip",
         lambda address: {
             "ip": "192.0.2.1",
@@ -27,7 +28,7 @@ def test_dns_reverse_api_returns_ptr_result(monkeypatch):
 def test_dns_reverse_api_rejects_invalid_ip(monkeypatch):
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "cached_reverse_lookup_ip",
         lambda _address: (_ for _ in ()).throw(ValueError("Ingresá una dirección IPv4 o IPv6 válida.")),
     )
@@ -39,7 +40,7 @@ def test_dns_reverse_api_rejects_invalid_ip(monkeypatch):
 def test_dns_reverse_api_reports_ptr_failure(monkeypatch):
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "cached_reverse_lookup_ip",
         lambda _address: (_ for _ in ()).throw(OSError("no PTR")),
     )
@@ -64,7 +65,7 @@ def test_dns_reverse_api_returns_not_found_when_ptr_is_absent(monkeypatch):
 
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "cached_reverse_lookup_ip",
         lambda _address: (_ for _ in ()).throw(DNSLookupError("No se encontró un registro PTR para esa dirección.", "not_found")),
     )

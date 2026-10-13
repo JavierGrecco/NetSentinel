@@ -1,4 +1,4 @@
-# ADR-001: evolucionar hacia un monolito modular
+# ADR-001: aplicación modular con despliegue único y límites estrictos
 
 - **Estado:** Propuesta para revisión.
 - **Fecha:** 2026-10-13.
@@ -15,7 +15,7 @@ La modularización debe preparar el crecimiento, no añadir complejidad operacio
 
 ## Decisión propuesta
 
-Adoptar un **monolito modular local**: una distribución, un proceso principal y una base SQLite, con módulos internos cohesionados, interfaces explícitas y dependencias dirigidas.
+Adoptar una **aplicación modular de despliegue único**. En esta decisión, *monolito* describe solo el artefacto de instalación y el proceso principal; no significa que cada módulo sea un bloque grande ni que pueda depender libremente de los demás. La distribución puede ser una, mientras los módulos internos siguen siendo pequeños, cohesionados, testeables y protegidos por contratos explícitos. Se conserva SQLite local y se diseña el interior para que componentes que lo justifiquen puedan separarse más adelante.
 
 ### Responsabilidad de cada capa
 
@@ -24,6 +24,20 @@ Adoptar un **monolito modular local**: una distribución, un proceso principal y
 3. **Servicios de dominio:** cada módulo ofrece casos de uso claros y tipos de entrada/salida conocidos. Las reglas de inventario, monitorización, actividad y hallazgos pertenecen a su dominio.
 4. **Adaptadores e infraestructura:** los repositorios gestionan lecturas y escrituras SQLite; los adaptadores encapsulan comandos del sistema o fuentes externas. Los módulos no deben saltarse estas fronteras para consultar tablas ajenas.
 5. **Contratos compartidos:** los tipos realmente transversales —por ejemplo, referencia de activo, procedencia, marca de tiempo y resultado de una observación— se definen una vez, con significado documentado. No se crea una estructura universal enorme para cada dato.
+
+### Reglas de diseño que no deben negociarse
+
+- **Límites por capacidad funcional.** Un módulo agrupa reglas y cambios que suelen evolucionar juntos; no se crean módulos solo por tipo de archivo ni uno por cada función.
+- **Alta cohesión y bajo acoplamiento.** Cada módulo expone una interfaz pública pequeña. Su implementación queda privada y puede cambiar sin obligar a sus clientes a conocerla.
+- **Dependencias dirigidas y sin ciclos.** La composición conecta módulos. La API llama a servicios; los servicios no importan la API. Los adaptadores de infraestructura implementan contratos definidos hacia el interior.
+- **Reglas de dominio independientes del transporte.** La lógica de inventario, actividad, monitorización y hallazgos no debe depender de clases FastAPI, peticiones HTTP ni detalles de SQLite.
+- **Persistencia con propiedad lógica.** Cada dominio gestiona sus operaciones y consultas. Una única SQLite es aceptable, pero no es aceptable que otro módulo escriba directamente en sus tablas para evitar la interfaz publicada.
+- **Contratos tipados y errores explícitos.** Definir entradas, salidas, límites, efectos secundarios y errores esperados. No filtrar estructuras internas ni exponer un modelo universal gigante.
+- **Sin comunicación de red dentro del proceso.** Las llamadas internas son interfaces Python tipadas. HTTP, colas o RPC solo se introducen cuando los componentes son procesos independientes por una necesidad demostrada.
+- **Sin estado global oculto.** La composición debe hacer visibles las dependencias. Evitar singletons mutables que vuelvan las pruebas dependientes del orden.
+- **Pruebas por frontera.** Cada módulo necesita pruebas unitarias; los límites públicos necesitan pruebas de contrato e integración; las reglas de arquitectura deben comprobar automáticamente que no aparezcan ciclos o dependencias prohibidas.
+- **Abstracción justificada por variación real.** Los adaptadores se introducen para fuentes distintas o sustitución necesaria, no para anticipar todos los proveedores imaginables.
+- **Separación desplegable cuando haya una razón operativa.** Solo se extrae un módulo a otro proceso si necesita escalar, recuperarse, aislar privilegios o desplegarse independientemente. La separación en carpetas no exige separación de procesos.
 
 ### Módulos de destino
 

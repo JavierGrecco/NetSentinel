@@ -15,7 +15,7 @@ La separación por archivos ya existe, pero no todas las fronteras representan r
 
 ## Dirección propuesta
 
-La decisión de arquitectura se documenta en [ADR-001: monolito modular](ADR-001-MODULAR-MONOLITH.md). La meta es separar las responsabilidades internas sin cambiar el modelo de instalación del usuario.
+La decisión de arquitectura se documenta en [ADR-001: aplicación modular de despliegue único](ADR-001-MODULAR-MONOLITH.md). El término *monolito* describe aquí cómo se instala y ejecuta el producto, no el tamaño interno de sus módulos: cada módulo debe ser cohesionado, tener una interfaz pública pequeña y proteger sus detalles privados. La meta es separar responsabilidades sin cambiar la instalación local.
 
 | Módulo | Responsabilidad principal | No debería hacer |
 | --- | --- | --- |
@@ -32,6 +32,10 @@ Estos límites son una dirección de diseño, no una afirmación de que todas la
 ## Cómo se comunican los módulos
 
 - Dentro del proceso, un módulo ofrece servicios de aplicación con entradas y salidas tipadas. Los demás módulos usan esa interfaz pública; no importan funciones internas ni escriben las tablas ajenas.
+- Las fronteras siguen capacidades funcionales y reglas de negocio, no una carpeta por cada función ni una capa técnica genérica que mezcle todos los dominios.
+- Los paquetes internos no se invocan entre sí mediante HTTP: los límites en memoria usan interfaces tipadas. La comunicación de red se reserva para clientes o procesos realmente separados.
+- Las dependencias deben formar un grafo dirigido sin ciclos. La composición conecta las piezas; la lógica de dominio no debe importar FastAPI ni conocer el transporte HTTP.
+- Cada dominio es responsable de sus operaciones de persistencia, aunque inicialmente todos utilicen la misma SQLite. Compartir motor no significa compartir la propiedad de las consultas internas.
 - Los routers HTTP traducen solicitudes a llamadas de servicio. No hacen llamadas HTTP entre sí.
 - El panel, la CLI y la extensión usan los contratos públicos que les corresponden. La extensión sigue siendo opt-in y usa los endpoints de actividad previstos para ella.
 - Las fuentes variables —por ejemplo, tablas de vecinos del sistema o futuras integraciones de router— se conectan mediante adaptadores pequeños. Solo se generaliza una interfaz cuando existe una necesidad concreta de soportar más de una implementación.
