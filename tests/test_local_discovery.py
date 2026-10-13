@@ -32,6 +32,7 @@ def test_detects_private_ipv4_subnet_without_user_input():
 def test_common_linux_container_interfaces_are_not_scanned():
     interfaces = {
         "br-2d2c4d4e": [_entry("172.18.0.1")],
+        "br0": [_entry("172.18.2.1")],
         "veth123456": [_entry("172.18.1.2")],
         "docker0": [_entry("172.17.0.1")],
         "podman0": [_entry("10.88.0.1")],
@@ -50,6 +51,7 @@ def test_container_bridge_does_not_become_second_scan_target():
     interfaces = {
         "en0": [_entry("192.168.1.20")],
         "br-a1b2c3d4": [_entry("172.18.0.1")],
+        "br0": [_entry("172.20.0.1")],
         "veth0abc": [_entry("172.19.0.1")],
         "podman0": [_entry("10.88.0.1")],
     }
