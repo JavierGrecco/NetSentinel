@@ -63,6 +63,21 @@ def test_container_bridge_does_not_become_second_scan_target():
         ("192.168.1.0/24", "en0")
     ]
 
+
+def test_physical_broadcom_interface_name_is_not_misclassified_as_bridge():
+    interfaces = {
+        "brcmfmac0": [_entry("192.168.10.20")],
+        "br0": [_entry("172.20.0.1")],
+        "br-a1b2c3d4": [_entry("172.18.0.1")],
+    }
+    stats = {name: SimpleNamespace(isup=True) for name in interfaces}
+
+    result = detect_scan_subnets(interfaces, stats)
+
+    assert [(str(item.network), item.interface) for item in result] == [
+        ("192.168.10.0/24", "brcmfmac0")
+    ]
+
 def test_duplicate_subnet_keeps_preferred_physical_interface_even_if_seen_later():
     addresses = {
         # Interface enumeration order is platform-dependent; the preferred
