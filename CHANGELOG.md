@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae la lectura, actualización y limpieza por retención de actividad a un repositorio SQLite de dominio; añade pruebas de retención/expiración y valida su dependencia permitida en el control arquitectónico sin cambiar el esquema ni las rutas.
+
 - Extrae el caso de uso de hallazgos y sus rutas HTTP de `main.py`; limita automáticamente las dependencias del router al servicio y las del servicio a la persistencia y al formateador de hallazgos.
 
 - Extrae las rutas HTTP de actividad autorizada a un router propio, conserva los contratos de las solicitudes y añade su lista de dependencias permitidas al control arquitectónico.

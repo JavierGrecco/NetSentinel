@@ -33,6 +33,8 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
+    assert graph["netsentinel.activity_repository"] == {"netsentinel.database"}
+    assert "netsentinel.activity_repository" in graph["netsentinel.activity_tracking"]
     assert "netsentinel.network_models" in graph["netsentinel.database"]
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
@@ -51,6 +53,7 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "findings.py",
         "monitoring.py",
         "activity_tracking.py",
+        "activity_repository.py",
         "network_models.py",
     }
     for name in expected:
