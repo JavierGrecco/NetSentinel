@@ -28,7 +28,7 @@ pytest
 - **Mantené el lenguaje coherente con la interfaz.** La documentación de usuario va en español claro; los nombres de módulos, API y comandos pueden conservar los identificadores técnicos necesarios.
 - **Actualizá la guía cuando cambie el comportamiento.** Una captura o un comentario no sustituye una prueba reproducible.
 
-## Criterios para los cambios
+### Pruebas y seguridad
 
 - Agregá pruebas para cada función nueva y para los errores que pueda producir.
 - Usá datos sintéticos; las pruebas no deben depender de una red real ni de privilegios elevados.
