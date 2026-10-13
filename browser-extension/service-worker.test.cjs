@@ -149,9 +149,6 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
     "[2001:2::1]",                  // benchmarking
     "[100::1]",                     // discard-only
     "[100:0:0:1::1]",              // dummy IPv6 prefix (RFC 9780)
-    "[100:0:0:2::1]",              // just outside dummy prefix
-    "[2001:10:10::1]",             // just outside deprecated ORCHID /28
-    "[5eff:ffff::1]",              // just outside SRv6 prefix
     "[2001:10::1]",                // deprecated ORCHID
     "[2001:10:f::1]",              // upper address range still inside /28
     "[5f00::1]",                   // SRv6 Segment Routing SIDs
@@ -166,8 +163,10 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
   for (const host of [
     "[2001:4860:4860::8888]",       // ordinary global unicast
     "[2001:2:1::1]",                // just outside 2001:2::/48
+    "[2001:10:10::1]",             // just outside deprecated ORCHID /28
+    "[5eff:ffff::1]",              // just outside SRv6 prefix
     "[3fff:1000::1]",               // just outside 3fff::/20
-    "[100:0:0:1::1]",               // just outside 100::/64
+    "[100:0:0:2::1]",               // just outside dummy and discard-only prefixes
     "[::ffff:0808:0808]",           // mapped public 8.8.8.8
     "[::ffff:8.8.8.8]"              // dotted mapped public IPv4
   ]) {
