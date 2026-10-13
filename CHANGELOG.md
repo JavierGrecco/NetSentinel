@@ -3,6 +3,7 @@
 ## Próxima versión — 0.10.0 (en desarrollo)
 
 - Amplía la CI con un job que instala y prueba conjuntamente las versiones mínimas declaradas de las dependencias runtime y de test, evitando asumir compatibilidad solo porque la matriz usa las versiones más nuevas disponibles.
+- Corrige el límite inferior declarado de `httpx2`: `1.0.0` no es una publicación instalable; el mínimo declarado y fijado para la prueba es ahora `2.0.0`. La CI verifica automáticamente que `pyproject.toml` y las constraints no vuelvan a desalinearse.
 - Corrige las gráficas de latencia para respetar la CSP basada en hashes: reemplaza los cambios de estilo inline bloqueados por atributos de altura con bandas CSS predefinidas y agrega una regresión de interfaz.
 - Amplía la neutralización CSV para cubrir controles ASCII y espacios Unicode antes de prefijos de fórmula, alineando la defensa del backend con el exportador de la extensión; añade casos de regresión.
 - Corrige la ejecución del endurecimiento de permisos SQLite: el helper estaba decorado accidentalmente como administrador de contexto y no se ejecutaba al abrir la base. Añade regresiones para archivos existentes con permisos 0644 y para preservar el destino de enlaces simbólicos.
