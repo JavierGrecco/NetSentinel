@@ -35,7 +35,7 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
     "netsentinel.api.inventory": {
         "netsentinel.database",
-        "netsentinel.discovery",
+        "netsentinel.local_discovery",
         "netsentinel.dns_tools",
     },
 }
