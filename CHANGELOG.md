@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae el caso de uso de hallazgos y sus rutas HTTP de `main.py`; limita automáticamente las dependencias del router al servicio y las del servicio a la persistencia y al formateador de hallazgos.
+
 - Extrae las rutas HTTP de actividad autorizada a un router propio, conserva los contratos de las solicitudes y añade su lista de dependencias permitidas al control arquitectónico.
 
 - Extrae las rutas DNS/TLS a un router propio y añade una verificación automática de límites de módulos en CI; separa el contrato de vecinos compartido para que SQLite no dependa del motor de descubrimiento.
