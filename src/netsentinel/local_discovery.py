@@ -30,10 +30,21 @@ _RFC1918_NETWORKS = tuple(
 # Interfaces virtuales, túneles y enlaces entre dispositivos Apple no son redes LAN
 # físicas adecuadas para un descubrimiento general del hogar/oficina.
 _EXCLUDED_PREFIXES = (
-    "lo", "awdl", "llw", "utun", "bridge", "br", "veth", "vmnet", "vmenet",
+    "lo", "awdl", "llw", "utun", "bridge", "veth", "vmnet", "vmenet",
     "docker", "podman", "cni", "flannel", "lxcbr", "ovs", "vboxnet", "virbr",
     "tailscale", "wg", "tun", "tap", "gif", "stf", "anpi", "ap", "p2p",
 )
+
+def _is_excluded_interface(name: str) -> bool:
+    """Exclude known virtual interfaces without hiding physical names like brcmfmac0."""
+    lowered = name.strip().lower()
+    if any(lowered.startswith(prefix) for prefix in _EXCLUDED_PREFIXES):
+        return True
+    # Linux bridge names commonly use br0/br1 or Docker's br-<network-id>.
+    # Avoid a blanket "br" prefix: some physical Broadcom interfaces start with it.
+    return lowered == "br" or lowered.startswith("br-") or (
+        lowered.startswith("br") and lowered[2:].isdigit()
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +64,7 @@ def detect_scan_subnets(
     Para una red mayor que /24 solo se examina el bloque /24 donde está la IP local.
     Solo admite 10/8, 172.16/12 y 192.168/16; excluye rangos especiales,
     loopback, link-local, túneles e interfaces virtuales conocidas, incluidas redes
-    habituales de contenedores (br*, veth*, docker*, podman*, CNI y OVS).
+    habituales de contenedores (br0/br-*, veth*, docker*, podman*, CNI y OVS).
     """
     addresses = interface_addresses if interface_addresses is not None else psutil.net_if_addrs()
     stats = interface_stats if interface_stats is not None else psutil.net_if_stats()
@@ -62,7 +73,7 @@ def detect_scan_subnets(
     for interface, entries in addresses.items():
         name = interface.strip()
         lowered = name.lower()
-        if any(lowered.startswith(prefix) for prefix in _EXCLUDED_PREFIXES):
+        if _is_excluded_interface(name):
             continue
         status = stats.get(interface)
         if status is not None and not status.isup:
