@@ -9,7 +9,6 @@ import hashlib
 import ipaddress
 from pathlib import Path
 import re
-from threading import Lock
 from urllib.parse import urlsplit
 from typing import AsyncIterator
 import os
@@ -24,19 +23,17 @@ from pydantic import BaseModel, Field
 from . import __version__
 from . import database
 from .diagnostics import run_diagnostics
-from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
 from .api.activity import router as activity_router
 from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
-from .dns_tools import DNSLookupError, cached_reverse_lookup_ip
 from .api.findings import router as findings_router
+from .api.inventory import router as inventory_router
 
 
 logger = logging.getLogger(__name__)
 
 
 _supervisor = MonitorSupervisor()
-_scan_lock = Lock()
 
 
 @asynccontextmanager
@@ -131,6 +128,7 @@ app = FastAPI(
 app.include_router(tools_router)
 app.include_router(activity_router)
 app.include_router(findings_router)
+app.include_router(inventory_router)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
@@ -294,16 +292,6 @@ def api_docs() -> Response:
     )
     return response
 
-class DeviceUpdate(BaseModel):
-    trusted: bool | None = None
-    display_name: str | None = Field(default=None, max_length=120)
-    notes: str | None = Field(default=None, max_length=2000)
-
-
-class EventUpdate(BaseModel):
-    acknowledged: bool = True
-
-
 class MonitorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     kind: str = Field(min_length=1, max_length=16)
@@ -345,118 +333,37 @@ def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
 
 
-@app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "name": "NetSentinel", "version": __version__}
 
 
-@app.get("/api/summary")
-def summary() -> dict:
-    return database.get_summary()
 
 
-@app.get("/api/devices")
-def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
-    return database.list_devices(query=q)
 
 
-@app.get("/api/events")
-def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
-    return database.get_events(limit=limit)
 
 
-@app.get("/api/scans")
-def scans(limit: int = Query(default=30, ge=1, le=100)) -> list[dict]:
-    return database.get_scans(limit=limit)
 
 
-@app.get("/api/devices/{device_id}/history")
-def device_history(device_id: int, limit: int = Query(default=100, ge=1, le=500)) -> dict:
-    """Consulta el historial de observaciones del inventario para un dispositivo."""
-    result = database.get_device_history(device_id, limit=limit)
-    if result is None:
-        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
-    return result
 
 
-@app.get("/api/devices/{device_id}/addresses")
-def device_addresses(device_id: int) -> list[dict]:
-    addresses = database.get_device_addresses(device_id)
-    if addresses is None:
-        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
-    return addresses
 
 
-@app.post("/api/scan")
-def scan() -> dict:
-    """Ejecuta un único descubrimiento local a la vez para evitar tráfico duplicado."""
-    if not _scan_lock.acquire(blocking=False):
-        raise HTTPException(
-            status_code=409,
-            detail="Ya hay un descubrimiento de red en curso. Esperá a que termine antes de iniciar otro.",
-        )
-    try:
-        neighbors, errors, discovery = discover_local_network()
-        result = database.record_scan(neighbors, errors, discovery=discovery)
-        result["discovery"] = discovery
-        result["message"] = (
-            "Se completó el descubrimiento automático de las subredes locales indicadas."
-            if discovery["networks"]
-            else "No se pudo identificar una subred privada adecuada para buscar dispositivos."
-        )
-        return result
-    finally:
-        _scan_lock.release()
 
 
-@app.get("/api/devices/{device_id}/dns-reverse")
-def device_dns_reverse_lookup(device_id: int) -> dict:
-    """Consulta PTR de la dirección observada más recientemente, solo bajo demanda."""
-    addresses = database.get_device_addresses(device_id)
-    if addresses is None:
-        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
-    if not addresses:
-        raise HTTPException(status_code=404, detail="El dispositivo no tiene direcciones observadas para consultar.")
-    address = addresses[0]["ip_address"]
-    try:
-        result = cached_reverse_lookup_ip(address)
-        result["device_id"] = device_id
-        return result
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DNSLookupError as exc:
-        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR para la dirección observada.") from exc
 
 
-@app.patch("/api/devices/{device_id}")
-def edit_device(device_id: int, body: DeviceUpdate) -> dict:
-    try:
-        result = database.update_device(
-            device_id,
-            trusted=body.trusted,
-            display_name=body.display_name,
-            notes=body.notes,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    if result is None:
-        raise HTTPException(status_code=404, detail="No se encontró el dispositivo.")
-    return result
 
 
-@app.patch("/api/events/{event_id}")
-def edit_event(event_id: int, body: EventUpdate) -> dict[str, bool]:
-    if body.acknowledged:
-        updated = database.acknowledge_event(event_id)
-    else:
-        # No se ofrece reabrir eventos en esta primera versión.
-        updated = False
-    if not updated:
-        raise HTTPException(status_code=404, detail="No se encontró el evento o no se admite el cambio solicitado.")
-    return {"ok": True}
+
+
+
+
+
+
+
+
+
+
+
 
 
 @app.get("/api/monitors")
@@ -580,31 +487,13 @@ def diagnostics() -> dict:
     return run_diagnostics()
 
 
-@app.get("/api/export/devices.csv")
-def export_devices_csv() -> Response:
-    return Response(
-        content=database.export_csv(),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-devices.csv"', "Cache-Control": "no-store"},
-    )
 
 
-@app.get("/api/export/backup.sqlite3")
-def export_sqlite_backup() -> Response:
-    return Response(
-        content=database.export_sqlite_backup(),
-        media_type="application/vnd.sqlite3",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-backup.sqlite3"', "Cache-Control": "no-store"},
-    )
 
 
-@app.get("/api/export/data.json")
-def export_data_json() -> Response:
-    return Response(
-        content=database.export_json(),
-        media_type="application/json; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-export.json"', "Cache-Control": "no-store"},
-    )
+
+
+
 
 
 # Sirve CSS y otros recursos desde el paquete local.
