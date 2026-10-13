@@ -1,6 +1,6 @@
 # Matriz de validación manual
 
-Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). En la revisión inicial todas las pruebas manuales se consideran **pendientes de registrar**: no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
+Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de pruebas manuales para la versión 0.10.0 se coordina en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Todas las pruebas se consideran **pendientes de registrar** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
 
 ## Datos de cada sesión de pruebas
 
