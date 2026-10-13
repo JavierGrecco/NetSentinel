@@ -174,10 +174,13 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/devices/{device_id}/addresses",
         "/api/scan",
         "/api/devices/{device_id}/dns-reverse",
+        "/api/devices/{device_id}",
+        "/api/events/{event_id}",
         "/api/export/devices.csv",
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
+    assert len(paths) == 14
 
 
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
