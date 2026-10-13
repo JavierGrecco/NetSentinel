@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, findings, tools
+from netsentinel.api import activity, findings, inventory, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from scripts.check_architecture_boundaries import check_architecture
@@ -159,3 +159,34 @@ def test_new_repository_must_declare_its_internal_dependencies(tmp_path: Path) -
         in violation
         for violation in violations
     )
+
+
+def test_inventory_endpoints_belong_to_inventory_router() -> None:
+    """Las rutas de inventario se registran desde el módulo funcional propio."""
+    paths = {route.path for route in inventory.router.routes}
+    assert {
+        "/api/health",
+        "/api/summary",
+        "/api/devices",
+        "/api/events",
+        "/api/scans",
+        "/api/devices/{device_id}/history",
+        "/api/devices/{device_id}/addresses",
+        "/api/scan",
+        "/api/devices/{device_id}/dns-reverse",
+        "/api/export/devices.csv",
+        "/api/export/backup.sqlite3",
+        "/api/export/data.json",
+    } <= paths
+
+
+def test_inventory_router_has_only_declared_internal_dependencies() -> None:
+    """El router no obtiene acceso implícito a otros dominios."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\n".join(violations)
+    assert graph["netsentinel.api.inventory"] == {
+        "netsentinel.database",
+        "netsentinel.discovery",
+        "netsentinel.dns_tools",
+    }
