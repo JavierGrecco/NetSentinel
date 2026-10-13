@@ -16,13 +16,16 @@ function hostMatches(host, rule) { return host === rule || host.endsWith("." + r
 function isPrivateOrLocalIPv4(host) {
   const parts = String(host || "").split(".");
   if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return false;
-  const [a, b, c] = parts.map(Number);
+  const [a, b, c, d] = parts.map(Number);
   // Suppress common non-public ranges as well as RFC1918: shared CGNAT,
   // documentation/test networks, benchmarking, multicast and reserved space.
   return a === 0 || a === 10 || a === 127 ||
     (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
+    // Most of 192.0.0.0/24 is special-purpose; preserve IANA global exceptions .9 and .10.
+    (a === 192 && b === 0 && c === 0 && d !== 9 && d !== 10) ||
+    (a === 192 && b === 88 && c === 99) || // deprecated 6to4 relay anycast
     (a === 192 && b === 168) ||
     (a === 192 && b === 0 && c === 2) ||
     (a === 198 && (b === 18 || b === 19)) ||
@@ -107,13 +110,16 @@ function privateOrLocalHost(hostname) {
   const teredo = words[0] === 0x2001 && words[1] === 0;  // 2001::/32
   const sixToFour = words[0] === 0x2002;                 // 2002::/16
   const localUseNat64 = words[0] === 0x0064 && words[1] === 0xff9b && words[2] === 1; // 64:ff9b:1::/48
+  const dummyPrefix = words[0] === 0x0100 && words[1] === 0 && words[2] === 0 && words[3] === 1; // 100:0:0:1::/64
+  const deprecatedOrchid = words[0] === 0x2001 && words[1] === 0x0010 && (words[2] & 0xfff0) === 0; // 2001:10::/28
+  const segmentRouting = words[0] === 0x5f00; // 5f00::/16
   const deprecatedIPv4Compatible = words.slice(0, 6).every(word => word === 0);
 
   // Keep ordinary globally-routed IPv6 hosts eligible; suppress well-known
   // special-use, multicast, documentation, transition, and local-use prefixes.
   return allZero || loopback || uniqueLocal || linkLocal || multicast ||
-    documentation || benchmarking || discardOnly || teredo || sixToFour ||
-    localUseNat64 || deprecatedIPv4Compatible;
+    documentation || benchmarking || discardOnly || dummyPrefix || teredo || sixToFour ||
+    localUseNat64 || deprecatedOrchid || segmentRouting || deprecatedIPv4Compatible;
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
