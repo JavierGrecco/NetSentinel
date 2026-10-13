@@ -10,6 +10,7 @@ import ipaddress
 import platform
 import re
 import subprocess
+from dataclasses import dataclass
 from typing import Iterable, Protocol
 
 from .network_models import Neighbor
