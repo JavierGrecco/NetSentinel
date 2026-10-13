@@ -8,27 +8,27 @@ from __future__ import annotations
 from . import database
 from .findings import build_findings
 
-DUPLICATE_MONITOR_EVENT_TYPES = ("monitor_down", "monitor_recovered")
-ALLOWED_STATES = {"active", "acknowledged", "resolved", "all"}
+_DUPLICATE_MONITOR_EVENT_TYPES = ("monitor_down", "monitor_recovered")
+_ALLOWED_STATES = frozenset({"active", "acknowledged", "resolved", "all"})
 
 
 def collect_findings_report(state: str, limit: int) -> dict:
     """Crea un informe desde la evidencia ya almacenada para el estado solicitado."""
-    if state not in ALLOWED_STATES:
+    if state not in _ALLOWED_STATES:
         raise ValueError("El estado debe ser active, acknowledged, resolved o all.")
 
     if state == "active":
         source_events = database.get_events(
             limit=limit,
             acknowledged=False,
-            exclude_event_types=DUPLICATE_MONITOR_EVENT_TYPES,
+            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
         )
         source_incidents = database.get_incidents(limit=limit, status="open")
     elif state == "acknowledged":
         source_events = database.get_events(
             limit=limit,
             acknowledged=True,
-            exclude_event_types=DUPLICATE_MONITOR_EVENT_TYPES,
+            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
         )
         source_incidents = []
     elif state == "resolved":
@@ -37,7 +37,7 @@ def collect_findings_report(state: str, limit: int) -> dict:
     else:
         source_events = database.get_events(
             limit=limit,
-            exclude_event_types=DUPLICATE_MONITOR_EVENT_TYPES,
+            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
         )
         source_incidents = database.get_incidents(limit=limit)
 
