@@ -81,6 +81,22 @@ def test_missing_retention_row_uses_legacy_default(monkeypatch, tmp_path):
         db.execute("DELETE FROM activity_settings")
         assert activity_repository.get_retention_days(db) == 7
 
+
+def test_retention_update_restores_a_missing_setting_row(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    with database.connect() as db:
+        db.execute("DELETE FROM activity_settings")
+
+    now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+    result = activity_repository.update_retention(2, now=now)
+
+    assert result == {"retention_days": 2, "deleted_events": 0}
+    with database.connect() as db:
+        assert activity_repository.get_retention_days(db) == 2
+        assert db.execute("SELECT COUNT(*) FROM activity_settings").fetchone()[0] == 1
+
+
 def _insert_device(db, now: datetime) -> int:
     return db.execute(
         """INSERT INTO devices
