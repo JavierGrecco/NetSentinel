@@ -1,68 +1,75 @@
-# Plan de implementación — estado auditable
+# Plan técnico de implementación
 
-## Implementado en la rama
-- Inventario local, observaciones, monitores e incidentes.
-- DNS A/AAAA, PTR bajo demanda y configuración DNS local.
-- Inspección TLS puntual de un endpoint autorizado: validación de certificado, vigencia, nombre, versión TLS y cifrado negociado; no descarga contenido ni persiste resultados.
-- Historial por dispositivo, sesiones de actividad temporales y tokens de ingestión cuya versión en claro se muestra una sola vez.
-- Importación CSV de metadatos de red, páginas, búsquedas compatibles y metadatos de correo de auditoría autorizada.
-- Extensión Chromium visible y apagada al instalarse; registra navegación futura y búsquedas por URL compatibles, y exporta CSV.
-- Sanitización URL en cliente y servidor; rechazo de columnas de cuerpo de correo, contenido y adjuntos.
-- Importaciones CSV manuales idempotentes: compara eventos normalizados del mismo dispositivo, omite duplicados exactos y muestra el recuento omitido.
-- Vista previa CSV de solo lectura: valida todas las filas, estima altas/duplicados y presenta hasta 10 filas de metadatos normalizados antes de guardar.
-- Filtros de actividad por dispositivo, fuente, tipo de evento y fechas UTC inclusivas; exportación CSV filtrada hasta 10.000 filas con neutralización de fórmulas de hoja de cálculo.
-- Saneamiento URL reforzado en extensión y backend: OAuth/redirect, claves doblemente codificadas, más claves de seguimiento, IPv6 canónico y redacción heurística de rutas reconocibles; pruebas Python y Node.
-- Pruebas Node del ciclo del service worker para apagado por defecto, opt-in, navegación de subframe/privada, exclusiones, toggles de página/búsqueda, retención y deduplicación.
-- Pruebas puras de CSV del popup (quoting, fórmulas, delimitadores, saltos de línea y BOM) más validación CI de Manifest V3, permisos explícitos y seguimiento desactivado por defecto.
-- Borrado selectivo de eventos por dispositivo, fuente, tipo o fechas con previsualización de alcance, prohibición de alcance vacío, confirmación exacta basada en el recuento actual y borrado transaccional; no elimina sesiones ni registros de inventario.
-- Retención configurable de 1 a 90 días y exportación de metadatos sin hash de token.
-- La extensión declara solo `storage` y `webNavigation`; no solicita permisos de host globales.
-- La pantalla principal ofrece una guía de primer uso, distingue inventario vacío de búsqueda sin coincidencias y se valida sintácticamente en CI.
+Este documento describe cómo abordar técnicamente las fases. **El orden, el estado y la definición de prioridades se mantienen exclusivamente en [ROADMAP.md](ROADMAP.md)**. Los criterios de pruebas manuales se registran en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Límites actuales
-- La extensión funciona solo en el navegador donde se instala y solo después de activarla; no recupera historia previa ni ve formularios, contenido, contraseñas o búsquedas internas de apps nativas.
-- La transferencia desde la extensión a la base central es manual mediante CSV.
-- El backend no captura tráfico por sí solo. No hay todavía adaptador para un router/AP ni agente de uso de aplicaciones.
-- El soporte de correo es importación manual de metadatos; no se conecta a proveedores, no lee bandejas y no guarda cuerpo ni adjuntos.
-- No puede garantizarse que un saneador URL detecte cualquier dato personal incrustado en rutas/parámetros desconocidos.
-- La matriz automatizada de la revisión actual está verde; las pruebas manuales completas de instalación y uso siguen pendientes en Windows, macOS y Linux.
+## 1. Arquitectura existente y alcance confirmado
 
-## P0 — Validación y estabilización
-1. Corregir fallos de CI y ejecutar tests, chequeo JS y empaquetado en la matriz.
-2. Validar migración SQLite conservando eventos existentes al ampliar esquema.
-3. Probar extensión Chrome/Edge: páginas normales, navegación SPA, motores, exclusiones, pausa, retención y exportación CSV.
-4. Importar el CSV a NetSentinel y comprobar eventos, fechas, términos y saneamiento.
-5. Probar metadatos de correo con CSV sintético autorizado; no incluir mensajes completos ni adjuntos.
-6. Probar instalación y flujo en Windows, macOS y Linux.
+La aplicación es local-first: Python/FastAPI, SQLite y paneles HTML/CSS servidos localmente. El paquete define su versión en src/netsentinel/__init__.py y pyproject.toml la obtiene de forma dinámica; no mantener un segundo número de versión independiente en pyproject.toml.
 
-## P1 — Experiencia de importación y validación TLS
-- Probar manualmente endpoints TLS válidos y fallidos, certificado cercano al vencimiento, puerto no TLS y timeout en Windows/macOS/Linux.
-- Comprobar la representación accesible de hallazgos sin renderizar texto remoto como HTML.
-1. Validación manual del saneamiento URL con casos reales y evaluación de falsos positivos en rutas largas.
-2. Validar los alias CSV de Google Workspace y Microsoft 365 con exportaciones reales; elegir después un proveedor y confirmar permisos/cobertura antes de implementar un conector API.
-3. Pruebas manuales del flujo de borrado y revisión de usabilidad multi-SO/navegador.
+Módulos/capacidades implementados en el código revisado:
 
-## P2 — Fuentes domésticas reales
-1. Elegir el modelo de router/AP/resolvedor y conseguir log de ejemplo o API documentada.
-2. Implementar parser read-only, fixtures, timeouts, atribución de fuente y límites.
-3. Diseñar sincronización en vivo con autenticación, autorización, rotación/revocación de tokens y transporte seguro.
-4. Añadir agente opcional de uso de aplicaciones/tiempo de pantalla por SO, sin keylogging ni captura de contenido.
+- **Inventario y observaciones:** dispositivos, direcciones IPv4/IPv6 observadas, fabricantes como indicio, historial y etiquetas de confianza.
+- **Descubrimiento local:** bajo demanda y con límites explícitos para subredes IPv4 privadas; no equivale a un escaneo exhaustivo de IPv6 o de toda la red.
+- **Monitorización:** checks Ping/TCP/HTTP(S), muestras, incidentes, recuperación, tendencias, retención y webhook opcional.
+- **Diagnóstico:** conectividad, configuración/consultas DNS bajo demanda y handshake TLS puntual con validación de certificado; la prueba TLS no solicita contenido HTTP.
+- **Hallazgos:** vista y API compuestas de solo lectura a partir de eventos de inventario e incidentes de monitorización persistidos; todavía no ofrece correlación de causa raíz ni ingiere automáticamente resultados DNS/TLS puntuales.
+- **Actividad autorizada:** sesiones locales acotadas, importación/exportación CSV, filtros y borrado selectivo. La extensión Chromium está apagada por defecto y su transferencia al backend sigue siendo manual.
+- **Correo:** importación de metadatos de auditoría autorizados; no existe conexión automática a buzones ni se guardan cuerpos o adjuntos.
+- **Distribución:** CLI, lanzadores por sistema operativo, paquete wheel y recursos estáticos; CI multiplataforma, tests Node de la extensión, análisis de seguridad y workflow de cadena de suministro.
 
-## P3 — Resto del plan conservado
-- DNS: el diagnóstico ahora aplica un timeout cancelable a la resolución; queda pendiente el enriquecimiento opcional del inventario con procedencia, fecha y control de desactivación.
-- Infraestructura: adaptadores DHCP/router/SNMP y gestión segura de secretos.
-- Observabilidad: topología, métricas Prometheus y perfiles multired.
-- Extensión Firefox y otros navegadores compatibles.
-- La auditoría TLS inicial ya existe como conexión puntual validada; cualquier seguimiento persistente o alerta automática necesita diseño independiente y no debe capturar credenciales ni contenido privado.
+La disponibilidad de código y tests automáticos no demuestra por sí sola que un recorrido real de instalación, navegador, router o restauración haya sido probado. Esos estados deben tomarse de la matriz de validación.
 
-## P4 — Seguridad empresarial y preparación para varias sedes
+## 2. Reglas de implementación
 
-- **Motor de hallazgos:** correlacionar inventario, cambios, incidentes e inspecciones TLS con evidencia explícita, fecha, fuente, severidad y grado de confianza; evitar puntuaciones opacas y afirmaciones no respaldadas por datos.
-- **Adaptador de infraestructura:** seleccionar primero un router/AP/resolvedor concreto; mantenerlo de solo lectura, con límites estrictos, secretos fuera de logs y fixtures documentados.
-- **Agente/collector remoto:** no abrir la API de ingestión en LAN hasta contar con autenticación, autorización por dispositivo y rol, TLS, enrolamiento y revocación de credenciales, protección contra repetición, rate limiting, auditoría y aislamiento entre ubicaciones.
-- **Operación SOC:** informes reproducibles, exportación selectiva, métricas Prometheus y luego integración SIEM/webhooks con datos sensibles mínimos. La matriz NIST CSF 2.0/CISA CPG debe señalar evidencia y brechas, sin presentarse como certificación.
-- **Límites del producto:** el inventario actual no es un escáner de vulnerabilidades de software ni un EDR. Esas etiquetas requieren inventario de software/servicios, versiones, validación de vulnerabilidades o telemetría endpoint suficiente.
-- **Puerta a producción:** pruebas manuales en sistemas reales admitidos, revisión de seguridad de endpoints remotos, política de retención, exportación/borrado y evaluación de falsos positivos.
+### Contratos de datos y migraciones
 
-## Criterio de finalización
-Una tarea no se da por terminada solo por escribir el código o marcarla en el roadmap. Requiere tests verdes, empaquetado comprobado, pruebas manuales aplicables, documentación precisa y un mecanismo para desactivar/eliminar los datos.
+- Las entidades procedentes de distintas fuentes deben conservar source/provenance, hora de observación, identificador de origen y calidad/frescura del dato.
+- No equiparar una observación a una conclusión de seguridad. Mantener evidencia, severidad y confianza como campos diferentes.
+- Las migraciones SQLite deben ser aditivas cuando sea viable, versionadas y probadas contra fixtures de bases anteriores; ninguna migración debe borrar datos silenciosamente.
+- Cada política de retención debe indicar qué tabla/dato afecta, el valor por defecto, rango configurable y si los incidentes o el inventario quedan fuera de la limpieza.
+- Toda eliminación masiva requiere alcance explícito, previsualización y confirmación inequívoca, con comprobaciones transaccionales.
+
+### Conectores y adaptadores
+
+- Empezar por un proveedor real cuya API/documentación pueda verificarse; no programar un “adaptador genérico” sin contrato operativo.
+- Hacer llamadas de solo lectura cuando sea posible y aplicar timeouts, límites de resultados, paginación y manejo de errores parciales.
+- Nunca guardar credenciales, tokens, archivos de clientes o datos reales sensibles en el repositorio, fixtures, trazas o mensajes de error.
+- Utilizar fixtures sanitizados para que la CI sea determinista sin conectarse a routers ni servicios personales.
+- Mostrar origen, momento de captura, limitaciones y errores de actualización al operador.
+
+### Seguridad de API y operación remota
+
+- El despliegue de referencia sigue limitado a loopback y el backend no debe exponerse en LAN/Internet como atajo.
+- Cualquier cambio de endpoints, origen/CSRF, cabeceras, CSP, autenticación, secretos o recepción de datos requiere tests negativos además de casos válidos.
+- Antes de ingestión remota son obligatorios diseño de amenazas, TLS, autenticación/autorización por dispositivo, enrolamiento, revocación, anti-replay, límites de tasa y tamaño, auditoría, aislamiento por sitio y recuperación segura.
+- No agregar datos sensibles a etiquetas de métricas, logs, exportaciones ni atributos de error.
+
+## 3. Orden técnico vinculado al roadmap
+
+| Fase del roadmap | Trabajo técnico principal | Puerta de aceptación |
+|---|---|---|
+| Fase 0 — 0.10.0 | Validación de flujos existentes, compatibilidad, recuperación, revisión de dependencias y versión de prerelease | Todas las tareas REL aplicables cerradas y matriz manual documentada |
+| Fase 1 — Hallazgos | Definición de esquema/evidencia/retención, migración, estados, correlación determinista y filtros | Evidencia reproducible, no duplicados, manejo de falsos positivos y borrado correcto |
+| Fase 2 — Fuentes reales | Selección de proveedor, contrato de adaptador, fixtures, timeouts y primera integración read-only | Pruebas automatizadas con fixtures y verificación manual contra proveedor compatible |
+| Fase 3 — Operación | Informes, métricas limitadas, perfiles y accesibilidad | Exportaciones reproducibles, cardinalidad acotada y pruebas de aislamiento |
+| Fase 4 — Remoto | Threat model, autenticación, TLS, autorización por agente/sitio, auditoría y recuperación | Suite de pruebas negativas de seguridad e inspección específica antes de habilitar |
+| Fase 5 — Integraciones | Webhooks/formatos versionados, SIEM, auditoría de correo y navegadores opcionales | Contrato estable, permisos mínimos, idempotencia, retención y desconexión/borrado probados |
+
+Este cuadro es una explicación de implementación; no sustituye el estado de las casillas del roadmap.
+
+## 4. Estrategia de pruebas
+
+1. **Unitarias:** parsers, normalización, reglas de confianza, rangos de IP, saneamiento, límites, fórmulas CSV y funciones puras.
+2. **Integración:** API/SQLite, migraciones, permisos, sesiones, retención, exportación, transacciones y seguridad de origen.
+3. **Frontend/extensión:** sintaxis JavaScript, pruebas Node, CSP, manifest/permisos mínimos, render seguro de texto remoto y comportamiento por defecto.
+4. **Paquete:** instalación del wheel, metadatos, archivos estáticos, CLI y ejecución desde una carpeta limpia.
+5. **CI:** matriz OS/Python, dependencias mínimas declaradas, CodeQL, auditoría de dependencias, detección de secretos y SBOM/manifiesto.
+6. **Manual:** sistemas operativos, navegador, interacción de usuario, endpoints TLS autorizados, hardware y restauración, cuando el entorno real pueda cambiar el resultado.
+
+Registrar la prueba manual con versión/commit, sistema operativo, versiones relevantes, pasos, resultado y referencia del error. Una casilla de roadmap no sustituye ese registro.
+
+## 5. Política de versión y releases
+
+La versión de desarrollo se representa como 0.10.0.dev0 y la release estable como 0.10.0. La fuente autorizada es src/netsentinel/__init__.py; el campo dinámico de pyproject.toml debe seguir leyéndola en vez de duplicar el número. No etiquetar ni anunciar una versión estable antes de superar la puerta de release de la Fase 0.
+
+Consultar [GITHUB_SETUP.md](GITHUB_SETUP.md) para la secuencia de publicación, comprobación de wheel/SBOM, SHA-256 y procedencia. El changelog describe los cambios del ciclo y no constituye prueba de que se hayan validado manualmente.
