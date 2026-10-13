@@ -93,7 +93,7 @@ def _write_minimal_package(root: Path) -> Path:
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "main.py").write_text(
-        '"""Punto de composición de prueba."""\\n', encoding="utf-8"
+        '"""Punto de composición de prueba."""\n', encoding="utf-8"
     )
     return package
 
@@ -101,7 +101,7 @@ def _write_minimal_package(root: Path) -> Path:
 def test_new_domain_module_is_checked_for_http_framework_imports(tmp_path: Path) -> None:
     package = _write_minimal_package(tmp_path)
     (package / "future_service.py").write_text(
-        "from fastapi import FastAPI\\n", encoding="utf-8"
+        "from fastapi import FastAPI\n", encoding="utf-8"
     )
 
     violations, _ = check_architecture(tmp_path)
@@ -114,9 +114,9 @@ def test_new_domain_module_is_checked_for_http_framework_imports(tmp_path: Path)
 
 def test_new_service_must_declare_its_internal_dependencies(tmp_path: Path) -> None:
     package = _write_minimal_package(tmp_path)
-    (package / "network_models.py").write_text("Neighbor = object\\n", encoding="utf-8")
+    (package / "network_models.py").write_text("Neighbor = object\n", encoding="utf-8")
     (package / "future_service.py").write_text(
-        "from . import network_models\\n", encoding="utf-8"
+        "from . import network_models\n", encoding="utf-8"
     )
 
     violations, _ = check_architecture(tmp_path)
@@ -130,16 +130,32 @@ def test_new_service_must_declare_its_internal_dependencies(tmp_path: Path) -> N
 
 def test_database_cannot_import_a_new_domain_module_by_default(tmp_path: Path) -> None:
     package = _write_minimal_package(tmp_path)
-    (package / "network_models.py").write_text("Neighbor = object\\n", encoding="utf-8")
-    (package / "future_domain.py").write_text("VALUE = 1\\n", encoding="utf-8")
+    (package / "network_models.py").write_text("Neighbor = object\n", encoding="utf-8")
+    (package / "future_domain.py").write_text("VALUE = 1\n", encoding="utf-8")
     (package / "database.py").write_text(
-        "from . import future_domain\\n", encoding="utf-8"
+        "from . import future_domain\n", encoding="utf-8"
     )
 
     violations, _ = check_architecture(tmp_path)
 
     assert any(
         "netsentinel.database imports netsentinel.future_domain, which is not an allowed persistence dependency"
+        in violation
+        for violation in violations
+    )
+
+
+def test_new_repository_must_declare_its_internal_dependencies(tmp_path: Path) -> None:
+    package = _write_minimal_package(tmp_path)
+    (package / "network_models.py").write_text("Neighbor = object\n", encoding="utf-8")
+    (package / "future_repository.py").write_text(
+        "from . import network_models\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.future_repository has internal dependencies but no explicit repository allow-list"
         in violation
         for violation in violations
     )
