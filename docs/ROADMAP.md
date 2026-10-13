@@ -43,6 +43,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Pruebas CSV del popup para comillas, comas, saltos de línea, fórmulas y BOM UTF-8; el manifest MV3 solicita solo permisos necesarios y CI comprueba los permisos mínimos.
 - [ ] Pruebas manuales de importación/extensión en Chrome/Edge y Windows/macOS/Linux; los cambios de deduplicación también deben pasar CI.
 - [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
+- [x] Exclusión de destinos no públicos en la extensión: añade CGNAT, redes de documentación/benchmark/reservadas y sufijos de nombres locales/de prueba; pruebas para IPv4 mapeada a IPv6 y límites de rango.
 - [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Parser de importación CSV acotado: rechaza la fila 1001 antes de acumular más objetos y convierte errores de límite de campo a validación, sin escrituras parciales.
