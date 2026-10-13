@@ -100,7 +100,8 @@ function privateOrLocalHost(hostname) {
   const uniqueLocal = (words[0] & 0xfe00) === 0xfc00;      // fc00::/7
   const linkLocal = (words[0] & 0xffc0) === 0xfe80;       // fe80::/10
   const multicast = (words[0] & 0xff00) === 0xff00;       // ff00::/8
-  const documentation = words[0] === 0x2001 && words[1] === 0x0db8; // 2001:db8::/32
+  const documentation = (words[0] === 0x2001 && words[1] === 0x0db8) ||
+    (words[0] === 0x3fff && (words[1] & 0xf000) === 0); // 2001:db8::/32 and 3fff::/20
   const benchmarking = words[0] === 0x2001 && words[1] === 0x0002 && words[2] === 0;
   const discardOnly = words[0] === 0x0100 && words.slice(1, 4).every(word => word === 0); // 100::/64
   const teredo = words[0] === 0x2001 && words[1] === 0;  // 2001::/32

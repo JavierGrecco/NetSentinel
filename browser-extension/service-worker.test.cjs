@@ -141,6 +141,7 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
   for (const host of [
     "[ff02::1]",                    // multicast
     "[2001:db8::1]",                // documentation
+    "[3fff:0::1]",                  // expanded documentation space (RFC 9637)
     "[2001:2::1]",                  // benchmarking
     "[100::1]",                     // discard-only
     "[2001::1]",                    // Teredo
@@ -154,6 +155,7 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
   for (const host of [
     "[2001:4860:4860::8888]",       // ordinary global unicast
     "[2001:2:1::1]",                // just outside 2001:2::/48
+    "[3fff:1000::1]",               // just outside 3fff::/20
     "[100:0:0:1::1]",               // just outside 100::/64
     "[::ffff:0808:0808]",           // mapped public 8.8.8.8
     "[::ffff:8.8.8.8]"              // dotted mapped public IPv4
