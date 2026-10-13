@@ -58,7 +58,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify module boundaries
-        run: python scripts/check-architecture-boundaries.py
+        run: python scripts/check_architecture_boundaries.py
       - name: Check minimum dependency constraints against project metadata
         run: python scripts/check-minimum-dependency-constraints.py
       - name: Verify minimum-dependency guard rejects metadata drift

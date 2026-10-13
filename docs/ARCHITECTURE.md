@@ -31,7 +31,7 @@ Estos límites son una dirección de diseño, no una afirmación de que todas la
 
 ## Reglas verificadas automáticamente
 
-El script `scripts/check-architecture-boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que los routers declaren sus dependencias internas permitidas, que la persistencia no dependa de la API ni coordine otros dominios, y que los módulos de dominio/infraestructura definidos en la política no importen FastAPI o Starlette. Estas reglas cubren las fronteras implementadas hoy; se amplían a medida que se extraen servicios y repositorios, en lugar de afirmar que todo el backend ya está desacoplado.
+El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que los routers declaren sus dependencias internas permitidas, que la persistencia no dependa de la API ni coordine otros dominios, y que los módulos de dominio/infraestructura definidos en la política no importen FastAPI o Starlette. Estas reglas cubren las fronteras implementadas hoy; se amplían a medida que se extraen servicios y repositorios, en lugar de afirmar que todo el backend ya está desacoplado.
 
 ## Cómo se comunican los módulos
 
