@@ -92,7 +92,7 @@ def test_all_report_reads_all_events_and_incidents_with_limit(monkeypatch):
 def test_invalid_state_is_rejected_before_any_database_read(monkeypatch):
     calls = _install_fakes(monkeypatch)
 
-    with pytest.raises(ValueError, match="active, acknowledged, resolved or all"):
+    with pytest.raises(ValueError, match="El estado debe ser active, acknowledged, resolved o all"):
         findings_service.collect_findings_report("open", 10)
 
     assert calls == {"events": [], "incidents": []}
