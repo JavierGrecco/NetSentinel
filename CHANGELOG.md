@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita sondeos accidentales sobre puentes virtuales habituales de Linux (`br-*`, `veth*`, Docker, Podman, CNI, Flannel, LXC y OVS), manteniendo el descubrimiento en las interfaces LAN compatibles; añade pruebas para redes virtuales aisladas y coexistentes con la LAN física.
 - Actualiza la guía de protección de `main`: incluye el nuevo job obligatorio de dependencias mínimas entre los checks de CI y aclara que la protección de rama debe confirmarse en GitHub, no se aplica desde los documentos.
 - Añade una regresión de CI que altera de forma aislada una cota de prueba y verifica que el validador de dependencias mínimas la rechace, evitando que un verificador que deje de detectar divergencias pase inadvertido.
 - Amplía la CI con un job que instala y prueba conjuntamente las versiones mínimas declaradas de las dependencias runtime y de test, evitando asumir compatibilidad solo porque la matriz usa las versiones más nuevas disponibles.
