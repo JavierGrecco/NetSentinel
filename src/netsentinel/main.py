@@ -29,7 +29,7 @@ from .monitoring import MonitorSupervisor, check_once, validate_spec
 from .api.activity import router as activity_router
 from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
 from .dns_tools import DNSLookupError, cached_reverse_lookup_ip
-from .findings import build_findings
+from .api.findings import router as findings_router
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 _supervisor = MonitorSupervisor()
 _scan_lock = Lock()
-_DUPLICATE_MONITOR_EVENT_TYPES = ("monitor_down", "monitor_recovered")
 
 
 @asynccontextmanager
@@ -131,6 +130,7 @@ app = FastAPI(
 # en el módulo dueño, no en este archivo de arranque.
 app.include_router(tools_router)
 app.include_router(activity_router)
+app.include_router(findings_router)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
@@ -363,63 +363,6 @@ def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
 @app.get("/api/events")
 def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
     return database.get_events(limit=limit)
-
-
-def _collect_findings_report(state: str, limit: int) -> dict:
-    """Compone hallazgos únicamente con eventos e incidentes ya persistidos."""
-    if state not in {"active", "acknowledged", "resolved", "all"}:
-        raise HTTPException(
-            status_code=422,
-            detail="El estado debe ser active, acknowledged, resolved o all.",
-        )
-
-    if state == "active":
-        source_events = database.get_events(
-            limit=limit, acknowledged=False,
-            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
-        )
-        source_incidents = database.get_incidents(limit=limit, status="open")
-    elif state == "acknowledged":
-        source_events = database.get_events(
-            limit=limit, acknowledged=True,
-            exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
-        )
-        source_incidents = []
-    elif state == "resolved":
-        source_events = []
-        source_incidents = database.get_incidents(limit=limit, status="resolved")
-    else:
-        source_events = database.get_events(
-            limit=limit, exclude_event_types=_DUPLICATE_MONITOR_EVENT_TYPES,
-        )
-        source_incidents = database.get_incidents(limit=limit)
-
-    return build_findings(source_events, source_incidents, state=state, limit=limit)
-
-
-@app.get("/api/findings")
-def findings(
-    state: str = Query(default="active", max_length=20),
-    limit: int = Query(default=100, ge=1, le=200),
-) -> dict:
-    """Devuelve una vista unificada y acotada de hallazgos con evidencia y límites."""
-    return _collect_findings_report(state, limit)
-
-
-@app.get("/api/export/findings.json")
-def export_findings_json(
-    state: str = Query(default="active", max_length=20),
-    limit: int = Query(default=100, ge=1, le=200),
-) -> JSONResponse:
-    """Exporta el conjunto de hallazgos consultado, sin modificar el historial."""
-    report = _collect_findings_report(state, limit)
-    return JSONResponse(
-        content=report,
-        headers={
-            "Content-Disposition": 'attachment; filename="netsentinel-findings.json"',
-            "Cache-Control": "no-store",
-        },
-    )
 
 
 @app.get("/api/scans")

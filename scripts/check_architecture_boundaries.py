@@ -30,6 +30,9 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.activity": {
         "netsentinel.activity_tracking",
     },
+    "netsentinel.api.findings": {
+        "netsentinel.findings_service",
+    },
 }
 
 # SQLite is a lower layer. It must not know about the HTTP API or coordinate
@@ -43,10 +46,19 @@ DATABASE_FORBIDDEN_IMPORTS = {
     "netsentinel.discovery",
     "netsentinel.local_discovery",
     "netsentinel.findings",
+    "netsentinel.findings_service",
     "netsentinel.diagnostics",
     "netsentinel.dns_config",
     "netsentinel.dns_tools",
     "netsentinel.tls_tools",
+}
+
+SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    # El servicio coordina evidencia y llama al formateador puro. No depende del transporte.
+    "netsentinel.findings_service": {
+        "netsentinel.database",
+        "netsentinel.findings",
+    },
 }
 
 DOMAIN_MODULES_INDEPENDENT_OF_HTTP = {
@@ -57,6 +69,7 @@ DOMAIN_MODULES_INDEPENDENT_OF_HTTP = {
     "netsentinel.dns_config",
     "netsentinel.dns_tools",
     "netsentinel.findings",
+    "netsentinel.findings_service",
     "netsentinel.local_discovery",
     "netsentinel.monitoring",
     "netsentinel.network_models",
@@ -197,6 +210,13 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
             if dependency not in (allowed or set()):
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed public dependency."
+                )
+
+    for source, allowed in sorted(SERVICE_ALLOWED_INTERNAL_IMPORTS.items()):
+        for dependency in sorted(graph.get(source, set())):
+            if dependency not in allowed:
+                violations.append(
+                    f"{source} imports {dependency}, which is not an allowed service dependency."
                 )
 
     for dependency in sorted(graph.get("netsentinel.database", set())):

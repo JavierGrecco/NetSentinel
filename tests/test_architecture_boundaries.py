@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, tools
+from netsentinel.api import activity, findings, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from scripts.check_architecture_boundaries import check_architecture
@@ -31,6 +31,8 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.tls_tools",
     }
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
+    assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
+    assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
     assert "netsentinel.network_models" in graph["netsentinel.database"]
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
@@ -74,3 +76,9 @@ def test_activity_endpoints_belong_to_activity_router() -> None:
         "/api/activity/delete",
         "/api/activity/retention",
     } <= paths
+
+
+def test_findings_endpoints_belong_to_findings_router() -> None:
+    """Las rutas de hallazgos viven en su capacidad funcional, no en main.py."""
+    paths = {route.path for route in findings.router.routes}
+    assert {"/api/findings", "/api/export/findings.json"} <= paths
