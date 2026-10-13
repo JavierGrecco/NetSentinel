@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Aísla errores de comprobaciones programadas: un fallo inesperado o de almacenamiento de un monitor se registra y no impide comprobar los siguientes; incorpora una regresión determinista sin red real.
 - Corrige las gráficas de latencia para respetar la CSP basada en hashes: reemplaza los cambios de estilo inline bloqueados por atributos de altura con bandas CSS predefinidas y agrega una regresión de interfaz.
 - Amplía la neutralización CSV para cubrir controles ASCII y espacios Unicode antes de prefijos de fórmula, alineando la defensa del backend con el exportador de la extensión; añade casos de regresión.
 - Corrige la ejecución del endurecimiento de permisos SQLite: el helper estaba decorado accidentalmente como administrador de contexto y no se ejecutaba al abrir la base. Añade regresiones para archivos existentes con permisos 0644 y para preservar el destino de enlaces simbólicos.
