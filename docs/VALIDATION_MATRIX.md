@@ -19,31 +19,90 @@ No adjuntar inventarios reales, IP públicas del cliente, cookies, tokens, crede
 
 ## Recorridos críticos por sistema operativo
 
-| ID / Recorrido | Windows | macOS | Linux | Evidencia mínima |
-|---|---|---|---|---|
-| REL-01 — instalación limpia y primer inicio | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Versión OS/Python, pasos, salida y URL local |
-| REL-02 — inventario y descubrimiento LAN autorizado | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Subred de laboratorio, resultado y límites observados |
-| REL-03 — monitor Ping/TCP/HTTP(S), incidentes y recuperación | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Resultado de cada tipo y ciclo de incidente |
-| REL-04 — DNS, timeout y diagnóstico TLS | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Casos válidos e inválidos, tiempos y errores |
-| REL-05 — exportación, respaldo SQLite y restauración | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Recuento antes/después y resultado de restauración |
-| REL-06 — importación CSV, filtros, deduplicación y borrado | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | Fixture sintético, recuentos, confirmación y resultado |
-| REL-07 — metadatos de correo de auditoría autorizada | [ ] Pendiente | [ ] Pendiente | [ ] Pendiente | CSV sintético/permitido y columnas admitidas/rechazadas |
+Marcar cada tarea solo después de completar el recorrido en ese sistema y registrar fecha, versión/commit y evidencia en el registro de sesiones.
 
-Marcar una celda solo cuando el recorrido se haya completado en ese OS; anotar fecha, versión y resultado en el historial de abajo o vincular un issue con la evidencia. Cuando no sea aplicable, indicar explícitamente N/A y la razón, no dejarla ambigua.
+### Windows
 
-## Extensión Chromium — pruebas manuales
+- [ ] REL-01 — Instalación limpia, primer inicio y actualización/reinicio.
+- [ ] REL-02 — Inventario y descubrimiento LAN autorizado; interfaces/subredes y límites.
+- [ ] REL-03 — Checks Ping/TCP/HTTP(S), incidentes, recuperación, timeouts y retención.
+- [ ] REL-04 — DNS válido/inválido/timeout; TLS válido, vencido/no confiable, hostname incorrecto y puerto no TLS.
+- [ ] REL-05 — Exportación y respaldo SQLite; restaurar en entorno seguro y verificar integridad.
+- [ ] REL-06 — Importación CSV, previsualización, deduplicación, filtros, fórmulas y borrado selectivo.
+- [ ] REL-07 — Importación de metadatos de auditoría de correo autorizados, rechazo de cuerpos/adjuntos y retención.
 
-| ID / Caso | Chrome | Edge | Resultado / evidencia |
-|---|---|---|---|
-| EXT-01 — instalada apagada por defecto; sin registrar hasta activar | [ ] Pendiente | [ ] Pendiente | |
-| EXT-02 — activación, pausa y desactivación | [ ] Pendiente | [ ] Pendiente | |
-| EXT-03 — navegación normal, SPA y cambios de URL | [ ] Pendiente | [ ] Pendiente | |
-| EXT-04 — exclusiones, pestaña privada/subframes y límites de retención | [ ] Pendiente | [ ] Pendiente | |
-| EXT-05 — exportación CSV, BOM, comas, comillas, saltos de línea y fórmulas | [ ] Pendiente | [ ] Pendiente | |
-| EXT-06 — vista previa, duplicados y rechazo del lote inválido sin escrituras parciales | [ ] Pendiente | [ ] Pendiente | |
-| EXT-07 — saneamiento de URLs y evaluación de falsos positivos/negativos | [ ] Pendiente | [ ] Pendiente | |
+**Evidencia Windows:**
+- Fecha/versión/commit:
+- Resultado y observaciones:
+- Issue/CI/capturas sanitizadas:
 
-Usar páginas y cuentas de prueba. Verificar especialmente que datos potencialmente sensibles no se asuman eliminados por completo: el saneamiento de URL es heurístico y no puede reconocer todos los identificadores personalizados que un sitio coloque en rutas/parámetros desconocidos.
+### macOS
+
+- [ ] REL-01 — Instalación limpia, primer inicio y actualización/reinicio.
+- [ ] REL-02 — Inventario y descubrimiento LAN autorizado; interfaces/subredes y límites.
+- [ ] REL-03 — Checks Ping/TCP/HTTP(S), incidentes, recuperación, timeouts y retención.
+- [ ] REL-04 — DNS válido/inválido/timeout; TLS válido, vencido/no confiable, hostname incorrecto y puerto no TLS.
+- [ ] REL-05 — Exportación y respaldo SQLite; restaurar en entorno seguro y verificar integridad.
+- [ ] REL-06 — Importación CSV, previsualización, deduplicación, filtros, fórmulas y borrado selectivo.
+- [ ] REL-07 — Importación de metadatos de auditoría de correo autorizados, rechazo de cuerpos/adjuntos y retención.
+
+**Evidencia macOS:**
+- Fecha/versión/commit:
+- Resultado y observaciones:
+- Issue/CI/capturas sanitizadas:
+
+### Linux
+
+- [ ] REL-01 — Instalación limpia, primer inicio y actualización/reinicio.
+- [ ] REL-02 — Inventario y descubrimiento LAN autorizado; interfaces/subredes y límites.
+- [ ] REL-03 — Checks Ping/TCP/HTTP(S), incidentes, recuperación, timeouts y retención.
+- [ ] REL-04 — DNS válido/inválido/timeout; TLS válido, vencido/no confiable, hostname incorrecto y puerto no TLS.
+- [ ] REL-05 — Exportación y respaldo SQLite; restaurar en entorno seguro y verificar integridad.
+- [ ] REL-06 — Importación CSV, previsualización, deduplicación, filtros, fórmulas y borrado selectivo.
+- [ ] REL-07 — Importación de metadatos de auditoría de correo autorizados, rechazo de cuerpos/adjuntos y retención.
+
+**Evidencia Linux:**
+- Fecha/versión/commit:
+- Resultado y observaciones:
+- Issue/CI/capturas sanitizadas:
+
+Si un caso no aplica, anotar N/A y justificarlo en vez de dejarlo ambiguo. Si falla, abrir/vincular un issue y dejar la tarea sin marcar.
+
+## Extensión Chromium: Chrome y Edge
+
+Usar páginas y cuentas de prueba; no capturar credenciales ni datos privados. El saneamiento de URL es heurístico y no puede reconocer todos los identificadores personalizados que un sitio coloque en rutas/parámetros desconocidos.
+
+### Chrome
+
+- [ ] EXT-01 — Instalada apagada por defecto y sin registrar hasta activar.
+- [ ] EXT-02 — Activación, pausa y desactivación.
+- [ ] EXT-03 — Navegación normal, SPA y cambios de URL.
+- [ ] EXT-04 — Exclusiones, navegación privada/subframes y límites de retención.
+- [ ] EXT-05 — CSV con BOM, comas, comillas, saltos de línea y fórmulas.
+- [ ] EXT-06 — Previsualización, duplicados y rechazo de lote inválido sin escrituras parciales.
+- [ ] EXT-07 — Saneamiento de URLs y evaluación de falsos positivos/negativos.
+
+**Evidencia Chrome:**
+- Fecha/versión/commit:
+- Versión navegador / SO:
+- Resultado y observaciones:
+- Issue/CI/capturas sanitizadas:
+
+### Edge
+
+- [ ] EXT-01 — Instalada apagada por defecto y sin registrar hasta activar.
+- [ ] EXT-02 — Activación, pausa y desactivación.
+- [ ] EXT-03 — Navegación normal, SPA y cambios de URL.
+- [ ] EXT-04 — Exclusiones, navegación privada/subframes y límites de retención.
+- [ ] EXT-05 — CSV con BOM, comas, comillas, saltos de línea y fórmulas.
+- [ ] EXT-06 — Previsualización, duplicados y rechazo de lote inválido sin escrituras parciales.
+- [ ] EXT-07 — Saneamiento de URLs y evaluación de falsos positivos/negativos.
+
+**Evidencia Edge:**
+- Fecha/versión/commit:
+- Versión navegador / SO:
+- Resultado y observaciones:
+- Issue/CI/capturas sanitizadas:
 
 ## Comprobaciones finales antes de la release
 
@@ -59,7 +118,7 @@ Usar páginas y cuentas de prueba. Verificar especialmente que datos potencialme
 
 ## Registro de sesiones
 
-Añadir una fila por sistema/recorrido comprobado. Si falla, dejarlo como bloqueado y abrir/vincular un issue; no sustituir el resultado negativo por una marca de aprobado.
+Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular un issue.
 
 | Fecha | Versión/commit | OS / navegador | IDs ejecutados | Resultado | Issue / evidencia |
 |---|---|---|---|---|---|
