@@ -1,10 +1,12 @@
 """Comprueba que las fronteras iniciales de la API modular se mantienen claras."""
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 
 from netsentinel.api import tools
+from netsentinel.discovery import Neighbor as DiscoveryNeighbor
+from netsentinel.network_models import Neighbor
+from scripts.check_architecture_boundaries import check_architecture
 
 
 def test_dns_tls_endpoints_belong_to_tools_router() -> None:
@@ -18,22 +20,39 @@ def test_dns_tls_endpoints_belong_to_tools_router() -> None:
     } <= paths
 
 
-def test_tools_api_does_not_depend_on_app_composition_or_database() -> None:
-    """Las rutas de herramientas no deben importar main.py ni consultar SQL."""
-    module_path = Path(tools.__file__)
-    tree = ast.parse(module_path.read_text(encoding="utf-8"))
-    imported_modules: set[str] = set()
+def test_architecture_policy_passes_without_coupling_violations() -> None:
+    """La política completa se ejecuta también como parte de las pruebas."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\n".join(violations)
+    assert graph["netsentinel.api.tools"] == {
+        "netsentinel.dns_config",
+        "netsentinel.dns_tools",
+        "netsentinel.tls_tools",
+    }
+    assert "netsentinel.network_models" in graph["netsentinel.database"]
+    assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            imported_modules.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            imported_modules.add(node.module or "")
 
-    assert not any(
-        name == "netsentinel.main"
-        or name.endswith(".main")
-        or name == "netsentinel.database"
-        or name.endswith(".database")
-        for name in imported_modules
-    )
+def test_neighbor_type_is_shared_but_old_import_path_still_works() -> None:
+    """El tipo compartido conserva compatibilidad con el módulo de descubrimiento."""
+    assert DiscoveryNeighbor is Neighbor
+
+
+def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
+    """Los módulos que contienen reglas/datos no dependen de FastAPI o Starlette."""
+    package_root = Path(__file__).resolve().parents[1] / "src" / "netsentinel"
+    expected = {
+        "database.py",
+        "discovery.py",
+        "findings.py",
+        "monitoring.py",
+        "activity_tracking.py",
+        "network_models.py",
+    }
+    for name in expected:
+        source = (package_root / name).read_text(encoding="utf-8")
+        assert "from fastapi " not in source
+        assert "import fastapi" not in source
+        assert "from starlette " not in source
+        assert "import starlette" not in source

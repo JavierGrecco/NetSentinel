@@ -13,20 +13,13 @@ import subprocess
 from dataclasses import dataclass
 from typing import Iterable, Protocol
 
+from .network_models import Neighbor
 from .vendor import is_unicast
 
 _MAC = r"(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}"
 _MAC_RE = re.compile(rf"^{_MAC}$")
 # macOS peer-to-peer link interfaces are not ordinary home/office LAN inventory.
 _NON_LAN_INTERFACE_PREFIXES = ("awdl", "llw")
-
-
-@dataclass(frozen=True, slots=True)
-class Neighbor:
-    ip_address: str
-    mac_address: str
-    interface: str | None = None
-    source: str = "system-neighbor-table"
 
 
 def normalize_mac(value: str) -> str | None:

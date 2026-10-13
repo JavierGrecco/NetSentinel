@@ -16,7 +16,7 @@ from typing import Any, Iterator
 
 from .config import database_path
 from .csv_safety import spreadsheet_safe_text
-from .discovery import Neighbor
+from .network_models import Neighbor
 from .vendor import is_locally_administered, manufacturer_for_mac, oui_database_path
 
 
