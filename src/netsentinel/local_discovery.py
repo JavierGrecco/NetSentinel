@@ -13,7 +13,8 @@ from typing import Callable
 
 import psutil
 
-from .discovery import Neighbor, read_neighbor_table
+from .discovery import read_neighbor_table
+from .network_models import Neighbor
 
 
 MAX_NETWORKS = 2
