@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import netsentinel.main as main_module
+import netsentinel.api.tools as tools_api
 from netsentinel.main import app
 
 
@@ -11,7 +11,7 @@ def disable_scheduler(monkeypatch):
 
 
 def test_dns_configuration_api_returns_local_read_only_data(monkeypatch):
-    monkeypatch.setattr(main_module, "get_dns_configuration", lambda: {
+    monkeypatch.setattr(tools_api, "get_dns_configuration", lambda: {
         "platform": "linux",
         "servers": ["192.168.1.1"],
         "count": 1,

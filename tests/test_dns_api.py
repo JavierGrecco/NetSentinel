@@ -3,7 +3,7 @@ import socket
 import pytest
 from fastapi.testclient import TestClient
 
-import netsentinel.main as main_module
+import netsentinel.api.tools as tools_api
 from netsentinel.main import app
 
 
@@ -14,7 +14,7 @@ def disable_scheduler(monkeypatch):
 
 def test_dns_lookup_api_returns_system_resolver_results(monkeypatch):
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "lookup_hostname",
         lambda hostname: {
             "hostname": hostname,
@@ -33,7 +33,7 @@ def test_dns_lookup_api_returns_system_resolver_results(monkeypatch):
 def test_dns_lookup_api_validates_hostname(monkeypatch):
     def reject(_hostname):
         raise ValueError("Ingresá un nombre de host válido.")
-    monkeypatch.setattr(main_module, "lookup_hostname", reject)
+    monkeypatch.setattr(tools_api, "lookup_hostname", reject)
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/tools/dns/lookup", params={"hostname": "https://example.com"})
     assert response.status_code == 422
@@ -43,7 +43,7 @@ def test_dns_lookup_api_validates_hostname(monkeypatch):
 def test_dns_lookup_api_reports_resolver_errors(monkeypatch):
     def fail(_hostname):
         raise OSError("resolver error")
-    monkeypatch.setattr(main_module, "lookup_hostname", fail)
+    monkeypatch.setattr(tools_api, "lookup_hostname", fail)
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/tools/dns/lookup", params={"hostname": "missing.example"})
     assert response.status_code == 502
@@ -55,7 +55,7 @@ def test_dns_lookup_api_returns_not_found_for_missing_name(monkeypatch):
     from netsentinel.dns_tools import DNSLookupError
 
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "lookup_hostname",
         lambda _hostname: (_ for _ in ()).throw(DNSLookupError("El resolvedor no encontró ese nombre.", "not_found")),
     )
@@ -69,7 +69,7 @@ def test_dns_lookup_api_returns_service_unavailable_for_temporary_failure(monkey
     from netsentinel.dns_tools import DNSLookupError
 
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "lookup_hostname",
         lambda _hostname: (_ for _ in ()).throw(DNSLookupError("El resolvedor DNS no respondió a tiempo; probá nuevamente.", "temporary")),
     )
@@ -83,7 +83,7 @@ def test_dns_lookup_api_classifies_ptr_and_dns_temporarily_unavailable(monkeypat
     from netsentinel.dns_tools import DNSLookupError
 
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "cached_reverse_lookup_ip",
         lambda _address: (_ for _ in ()).throw(DNSLookupError("El resolvedor DNS no respondió a tiempo; probá nuevamente.", "temporary")),
     )

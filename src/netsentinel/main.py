@@ -26,10 +26,9 @@ from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
-from .dns_tools import DNSLookupError, cached_reverse_lookup_ip, lookup_hostname
-from .dns_config import get_dns_configuration
+from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
+from .dns_tools import DNSLookupError, cached_reverse_lookup_ip
 from . import activity_tracking
-from .tls_tools import inspect_tls_endpoint
 from .findings import build_findings
 
 
@@ -64,7 +63,7 @@ _IPV6_UNIQUE_LOCAL = ipaddress.IPv6Network("fc00::/7")
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # These GET routes initiate DNS traffic. They must not be triggerable by pages
 # from another origin merely by embedding a local URL in an image/link/script.
-_NETWORK_SIDE_EFFECT_GET_PATHS = {"/api/tools/dns/lookup", "/api/tools/dns/reverse"}
+_NETWORK_SIDE_EFFECT_GET_PATHS = NETWORK_SIDE_EFFECT_GET_PATHS
 _DEVICE_DNS_REVERSE_PATH = re.compile(r"^/api/devices/\d+/dns-reverse$")
 
 
@@ -127,6 +126,11 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+# La composición registra routers por capacidad; las rutas y sus contratos viven
+# en el módulo dueño, no en este archivo de arranque.
+app.include_router(tools_router)
+
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
 _MONITORS_STATIC = _STATIC_DIR / "monitors.html"
@@ -367,13 +371,6 @@ class ActivityDeleteRequest(ActivityDeleteSelection):
     confirmation: str = Field(min_length=1, max_length=40)
 
 
-class TLSInspectionRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    host: str = Field(min_length=1, max_length=253)
-    port: int = Field(default=443, ge=1, le=65535, strict=True)
-
-
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -398,49 +395,6 @@ def findings_page() -> FileResponse:
 @app.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
-
-
-@app.post("/api/tools/tls/inspect")
-def tls_endpoint_inspection(body: TLSInspectionRequest) -> dict:
-    """Audita un único handshake TLS, sin solicitar contenido HTTP ni persistir resultados."""
-    try:
-        return inspect_tls_endpoint(body.host, body.port)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@app.get("/api/tools/dns/configuration")
-def dns_configuration() -> dict:
-    """Lee la configuración DNS local sin modificarla ni consultar dominios externos."""
-    return get_dns_configuration()
-
-
-@app.get("/api/tools/dns/lookup")
-def dns_lookup(hostname: str = Query(min_length=1, max_length=253)) -> dict:
-    """Resuelve registros A/AAAA mediante el resolvedor del sistema, a pedido del usuario."""
-    try:
-        return lookup_hostname(hostname)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DNSLookupError as exc:
-        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(status_code=502, detail="No se pudo resolver el nombre con el DNS configurado en el sistema.") from exc
-
-
-@app.get("/api/tools/dns/reverse")
-def dns_reverse_lookup(address: str = Query(min_length=1, max_length=64)) -> dict:
-    """Consulta PTR para una IP ingresada explícitamente por el usuario."""
-    try:
-        return cached_reverse_lookup_ip(address)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DNSLookupError as exc:
-        status_code = 404 if exc.kind == "not_found" else 503 if exc.kind == "temporary" else 502
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(status_code=502, detail="No se pudo obtener un registro PTR con el DNS configurado en el sistema.") from exc
 
 
 @app.get("/api/health")

@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from netsentinel import database
 import netsentinel.main as main_module
+import netsentinel.api.tools as tools_api
 from netsentinel.main import app
 
 
@@ -86,7 +87,8 @@ def test_cross_site_dns_requests_are_blocked_before_resolver(client, monkeypatch
     def unexpected_call(*_args, **_kwargs):
         pytest.fail("A cross-origin request must not trigger DNS traffic.")
 
-    monkeypatch.setattr(main_module, "lookup_hostname", unexpected_call)
+    monkeypatch.setattr(tools_api, "lookup_hostname", unexpected_call)
+    monkeypatch.setattr(tools_api, "cached_reverse_lookup_ip", unexpected_call)
     monkeypatch.setattr(main_module, "cached_reverse_lookup_ip", unexpected_call)
     monkeypatch.setattr(main_module.database, "get_device_addresses", unexpected_call)
 
@@ -99,7 +101,7 @@ def test_cross_site_dns_requests_are_blocked_before_resolver(client, monkeypatch
 
 def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
     monkeypatch.setattr(
-        main_module,
+        tools_api,
         "lookup_hostname",
         lambda hostname: {"hostname": hostname, "addresses": [], "count": 0, "source": "test"},
     )

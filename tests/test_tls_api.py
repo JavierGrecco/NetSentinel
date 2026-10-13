@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import netsentinel.main as main_module
+import netsentinel.api.tools as tools_api
 from netsentinel import database
 from netsentinel.main import app
 
@@ -25,7 +25,7 @@ def test_tls_inspection_api_returns_point_in_time_report(monkeypatch, tmp_path):
     }
     calls = []
     monkeypatch.setattr(
-        main_module, "inspect_tls_endpoint",
+        tools_api, "inspect_tls_endpoint",
         lambda host, port: calls.append((host, port)) or expected,
     )
 
@@ -43,7 +43,7 @@ def test_tls_inspection_api_returns_point_in_time_report(monkeypatch, tmp_path):
 
 def test_tls_inspection_api_rejects_url_instead_of_host(monkeypatch):
     monkeypatch.setattr(
-        main_module, "inspect_tls_endpoint",
+        tools_api, "inspect_tls_endpoint",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
             ValueError("Ingresá solo el host o la IP, sin esquema, ruta ni credenciales.")
         ),
