@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Amplía el repositorio SQLite de actividad con operaciones de creación/detención/lectura de sesiones e inserción de eventos previamente validados; prueba sustitución de sesión activa, detención idempotente y escritura de metadatos.
+- Amplía el repositorio SQLite de actividad con operaciones de creación/detención/lectura de sesiones e inserción de eventos previamente validados; prueba sustitución de sesión activa, detención idempotente y escritura de metadatos. También corrige la actualización de retención cuando falta la fila de configuración y agrega una prueba de regresión.
 
 - Extrae la lectura, actualización y limpieza por retención de actividad a un repositorio SQLite de dominio; añade pruebas de retención/expiración y valida su dependencia permitida en el control arquitectónico sin cambiar el esquema ni las rutas.
 
