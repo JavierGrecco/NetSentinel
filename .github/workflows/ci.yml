@@ -59,6 +59,36 @@ jobs:
           python-version: '3.12'
       - name: Check minimum dependency constraints against project metadata
         run: python scripts/check-minimum-dependency-constraints.py
+      - name: Verify minimum-dependency guard rejects metadata drift
+        run: |
+          tempdir="$(mktemp -d)"
+          trap 'rm -rf "$tempdir"' EXIT
+          mkdir -p "$tempdir/scripts" "$tempdir/ci"
+          cp pyproject.toml "$tempdir/pyproject.toml"
+          cp ci/constraints-min.txt "$tempdir/ci/constraints-min.txt"
+          cp scripts/check-minimum-dependency-constraints.py "$tempdir/scripts/check-minimum-dependency-constraints.py"
+          python - "$tempdir/pyproject.toml" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          text = path.read_text(encoding="utf-8")
+          old = '"httpx2>=2.0,<3.0"'
+          new = '"httpx2>=2.1,<3.0"'
+          assert old in text, "Fixture could not find the expected httpx2 lower bound."
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          if python "$tempdir/scripts/check-minimum-dependency-constraints.py" > "$tempdir/output.txt" 2>&1; then
+            echo "Minimum dependency guard accepted an intentionally mismatched lower bound." >&2
+            cat "$tempdir/output.txt" >&2
+            exit 1
+          fi
+          if ! grep -q "Constraint mismatch for httpx2" "$tempdir/output.txt"; then
+            echo "Minimum dependency guard failed for an unexpected reason." >&2
+            cat "$tempdir/output.txt" >&2
+            exit 1
+          fi
+          echo "Minimum dependency guard correctly rejected metadata drift."
       - name: Validate launcher and release helper shell syntax
         run: bash -n run.sh run-macos.command scripts/verify-sha256-manifest.sh
       - name: Keep CodeQL initialization and analysis versions in sync
