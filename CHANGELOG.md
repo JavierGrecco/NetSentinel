@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Fortalece el guardián de arquitectura: las dependencias internas de nuevos servicios/repositorios requieren una lista explícita, SQLite solo admite el contrato de red neutro y todo módulo nuevo fuera de la API se comprueba automáticamente para evitar dependencias HTTP. Añade regresiones con módulos sintéticos para asegurar que las reglas también cubran componentes futuros.
+- Fortalece el guardián de arquitectura: las dependencias internas de nuevos servicios/repositorios requieren una lista explícita, SQLite solo admite un conjunto pequeño de apoyos compartidos declarados y todo módulo nuevo fuera de la API se comprueba automáticamente para evitar dependencias HTTP. Añade regresiones con módulos sintéticos para asegurar que las reglas también cubran componentes futuros.
 
 - Extrae la lectura, actualización y limpieza por retención de actividad a un repositorio SQLite de dominio; añade pruebas de retención/expiración y valida su dependencia permitida en el control arquitectónico sin cambiar el esquema ni las rutas.
 
