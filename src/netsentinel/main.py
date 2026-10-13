@@ -272,7 +272,6 @@ async def protect_local_app(request: Request, call_next):
     return _apply_security_headers(response, page_path=request.url.path)
 
 
-
 @app.get("/api/docs", include_in_schema=False)
 def api_docs() -> Response:
     """Serve Swagger UI with a per-response hash for its generated inline initializer."""
@@ -331,39 +330,6 @@ def findings_page() -> FileResponse:
 @app.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @app.get("/api/monitors")
