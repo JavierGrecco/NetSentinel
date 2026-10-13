@@ -85,3 +85,61 @@ def test_findings_endpoints_belong_to_findings_router() -> None:
     """Las rutas de hallazgos viven en su capacidad funcional, no en main.py."""
     paths = {route.path for route in findings.router.routes}
     assert {"/api/findings", "/api/export/findings.json"} <= paths
+
+
+def _write_minimal_package(root: Path) -> Path:
+    """Crea un paquete pequeño para probar que las reglas cubren módulos nuevos."""
+    package = root / "src" / "netsentinel"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "main.py").write_text(
+        '"""Punto de composición de prueba."""\\n', encoding="utf-8"
+    )
+    return package
+
+
+def test_new_domain_module_is_checked_for_http_framework_imports(tmp_path: Path) -> None:
+    package = _write_minimal_package(tmp_path)
+    (package / "future_service.py").write_text(
+        "from fastapi import FastAPI\\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.future_service imports the HTTP framework" in violation
+        for violation in violations
+    )
+
+
+def test_new_service_must_declare_its_internal_dependencies(tmp_path: Path) -> None:
+    package = _write_minimal_package(tmp_path)
+    (package / "network_models.py").write_text("Neighbor = object\\n", encoding="utf-8")
+    (package / "future_service.py").write_text(
+        "from . import network_models\\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.future_service has internal dependencies but no explicit service allow-list"
+        in violation
+        for violation in violations
+    )
+
+
+def test_database_cannot_import_a_new_domain_module_by_default(tmp_path: Path) -> None:
+    package = _write_minimal_package(tmp_path)
+    (package / "network_models.py").write_text("Neighbor = object\\n", encoding="utf-8")
+    (package / "future_domain.py").write_text("VALUE = 1\\n", encoding="utf-8")
+    (package / "database.py").write_text(
+        "from . import future_domain\\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.database imports netsentinel.future_domain, which is not an allowed persistence dependency"
+        in violation
+        for violation in violations
+    )
