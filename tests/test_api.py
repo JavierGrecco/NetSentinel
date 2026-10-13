@@ -33,6 +33,35 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
 
 
+def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    secret = "TOKEN_LEAK"
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.post(
+            "/api/activity/ingest",
+            json={
+                "session_id": 1,
+                "collector_token": secret,
+                "device_id": 1,
+                "event_type": "dns_query",
+                "source": "router_dns",
+                "domain": "example.com",
+            },
+        )
+
+    assert response.status_code == 422
+    assert secret not in response.text
+    errors = response.json()["detail"]
+    assert errors[0]["loc"] == ["body", "collector_token"]
+    assert "msg" in errors[0]
+    assert "type" in errors[0]
+    assert "input" not in errors[0]
+    assert "ctx" not in errors[0]
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
 def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
