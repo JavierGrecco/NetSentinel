@@ -1,102 +1,132 @@
-# Roadmap operativo de NetSentinel
+# Roadmap maestro de NetSentinel
 
-Separamos código presente, validación pendiente y trabajo que todavía no está implementado. Una casilla marcada indica que existe código, no que CI o pruebas manuales estén aprobadas.
+> **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Núcleo de inventario y diagnóstico
-- [x] Aislamiento de errores por monitor en el supervisor: las comprobaciones programadas siguen con los demás objetivos si una falla inesperadamente.
-- [x] Inventario local, observaciones, historial de direcciones, etiquetas de confianza y eventos.
-- [x] Descubrimiento local explícito y acotado a subredes privadas.
-- [x] Priorización determinista de interfaces físicas al deduplicar subredes compartidas entre adaptadores; prueba que no depende del orden de enumeración.
-- [x] Exclusión de puentes y pares virtuales comunes de contenedores Linux para evitar que se conviertan en objetivos del sondeo LAN; pruebas con varias familias de interfaces.
-- [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
-- [x] Retención configurable de muestras detalladas de monitorización (90 días por defecto, 1–3650 configurable, o desactivación explícita); limpieza diaria que preserva incidentes, estado actual e inventario, con pruebas deterministas.
-- [x] Protección de permisos POSIX de datos SQLite: no modifica destinos de enlaces simbólicos del directorio `~/.netsentinel` ni del propio archivo de base de datos; prueba ambos recorridos y conserva `0600` para archivos regulares.
-- [x] Operaciones TCP/HTTP y webhook en procesos terminables con plazos globales (timeout del monitor + 1 s de arranque; webhook 5 s); pruebas de timeout, salida inválida y protocolo hijo.
-- [x] Consultas DNS A/AAAA, PTR bajo demanda, caché PTR acotada y diagnóstico de configuración DNS local.
-- [x] Límite estricto de 3 segundos para consultas interactivas A/AAAA y PTR mediante proceso hijo terminable; pruebas de timeouts, clasificación de errores y validación de la salida del proceso.
-- [ ] Pruebas manuales de instalación/flujos completos en Windows, macOS y Linux.
-- [x] Timeout DNS independiente del resolvedor del sistema, con proceso hijo terminable y pruebas deterministas de éxito, error y timeout.
-- [x] Herramienta TLS puntual en Herramientas: valida certificado, fechas, nombre, versión TLS y cifrado negociado; no solicita contenido HTTP ni persiste el resultado.
-- [x] CLI fail-closed para enlace remoto: solo loopback, validación de puerto y pruebas para bloquear exposición accidental sin autenticación.
-- [x] Canonicalización de `localhost` a loopback literal y propagación del código de salida en el lanzador Windows, con pruebas de regresión.
-- [x] Protección de rutas GET con efectos DNS/PTR: bloquea Fetch Metadata cross-site/same-site y Origin remoto antes de invocar el resolvedor; conserva navegación directa y same-origin.
-- [x] Política CSP/Permissions-Policy para respuestas del servidor, con excepción acotada de Swagger UI y pruebas de cabeceras de seguridad en rutas válidas y rechazos.
-- [x] `script-src` hash-only por pantalla para las cinco interfaces principales; CI verifica el hash exacto de cada bloque y rechaza manejadores JavaScript inline.
-- [x] Eliminar `style-src unsafe-inline`: externaliza estilos de página, sustituye atributos inline por clases y valida los CSS incluidos en el wheel y servidos localmente.
-- [x] Retirar `script-src unsafe-inline` de `/api/docs`: el inicializador generado por Swagger se autoriza mediante hash SHA-256 calculado por respuesta; el CDN conserva alcance exclusivo a la documentación.
-- [x] Primera iteración del motor de hallazgos: API de solo lectura y exportación JSON para cambios del inventario e incidentes de monitorización, con procedencia, evidencia, estado, severidad y confianza separadas; evita duplicar transiciones de monitorización.
-- [x] Bandeja visual `/findings` conectada al motor de hallazgos, con filtros por estado, evidencia/procedencia, reconocimiento de eventos del inventario y exportación JSON; respuestas locales sin caché.
-- [ ] Ampliar el motor para incluir resultados DNS/TLS persistibles solo después de definir retención, eliminación, consentimiento cuando corresponda y control de falsos positivos.
-- [ ] Pruebas manuales de TLS con endpoints autorizados (certificado válido, próximo a vencer, no confiable, timeout y puerto no TLS) en Windows, macOS y Linux.
-- [ ] Enriquecimiento DNS persistido/visible con procedencia, fecha y opción de desactivación.
+## Estado del proyecto
 
-## Actividad y telemetría autorizada: estado de código
-- [x] Historial de presencia por dispositivo (fecha/IP/fuente), claramente distinto de páginas visitadas.
-- [x] API/SQLite de sesiones acotadas, token temporal hasheado, CSV, retención y exportación JSON v4.
-- [x] Extensión Chromium visible, opt-in y apagada por defecto para registrar páginas futuras y búsquedas por URL en el dispositivo local.
-- [x] Importación manual de CSV de navegación y búsquedas; validación y saneamiento de URLs.
-- [x] Importación manual de metadatos de correo autorizados: fecha, proveedor, emisor, destinatarios y asunto opcional.
-- [x] Rechazo de columnas de cuerpo de mensaje, contenido o adjuntos; no hay extracción de bandejas.
-- [x] Normalización inicial de alias CSV de Google Workspace (Date/Sender/Recipient/Subject or Message ID) y Microsoft 365 (receivedDateTime/senderAddress/recipientAddress/subject).
-- [x] CI automatizada verde en la matriz de Python 3.10–3.14 en Windows/macOS/Linux y validación del paquete para la integración anterior.
-- [x] Pruebas Node automatizadas del ciclo de extensión: apagada por defecto, opt-in, subframes/privado, exclusiones, opciones de captura, retención/límite y deduplicación.
-- [x] Mutaciones del historial Chromium serializadas en el service worker, incluyendo limpieza inicial y borrado explícito; el popup ya no escribe snapshots antiguos de eventos al renderizar. Pruebas deterministas de concurrencia y orden de borrado. También excluye IPv4-mapped IPv6 privadas y el rango IPv6 link-local completo en el filtro de privacidad.
-- [x] Pruebas CSV del popup para comillas, comas, saltos de línea, fórmulas y BOM UTF-8; el manifest MV3 solicita solo permisos necesarios y CI comprueba los permisos mínimos.
-- [ ] Pruebas manuales de importación/extensión en Chrome/Edge y Windows/macOS/Linux; los cambios de deduplicación también deben pasar CI.
-- [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
-- [x] Exclusión de destinos no públicos en la extensión: añade CGNAT, redes de documentación/benchmark/reservadas y sufijos de nombres locales/de prueba; pruebas para IPv4 mapeada a IPv6 y límites de rango.
-- [x] Amplía el filtro de destinos IPv6 no públicos: multicast, documentación, benchmarking, Teredo/6to4, discard-only y NAT64 de uso local; cubre formas comprimidas/expandidas de IPv4 mapeada y conserva IPv6 global normal.
-- [x] Cubre asignaciones IANA adicionales no globales: rangos IPv4 `192.0.0.0/24` con excepción explícita a `.9`/`.10` y `192.88.99.0/24`, más prefijos IPv6 dummy, ORCHID obsoleto y SRv6; agrega pruebas de frontera para evitar sobrebloqueo.
-- [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.
-- [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
-- [x] Parser de importación CSV acotado: rechaza la fila 1001 antes de acumular más objetos y convierte errores de límite de campo a validación, sin escrituras parciales.
-- [x] Saneamiento común de celdas CSV frente a fórmulas de hojas de cálculo, incluido el inventario editable; las pruebas verifican que exportar no modifica los valores almacenados.
-- [x] Alinea el aviso de privacidad de navegación con el comportamiento real del saneador: host/ruta normalizada, redacción heurística y riesgo residual de parámetros o segmentos desconocidos.
-- [x] Ingestión en vivo respeta la retención de actividad configurada y rechaza eventos retrasados que desaparecerían al consultar el historial.
-- [x] La previsualización/importación CSV rechaza el lote si alguna fila supera la retención configurada, antes de guardar datos; pruebas cubren la ampliación del período y la ausencia de escrituras parciales.
-- [x] Deduplicación idempotente de filas CSV manuales por dispositivo; las filas idénticas ya importadas se omiten y se contabilizan.
-- [x] Filtros de eventos por dispositivo, tipo y rango de fechas UTC; exportación CSV filtrada con neutralización de fórmulas, hasta 10.000 filas.
-- [x] Borrado selectivo de eventos por dispositivo, tipo o fechas: previsualización sin escritura y confirmación exacta `BORRAR N` comprobada de forma transaccional; no puede ejecutarse sin al menos un filtro.
-- [x] Filtros de actividad, exportación y borrado selectivo también por fuente (`router_dns`, `router_flow`, `device_agent`, `manual_import`); valores admitidos validados por servidor.
-- [ ] Pruebas manuales de UX para flujos de borrado.
-- [ ] Sincronización en vivo desde equipos supervisados, tras añadir autenticación, autorización por dispositivo, cifrado de transporte, revocación y protección contra reenvío. No exponer la API actual a la LAN como atajo.
-- [ ] Extensión Firefox u otros navegadores compatibles.
-- [ ] Adaptador de auditoría para un proveedor concreto de correo, tras verificar qué registros admite el tipo de cuenta y con permisos válidos.
-- [ ] Agente opcional de tiempo de pantalla/uso de apps por SO, sin keylogging ni lectura de formularios.
-- [ ] Adaptador real de DNS/flows de router/AP/resolvedor doméstico, después de elegir modelo y formato.
+**Estado:** estabilización de la versión local 0.10.0. La funcionalidad principal existe y las comprobaciones automatizadas han estado verdes en la revisión anterior, pero **la versión todavía no está lista para declararse estable** porque faltan pruebas manuales documentadas en sistemas/navegadores reales y confirmar controles de repositorio.
 
-## Adaptadores de infraestructura
-- [ ] Adaptadores DHCP/router/SNMP de solo lectura, con límites de tiempo, compatibilidad documentada, auditoría y fixtures.
-- [ ] Gestión de credenciales de adaptadores fuera del repositorio y de logs.
-- [ ] Integración de DNS/destinos IP/puerto del router sin inferir identidad personal.
-- [ ] Guía de despliegue local segura; loopback como valor predeterminado.
+- **Versión durante el desarrollo:** 0.10.0.dev0.
+- **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
+- **Último commit de main revisado para este plan:** [b1b256c](https://github.com/JavierGrecco/NetSentinel/commit/b1b256ce7defca08a4411582d8adbc56570e66ed).
+- **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159685).
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159672).
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159674).
+- **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+- **Pruebas manuales de instalación y uso:** pendientes de registrar en la matriz enlazada arriba.
+- **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
 
-## Observabilidad y usabilidad
-- [ ] Topología basada en relaciones observadas y nivel de incertidumbre.
-- [ ] Métricas Prometheus de cardinalidad acotada.
-- [ ] Perfiles de varias redes/ubicaciones aislados entre sí.
-- [ ] Exportación selectiva por dispositivo/período/fuente.
+Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
 
-## TLS y contenido privado
-- [x] Inspección explícita de un único handshake TLS con validación normal del certificado; metadatos temporales y hallazgos orientativos, sin petición HTTP.
-- [ ] Valorar alertas persistentes de vencimiento únicamente después de diseñar retención, destino de avisos y tratamiento de resultados.
-- [ ] No implementar recuperación/interceptación de contraseñas, captura de formularios, keylogging, lectura de mensajes o cuerpos HTTP.
-- [ ] No realizar descifrado/proxy TLS general. Cualquier futura herramienta de diagnóstico TLS requiere diseño independiente, consentimiento visible, aislamiento y revisión de seguridad.
+## Cómo se mantiene el seguimiento
 
-## Orden de trabajo recomendado
+1. Cada tarea lleva un ID estable (por ejemplo, REL-01 o FIND-02) para poder referenciarla desde PR, issue y evidencia de pruebas.
+2. Una casilla marcada como completa significa que **todos** los criterios de aceptación de esa tarea están cumplidos. Que el código exista, compile o pase CI no basta si la tarea requiere prueba manual, política de privacidad, documentación o verificación operativa.
+3. Las tareas que dependen de sistemas reales se cierran solo después de añadir fecha, entorno, versión/commit y resultado en VALIDATION_MATRIX.md. Adjuntá el enlace de CI, PR o issue cuando corresponda.
+4. Si una prueba falla, no marques la tarea como completa: abrí o vinculá un issue con pasos para reproducir, resultado observado y esperado.
+5. Actualizá este documento en el mismo PR que completa una tarea. No mantengas porcentajes estimados en paralelo: el estado por fase y las evidencias son más fiables que contar casillas de diferente tamaño.
+6. Las fases son puertas secuenciales: se pueden preparar tareas futuras, pero no habilitar capacidades remotas ni anunciar una release antes de superar sus puertas de seguridad.
 
-1. **Validación real y confianza en los resultados.** Ejecutar flujos manuales en Windows, macOS y Linux: inventario, DNS, monitorización, informes, extensión Chromium/Edge, importación/exportación y borrado selectivo. Probar TLS con certificados válidos, próximos a vencer, no confiables, puertos sin TLS y timeouts. La CI verde no sustituye estas comprobaciones.
-2. **Motor de hallazgos de seguridad.** La primera capa ya unifica por API eventos persistidos del inventario e incidentes de monitorización. El siguiente paso es ofrecer una bandeja visual y, solo después de definir retención y eliminación, integrar resultados DNS/TLS persistibles. Mantener severidad, evidencia, procedencia y confianza separadas; no marcar como comprometido un equipo solo por ser desconocido.
-3. **Adaptador de infraestructura de solo lectura.** Elegir un router/AP/resolvedor concreto según hardware y APIs disponibles; incorporar DHCP, DNS o flujos realmente soportados con límites de tiempo, fixtures, origen de datos y pruebas sin equipo real. No prometer visibilidad completa sin una fuente que la provea.
-4. **Sincronización remota segura.** Antes de exponer NetSentinel a una LAN o desplegarlo en varias sedes, implementar autenticación, autorización por equipo/rol, alta explícita, credenciales revocables, transporte cifrado, protección contra repetición, límites de tasa y registro de auditoría.
-5. **Informes e integración SOC.** Añadir informes de hallazgos con evidencia y recomendaciones; después métricas Prometheus e integración SIEM. Una matriz de cobertura frente a NIST CSF 2.0/CISA CPG debe mostrar evidencia y brechas, nunca una certificación automática.
-6. **Ampliación de fuentes.** Incorporar enriquecimiento DNS opcional con fecha/procedencia, adaptador de auditoría de correo para un proveedor elegido y exportaciones selectivas. Priorizar Firefox y agente voluntario de uso de aplicaciones después de validar las funciones actuales y la política de datos.
-7. **Cierre de calidad.** Cada módulo requiere tests deterministas, CI multiplataforma, pruebas manuales cuando dependa de SO/navegador/router, documentación de permisos/retención y un mecanismo de desactivación y eliminación.
+## Fase 0 — Estabilización y release local 0.10.0
 
-## Criterios para cerrar tareas
-1. Código integrado y revisado.
-2. Tests reproducibles sin red real ni privilegios administrativos.
-3. CI verde en Linux/Windows/macOS y empaquetado comprobado.
-4. Pruebas manuales para flujos dependientes de navegador, SO o router.
-5. Documentación de permisos, datos, retención, límites y eliminación.
-6. Changelog/versión estable solo después de validación; el roadmap no sustituye al código.
+**Estado: en curso. Bloquea la publicación estable.**
+
+El núcleo actual incluye inventario local, observaciones y cambios, descubrimiento LAN limitado, monitores Ping/TCP/HTTP(S), incidentes, consultas DNS, diagnóstico TLS puntual, hallazgos de inventario/monitorización, exportaciones, copia SQLite y extensión Chromium opt-in con importación manual. También existen pruebas automatizadas Python/Node, CI para Python 3.10–3.14 en Windows/macOS/Linux, análisis estático, auditoría de dependencias y artefactos de cadena de suministro.
+
+Quedan por cerrar:
+
+- [ ] **REL-01 — Instalación limpia multiplataforma.** Completar instalación y primer inicio desde descarga limpia, actualización/reinicio y diagnóstico de errores en Windows, macOS y Linux. Registrar sistema operativo, Python, versión/commit y evidencia.
+- [ ] **REL-02 — Flujos de inventario y red.** Comprobar descubrimiento explícito, subredes duplicadas/interfaces virtuales, inventario vacío, cambios observados, diagnósticos y límites anunciados. Confirmar que un resultado sin respuesta no se presenta como prueba de ausencia.
+- [ ] **REL-03 — Monitorización e incidentes.** Verificar los tipos Ping/TCP/HTTP(S), apertura/actualización/cierre de incidentes, timeouts, retención y webhook opcional con un destino de prueba controlado.
+- [ ] **REL-04 — DNS y TLS.** Validar resolución correcta, NXDOMAIN/entrada inválida, timeout, endpoint TLS válido, certificado vencido/no confiable, hostname incompatible y puerto que no habla TLS. El resultado debe distinguir error de red, error de certificado y límite de diagnóstico.
+- [ ] **REL-05 — Persistencia y recuperación.** Crear datos representativos, exportarlos, restaurar una copia SQLite en una ubicación segura y comprobar que los registros se recuperan sin pérdida. Verificar retención y borrado selectivo, incluidos el alcance y la confirmación.
+- [ ] **REL-06 — Extensión e importación.** Probar manualmente Chrome y Edge: instalación, estado apagado por defecto, activación explícita, pausa, exclusiones, navegación SPA, retención, CSV, previsualización, deduplicación y ausencia de escrituras parciales cuando el lote es inválido. Registrar casos de falsos positivos/negativos del saneamiento.
+- [ ] **REL-07 — Privacidad de actividad y correo.** Usar datos sintéticos o exportaciones de auditoría expresamente autorizadas. Confirmar límites de metadatos, rechazo de columnas de cuerpo/adjuntos, retención, exportación y borrado. No usar mensajes o datos personales reales en fixtures públicos.
+- [ ] **REL-08 — Controles del repositorio.** Resolver el seguimiento de [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73): verificar en Settings que main exige PR y los checks necesarios, y que no permite force-push ni borrado. La documentación por sí sola no activa estas reglas.
+- [ ] **REL-09 — Dependencias y workflows.** Revisar separadamente los PR #37–#43 de Dependabot, verificar que sus checks correspondan a los SHAs actuales y evaluar cambios de compatibilidad/acciones antes de fusionar o cerrar.
+- [ ] **REL-10 — Preparación del paquete.** Instalar el wheel generado en un entorno limpio y verificar metadatos, recursos estáticos, CLI, checksum y SBOM. Confirmar la procedencia de los artefactos firmados/atestados cuando exista una etiqueta.
+- [ ] **REL-11 — Documentación de release.** Registrar resultados reales, limitaciones conocidas, pasos de actualización/restauración y procedimiento de reporte de vulnerabilidades. No llamar “probado manualmente” a un test automático.
+
+### Puerta de salida de Fase 0
+
+La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tengan una excepción documentada, aprobada y de riesgo bajo; la ejecución vigente de CI, Security y Supply Chain esté verde sobre el commit candidato; no haya vulnerabilidades críticas/altas sin tratar en el alcance publicado; los artefactos se instalen desde cero; y no haya fallos bloqueantes conocidos en los recorridos principales. Toda excepción debe indicar responsable, motivo, impacto y plan de resolución.
+
+## Fase 1 — Hallazgos explicables y evidencia correlacionada
+
+**Objetivo:** evolucionar desde una lista de observaciones hacia un flujo de triaje útil, sin exagerar lo que una señal demuestra.
+
+- [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.
+- [ ] **FIND-02 — Resultados DNS/TLS opcionales.** Incorporar resultados puntuales solo con política explícita de persistencia y retención; registrar fuente, hora, activo consultado, resultado bruto mínimo necesario y limitaciones. No almacenar secretos ni contenido HTTP.
+- [ ] **FIND-03 — Ciclo de vida de hallazgos.** Especificar y probar estados nuevo/revisado/aceptado como riesgo/resuelto, agrupación determinista, deduplicación, reevaluación y cierre sin eliminar el historial de evidencia.
+- [ ] **FIND-04 — Correlación conservadora.** Crear reglas deterministas con explicación de cada relación. Mantener severidad y confianza separadas; identificar qué dato respalda una inferencia y qué información falta. No inferir causa raíz o compromiso basándose solo en una MAC desconocida, ping fallido, nombre DNS o certificado.
+- [ ] **FIND-05 — UX de investigación.** Facilitar filtros por activo, periodo, fuente y estado; permitir saltar desde el hallazgo al evento original; representar errores, falta de datos y falsos positivos de forma accesible.
+- [ ] **FIND-06 — Pruebas de regresión.** Cubrir duplicados, eventos fuera de orden, transición a resuelto, evidencia incompleta, migraciones, exportación y borrado; añadir pruebas de aceptación para no filtrar texto externo como HTML.
+
+### Puerta de salida de Fase 1
+
+Cada hallazgo debe ser reproducible, tener procedencia/fecha/evidencia y explicar su grado de certeza; la retención y el borrado deben funcionar; las migraciones deben conservar datos; y la documentación debe describir exactamente las fuentes que sí entran y las que no.
+
+## Fase 2 — Fuentes reales de infraestructura, de solo lectura
+
+**Objetivo:** sumar contexto fiable sin inventar adaptadores genéricos ni abrir accesos innecesarios.
+
+- [ ] **SRC-01 — Selección de la primera integración.** Elegir un modelo/proveedor concreto de router, AP, DHCP o resolvedor a partir de documentación/API disponible y necesidad real. Documentar campos que realmente expone, requisitos de acceso y limitaciones.
+- [ ] **SRC-02 — Contrato del adaptador.** Definir interfaz común para origen, marca de tiempo, alcance, estado de frescura, errores parciales, paginación/límites y saneamiento de datos.
+- [ ] **SRC-03 — Primer adaptador de solo lectura.** Implementar una integración real a la vez. Mantener credenciales fuera del repositorio y de logs; configurar timeouts, llamadas limitadas y opción clara de desconexión.
+- [ ] **SRC-04 — Fixtures sin hardware real.** Guardar fixtures sanitizados y pruebas deterministas para respuestas normales, vacías, incompletas, malformadas, autenticación fallida, timeout y cambio de versión de API.
+- [ ] **SRC-05 — Confianza y atribución.** Mostrar la fuente y la hora de cada dato; distinguir información observada de inferida y no asociar una IP/MAC a una persona sin evidencia.
+- [ ] **SRC-06 — Expansión condicionada.** Evaluar SNMP u otras familias después de demostrar que la primera integración es estable y útil; documentar compatibilidad, versiones y credenciales requeridas.
+
+### Puerta de salida de Fase 2
+
+Una fuente se considera soportada solo si tiene documentación, fixtures, pruebas de error, timeouts, límites, procedencia visible, gestión de secretos y validación en un equipo compatible sin requerir privilegios innecesarios.
+
+## Fase 3 — Informes, métricas y experiencia operativa
+
+- [ ] **OPS-01 — Informe reproducible.** Exportar un informe por periodo/activo con eventos, hallazgos, evidencia, fuentes, tiempos y limitaciones; permitir minimizar datos sensibles y verificar neutralización de fórmulas en formatos tabulares.
+- [ ] **OPS-02 — Métricas Prometheus.** Añadir métricas de cardinalidad controlada, sin etiquetas de alta cardinalidad con IP arbitrarias, URL, nombres de usuario o datos sensibles. Mantener exposición local segura y documentar cómo desactivarlas.
+- [ ] **OPS-03 — Perfiles de red.** Diseñar aislamiento de inventario e historial por sitio/perfil antes de implementar múltiples ubicaciones. Evitar mezclar direcciones repetidas de redes diferentes.
+- [ ] **OPS-04 — Usabilidad y accesibilidad.** Validar teclado, contraste, nombres accesibles, errores accionables y funcionamiento sin depender de notificaciones temporales.
+- [ ] **OPS-05 — Métricas del producto.** Medir tiempo hasta inventario útil, recorridos completos sin ayuda, falsos positivos reportados, éxito de restauración y tiempo de reproducción de errores. No recolectar telemetría de uso externa por defecto.
+
+## Fase 4 — Recolección remota y multi-sede (bloqueada por diseño de seguridad)
+
+**No exponer la API actual a la LAN como atajo.** Esta fase no empieza hasta aprobar el diseño de amenazas, el modelo de autorización y las pruebas del límite de confianza.
+
+- [ ] **REM-01 — Modelo de amenazas y arquitectura.** Definir actores, activos, límites de red, enrolamiento, pérdida de credenciales, suplantación, repetición, aislamiento y escenarios de actualización comprometida.
+- [ ] **REM-02 — Identidad y transporte.** Implementar TLS, autenticación fuerte, autorización por dispositivo, enrolamiento explícito, expiración, rotación y revocación de credenciales.
+- [ ] **REM-03 — Protección de la ingestión.** Añadir protección anti-replay, idempotencia, cuotas y rate limiting, límites de tamaño, validación estricta, registro de auditoría y comportamiento fail-closed.
+- [ ] **REM-04 — Aislamiento multi-sede.** Definir roles/permisos y probar que usuarios, agentes y administradores de un sitio no puedan consultar/modificar datos de otro.
+- [ ] **REM-05 — Operación segura.** Versionar migraciones, respaldos/restauración, actualización, recuperación, rotación de secretos y respuesta a incidentes.
+- [ ] **REM-06 — Revisión antes de habilitar.** Realizar pruebas de seguridad específicas de API remota y solo entonces documentar una configuración remota habilitada expresamente.
+
+### Puerta de salida de Fase 4
+
+No se habilita despliegue remoto/centralizado hasta que las pruebas negativas de autenticación, autorización, replay, rate-limit y aislamiento estén verdes, exista auditoría y revocación probadas, y la configuración segura por defecto se haya verificado.
+
+## Fase 5 — Ecosistema e integración SOC
+
+- [ ] **INT-01 — Webhooks y formatos de intercambio.** Definir contrato versionado, reintentos, idempotencia, autenticación y minimización de datos para integraciones externas.
+- [ ] **INT-02 — Integración SIEM.** Elegir un formato/proveedor a partir de casos de uso reales y validar manejo de errores, orden, duplicados y secretos.
+- [ ] **INT-03 — Adaptador de auditoría de correo.** Solo después de seleccionar proveedor, verificar capacidades de la cuenta, consentimiento y permisos mínimos; empezar por metadatos de auditoría y no por lectura de bandejas.
+- [ ] **INT-04 — Otros navegadores/agentes opt-in.** Considerar Firefox o agentes por sistema operativo únicamente después de definir el contrato de eventos, los controles de autorización y la desinstalación/borrado.
+- [ ] **INT-05 — Mapeo de controles.** Publicar una matriz de evidencia y brechas frente a marcos pertinentes (por ejemplo, NIST CSF 2.0/CISA CPG) sin declarar certificación o cumplimiento automático.
+
+## No objetivos y límites de producto
+
+Mientras no exista evidencia y diseño explícitos, NetSentinel no debe presentarse como EDR, IDS/NDR, SIEM completo, escáner de vulnerabilidades integral ni gestor de identidad de dispositivos. El núcleo local actual no captura paquetes de red ni puede ver por sí solo toda la actividad de otros equipos. No implementar keylogging, recuperación/interceptación de contraseñas, lectura de cuerpos de mensajes, captura de formularios ni descifrado/proxy TLS general.
+
+## Definición de terminado para cualquier tarea
+
+Una tarea se marca completa cuando aplican y se cumplen todos estos puntos:
+
+1. Código integrado por PR y revisión del cambio.
+2. Tests deterministas de casos normales, inválidos, límites, errores y timeouts; sin depender de Internet, hardware o privilegios en tests unitarios.
+3. CI vigente verde y wheel/recursos de distribución verificados si el cambio los afecta.
+4. Prueba manual documentada para características dependientes de SO, navegador, router o experiencia de usuario.
+5. Tratamiento de privacidad, retención, eliminación y autorización documentado junto a la función.
+6. Migración compatible y restauración validada si cambia el almacenamiento.
+7. Guía, changelog y limitaciones actualizados.
+8. Evidencia enlazada desde esta tarea: PR/commit, ejecución CI, fila de VALIDATION_MATRIX.md y/o issue de seguimiento.
+
+No se considera terminado por existir código, por una captura de pantalla aislada ni por la cantidad de líneas implementadas.
