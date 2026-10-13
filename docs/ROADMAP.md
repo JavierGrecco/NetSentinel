@@ -3,6 +3,7 @@
 Separamos código presente, validación pendiente y trabajo que todavía no está implementado. Una casilla marcada indica que existe código, no que CI o pruebas manuales estén aprobadas.
 
 ## Núcleo de inventario y diagnóstico
+- [x] Aislamiento de errores por monitor en el supervisor: las comprobaciones programadas siguen con los demás objetivos si una falla inesperadamente.
 - [x] Inventario local, observaciones, historial de direcciones, etiquetas de confianza y eventos.
 - [x] Descubrimiento local explícito y acotado a subredes privadas.
 - [x] Priorización determinista de interfaces físicas al deduplicar subredes compartidas entre adaptadores; prueba que no depende del orden de enumeración.
