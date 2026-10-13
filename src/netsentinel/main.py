@@ -486,15 +486,5 @@ def notifications(limit: int = Query(default=50, ge=1, le=200)) -> dict:
 def diagnostics() -> dict:
     return run_diagnostics()
 
-
-
-
-
-
-
-
-
-
-
 # Sirve CSS y otros recursos desde el paquete local.
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
