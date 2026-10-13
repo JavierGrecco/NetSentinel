@@ -4,9 +4,9 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 
 ## Cómo está organizado hoy
 
-- **Entrada y API:** `main.py` crea la aplicación, configura controles de seguridad, sirve páginas y contiene rutas de inventario, monitorización, actividad, hallazgos, herramientas y exportaciones.
+- **Composición y API:** `main.py` crea la aplicación y sus controles transversales. Los routers `api/activity.py` y `api/tools.py` agrupan las rutas de actividad autorizada y diagnóstico DNS/TLS; las demás rutas aún se están extrayendo.
 - **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios. Los tipos de observación que comparten descubrimiento e inventario se definen en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
-- **Actividad:** `activity_tracking.py` centraliza sesiones autorizadas, normalización, saneamiento de URL, metadatos de correo, importación, retención y exportación.
+- **Actividad:** `api/activity.py` define los contratos HTTP de sesiones, ingesta, importación, retención y borrado; `activity_tracking.py` centraliza las reglas de privacidad, normalización, saneamiento de URL, metadatos de correo, importación, retención y exportación.
 - **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
 - **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
 - **Interfaz:** páginas HTML y estilos están separados por pantalla; la extensión vive en `browser-extension/`.

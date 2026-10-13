@@ -27,6 +27,9 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
     },
+    "netsentinel.api.activity": {
+        "netsentinel.activity_tracking",
+    },
 }
 
 # SQLite is a lower layer. It must not know about the HTTP API or coordinate
