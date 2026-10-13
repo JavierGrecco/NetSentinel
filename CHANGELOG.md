@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Reduce la captura innecesaria de metadatos de navegación: la extensión también omite IPv4 de uso especial (CGNAT, documentación, benchmarking, multicast y rangos reservados), IPv4 mapeada a IPv6 equivalente y sufijos DNS locales/de prueba; agrega regresiones de límites y de nombres.
 - Actualiza la guía de protección de `main`: incluye el nuevo job obligatorio de dependencias mínimas entre los checks de CI y aclara que la protección de rama debe confirmarse en GitHub, no se aplica desde los documentos.
 - Añade una regresión de CI que altera de forma aislada una cota de prueba y verifica que el validador de dependencias mínimas la rechace, evitando que un verificador que deje de detectar divergencias pase inadvertido.
 - Amplía la CI con un job que instala y prueba conjuntamente las versiones mínimas declaradas de las dependencias runtime y de test, evitando asumir compatibilidad solo porque la matriz usa las versiones más nuevas disponibles.
