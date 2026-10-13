@@ -9,6 +9,7 @@ from __future__ import annotations
 from threading import Lock
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import __version__, database
