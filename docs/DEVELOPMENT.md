@@ -19,6 +19,17 @@ pytest
 
 ## Criterios para los cambios
 
+### Comentarios, nombres y mensajes
+
+- **Comentá el motivo, no repitas el código.** Un comentario sirve cuando explica una decisión, un límite de seguridad, una compatibilidad especial o un caso que no es obvio.
+- **Documentá lo que otra persona necesita para mantener la función.** En funciones públicas o complejas, explicá qué recibe, qué devuelve, qué errores puede producir y qué efectos secundarios tiene.
+- **Usá nombres concretos.** Preferí `device_id` a `id2`, y evitá siglas internas si no son necesarias. Si un término técnico es importante, explicalo la primera vez.
+- **Escribí errores que ayuden a actuar.** Indicá qué falló y, cuando sea seguro, qué puede revisar el usuario. No incluyas tokens, URLs privadas, contenido importado ni otros datos sensibles en el mensaje.
+- **Mantené el lenguaje coherente con la interfaz.** La documentación de usuario va en español claro; los nombres de módulos, API y comandos pueden conservar los identificadores técnicos necesarios.
+- **Actualizá la guía cuando cambie el comportamiento.** Una captura o un comentario no sustituye una prueba reproducible.
+
+### Pruebas y seguridad
+
 - Agregá pruebas para cada función nueva y para los errores que pueda producir.
 - Usá datos sintéticos; las pruebas no deben depender de una red real ni de privilegios elevados.
 - No agregues secretos, direcciones privadas reales ni capturas con información sensible.
