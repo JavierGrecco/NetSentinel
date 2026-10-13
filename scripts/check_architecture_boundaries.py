@@ -35,23 +35,10 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 
-# SQLite is a lower layer. It must not know about the HTTP API or coordinate
-# other domains. Shared data contracts live in neutral modules instead.
-DATABASE_FORBIDDEN_IMPORTS = {
-    "netsentinel.main",
-    "netsentinel.api",
-    "netsentinel.api.tools",
-    "netsentinel.activity_tracking",
-    "netsentinel.activity_repository",
-    "netsentinel.monitoring",
-    "netsentinel.discovery",
-    "netsentinel.local_discovery",
-    "netsentinel.findings",
-    "netsentinel.findings_service",
-    "netsentinel.diagnostics",
-    "netsentinel.dns_config",
-    "netsentinel.dns_tools",
-    "netsentinel.tls_tools",
+# SQLite is a lower layer. Allow only the neutral network data contract.
+# An allow-list catches accidental imports of future domain modules automatically.
+DATABASE_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.network_models",
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
@@ -69,21 +56,11 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 
-DOMAIN_MODULES_INDEPENDENT_OF_HTTP = {
-    "netsentinel.activity_tracking",
-    "netsentinel.activity_repository",
-    "netsentinel.database",
-    "netsentinel.diagnostics",
-    "netsentinel.discovery",
-    "netsentinel.dns_config",
-    "netsentinel.dns_tools",
-    "netsentinel.findings",
-    "netsentinel.findings_service",
-    "netsentinel.local_discovery",
-    "netsentinel.monitoring",
-    "netsentinel.network_models",
-    "netsentinel.tls_tools",
-    "netsentinel.vendor",
+# Only the composition root and API routers may import the HTTP framework.
+# This rule applies automatically to new domain modules as they are added.
+HTTP_FRAMEWORK_ALLOWED_MODULES = {
+    "netsentinel.main",
+    "netsentinel.api",
 }
 
 
@@ -221,29 +198,48 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
                     f"{source} imports {dependency}, which is not an allowed public dependency."
                 )
 
-    for source, allowed in sorted(SERVICE_ALLOWED_INTERNAL_IMPORTS.items()):
-        for dependency in sorted(graph.get(source, set())):
-            if dependency not in allowed:
+    # Every service with internal dependencies needs a declared allow-list.
+    # New modules cannot silently skip this policy by not being registered above.
+    for source, dependencies in sorted(graph.items()):
+        if not source.endswith("_service"):
+            continue
+        allowed = SERVICE_ALLOWED_INTERNAL_IMPORTS.get(source)
+        if allowed is None and dependencies:
+            violations.append(
+                f"{source} has internal dependencies but no explicit service allow-list."
+            )
+            continue
+        for dependency in sorted(dependencies):
+            if dependency not in (allowed or set()):
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed service dependency."
                 )
 
-    for source, allowed in sorted(REPOSITORY_ALLOWED_INTERNAL_IMPORTS.items()):
-        for dependency in sorted(graph.get(source, set())):
-            if dependency not in allowed:
+    # Apply the same rule to persistence adapters.
+    for source, dependencies in sorted(graph.items()):
+        if not source.endswith("_repository"):
+            continue
+        allowed = REPOSITORY_ALLOWED_INTERNAL_IMPORTS.get(source)
+        if allowed is None and dependencies:
+            violations.append(
+                f"{source} has internal dependencies but no explicit repository allow-list."
+            )
+            continue
+        for dependency in sorted(dependencies):
+            if dependency not in (allowed or set()):
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed repository dependency."
                 )
 
-    for dependency in sorted(graph.get("netsentinel.database", set())):
-        if dependency in DATABASE_FORBIDDEN_IMPORTS:
-            violations.append(
-                f"netsentinel.database depends on {dependency}; persistence must not depend "
-                "on the API or coordinate other domains."
-            )
+    database_dependencies = graph.get("netsentinel.database", set())
+    for dependency in sorted(database_dependencies - DATABASE_ALLOWED_INTERNAL_IMPORTS):
+        violations.append(
+            f"netsentinel.database imports {dependency}, which is not an allowed persistence dependency; "
+            "keep shared contracts in neutral modules."
+        )
 
     for source, module in sorted(modules.items()):
-        if source not in DOMAIN_MODULES_INDEPENDENT_OF_HTTP:
+        if source in HTTP_FRAMEWORK_ALLOWED_MODULES or source.startswith("netsentinel.api."):
             continue
         syntax = ast.parse(module.path.read_text(encoding="utf-8"), filename=str(module.path))
         for node in ast.walk(syntax):
