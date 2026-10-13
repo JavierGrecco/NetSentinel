@@ -46,6 +46,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Refuerzo de saneamiento URL y pruebas automáticas: OAuth/redirect, nombres doblemente codificados, tracking, IPv6, términos de búsqueda y segmentos de ruta reconocibles (correo, teléfono, UUID, token opaco).
 - [x] Exclusión de destinos no públicos en la extensión: añade CGNAT, redes de documentación/benchmark/reservadas y sufijos de nombres locales/de prueba; pruebas para IPv4 mapeada a IPv6 y límites de rango.
 - [x] Amplía el filtro de destinos IPv6 no públicos: multicast, documentación, benchmarking, Teredo/6to4, discard-only y NAT64 de uso local; cubre formas comprimidas/expandidas de IPv4 mapeada y conserva IPv6 global normal.
+- [x] Cubre asignaciones IANA adicionales no globales: rangos IPv4 `192.0.0.0/24` con excepción explícita a `.9`/`.10` y `192.88.99.0/24`, más prefijos IPv6 dummy, ORCHID obsoleto y SRv6; agrega pruebas de frontera para evitar sobrebloqueo.
 - [ ] Validación manual con URLs reales y revisión de falsos positivos; no es posible reconocer de forma fiable cualquier identificador arbitrario de ruta.
 - [x] Previsualización CSV sin escritura: valida el archivo completo, informa duplicados y muestra hasta 10 filas normalizadas antes de confirmar.
 - [x] Parser de importación CSV acotado: rechaza la fila 1001 antes de acumular más objetos y convierte errores de límite de campo a validación, sin escrituras parciales.

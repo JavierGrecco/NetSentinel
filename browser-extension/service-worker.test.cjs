@@ -104,6 +104,7 @@ test("excludes local/private, shared and special-use IPv4 plus IPv6 and mapped I
     "0.0.0.1", "10.0.0.1", "127.0.0.1", "169.254.1.1",
     "172.16.0.1", "172.31.255.254", "192.168.1.1",
     "100.64.0.1", "100.127.255.254", "192.0.2.1",
+    "192.0.0.1", "192.0.0.8", "192.0.0.170", "192.88.99.1",
     "198.18.0.1", "198.19.255.254", "198.51.100.1",
     "203.0.113.1", "224.0.0.1", "240.0.0.1"
   ]) {
@@ -111,6 +112,9 @@ test("excludes local/private, shared and special-use IPv4 plus IPv6 and mapped I
   }
   assert.equal(privateOrLocalHost("100.63.255.255"), false, "the lower CGNAT boundary is public-use");
   assert.equal(privateOrLocalHost("100.128.0.1"), false, "the upper CGNAT boundary is outside 100.64/10");
+  assert.equal(privateOrLocalHost("192.0.0.9"), false, "IANA global-reachability exception must remain eligible");
+  assert.equal(privateOrLocalHost("192.0.0.10"), false, "IANA global-reachability exception must remain eligible");
+  assert.equal(privateOrLocalHost("192.88.98.255"), false, "outside deprecated 192.88.99.0/24");
   assert.equal(privateOrLocalHost("8.8.8.8"), false);
   assert.equal(privateOrLocalHost("router.local."), true);
   assert.equal(privateOrLocalHost("[::1]"), true);
@@ -144,6 +148,13 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
     "[3fff:0::1]",                  // expanded documentation space (RFC 9637)
     "[2001:2::1]",                  // benchmarking
     "[100::1]",                     // discard-only
+    "[100:0:0:1::1]",              // dummy IPv6 prefix (RFC 9780)
+    "[100:0:0:2::1]",              // just outside dummy prefix
+    "[2001:10:10::1]",             // just outside deprecated ORCHID /28
+    "[5eff:ffff::1]",              // just outside SRv6 prefix
+    "[2001:10::1]",                // deprecated ORCHID
+    "[2001:10:f::1]",              // upper address range still inside /28
+    "[5f00::1]",                   // SRv6 Segment Routing SIDs
     "[2001::1]",                    // Teredo
     "[2002:c000:0204::1]",          // 6to4
     "[64:ff9b:1::1]",               // local-use NAT64
