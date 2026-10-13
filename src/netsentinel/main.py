@@ -26,7 +26,7 @@ from . import database
 from .diagnostics import run_diagnostics
 from .local_discovery import discover_local_network
 from .monitoring import MonitorSupervisor, check_once, validate_spec
-from .api.tools import router as tools_router
+from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
 from .dns_tools import DNSLookupError, cached_reverse_lookup_ip
 from . import activity_tracking
 from .findings import build_findings
@@ -63,7 +63,7 @@ _IPV6_UNIQUE_LOCAL = ipaddress.IPv6Network("fc00::/7")
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # These GET routes initiate DNS traffic. They must not be triggerable by pages
 # from another origin merely by embedding a local URL in an image/link/script.
-_NETWORK_SIDE_EFFECT_GET_PATHS = {"/api/tools/dns/lookup", "/api/tools/dns/reverse"}
+_NETWORK_SIDE_EFFECT_GET_PATHS = NETWORK_SIDE_EFFECT_GET_PATHS
 _DEVICE_DNS_REVERSE_PATH = re.compile(r"^/api/devices/\d+/dns-reverse$")
 
 

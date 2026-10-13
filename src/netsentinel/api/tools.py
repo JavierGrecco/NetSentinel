@@ -15,6 +15,13 @@ from ..tls_tools import inspect_tls_endpoint
 
 router = APIRouter(tags=["tools"])
 
+# Consultas GET que generan tráfico DNS; el middleware del backend evita que
+# otro origen del navegador las pueda disparar mediante enlaces o recursos embebidos.
+NETWORK_SIDE_EFFECT_GET_PATHS = frozenset({
+    "/api/tools/dns/lookup",
+    "/api/tools/dns/reverse",
+})
+
 
 class TLSInspectionRequest(BaseModel):
     """Datos permitidos para inspeccionar un endpoint TLS puntual."""
