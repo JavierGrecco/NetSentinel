@@ -16,9 +16,19 @@ function hostMatches(host, rule) { return host === rule || host.endsWith("." + r
 function isPrivateOrLocalIPv4(host) {
   const parts = String(host || "").split(".");
   if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part) || Number(part) > 255)) return false;
-  const [a, b] = parts.map(Number);
-  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  const [a, b, c] = parts.map(Number);
+  // Suppress common non-public ranges as well as RFC1918: shared CGNAT,
+  // documentation/test networks, benchmarking, multicast and reserved space.
+  return a === 0 || a === 10 || a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0 && c === 2) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113) ||
+    a >= 224;
 }
 
 function mappedIPv4FromIPv6(host) {
@@ -36,9 +46,14 @@ function mappedIPv4FromIPv6(host) {
   return [high >> 8, high & 255, low >> 8, low & 255].join(".");
 }
 
+const NON_PUBLIC_HOST_SUFFIXES = [
+  "localhost", "local", "lan", "localdomain", "test", "example", "invalid", "arpa"
+];
+
 function privateOrLocalHost(hostname) {
   const host = String(hostname || "").replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
-  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".lan")) return true;
+  if (!host || NON_PUBLIC_HOST_SUFFIXES.some(suffix => host === suffix || host.endsWith("." + suffix))) return true;
+  // home.arpa is reserved for home-network naming; .arpa is filtered above too.
   if (!host.includes(":")) return isPrivateOrLocalIPv4(host);
 
   // IPv4-mapped IPv6 literals can still point at localhost or an RFC1918 host.
