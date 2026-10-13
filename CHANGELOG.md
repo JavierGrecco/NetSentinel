@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae las rutas DNS/TLS a un router propio y añade una verificación automática de límites de módulos en CI; separa el contrato de vecinos compartido para que SQLite no dependa del motor de descubrimiento.
+
 - Completa el filtrado de destinos de uso especial de la extensión con asignaciones IPv4 adicionales de IANA y prefijos IPv6 dummy, ORCHID obsoleto y SRv6; conserva excepciones con alcance global y añade regresiones de límites.
 
 - Refuerza la privacidad de la extensión Chromium ante IPv6 de uso especial: excluye multicast, documentación, benchmarking, prefijos Teredo/6to4, discard-only y NAT64 de uso local; suma pruebas para límites, formas expandidas y direcciones globales que deben seguir permitidas.

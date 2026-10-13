@@ -66,6 +66,8 @@ Estas referencias no son equivalentes uno a uno a NetSentinel, pero enseñan pat
 - **Zabbix** define papeles distintos para servidor, base de datos, interfaz, proxy y agente. El proxy es opcional y sirve a entornos que necesitan distribuir la recolección. [Referencia](https://www.zabbix.com/documentation/7.2/en/manual/introduction/overview)
 - **Prometheus** usa exportadores para adaptar sistemas que no están instrumentados directamente. [Referencia](https://prometheus.io/docs/instrumenting/exporters/)
 - **LibreNMS** recomienda escalar gradualmente: optimizar una instalación estable y separar servicios o añadir pollers cuando la carga lo pide. [Referencia](https://docs.librenms.org/Extensions/Distributed-Poller/)
+- **Apache Fineract** hace visibles las dependencias entre módulos y genera métricas de arquitectura a nivel de paquete y capacidad funcional. Para NetSentinel tomamos la práctica aplicable —medir y verificar las fronteras continuamente— sin copiar su complejidad de construcción Java. [Referencia](https://github.com/apache/fineract/blob/develop/build.gradle)
+- **Spring Modulith** verifica que los módulos no formen ciclos y que el acceso desde otro módulo se haga por las APIs declaradas. Nuestro verificador Python sigue la misma intención mediante análisis AST y listas explícitas de dependencias permitidas. [Verificación](https://docs.spring.io/spring-modulith/reference/verification.html)
 
 La conclusión no es copiar esos sistemas: es mantener módulos cohesionados, contratos estables y una experiencia de uso sencilla, separando procesos solo cuando la escala, el aislamiento o el despliegue lo justifiquen.
 
@@ -86,7 +88,7 @@ La versión 0.10.0 debe seguir priorizando las puertas de estabilización y la v
 2. **Separar la entrada de la aplicación.** Extraer routers por dominio de `main.py`; dejar en la composición de la app el registro de rutas, middleware y ciclo de vida. Mantener alias temporales si alguna prueba o importación pública lo necesita.
 3. **Versionar el esquema SQLite.** Añadir un mecanismo explícito de versión/migración y pruebas de actualización, backup y restore antes de mover tablas o cambiar sus consultas.
 4. **Crear servicios y repositorios por dominio.** Extraer primero la responsabilidad más acotada, conservar funciones de compatibilidad y retirar la fachada anterior solo cuando no tenga consumidores.
-5. **Establecer límites automatizados.** Añadir pruebas arquitectónicas que comprueben, como mínimo, que los routers no ejecutan SQL, los módulos no importan detalles internos de otro dominio y las reglas de dominio no dependen de FastAPI.
+5. **Establecer límites automatizados.** Ejecutar `scripts/check-architecture-boundaries.py` en CI para comprobar ciclos, listas explícitas de dependencias de los routers, independencia de la persistencia respecto de la API/dominios de coordinación y ausencia de dependencias HTTP en módulos de dominio/infraestructura. Ampliar las reglas cuando se extraigan nuevas fronteras.
 6. **Introducir adaptadores de fuente cuando sean reales.** Definir contrato, fixture y prueba de errores antes de integrar cada nueva fuente; mantener las fuentes opcionales y de solo lectura cuando aplique.
 7. **Evaluar separación de procesos con evidencia.** Considerar procesos/servicios separados solo si aparecen necesidades medibles de escala, permisos, aislamiento de fallos o despliegue independiente.
 
@@ -104,6 +106,11 @@ La versión 0.10.0 debe seguir priorizando las puertas de estabilización y la v
 Esta decisión no incorpora colas, Redis, un bus de eventos, Kubernetes, un servidor remoto ni microservicios. Tampoco autoriza captura de contenido de correo o navegación, apertura de la API a la red ni cambios automáticos de la configuración del router.
 
 ## Referencias técnicas
+
+- [Microsoft — Architecture styles and trade-offs](https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/)
+- [Martin Fowler — Microservice trade-offs and strong module boundaries](https://martinfowler.com/articles/microservice-trade-offs.html)
+- [Spring Modulith — Verifying application module structure](https://docs.spring.io/spring-modulith/reference/verification.html)
+- [Apache Fineract — Module architecture metrics](https://github.com/apache/fineract/blob/develop/build.gradle)
 
 - [Wazuh — Architecture](https://documentation.wazuh.com/current/getting-started/architecture.html)
 - [Zeek — Architecture](https://docs.zeek.org/en/current/about/architecture.html)

@@ -5,7 +5,7 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 ## Cómo está organizado hoy
 
 - **Entrada y API:** `main.py` crea la aplicación, configura controles de seguridad, sirve páginas y contiene rutas de inventario, monitorización, actividad, hallazgos, herramientas y exportaciones.
-- **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios.
+- **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios. Los tipos de observación que comparten descubrimiento e inventario se definen en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
 - **Actividad:** `activity_tracking.py` centraliza sesiones autorizadas, normalización, saneamiento de URL, metadatos de correo, importación, retención y exportación.
 - **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
 - **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
@@ -28,6 +28,10 @@ La decisión de arquitectura se documenta en [ADR-001: aplicación modular de de
 | **Persistencia SQLite** | Gestionar conexiones, transacciones, versión del esquema y consultas por dominio | Convertirse en una capa global de reglas de negocio |
 
 Estos límites son una dirección de diseño, no una afirmación de que todas las carpetas o interfaces ya estén implementadas.
+
+## Reglas verificadas automáticamente
+
+El script `scripts/check-architecture-boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que los routers declaren sus dependencias internas permitidas, que la persistencia no dependa de la API ni coordine otros dominios, y que los módulos de dominio/infraestructura definidos en la política no importen FastAPI o Starlette. Estas reglas cubren las fronteras implementadas hoy; se amplían a medida que se extraen servicios y repositorios, en lugar de afirmar que todo el backend ya está desacoplado.
 
 ## Cómo se comunican los módulos
 
