@@ -43,14 +43,17 @@ Un módulo presta servicio a otros mediante funciones o interfaces tipadas dentr
 
 Estas referencias no son equivalentes uno a uno a NetSentinel, pero enseñan patrones útiles:
 
-- **Wazuh** separa agente, servidor de análisis, indexador y panel. La lección es dividir recolección, procesamiento, almacenamiento y visualización cuando tienen responsabilidades diferentes; no exige replicar esa arquitectura distribuida en una app local.
-- **Zeek** separa el motor de eventos que describe lo observado de la política que interpreta esos eventos. NetSentinel puede aplicar el mismo principio: preservar la evidencia y su procedencia separadas de la conclusión o recomendación.
-- **Suricata** ofrece salidas estructuradas como EVE JSON para alertas, anomalías y metadatos. Un contrato de salida estable hace posible añadir consumidores sin acoplarlos al código interno que detecta.
-- **Zabbix** define papeles distintos para servidor, base de datos, interfaz, proxy y agente. El proxy es opcional y sirve a entornos que necesitan distribuir la recolección.
-- **Prometheus** usa exportadores para adaptar sistemas que no están instrumentados directamente.
-- **LibreNMS** recomienda escalar gradualmente: optimizar una instalación estable y separar servicios o añadir pollers cuando la carga lo pide.
+- **Fing** prioriza el descubrimiento sencillo, el reconocimiento de dispositivos y una experiencia de inicio rápida, con aplicaciones de escritorio y agentes opcionales para seguimiento continuo. Para NetSentinel, la lección es que separar internamente no debe añadir pasos al usuario; los agentes deben responder a una necesidad real de continuidad y cobertura. [Referencia](https://www.fing.com/scan/)
+- **Angry IP Scanner** documenta un núcleo de escaneo desacoplado, un mediador entre la interfaz y los recolectores, y *fetchers* seleccionables o ampliables mediante plugins. Es un ejemplo especialmente cercano de extensibilidad por adaptadores. La lección es definir interfaces intercambiables para recolectar datos, pero no crear un cargador de plugins hasta que tengamos múltiples implementaciones reales. [Referencia](https://angryip.org/documentation/)
+- **Auvik** separa un colector instalado en la red del servicio de gestión central y contempla más de un colector para segmentos aislados o continuidad operativa. Esa separación responde a despliegues multi-sede; no es motivo para convertir ahora NetSentinel en un producto remoto. [Arquitectura y seguridad](https://www.auvik.com/system-security/) · [Cuándo desplegar colectores](https://support.auvik.com/hc/en-us/articles/217099526-When-and-how-to-deploy-additional-Auvik-collectors)
+- **Wazuh** separa agente, servidor de análisis, indexador y panel. La lección es dividir recolección, procesamiento, almacenamiento y visualización cuando tienen responsabilidades diferentes; no exige replicar esa arquitectura distribuida en una app local. [Referencia](https://documentation.wazuh.com/current/getting-started/architecture.html)
+- **Zeek** separa el motor de eventos que describe lo observado de la política que interpreta esos eventos. NetSentinel puede aplicar el mismo principio: preservar la evidencia y su procedencia separadas de la conclusión o recomendación. [Referencia](https://docs.zeek.org/en/current/about/architecture.html)
+- **Suricata** ofrece salidas estructuradas como EVE JSON para alertas, anomalías y metadatos. Un contrato de salida estable hace posible añadir consumidores sin acoplarlos al código interno que detecta. [Referencia](https://docs.suricata.io/en/suricata-8.0.2/output/eve/eve-json-output.html)
+- **Zabbix** define papeles distintos para servidor, base de datos, interfaz, proxy y agente. El proxy es opcional y sirve a entornos que necesitan distribuir la recolección. [Referencia](https://www.zabbix.com/documentation/7.2/en/manual/introduction/overview)
+- **Prometheus** usa exportadores para adaptar sistemas que no están instrumentados directamente. [Referencia](https://prometheus.io/docs/instrumenting/exporters/)
+- **LibreNMS** recomienda escalar gradualmente: optimizar una instalación estable y separar servicios o añadir pollers cuando la carga lo pide. [Referencia](https://docs.librenms.org/Extensions/Distributed-Poller/)
 
-La conclusión no es copiar esos sistemas: es dar a cada dominio una responsabilidad, mantener contratos estables y separar procesos solo cuando una necesidad operativa lo justifique.
+La conclusión no es copiar esos sistemas: es mantener módulos cohesionados, contratos estables y una experiencia de uso sencilla, separando procesos solo cuando la escala, el aislamiento o el despliegue lo justifiquen.
 
 ## Opciones consideradas
 
