@@ -1,24 +1,52 @@
 # Arquitectura de NetSentinel
 
-NetSentinel es una aplicación local. El servidor web expone un panel y una API en `127.0.0.1`; SQLite guarda el inventario y el historial.
+NetSentinel sigue siendo una aplicación local de una sola instalación: el servidor FastAPI sirve el panel y la API en `127.0.0.1`, y SQLite conserva el inventario y el historial. La extensión del navegador es un cliente opcional; no es un proceso del servidor.
 
-## Componentes
+## Cómo está organizado hoy
 
-- **Panel web:** HTML y hojas CSS independientes para el inventario y la monitorización.
-- **API:** FastAPI valida los datos recibidos y llama a la lógica de la aplicación.
-- **Descubrimiento:** detecta solo subredes RFC 1918 activas, limita la búsqueda a dos segmentos y hasta un /24 por segmento, y persiste el informe de alcance, resultados y duración junto con cada lectura.
-- **Inventario:** registra dispositivos, direcciones, confianza manual y eventos.
-- **Monitorización:** ejecuta comprobaciones de ping, TCP y HTTP/HTTPS con límites de tiempo.
-- **Incidentes:** agrupa fallos consecutivos de un mismo control y registra su recuperación.
-- **Notificaciones:** envía avisos solo si se configura explícitamente un webhook HTTPS.
-- **Persistencia:** SQLite almacena dispositivos, monitores, comprobaciones, incidentes y registros de notificación.
+- **Entrada y API:** `main.py` crea la aplicación, configura controles de seguridad, sirve páginas y contiene rutas de inventario, monitorización, actividad, hallazgos, herramientas y exportaciones.
+- **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios.
+- **Actividad:** `activity_tracking.py` centraliza sesiones autorizadas, normalización, saneamiento de URL, metadatos de correo, importación, retención y exportación.
+- **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
+- **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
+- **Interfaz:** páginas HTML y estilos están separados por pantalla; la extensión vive en `browser-extension/`.
 
-## Límites importantes
+La separación por archivos ya existe, pero no todas las fronteras representan responsabilidades completas. La API y la persistencia concentran varios dominios, y las rutas conocen detalles de servicios y almacenamiento. Al crecer las fuentes de evidencia, esa estructura puede hacer que un cambio de una función afecte a otras que no deberían depender de ella.
 
-La lista de vecinos del sistema no es una vista completa de todos los equipos de la red. La búsqueda automática solo sondea redes RFC 1918 dentro de límites explícitos y genera tráfico local; depende de la respuesta de los equipos, las políticas de ICMP y el sistema operativo; no descubre necesariamente todos los dispositivos ni cubre redes exclusivamente IPv6. Una dirección o fabricante por sí solo no demuestra que un dispositivo sea legítimo o malicioso.
+## Dirección propuesta
 
-Los controles de disponibilidad generan tráfico hacia objetivos configurados por el usuario. Las funciones que cambien la configuración de la red no forman parte de esta versión.
+La decisión de arquitectura se documenta en [ADR-001: monolito modular](ADR-001-MODULAR-MONOLITH.md). La meta es separar las responsabilidades internas sin cambiar el modelo de instalación del usuario.
 
-## Pruebas
+| Módulo | Responsabilidad principal | No debería hacer |
+| --- | --- | --- |
+| **API y presentación** | Validar entradas, aplicar el contrato HTTP y traducir errores a respuestas claras | Ejecutar SQL o contener reglas de negocio |
+| **Inventario y descubrimiento** | Gestionar activos, observaciones de red, direcciones, procedencia y cambios | Decidir por sí solo que un activo es malicioso |
+| **Monitorización** | Definir controles, ejecutar comprobaciones, registrar transiciones e incidentes | Consultar directamente las tablas internas de otros dominios |
+| **Actividad** | Administrar sesiones autorizadas, metadatos recibidos, privacidad, saneamiento, retención e importación/exportación | Recopilar contenido de mensajes, credenciales o cuerpos HTTP |
+| **Herramientas de red** | Encapsular las consultas DNS/TLS y diagnósticos puntuales, con límites y timeouts | Iniciar sondeos arbitrarios o guardar datos sin política explícita |
+| **Hallazgos** | Unificar evidencia, explicar procedencia, límites y grado de certeza | Inventar señales, elevar confianza sin evidencia o convertirse en dueño de los datos de origen |
+| **Persistencia SQLite** | Gestionar conexiones, transacciones, versión del esquema y consultas por dominio | Convertirse en una capa global de reglas de negocio |
 
-Las pruebas usan datos sintéticos y no requieren una red real. GitHub Actions valida la instalación y la suite de pruebas en Windows, macOS y Ubuntu con distintas versiones de Python.
+Estos límites son una dirección de diseño, no una afirmación de que todas las carpetas o interfaces ya estén implementadas.
+
+## Cómo se comunican los módulos
+
+- Dentro del proceso, un módulo ofrece servicios de aplicación con entradas y salidas tipadas. Los demás módulos usan esa interfaz pública; no importan funciones internas ni escriben las tablas ajenas.
+- Los routers HTTP traducen solicitudes a llamadas de servicio. No hacen llamadas HTTP entre sí.
+- El panel, la CLI y la extensión usan los contratos públicos que les corresponden. La extensión sigue siendo opt-in y usa los endpoints de actividad previstos para ella.
+- Las fuentes variables —por ejemplo, tablas de vecinos del sistema o futuras integraciones de router— se conectan mediante adaptadores pequeños. Solo se generaliza una interfaz cuando existe una necesidad concreta de soportar más de una implementación.
+- La evidencia compartida lleva procedencia y hora, y conserva la diferencia entre dato observado e interpretación.
+
+## Límites de seguridad y privacidad
+
+La app continúa enlazada a loopback y usa SQLite local. La modularización no justifica abrir la API a la red, añadir telemetría externa, capturar contenido sensible, cambiar la configuración del router ni activar automáticamente la extensión. Cada nueva fuente debe tener alcance, autorización, límite de tiempo, tratamiento de errores, política de retención y forma de desactivación documentados.
+
+## Migración y pruebas
+
+La reorganización será incremental y deberá preservar el contrato visible. Antes de mover consultas o cambiar tablas, hay que formalizar la versión del esquema SQLite y probar migraciones, copias de seguridad, importación y restauración. Las rutas actuales, formatos exportados, encabezados de seguridad, protección de origen y respuestas de error se cubren con pruebas de contrato.
+
+No se considera terminada una extracción solo porque el código haya cambiado de archivo: debe reducir acoplamiento, mantener compatibilidad y demostrarlo con pruebas. El plan gradual y sus criterios de aceptación están en [ADR-001](ADR-001-MODULAR-MONOLITH.md) y en el [roadmap](ROADMAP.md).
+
+## Pruebas actuales
+
+Las pruebas automatizadas usan datos sintéticos y no requieren una red real. GitHub Actions valida la instalación y la suite de pruebas en Windows, macOS y Ubuntu con distintas versiones de Python. Las comprobaciones automatizadas no sustituyen la validación manual de sistemas y navegadores reales descrita en la matriz de validación.
