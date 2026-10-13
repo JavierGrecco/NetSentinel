@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae 14 endpoints de inventario y registros locales desde `main.py` al router `api/inventory.py`, incluyendo descubrimiento bajo demanda, cambios de confianza, historial y exportaciones. Conserva los contratos HTTP y agrega pruebas de rutas y dependencias permitidas.
+
 - Fortalece el guardián de arquitectura: las dependencias internas de nuevos servicios/repositorios requieren una lista explícita, SQLite solo admite un conjunto pequeño de apoyos compartidos declarados y todo módulo nuevo fuera de la API se comprueba automáticamente para evitar dependencias HTTP. Añade regresiones con módulos sintéticos para asegurar que las reglas también cubran componentes futuros.
 
 - Amplía el repositorio SQLite de actividad con operaciones de creación/detención/lectura de sesiones e inserción de eventos previamente validados; prueba sustitución de sesión activa, detención idempotente y escritura de metadatos. También corrige la actualización de retención cuando falta la fila de configuración y agrega una prueba de regresión.
