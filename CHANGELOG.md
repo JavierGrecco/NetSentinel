@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae las rutas HTTP de actividad autorizada a un router propio, conserva los contratos de las solicitudes y añade su lista de dependencias permitidas al control arquitectónico.
+
 - Extrae las rutas DNS/TLS a un router propio y añade una verificación automática de límites de módulos en CI; separa el contrato de vecinos compartido para que SQLite no dependa del motor de descubrimiento.
 
 - Completa el filtrado de destinos de uso especial de la extensión con asignaciones IPv4 adicionales de IANA y prefijos IPv6 dummy, ORCHID obsoleto y SRv6; conserva excepciones con alcance global y añade regresiones de límites.

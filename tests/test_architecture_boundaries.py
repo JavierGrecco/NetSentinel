@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import tools
+from netsentinel.api import activity, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from scripts.check_architecture_boundaries import check_architecture
@@ -30,6 +30,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
     }
+    assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert "netsentinel.network_models" in graph["netsentinel.database"]
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
@@ -56,3 +57,20 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         assert "import fastapi" not in source
         assert "from starlette " not in source
         assert "import starlette" not in source
+
+
+def test_activity_endpoints_belong_to_activity_router() -> None:
+    """La capacidad de actividad expone su API desde el módulo correspondiente."""
+    paths = {route.path for route in activity.router.routes}
+    assert {
+        "/api/activity",
+        "/api/activity/export.csv",
+        "/api/activity/sessions",
+        "/api/activity/sessions/{session_id}/stop",
+        "/api/activity/ingest",
+        "/api/activity/import/preview",
+        "/api/activity/import",
+        "/api/activity/delete/preview",
+        "/api/activity/delete",
+        "/api/activity/retention",
+    } <= paths
