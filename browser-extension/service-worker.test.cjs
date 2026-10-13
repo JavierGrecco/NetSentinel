@@ -99,7 +99,19 @@ test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
   assert.equal(cleanUrl("https://alice:password@example.com/profile"), null);
 });
 
-test("excludes local/private IPv4, IPv6 and mapped IPv6 hosts", () => {
+test("excludes local/private, shared and special-use IPv4 plus IPv6 and mapped IPv6 hosts", () => {
+  for (const host of [
+    "0.0.0.1", "10.0.0.1", "127.0.0.1", "169.254.1.1",
+    "172.16.0.1", "172.31.255.254", "192.168.1.1",
+    "100.64.0.1", "100.127.255.254", "192.0.2.1",
+    "198.18.0.1", "198.19.255.254", "198.51.100.1",
+    "203.0.113.1", "224.0.0.1", "240.0.0.1"
+  ]) {
+    assert.equal(privateOrLocalHost(host), true, host + " must not be captured as a public destination");
+  }
+  assert.equal(privateOrLocalHost("100.63.255.255"), false, "the lower CGNAT boundary is public-use");
+  assert.equal(privateOrLocalHost("100.128.0.1"), false, "the upper CGNAT boundary is outside 100.64/10");
+  assert.equal(privateOrLocalHost("8.8.8.8"), false);
   assert.equal(privateOrLocalHost("router.local."), true);
   assert.equal(privateOrLocalHost("[::1]"), true);
   assert.equal(privateOrLocalHost("::"), true);
@@ -107,10 +119,22 @@ test("excludes local/private IPv4, IPv6 and mapped IPv6 hosts", () => {
   assert.equal(privateOrLocalHost("fe81::1"), true, "the complete fe80::/10 link-local range is excluded");
   assert.equal(privateOrLocalHost("febf::1"), true, "the upper bound of the link-local range is excluded");
   assert.equal(privateOrLocalHost("[::ffff:c0a8:101]"), true, "mapped 192.168.1.1 must not be captured");
-  assert.equal(privateOrLocalHost("[::ffff:7f00:1]"), true, "mapped 127.0.0.1 must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:6440:1]"), true, "mapped 100.64.0.1 CGNAT must not be captured");
+  assert.equal(privateOrLocalHost("[::ffff:cb00:7101]"), true, "mapped 203.0.113.1 documentation IP must not be captured");
   assert.equal(privateOrLocalHost("[::ffff:0808:0808]"), false, "mapped public 8.8.8.8 is not classified as private");
   assert.equal(isExcluded("sub.example.com.", ["example.com"]), true);
   assert.equal(isExcluded("public.example.net", ["example.com"]), false);
+});
+
+test("filters reserved local-use DNS suffixes but not ordinary public subdomains", () => {
+  for (const host of [
+    "localhost", "printer.local", "router.lan", "service.localdomain",
+    "preview.test", "docs.example", "bad.invalid", "host.arpa", "gateway.home.arpa"
+  ]) {
+    assert.equal(privateOrLocalHost(host), true, host + " should be treated as local/test naming");
+  }
+  assert.equal(privateOrLocalHost("example.com"), false);
+  assert.equal(privateOrLocalHost("test.example.com"), false, "a reserved suffix must match the whole host suffix");
 });
 
 test("recognizes Google search terms separately from the sanitized page URL", () => {
