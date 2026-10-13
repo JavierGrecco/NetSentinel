@@ -491,7 +491,17 @@ class MonitorSupervisor:
             if due:
                 if self._stop.is_set():
                     break
-                check_once(monitor)
+                try:
+                    check_once(monitor)
+                except Exception:
+                    # A storage error or unexpected failure for one monitor must
+                    # not starve every later monitor on each supervisor cycle.
+                    logger.exception(
+                        "No se pudo completar la comprobación programada del monitor id=%s; "
+                        "se continuará con los siguientes.",
+                        monitor.get("id"),
+                    )
+                    continue
                 executed += 1
         return executed
 

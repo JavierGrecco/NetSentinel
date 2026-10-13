@@ -412,6 +412,35 @@ def test_run_due_once_stops_scheduling_after_shutdown_is_requested(monkeypatch):
     assert checked == [1]
 
 
+def test_run_due_once_continues_after_one_monitor_raises(monkeypatch, caplog):
+    import logging
+
+    supervisor = MonitorSupervisor()
+    monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
+    monitors = [
+        {"id": 1, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 2, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 3, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+    ]
+    monkeypatch.setattr(monitoring.database, "list_monitors", lambda: monitors)
+    checked = []
+
+    def fail_first_monitor(monitor):
+        checked.append(monitor["id"])
+        if monitor["id"] == 1:
+            raise RuntimeError("simulated transient storage error")
+        return {"status": "up"}
+
+    monkeypatch.setattr(monitoring, "check_once", fail_first_monitor)
+
+    with caplog.at_level(logging.ERROR, logger="netsentinel.monitoring"):
+        assert supervisor.run_due_once() == 2
+
+    assert checked == [1, 2, 3]
+    assert "monitor id=1" in caplog.text
+    assert "se continuará con los siguientes" in caplog.text
+
+
 def test_stop_keeps_reference_to_worker_that_missed_shutdown_deadline():
     class SlowWorker:
         joined_with = None
