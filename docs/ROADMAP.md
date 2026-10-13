@@ -7,6 +7,7 @@ Separamos código presente, validación pendiente y trabajo que todavía no est�
 - [x] Inventario local, observaciones, historial de direcciones, etiquetas de confianza y eventos.
 - [x] Descubrimiento local explícito y acotado a subredes privadas.
 - [x] Priorización determinista de interfaces físicas al deduplicar subredes compartidas entre adaptadores; prueba que no depende del orden de enumeración.
+- [x] Exclusión de puentes y pares virtuales comunes de contenedores Linux para evitar que se conviertan en objetivos del sondeo LAN; pruebas con varias familias de interfaces.
 - [x] Monitores Ping/TCP/HTTP(S), incidentes, recuperación, tendencias, exportaciones y webhooks opcionales.
 - [x] Retención configurable de muestras detalladas de monitorización (90 días por defecto, 1–3650 configurable, o desactivación explícita); limpieza diaria que preserva incidentes, estado actual e inventario, con pruebas deterministas.
 - [x] Protección de permisos POSIX de datos SQLite: no modifica destinos de enlaces simbólicos del directorio `~/.netsentinel` ni del propio archivo de base de datos; prueba ambos recorridos y conserva `0600` para archivos regulares.
