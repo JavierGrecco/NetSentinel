@@ -46,6 +46,37 @@ function mappedIPv4FromIPv6(host) {
   return [high >> 8, high & 255, low >> 8, low & 255].join(".");
 }
 
+// Parse an IPv6 literal into eight 16-bit words. Invalid or unusual spellings
+// are rejected by the caller rather than treated as confirmed public hosts.
+function ipv6Words(host) {
+  const value = String(host || "").replace(/^\[|\]$/g, "").toLowerCase();
+  if (!value.includes(":") || value.includes(".")) return null;
+  const marker = value.indexOf("::");
+  if (marker >= 0 && value.indexOf("::", marker + 2) >= 0) return null;
+  const compressed = marker >= 0;
+  const sides = compressed ? value.split("::") : [value];
+  const parseSide = side => {
+    if (!side) return [];
+    const groups = side.split(":");
+    if (groups.some(group => !/^[0-9a-f]{1,4}$/.test(group))) return null;
+    return groups.map(group => Number.parseInt(group, 16));
+  };
+  const left = parseSide(sides[0]);
+  const right = compressed ? parseSide(sides[1]) : [];
+  if (left === null || right === null) return null;
+  const explicitCount = left.length + right.length;
+  if ((!compressed && explicitCount !== 8) || (compressed && explicitCount >= 8)) return null;
+  return [...left, ...Array(compressed ? 8 - explicitCount : 0).fill(0), ...right];
+}
+
+function mappedIPv4FromWords(words) {
+  if (!words || !words.slice(0, 5).every(word => word === 0) || words[5] !== 0xffff) return null;
+  return [
+    words[6] >> 8, words[6] & 255,
+    words[7] >> 8, words[7] & 255
+  ].join(".");
+}
+
 const NON_PUBLIC_HOST_SUFFIXES = [
   "localhost", "local", "lan", "localdomain", "test", "example", "invalid", "arpa"
 ];
@@ -56,13 +87,33 @@ function privateOrLocalHost(hostname) {
   // home.arpa is reserved for home-network naming; .arpa is filtered above too.
   if (!host.includes(":")) return isPrivateOrLocalIPv4(host);
 
-  // IPv4-mapped IPv6 literals can still point at localhost or an RFC1918 host.
+  // IPv4-mapped IPv6 spellings can hide a non-public IPv4 destination.
   const mappedIPv4 = mappedIPv4FromIPv6(host);
   if (mappedIPv4 !== null) return isPrivateOrLocalIPv4(mappedIPv4);
-  // Exclude unspecified/loopback, unique-local fc00::/7, and the full
-  // fe80::/10 link-local range (fe80 through febf), not only fe80::/16.
-  return host === "::" || host === "::1" || host.startsWith("fc") || host.startsWith("fd") ||
-    /^fe[89ab]/.test(host);
+  const words = ipv6Words(host);
+  if (!words) return true; // fail closed if the IPv6 literal cannot be classified
+  const mappedWordsIPv4 = mappedIPv4FromWords(words);
+  if (mappedWordsIPv4 !== null) return isPrivateOrLocalIPv4(mappedWordsIPv4);
+
+  const allZero = words.every(word => word === 0);
+  const loopback = words.slice(0, 7).every(word => word === 0) && words[7] === 1;
+  const uniqueLocal = (words[0] & 0xfe00) === 0xfc00;      // fc00::/7
+  const linkLocal = (words[0] & 0xffc0) === 0xfe80;       // fe80::/10
+  const multicast = (words[0] & 0xff00) === 0xff00;       // ff00::/8
+  const documentation = (words[0] === 0x2001 && words[1] === 0x0db8) ||
+    (words[0] === 0x3fff && (words[1] & 0xf000) === 0); // 2001:db8::/32 and 3fff::/20
+  const benchmarking = words[0] === 0x2001 && words[1] === 0x0002 && words[2] === 0;
+  const discardOnly = words[0] === 0x0100 && words.slice(1, 4).every(word => word === 0); // 100::/64
+  const teredo = words[0] === 0x2001 && words[1] === 0;  // 2001::/32
+  const sixToFour = words[0] === 0x2002;                 // 2002::/16
+  const localUseNat64 = words[0] === 0x0064 && words[1] === 0xff9b && words[2] === 1; // 64:ff9b:1::/48
+  const deprecatedIPv4Compatible = words.slice(0, 6).every(word => word === 0);
+
+  // Keep ordinary globally-routed IPv6 hosts eligible; suppress well-known
+  // special-use, multicast, documentation, transition, and local-use prefixes.
+  return allZero || loopback || uniqueLocal || linkLocal || multicast ||
+    documentation || benchmarking || discardOnly || teredo || sixToFour ||
+    localUseNat64 || deprecatedIPv4Compatible;
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");

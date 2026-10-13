@@ -137,6 +137,33 @@ test("filters reserved local-use DNS suffixes but not ordinary public subdomains
   assert.equal(privateOrLocalHost("test.example.com"), false, "a reserved suffix must match the whole host suffix");
 });
 
+test("excludes special-use IPv6 ranges but preserves ordinary global unicast", () => {
+  for (const host of [
+    "[ff02::1]",                    // multicast
+    "[2001:db8::1]",                // documentation
+    "[3fff:0::1]",                  // expanded documentation space (RFC 9637)
+    "[2001:2::1]",                  // benchmarking
+    "[100::1]",                     // discard-only
+    "[2001::1]",                    // Teredo
+    "[2002:c000:0204::1]",          // 6to4
+    "[64:ff9b:1::1]",               // local-use NAT64
+    "[0:0:0:0:0:ffff:c0a8:101]",    // expanded mapped private IPv4
+    "[::ffff:192.168.1.1]"          // dotted mapped private IPv4
+  ]) {
+    assert.equal(privateOrLocalHost(host), true, host + " must not be captured as an ordinary public destination");
+  }
+  for (const host of [
+    "[2001:4860:4860::8888]",       // ordinary global unicast
+    "[2001:2:1::1]",                // just outside 2001:2::/48
+    "[3fff:1000::1]",               // just outside 3fff::/20
+    "[100:0:0:1::1]",               // just outside 100::/64
+    "[::ffff:0808:0808]",           // mapped public 8.8.8.8
+    "[::ffff:8.8.8.8]"              // dotted mapped public IPv4
+  ]) {
+    assert.equal(privateOrLocalHost(host), false, host + " should remain eligible");
+  }
+});
+
 test("recognizes Google search terms separately from the sanitized page URL", () => {
   const url = new URL("https://www.google.com/search?q=private+search&lang=es");
   assert.deepEqual(searchInfo(url), { search_engine: "Google", search_terms: "private search" });

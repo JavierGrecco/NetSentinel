@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Refuerza la privacidad de la extensión Chromium ante IPv6 de uso especial: excluye multicast, documentación, benchmarking, prefijos Teredo/6to4, discard-only y NAT64 de uso local; suma pruebas para límites, formas expandidas y direcciones globales que deben seguir permitidas.
+
 - Reduce la captura innecesaria de metadatos de navegación: la extensión también omite IPv4 de uso especial (CGNAT, documentación, benchmarking, multicast y rangos reservados), IPv4 mapeada a IPv6 equivalente y sufijos DNS locales/de prueba; agrega regresiones de límites y de nombres.
 - Evita sondeos accidentales sobre puentes virtuales habituales de Linux (`br0`/`br-*`, `veth*`, Docker, Podman, CNI, Flannel, LXC y OVS), manteniendo el descubrimiento en las interfaces LAN compatibles; añade pruebas para redes virtuales aisladas y coexistentes con la LAN física.
 - Actualiza la guía de protección de `main`: incluye el nuevo job obligatorio de dependencias mínimas entre los checks de CI y aclara que la protección de rama debe confirmarse en GitHub, no se aplica desde los documentos.
