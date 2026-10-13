@@ -8,7 +8,7 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de main revisado para este plan:** [b1b256c](https://github.com/JavierGrecco/NetSentinel/commit/b1b256ce7defca08a4411582d8adbc56570e66ed).
+- **Último commit de main revisado para este plan:** [b1b256c](https://github.com/JavierGrecco/NetSentinel/commit/c2c6da9fd9bd20b96bba26d77ab73f1479bbca65).
 - **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159685).
 - **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159672).
 - **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159674).
@@ -54,6 +54,15 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
 **Objetivo:** evolucionar desde una lista de observaciones hacia un flujo de triaje útil, sin exagerar lo que una señal demuestra.
+
+**Prerequisito transversal:** antes de sumar correlaciones y fuentes, separar las responsabilidades internas por dominio sin retrasar las pruebas de estabilización de la Fase 0. La propuesta y sus límites están en [ADR-001: monolito modular](ADR-001-MODULAR-MONOLITH.md). No implica adoptar microservicios ni cambiar el modo de instalación local.
+
+- [ ] **ARCH-01 — Línea base de contratos.** Mapear dependencias/rutas existentes y asegurar pruebas de contrato para API, seguridad del navegador, exportaciones, CLI y ciclo de vida antes de mover código.
+- [ ] **ARCH-02 — Separar API de casos de uso.** Extraer routers por dominio de `main.py`; mantener respuestas, códigos, encabezados de seguridad, protección de origen y rutas compatibles.
+- [ ] **ARCH-03 — Persistencia con migraciones explícitas.** Versionar el esquema SQLite y probar actualización, backup, restauración y operaciones atómicas antes de redistribuir consultas por dominio.
+- [ ] **ARCH-04 — Servicios y repositorios por dominio.** Hacer que cada módulo publique una interfaz tipada pequeña y que ningún dominio escriba directamente en las tablas internas de otro.
+- [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
+- [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
 
 - [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.
 - [ ] **FIND-02 — Resultados DNS/TLS opcionales.** Incorporar resultados puntuales solo con política explícita de persistencia y retención; registrar fuente, hora, activo consultado, resultado bruto mínimo necesario y limitaciones. No almacenar secretos ni contenido HTTP.
