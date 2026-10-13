@@ -32,66 +32,59 @@ La privacidad debe ser una ventaja de diseño verificable. En el panel de activi
 5. **Datos portables.** CSV/JSON y respaldos documentados para que el cliente no quede atrapado en la herramienta. Las exportaciones deben minimizar datos, evitar fórmulas activas y excluir secretos.
 6. **Funcionalidad verificable.** Lo que la interfaz promete debe tener pruebas reproducibles; lo que depende de un SO, navegador o modelo de router debe tener una prueba manual documentada.
 
-## 4. Prioridades de producto
+## 4. Prioridades de producto y secuencia de ejecución
 
-### P0 — Confianza y calidad de la versión
+El orden exacto, las tareas y el estado se mantienen en [ROADMAP.md](ROADMAP.md), que es la fuente única de verdad. Las fases de abajo describen la secuencia de producto y sus puertas; las casillas de implementación, los IDs de tarea y la evidencia de pruebas viven en el roadmap y en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-- Completar los recorridos manuales en Windows, macOS y Linux: instalación, primer uso, descubrimiento, diagnóstico, monitorización, respaldo/restauración, importación/exportación y borrado selectivo.
-- Probar el flujo de la extensión en Chrome/Edge, con opt-in, pausa, exclusiones, retención y saneamiento. Verificar tanto resultados esperados como límites y falsos positivos.
-- Añadir una matriz de casos de aceptación para las herramientas DNS y TLS, incluidos timeout, entrada inválida, error de certificado y endpoint no disponible.
-- Corregir inconsistencias de interfaz y documentación: mismo nombre para cada módulo, estado actual visible, errores accionables y avisos de privacidad junto al control que inicia la recolección.
-- Publicar versiones solo cuando CI, empaquetado y recorridos manuales aplicables estén aprobados; las pruebas automatizadas no se deben describir como pruebas manuales.
+### Fase 0 — Estabilización de la versión local
 
-### P1 — Motor de hallazgos con evidencia
+- Completar recorridos manuales en Windows, macOS y Linux: instalación limpia, primer uso, descubrimiento, monitorización, DNS/TLS, backup/restauración, importación/exportación y borrado selectivo.
+- Probar Chrome y Edge con opt-in, pausa, exclusiones, retención y saneamiento; revisar falsos positivos y límites.
+- Alinear metadatos de versión, changelog y wheel; comprobar CI, seguridad, supply chain y configuración de protección de main.
+- Publicar 0.10.0 solo cuando se cumplan los criterios de salida de la Fase 0 del roadmap. Las pruebas automáticas no se deben describir como validaciones manuales.
 
-Es el mayor salto funcional después de estabilizar los flujos actuales. La primera iteración ya expone `/api/findings` y `/api/export/findings.json`, con eventos almacenados del inventario e incidentes de disponibilidad. Es una vista compuesta de solo lectura, limitada a 200 registros por consulta, con estados `active`, `acknowledged`, `resolved` y `all`; omite eventos duplicados que reflejan la misma transición de monitorización. La bandeja visual ya está disponible en `/findings`, con filtros por estado, evidencia/procedencia y reconocimiento de eventos del inventario. Aún no se incluyen resultados DNS/TLS puntuales, porque esas inspecciones no se guardan. Antes de persistir resultados adicionales, hay que definir una política de retención/eliminación y controles para falsos positivos.
+### Fase 1 — Hallazgos explicables y evidencia
 
-La vista no atribuye causa raíz, no correlaciona ataques y no identifica personas. El objetivo es ordenar evidencia existente, sin mezclar simples observaciones con alertas de seguridad confirmadas.
+La primera iteración ya expone la API y una bandeja visual a partir de eventos persistidos de inventario e incidentes de disponibilidad. Antes de incorporar DNS/TLS persistidos, definir esquema, migraciones, retención, eliminación y controles de falsos positivos.
 
-Cada hallazgo debe incluir, como mínimo:
-- identificador y categoría;
-- activo afectado y fuente;
-- primera y última observación;
-- evidencia reproducible y contexto;
-- severidad y confianza separadas;
-- estado (nuevo, revisado, aceptado como riesgo, resuelto);
-- explicación en lenguaje claro y siguiente comprobación recomendada;
-- control para reconocer falsos positivos y registrar la razón.
+- Registrar fuente, hora, activo, evidencia, estado, severidad y confianza por separado.
+- Introducir reglas deterministas, agrupación/deduplicación y transiciones de estado reproducibles.
+- Permitir revisar y exportar evidencia sin renderizar contenido externo como HTML.
+- No atribuir causa raíz ni declarar un equipo comprometido basándose solo en una señal ambigua.
 
-No crear una puntuación opaca. No llamar “ataque”, “intrusión” o “dispositivo comprometido” a un evento sin evidencia suficiente. La correlación debe empezar con reglas deterministas y pruebas de regresión antes de considerar modelos heurísticos.
+### Fase 2 — Fuentes reales de infraestructura
 
-### P2 — Contexto real de activos e infraestructura
+- Elegir un router/AP/resolvedor concreto a partir de su API y un caso de uso real.
+- Empezar con lecturas acotadas y de solo lectura; registrar fuente, hora, frescura y limitaciones.
+- Incorporar timeouts, límites de consulta, fixtures sanitizados, manejo de errores parciales y secretos fuera de logs/repositorio.
+- Ampliar a DHCP/SNMP u otras fuentes solo después de validar utilidad y compatibilidad de la primera integración.
 
-- Elegir un modelo concreto de router/AP/resolvedor a partir de hardware, necesidades y documentación/API disponibles; no desarrollar un adaptador genérico especulativo.
-- Empezar con integraciones de solo lectura para información DHCP, dispositivos asociados y registros DNS/flujo realmente proporcionados por ese equipo.
-- Mantener procedencia, marca de tiempo, estado de la conexión, límites de consulta y fixtures de ejemplo. No atribuir una IP o un nombre a una persona sin evidencia.
-- Construir una topología basada en relaciones observadas, diferenciando relación confirmada, inferida e incierta.
-- Añadir contexto de fabricante solo como indicio: una MAC, nombre o fabricante se puede falsear y no es identidad autenticada.
+### Fase 3 — Informes, métricas y usabilidad operativa
 
-### P3 — Uso empresarial y operación en varias sedes
+- Producir informes reproducibles por activo/periodo que incluyan evidencia, fuentes, tiempos y limitaciones, con exportaciones seguras y datos sensibles mínimos.
+- Añadir métricas Prometheus de cardinalidad limitada; no etiquetar métricas con URL, IP arbitraria, identificadores personales o secretos.
+- Mejorar accesibilidad, errores accionables, navegación entre hallazgos y datos de origen.
+- Diseñar perfiles de red/sitio con aislamiento para evitar mezclar direcciones coincidentes entre ubicaciones.
+- Medir utilidad mediante tareas completadas, tiempo hasta un inventario útil, restauración y falsos positivos reportados; no enviar telemetría de uso externa por defecto.
 
-Esta etapa no debe adelantarse a la estabilización de la versión local. Antes de ofrecer uso remoto, centralizado o por varios clientes, hacen falta:
+### Fase 4 — Operación remota y multi-sede
 
-- autenticación robusta y autorización por rol y por sitio;
-- alta explícita, identidad de agente, rotación y revocación de credenciales;
-- TLS de transporte, protección contra repetición, limitación de tasa y registro de auditoría;
-- aislamiento fuerte entre clientes/sitios y pruebas que intenten cruzar esos límites;
-- migraciones de base de datos versionadas, estrategia de respaldo/restauración y actualización segura;
-- política de retención y eliminación aplicable a todos los datos y exportaciones;
-- configuración de secretos fuera del repositorio, la base de datos legible y los registros.
+No abrir la API actual a la LAN como atajo. Antes de habilitar operación remota hacen falta diseño de amenazas y pruebas específicas de:
 
-No exponer la API actual de ingestión a la LAN como atajo. El uso remoto requiere un diseño de seguridad específico y una revisión antes de habilitarlo.
+- TLS, autenticación, autorización por dispositivo/rol/sitio y enrolamiento explícito;
+- expiración, rotación y revocación de credenciales;
+- anti-replay, idempotencia, límites de tasa/tamaño y auditoría;
+- aislamiento probado entre sitios y recuperación segura de datos;
+- migraciones versionadas, respaldo/restauración y actualización segura.
 
-### P4 — Integración operativa y ecosistema
+La función remota se habilita solo después de que las pruebas negativas de autenticación, autorización, repetición e aislamiento estén verdes y la configuración segura por defecto se haya verificado.
 
-Cuando exista un modelo de hallazgos confiable, agregar en este orden según demanda real:
-1. exportación de informes de hallazgos con evidencia y remediación;
-2. métricas Prometheus de cardinalidad acotada;
-3. integraciones documentadas con webhooks y formatos de intercambio útiles para SIEM;
-4. perfiles de red/sitio con aislamiento comprobado;
-5. adaptadores adicionales y navegadores, solo cuando exista una fuente real y un caso de uso validado.
+### Fase 5 — Integración y ecosistema
 
-Una matriz de cobertura NIST CSF 2.0 puede indicar qué evidencia aporta NetSentinel y qué brechas permanecen. Debe ser una guía de trazabilidad, nunca una certificación automática ni una afirmación de cumplimiento.
+- Versionar el contrato de webhooks y formatos de intercambio antes de integrar un SIEM.
+- Seleccionar cualquier conector de auditoría de correo a partir de permisos y capacidades verificados de un proveedor concreto; limitarse inicialmente a metadatos autorizados.
+- Evaluar Firefox u otros agentes opt-in después de probar la base actual y definir desactivación, retención y eliminación.
+- Mantener una matriz de evidencia/brechas frente a marcos pertinentes como NIST CSF 2.0 o CISA CPG; nunca presentarla como certificación automática.
 
 ## 5. Barra obligatoria para cualquier nueva función
 

@@ -1,63 +1,63 @@
 # Mantenimiento del repositorio
 
+## Fuente de verdad del plan
+
+- [ROADMAP.md](ROADMAP.md) es la fuente única para prioridades, estado y puertas de finalización.
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) describe el enfoque técnico y las pruebas.
+- [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) conserva evidencia de pruebas manuales.
+- Al cerrar una tarea, actualizá su casilla y adjuntá en el mismo PR los enlaces a tests/CI/evidencia. No marcar como completa una prueba manual a partir de CI.
+
 ## Proteger la rama principal
 
-La configuración de GitHub no está incluida en los archivos del repositorio. En esta revisión no se pudo confirmar que `main` esté protegida: la lista consultable de rulesets está vacía y el acceso disponible no permitió verificar la protección clásica de la rama. Confirmá el estado desde Settings antes de dar por aplicada la política; documentarla no la activa automáticamente. Para impedir que una actualización aprobada se pierda o que un cambio entre sin validar:
+La política escrita no configura GitHub por sí sola. En la revisión actual no se pudo confirmar que main esté protegida; completar el seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 
-1. Abrí **Settings → Branches** (o **Rules → Rulesets**) del repositorio y creá una regla que apunte exactamente a `main`.
-2. Activá **Require a pull request before merging**. Si sos el único mantenedor, podés exigir PR sin requerir una aprobación imposible de obtener de otro usuario; si hay un segundo revisor, pedí al menos una aprobación y descartá aprobaciones obsoletas tras cambios nuevos.
-3. Activá **Require status checks to pass before merging** y seleccioná las comprobaciones de la última ejecución de una PR. Como base, exigí los 17 jobs de `CI`: las 15 combinaciones `Python 3.10–3.14 / ubuntu-latest, windows-latest y macos-latest`, más `Minimum declared dependencies (Python 3.10 / Ubuntu)` y `Wheel metadata and static assets`. El job de dependencias mínimas es obligatorio: comprueba que se puedan instalar las cotas inferiores declaradas y que la suite completa pase con ellas.
-4. Exigí además `CodeQL static analysis (Python)`, `Audit Python dependencies`, `Detect committed secrets` y `Build wheel, SBOM, and integrity manifest`. Elegí estos contextos por sus nombres de job, después de que GitHub los muestre en la lista de checks recientes.
-5. No exijas `Sign release artifact provenance` para PR normales: está condicionado a etiquetas de versión `v*` y correctamente se omite en el trabajo habitual.
-6. No permitas force-push ni borrado de `main`. Para una protección fuerte, activá **Do not allow bypassing the above settings** cuando tu flujo de trabajo y permisos lo permitan. Conservá una vía administrativa de recuperación y comprobá después que la regla aparece activa.
+1. Abrí Settings → Branches o Rules → Rulesets y creá una regla que aplique exactamente a main.
+2. Exigí pull request antes de merge. Si existe un segundo revisor, exigí aprobación y descartá aprobaciones obsoletas; si solo hay un mantenedor, no configures un requisito de aprobación imposible de cumplir.
+3. Exigí las comprobaciones de estado de la CI vigente. La configuración documentada actualmente contempla la matriz Python 3.10–3.14 en Ubuntu/Windows/macOS, dependencias mínimas y metadata/recursos del wheel.
+4. Exigí además CodeQL, auditoría de dependencias, detección de secretos y build de wheel/SBOM/manifiesto. Seleccioná los contextos por el nombre de job que GitHub muestre en las ejecuciones recientes.
+5. No exijas el job de atestación de release en PR normales: se ejecuta al publicar etiquetas de versión.
+6. Bloqueá force-push y borrado de main. Revisá si conviene impedir bypass administrativo de acuerdo con el modelo de mantenimiento.
+7. Después de guardar, verificá que la regla se vea activa y que no se pueda fusionar un cambio con un check obligatorio fallido.
 
-La regla de rama es una configuración de GitHub, no un archivo de código. Después de guardarla, volvé a consultar la protección de `main` y verificá que el merge de prueba no puede avanzar con un check obligatorio fallido. Los nombres concretos de checks pueden cambiar al modificar workflows; actualizá la regla si se renombran.
+Si cambian los nombres de jobs o workflows, actualizá los checks requeridos. No declares la protección como activa hasta verificarlo en la configuración real.
 
-## Publicar una versión
+## Política de versiones
 
-1. Actualizá la versión en `pyproject.toml` y `src/netsentinel/__init__.py`.
-2. Agregá los cambios al principio de `CHANGELOG.md`.
-3. Ejecutá `python -m pip install -e ".[test]"` y `pytest`.
-4. Comprobá el flujo de GitHub Actions en Windows, macOS y Ubuntu.
-5. Creá una etiqueta de versión solo cuando las pruebas estén aprobadas.
+La versión se define en src/netsentinel/__init__.py. pyproject.toml la obtiene mediante metadatos dinámicos y no debe mantener una segunda versión manual.
 
-## Artefactos y procedencia de versiones
+- Mientras 0.10.0 esté en desarrollo, usar la versión PEP 440 0.10.0.dev0 y mantener el changelog claramente marcado como en desarrollo.
+- Para publicar 0.10.0, completar la puerta de release en ROADMAP.md, cambiar la versión de desarrollo a 0.10.0, actualizar CHANGELOG.md, ejecutar CI sobre el candidato y comprobar que los metadatos del wheel coinciden.
+- Publicar la etiqueta v0.10.0 solo sobre el commit aprobado; generar y verificar los artefactos de ese commit.
+- Inmediatamente después de una release, preparar la siguiente versión de desarrollo con sufijo .dev0 y un encabezado de changelog que la identifique como futura. No etiquetar una versión no validada como estable.
 
-El workflow `.github/workflows/supply-chain.yml` genera el wheel, el SBOM CycloneDX y `SHA256SUMS` como artefacto descargable. Antes de distribuir un artefacto, comprobá el manifiesto:
+## Artefactos y procedencia
 
-```bash
-sha256sum --check SHA256SUMS
-```
+El workflow .github/workflows/supply-chain.yml genera un wheel, SBOM CycloneDX y SHA256SUMS como artefactos. Comprueba el checksum desde la carpeta del manifiesto con:
 
-Para una versión publicada mediante una etiqueta `v*`, verificá la procedencia con GitHub CLI (además de comprobar el checksum):
+    sha256sum --check SHA256SUMS
 
-```bash
-gh attestation verify netsentinel-<version>-py3-none-any.whl --repo JavierGrecco/NetSentinel
-gh attestation verify netsentinel-sbom.cdx.json --repo JavierGrecco/NetSentinel
-```
+El repositorio incluye scripts/verify-sha256-manifest.sh para validar manifiestos. La comprobación del hash detecta corrupción, pero por sí sola no autentica al autor del artefacto. Para versiones publicadas con atestación, comprobar también la procedencia con GitHub CLI:
 
-El workflow también ejecuta Gitleaks con el historial completo para detectar secretos comprometidos. Si una credencial real se detecta o se publica accidentalmente, revocala/rotala inmediatamente; borrar el texto en un commit posterior no vuelve segura la credencial.
+    gh attestation verify netsentinel-<version>-py3-none-any.whl --repo JavierGrecco/NetSentinel
+    gh attestation verify netsentinel-sbom.cdx.json --repo JavierGrecco/NetSentinel
 
-## Integridad de los workflows
+Usar el nombre de los ficheros realmente descargados. Si se expone una credencial real, revocarla/rotarla de inmediato; borrar el texto en un commit posterior no vuelve segura la credencial.
 
-Las acciones externas usadas por los workflows de CI, análisis de seguridad y cadena de suministro se fijan a SHA completos, no a etiquetas móviles. Dependabot tiene habilitadas actualizaciones semanales para GitHub Actions; revisá cada propuesta y su cambio de SHA antes de integrarla. La fijación reduce el riesgo de que una etiqueta se mueva de forma inesperada, pero las actualizaciones siguen requiriendo revisión y CI.
+## Dependencias y workflows
 
-## Validación de checksums
+Las acciones externas se fijan a SHA completos. Dependabot puede proponer actualizaciones semanales: revisar cada PR individualmente, especialmente cambios de SHA de acciones, compatibilidad runtime, constraints mínimas y tests. No fusionar un lote únicamente porque los checks históricos estén verdes: confirmar el resultado sobre el head SHA actual y considerar el diff.
 
-El helper `scripts/verify-sha256-manifest.sh` comprueba un manifiesto desde la carpeta donde se generó, por lo que funciona aunque se invoque desde otra ubicación:
-
-```bash
-bash scripts/verify-sha256-manifest.sh dist/SHA256SUMS
-```
-
-La CI prueba un artefacto sintético intacto y verifica que el helper rechace el mismo archivo tras modificarlo. Para artefactos descargados sin el repositorio, ejecutá `sha256sum --check SHA256SUMS` desde la carpeta que contiene el manifiesto y todos los archivos listados. Esto comprueba integridad, pero no certifica autenticidad; verificá también la atestación de procedencia cuando exista.
+Antes de añadir una dependencia, justificar la función que aporta, mantenimiento, licencia, permisos/red, superficie de ataque y alternativa estándar. La CI debe verificar comportamiento, no solo instalar herramientas como decoración.
 
 ## Estructura básica
 
-- `src/netsentinel/`: código de la aplicación.
-- `src/netsentinel/static/`: paneles HTML y hojas CSS.
-- `tests/`: pruebas automatizadas.
-- `docs/`: arquitectura, seguridad, monitorización y planificación.
-- `.github/workflows/ci.yml`: matriz de pruebas multiplataforma.
+- src/netsentinel/: aplicación y módulos de dominio.
+- src/netsentinel/static/: paneles HTML/CSS.
+- tests/: pruebas Python.
+- browser-extension/: extensión y tests Node.
+- docs/: arquitectura, seguridad, uso y planificación.
+- .github/workflows/ci.yml: matriz de pruebas.
+- .github/workflows/security.yml: análisis estático y auditoría de dependencias.
+- .github/workflows/supply-chain.yml: artefactos, SBOM, manifiesto y procedencia.
 
-No agregues bases de datos locales, exportaciones reales, secretos ni credenciales al repositorio.
+No agregar bases de datos locales, exportaciones reales, inventarios de clientes, tokens, credenciales ni URLs privadas al repositorio.
