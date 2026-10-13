@@ -32,10 +32,10 @@ function isPrivateOrLocalIPv4(host) {
 }
 
 function mappedIPv4FromIPv6(host) {
-  const value = String(host || "").replace(/^\\[|\\]$/g, "").toLowerCase();
+  const value = String(host || "").replace(/^\[|\]$/g, "").toLowerCase();
   if (!value.startsWith("::ffff:")) return null;
   const suffix = value.slice("::ffff:".length);
-  if (/^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(suffix)) {
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(suffix)) {
     const octets = suffix.split(".").map(Number);
     return octets.every(part => part >= 0 && part <= 255) ? octets.join(".") : null;
   }
@@ -49,7 +49,7 @@ function mappedIPv4FromIPv6(host) {
 // Parse an IPv6 literal into eight 16-bit words. Invalid or unusual spellings
 // are rejected by the caller rather than treated as confirmed public hosts.
 function ipv6Words(host) {
-  const value = String(host || "").replace(/^\\[|\\]$/g, "").toLowerCase();
+  const value = String(host || "").replace(/^\[|\]$/g, "").toLowerCase();
   if (!value.includes(":") || value.includes(".")) return null;
   const marker = value.indexOf("::");
   if (marker >= 0 && value.indexOf("::", marker + 2) >= 0) return null;
