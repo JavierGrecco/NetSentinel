@@ -2,6 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade una regresión de CI que altera de forma aislada una cota de prueba y verifica que el validador de dependencias mínimas la rechace, evitando que un verificador que deje de detectar divergencias pase inadvertido.
 - Amplía la CI con un job que instala y prueba conjuntamente las versiones mínimas declaradas de las dependencias runtime y de test, evitando asumir compatibilidad solo porque la matriz usa las versiones más nuevas disponibles.
 - Corrige el límite inferior declarado de `httpx2`: `1.0.0` no es una publicación instalable; el mínimo declarado y fijado para la prueba es ahora `2.0.0`. La CI verifica automáticamente que `pyproject.toml` y las constraints no vuelvan a desalinearse.
 - Corrige las gráficas de latencia para respetar la CSP basada en hashes: reemplaza los cambios de estilo inline bloqueados por atributos de altura con bandas CSS predefinidas y agrega una regresión de interfaz.
