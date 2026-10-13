@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 import netsentinel.main as main_module
+import netsentinel.api.inventory as inventory_api
 import netsentinel.api.tools as tools_api
 from netsentinel.main import app
 
@@ -87,7 +88,7 @@ def test_device_dns_reverse_uses_latest_observed_address_on_demand(monkeypatch):
     )
     calls = []
     monkeypatch.setattr(
-        main_module,
+        inventory_api,
         "cached_reverse_lookup_ip",
         lambda address: calls.append(address) or {
             "ip": address, "hostname": "router.example.test", "record_type": "PTR",
