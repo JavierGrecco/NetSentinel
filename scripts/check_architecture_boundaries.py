@@ -35,10 +35,13 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 
-# SQLite is a lower layer. Allow only the neutral network data contract.
-# An allow-list catches accidental imports of future domain modules automatically.
+# SQLite may use a small set of shared infrastructure helpers and neutral contracts.
+# All other internal dependencies require a deliberate architecture change.
 DATABASE_ALLOWED_INTERNAL_IMPORTS = {
-    "netsentinel.network_models",
+    "netsentinel.config",       # Ubicación del archivo de datos.
+    "netsentinel.csv_safety",   # Exportaciones CSV seguras.
+    "netsentinel.network_models",  # Contrato de vecinos compartido.
+    "netsentinel.vendor",       # Consulta OUI local, sin acceso a red.
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
