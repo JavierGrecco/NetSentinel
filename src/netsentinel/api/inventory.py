@@ -13,7 +13,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import __version__, database
-from ..discovery import discover_local_network
+from ..local_discovery import discover_local_network
 from ..dns_tools import DNSLookupError, cached_reverse_lookup_ip
 
 router = APIRouter()
