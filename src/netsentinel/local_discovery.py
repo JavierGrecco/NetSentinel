@@ -30,7 +30,7 @@ _RFC1918_NETWORKS = tuple(
 # Interfaces virtuales, túneles y enlaces entre dispositivos Apple no son redes LAN
 # físicas adecuadas para un descubrimiento general del hogar/oficina.
 _EXCLUDED_PREFIXES = (
-    "lo", "awdl", "llw", "utun", "bridge", "br-", "veth", "vmnet", "vmenet",
+    "lo", "awdl", "llw", "utun", "bridge", "br", "veth", "vmnet", "vmenet",
     "docker", "podman", "cni", "flannel", "lxcbr", "ovs", "vboxnet", "virbr",
     "tailscale", "wg", "tun", "tap", "gif", "stf", "anpi", "ap", "p2p",
 )
@@ -53,7 +53,7 @@ def detect_scan_subnets(
     Para una red mayor que /24 solo se examina el bloque /24 donde está la IP local.
     Solo admite 10/8, 172.16/12 y 192.168/16; excluye rangos especiales,
     loopback, link-local, túneles e interfaces virtuales conocidas, incluidas redes
-    habituales de contenedores (br-*, veth*, docker*, podman*, CNI y OVS).
+    habituales de contenedores (br*, veth*, docker*, podman*, CNI y OVS).
     """
     addresses = interface_addresses if interface_addresses is not None else psutil.net_if_addrs()
     stats = interface_stats if interface_stats is not None else psutil.net_if_stats()
