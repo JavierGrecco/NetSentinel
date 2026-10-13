@@ -187,6 +187,6 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.inventory"] == {
         "netsentinel.database",
-        "netsentinel.discovery",
+        "netsentinel.local_discovery",
         "netsentinel.dns_tools",
     }
