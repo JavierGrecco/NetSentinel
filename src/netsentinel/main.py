@@ -15,6 +15,7 @@ from typing import AsyncIterator
 import os
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -188,6 +189,24 @@ def _apply_security_headers(response: Response, *, page_path: str = "") -> Respo
     response.headers.setdefault("Content-Security-Policy", _base_content_security_policy(page_path))
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
     return response
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_request_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Return actionable validation details without reflecting submitted field values."""
+    safe_errors = []
+    for error in exc.errors():
+        location = [
+            part if isinstance(part, (str, int)) else str(part)
+            for part in error.get("loc", ())
+        ]
+        safe_errors.append({
+            "loc": location,
+            "msg": str(error.get("msg", "Solicitud inválida"))[:200],
+            "type": str(error.get("type", "value_error"))[:100],
+        })
+    response = JSONResponse(status_code=422, content={"detail": safe_errors})
+    return _apply_security_headers(response)
 
 
 @app.exception_handler(Exception)
