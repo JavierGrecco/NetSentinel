@@ -64,8 +64,11 @@ def update_retention(retention_days: int, *, now: datetime) -> dict[str, int]:
         raise ValueError("La retención debe ser de 1 a 90 días.")
 
     with database.connect() as db:
+        # Restore the singleton row if an older or repaired database lacks it.
+        # Otherwise, UPDATE would silently keep the default while reporting success.
         db.execute(
-            "UPDATE activity_settings SET retention_days = ? WHERE id = 1",
+            """INSERT INTO activity_settings (id, retention_days) VALUES (1, ?)
+               ON CONFLICT(id) DO UPDATE SET retention_days = excluded.retention_days""",
             (days,),
         )
         deleted_events = cleanup(db, now=now)
