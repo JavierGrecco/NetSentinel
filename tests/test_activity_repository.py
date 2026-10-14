@@ -175,7 +175,8 @@ def test_event_repository_inserts_validated_metadata(monkeypatch, tmp_path):
     assert inserted["domain"] == "example.com"
     assert "collector_token_hash" not in inserted
 
-def test_activity_scope_repository_requires_existing_device_and_exact_confirmation(monkeypatch, tmp_path):
+
+def test_activity_scope_repository_checks_bounds_and_confirmation(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
