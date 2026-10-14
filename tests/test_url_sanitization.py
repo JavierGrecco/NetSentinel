@@ -137,3 +137,22 @@ def test_safe_page_url_rejects_local_private_and_special_use_hosts(raw_url):
 )
 def test_safe_page_url_preserves_public_hosts_and_explicit_global_exceptions(raw_url, expected):
     assert _safe_page_url(raw_url) == expected
+
+@pytest.mark.parametrize(
+    "raw_url",
+    [
+        "http://127.1/admin",
+        "http://127.1./admin",
+        "http://2130706433/",
+        "http://0x7f000001/",
+        "http://0177.0.0.1/",
+        "http://router.1/",
+    ],
+)
+def test_safe_page_url_rejects_ambiguous_browser_ipv4_spellings(raw_url):
+    with pytest.raises(ValueError, match="host IPv4 ambiguo o no canónico"):
+        _safe_page_url(raw_url)
+
+
+def test_safe_page_url_normalizes_public_ipv4_with_trailing_dot():
+    assert _safe_page_url("https://192.0.0.9./docs") == "https://192.0.0.9/docs"
