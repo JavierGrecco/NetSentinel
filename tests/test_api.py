@@ -62,6 +62,7 @@ def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_
     assert "ctx" not in errors[0]
     assert "TOKEN_LEAK" not in errors[0]["msg"]
     assert "TOKEN_LEAK" not in caplog.text
+    assert not (tmp_path / "netsentinel-errors.jsonl").exists()
     assert response.json()["error_code"] == "NS-REQ-422"
     assert response.json()["request_id"] == response.headers["x-request-id"]
     assert response.json()["next_action"]
@@ -98,6 +99,8 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         assert missing.json()["error_code"] == "NS-HTTP-404"
         assert missing.json()["request_id"] == missing.headers["x-request-id"]
         assert missing.json()["registered_in_log"] is False
+        assert missing.json()["should_log"] is False
+        assert not (tmp_path / "netsentinel-errors.jsonl").exists()
 
 
 def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
