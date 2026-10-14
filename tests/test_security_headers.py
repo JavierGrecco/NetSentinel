@@ -141,5 +141,7 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, ex
     assert "'unsafe-inline'" not in policy
 
     # CSP must permit the trusted inline scripts from this exact packaged page.
-    for source in main_module._inline_script_hashes(path):
+    trusted_hashes = main_module._inline_script_hashes(path)
+    assert trusted_hashes, "Each packaged page should have at least one trusted inline-script hash."
+    for source in trusted_hashes:
         assert source in policy
