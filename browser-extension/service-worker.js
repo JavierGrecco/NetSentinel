@@ -1,6 +1,8 @@
 const SETTINGS_KEY = "netsentinelSettings";
 const EVENTS_KEY = "netsentinelEvents";
 const MAX_EVENTS = 1000;
+const MAX_QUERY_PARAMETERS = 200; // Must match the backend CSV URL parser limit.
+const MAX_SAFE_URL_LENGTH = 2048; // Must match activity_tracking._safe_page_url.
 const DEFAULTS = { enabled: false, capturePages: true, captureSearches: true, retentionDays: 7, excludeDomains: [] };
 const SEARCH_QUERY_KEYS = new Set(["q", "query", "text", "wd", "word", "search_query", "search"]);
 const TRACKING_QUERY_KEYS = new Set([
@@ -156,6 +158,15 @@ function cleanUrl(rawUrl) {
   let url;
   try { url = new URL(rawUrl); } catch { return null; }
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+
+  // The backend uses parse_qsl(max_num_fields=200) before removing sensitive
+  // query keys. Match that limit here so an exported CSV cannot fail import just
+  // because the original navigation carried too many parameters.
+  let queryFieldCount = 0;
+  for (const _entry of url.searchParams) {
+    if (++queryFieldCount > MAX_QUERY_PARAMETERS) return null;
+  }
+
   url.hash = "";
   url.pathname = url.pathname.split("/").map(segment =>
     isSensitivePathSegment(segment) ? "%5Bredacted%5D" : segment
@@ -166,7 +177,7 @@ function cleanUrl(rawUrl) {
         TRACKING_QUERY_KEYS.has(normalized) || SEARCH_QUERY_KEYS.has(normalized)) url.searchParams.delete(key);
   }
   const result = url.toString();
-  return result.length <= 2048 ? result : null;
+  return result.length <= MAX_SAFE_URL_LENGTH ? result : null;
 }
 function googleHost(host) {
   return host === "google.com" || host.endsWith(".google.com") ||

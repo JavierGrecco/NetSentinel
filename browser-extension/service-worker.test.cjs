@@ -99,6 +99,25 @@ test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
   assert.equal(cleanUrl("https://alice:password@example.com/profile"), null);
 });
 
+test("matches backend query-field limit and accepts the exact boundary", () => {
+  const atLimit = new URL("https://example.com/");
+  for (let i = 0; i < 200; i++) atLimit.searchParams.append("a", "1");
+  assert.equal(new URL(cleanUrl(atLimit.toString())).searchParams.size, 200);
+
+  const overLimit = new URL("https://example.com/");
+  for (let i = 0; i < 201; i++) overLimit.searchParams.append("a", "1");
+  assert.equal(cleanUrl(overLimit.toString()), null);
+});
+
+test("enforces query-field limit before removing sensitive parameters", () => {
+  const url = new URL("https://example.com/");
+  for (let i = 0; i < 200; i++) url.searchParams.append("lang", "es");
+  url.searchParams.append("access_token", "sensitive");
+  // The backend counts parameters before filtering, so the extension must too.
+  assert.equal(cleanUrl(url.toString()), null);
+});
+
+
 test("excludes local/private, shared and special-use IPv4 plus IPv6 and mapped IPv6 hosts", () => {
   for (const host of [
     "0.0.0.1", "10.0.0.1", "127.0.0.1", "169.254.1.1",
