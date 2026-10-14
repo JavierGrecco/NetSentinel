@@ -32,31 +32,49 @@ _PATH_UUID = re.compile(
 )
 _PATH_OPAQUE = re.compile(r"^[A-Za-z0-9._~-]+$")
 
+def _normalize_dns_name(value: str, *, field: str) -> str:
+    """Return a canonical ASCII DNS name and enforce wire-format length limits."""
+    candidate = value.strip()
+    if candidate.endswith("."):
+        candidate = candidate[:-1]
+    if not candidate or candidate.endswith("."):
+        raise ValueError(f"{field} no es un nombre DNS válido.")
+    try:
+        normalized = candidate.encode("idna").decode("ascii").lower()
+    except UnicodeError as exc:
+        raise ValueError(f"{field} no es un nombre DNS válido.") from exc
+
+    labels = normalized.split(".")
+    if (
+        len(normalized) > 253
+        or any(
+            not label
+            or len(label) > 63
+            or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
+            for label in labels
+        )
+    ):
+        raise ValueError(f"{field} no es un nombre DNS válido.")
+    return normalized
+
+
 def _domain(value: str | None) -> str | None:
     if value is None or not value.strip():
         return None
-    raw = value.strip().rstrip(".")
-    if len(raw) > 253 or any(ch in raw for ch in "/\\@?#") or "://" in raw:
+    raw = value.strip()
+    if any(ch in raw for ch in "/\\@?#") or "://" in raw:
         raise ValueError("El campo domain acepta solo un nombre DNS, no una URL ni una ruta.")
+    # IP literals are represented in destination_ip, not as DNS names. Strip
+    # one terminal root dot only for this check; malformed dots are rejected
+    # by the shared DNS normalizer below.
+    ip_candidate = raw[:-1] if raw.endswith(".") else raw
     try:
-        # IP literals are represented in destination_ip, not as DNS names.
-        ipaddress.ip_address(raw)
+        ipaddress.ip_address(ip_candidate)
     except ValueError:
         pass
     else:
         raise ValueError("Usá destination_ip para direcciones IP; domain debe ser un nombre DNS.")
-    try:
-        normalized = raw.encode("idna").decode("ascii").lower()
-    except UnicodeError as exc:
-        raise ValueError("El nombre DNS no es válido.") from exc
-    labels = normalized.split(".")
-    if any(
-        not label or len(label) > 63
-        or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
-        for label in labels
-    ):
-        raise ValueError("El nombre DNS contiene etiquetas no válidas.")
-    return normalized
+    return _normalize_dns_name(raw, field="El nombre DNS")
 
 
 def _normalized_query_key(value: str) -> str:
@@ -210,10 +228,7 @@ def _safe_page_url(value: str | None) -> str | None:
         # A final dot is insignificant for an IP literal, just as it is in browser URL parsing.
         normalized_host = str(ipaddress.ip_address(hostname.rstrip("."))).lower()
     except ValueError:
-        try:
-            normalized_host = hostname.encode("idna").decode("ascii").lower()
-        except UnicodeError as exc:
-            raise ValueError("El host de page_url no es válido.") from exc
+        normalized_host = _normalize_dns_name(hostname, field="El host de page_url")
         if _has_noncanonical_ipv4_host_syntax(normalized_host):
             raise ValueError(
                 "page_url contiene un host IPv4 ambiguo o no canónico; "
@@ -267,8 +282,8 @@ def _email_address_list(value: str | None, *, field: str, required: bool) -> lis
         if not local or len(local) > 64 or not domain or "." not in domain or len(address) > 254:
             continue
         try:
-            domain = domain.encode("idna").decode("ascii").lower()
-        except UnicodeError:
+            domain = _normalize_dns_name(domain, field=field)
+        except ValueError:
             continue
         if any(ch.isspace() for ch in local) or any(ch in local for ch in "<>,;"):
             continue
