@@ -418,7 +418,6 @@ def test_pages_router_has_no_internal_domain_dependencies() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\\n".join(violations)
     assert graph["netsentinel.api.pages"] == set()
-
 def test_error_journal_cannot_import_unrelated_domains(tmp_path: Path) -> None:
     """El diario solo depende de la ubicación de datos, no del resto del programa."""
     package = _write_minimal_package(tmp_path)
