@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from . import database
-from .error_reporting import describe_http_error, describe_unhandled_exception
+from .error_reporting import describe_http_error, describe_unhandled_exception, record_error_event
 from .monitoring import MonitorSupervisor
 from .api.activity import router as activity_router
 from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
@@ -273,6 +273,7 @@ async def handle_request_validation_error(request: Request, exc: RequestValidati
             "error_code": "NS-REQ-422",
             "request_id": _request_id(request),
             "next_action": "Corregí los campos indicados y volvé a enviar la solicitud.",
+            "should_log": False,
             "registered_in_log": False,
         },
     )
@@ -283,10 +284,22 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
     """Attach stable error metadata without logging expected client-side rejections."""
     code, next_action = describe_http_error(exc.status_code)
     request_id = _request_id(request)
+    registered = False
+    safe_path = getattr(request.scope.get("route"), "path", request.url.path)
     if exc.status_code >= 500:
+        registered = record_error_event({
+            "error_code": code,
+            "request_id": request_id,
+            "category": "http_server",
+            "severity": "error",
+            "exception_type": "StarletteHTTPException",
+            "method": request.method,
+            "path": safe_path,
+            "reason": "Explicit HTTP 5xx response",
+        })
         logger.error(
-            "HTTP server failure code=%s request_id=%s status=%s method=%s path=%s",
-            code, request_id, exc.status_code, request.method, request.url.path,
+            "HTTP server failure code=%s request_id=%s status=%s method=%s path=%s persisted=%s",
+            code, request_id, exc.status_code, request.method, safe_path, registered,
         )
     return _error_response(
         request,
@@ -296,7 +309,8 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
             "error_code": code,
             "request_id": request_id,
             "next_action": next_action,
-            "registered_in_log": exc.status_code >= 500,
+            "should_log": exc.status_code >= 500,
+            "registered_in_log": registered,
         },
         headers=dict(exc.headers or {}),
     )
@@ -313,12 +327,27 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
         f"{Path(frame.filename).name}:{frame.lineno}:{frame.name}"
         for frame in traceback.extract_tb(exc.__traceback__)
     )
+    safe_path = getattr(request.scope.get("route"), "path", request.url.path)
+    registered = record_error_event({
+        "error_code": error.code,
+        "request_id": request_id,
+        "category": error.category,
+        "severity": error.log_level,
+        "exception_type": type(exc).__name__,
+        "method": request.method,
+        "path": safe_path,
+        "reason": error.log_reason,
+        "frames": frames,
+    })
     logger.log(
         getattr(logging, error.log_level.upper(), logging.ERROR),
-        "Application failure code=%s request_id=%s category=%s exception_type=%s method=%s path=%s reason=%s frames=%s",
+        "Application failure code=%s request_id=%s category=%s exception_type=%s method=%s path=%s reason=%s frames=%s persisted=%s",
         error.code, request_id, error.category, type(exc).__name__,
-        request.method, request.url.path, error.log_reason, frames,
+        request.method, safe_path, error.log_reason, frames, registered,
     )
+    next_action = error.next_action
+    if not registered:
+        next_action += " No se pudo guardar el registro local de errores; revisá el espacio disponible y los permisos de la carpeta de datos."
     return _error_response(
         request,
         status_code=500,
@@ -326,8 +355,9 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
             "detail": error.message,
             "error_code": error.code,
             "request_id": request_id,
-            "next_action": error.next_action,
-            "registered_in_log": True,
+            "next_action": next_action,
+            "should_log": True,
+            "registered_in_log": registered,
         },
     )
 
