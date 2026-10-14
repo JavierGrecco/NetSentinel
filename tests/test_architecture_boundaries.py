@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, findings, inventory, tools
+from netsentinel.api import activity, findings, inventory, monitoring, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from scripts.check_architecture_boundaries import check_architecture
@@ -192,4 +192,37 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
         "netsentinel.database",
         "netsentinel.local_discovery",
         "netsentinel.dns_tools",
+    }
+
+
+
+def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
+    """Las rutas de monitores, incidentes y diagnóstico viven en su router."""
+    paths = {route.path for route in monitoring.router.routes}
+    assert {
+        "/api/monitors",
+        "/api/monitoring/summary",
+        "/api/export/monitoring.csv",
+        "/api/export/incidents.csv",
+        "/api/monitors/{monitor_id}/latency",
+        "/api/export/monitor-latency.csv",
+        "/api/monitors/{monitor_id}",
+        "/api/monitors/{monitor_id}/check",
+        "/api/monitors/{monitor_id}/checks",
+        "/api/incidents",
+        "/api/notifications",
+        "/api/diagnostics",
+    } <= paths
+    assert len(paths) == 14
+
+
+def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
+    """El router de monitorización se limita a persistencia y servicios de dominio."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.api.monitoring"] == {
+        "netsentinel.database",
+        "netsentinel.diagnostics",
+        "netsentinel.monitoring",
     }
