@@ -228,6 +228,96 @@ def _safe_url_path(path: str) -> str:
     return "/".join("%5Bredacted%5D" if _sensitive_path_segment(segment) else segment for segment in segments)
 
 
+_NON_PUBLIC_IPV4_NETWORKS = tuple(
+    ipaddress.ip_network(network)
+    for network in (
+        "0.0.0.0/8",
+        "10.0.0.0/8",
+        "100.64.0.0/10",
+        "127.0.0.0/8",
+        "169.254.0.0/16",
+        "172.16.0.0/12",
+        "192.0.2.0/24",
+        "192.88.99.0/24",
+        "192.168.0.0/16",
+        "198.18.0.0/15",
+        "198.51.100.0/24",
+        "203.0.113.0/24",
+        "224.0.0.0/3",
+    )
+)
+_IPV4_SPECIAL_192_0_0_0_24 = ipaddress.ip_network("192.0.0.0/24")
+_IPV4_GLOBAL_EXCEPTIONS = {
+    ipaddress.ip_address("192.0.0.9"),
+    ipaddress.ip_address("192.0.0.10"),
+}
+_NON_PUBLIC_IPV6_NETWORKS = tuple(
+    ipaddress.ip_network(network)
+    for network in (
+        "::/96",           # Deprecated IPv4-compatible prefix; mapped IPv4 handled separately.
+        "fc00::/7",        # Unique-local.
+        "fe80::/10",       # Link-local.
+        "ff00::/8",        # Multicast.
+        "2001:db8::/32",   # Documentation.
+        "3fff::/20",       # Documentation.
+        "2001:2::/48",     # Benchmarking.
+        "100::/64",        # Discard-only.
+        "2001::/32",       # Teredo transition.
+        "2002::/16",       # 6to4 transition.
+        "64:ff9b:1::/48",  # Local-use NAT64.
+        "100:0:0:1::/64",  # Dummy prefix.
+        "2001:10::/28",    # Deprecated ORCHID.
+        "5f00::/16",       # Segment-routing special use.
+    )
+)
+_NON_PUBLIC_HOST_SUFFIXES = frozenset(
+    {"localhost", "local", "lan", "localdomain", "test", "example", "invalid", "arpa"}
+)
+
+
+def _has_noncanonical_ipv4_host_syntax(hostname: str) -> bool:
+    """Detect WHATWG-style numeric host spellings that Python's ipaddress rejects."""
+    host = str(hostname or "").strip().rstrip(".").lower()
+    final_label = host.rsplit(".", 1)[-1]
+    # Browsers canonicalize forms such as 127.1, 2130706433, 0177.0.0.1
+    # and 0x7f000001 to IPv4 literals before navigation events are delivered.
+    return bool(
+        re.fullmatch(r"[0-9]+", final_label)
+        or re.fullmatch(r"0x[0-9a-f]*", final_label)
+    )
+
+
+def _is_non_public_navigation_host(hostname: str) -> bool:
+    """Return whether a navigation host is local or a documented special-use address."""
+    host = str(hostname or "").strip().rstrip(".").lower()
+    if not host or any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in _NON_PUBLIC_HOST_SUFFIXES
+    ):
+        return True
+
+    try:
+        # Zone identifiers do not change the scope classification of an IPv6 address.
+        address = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        # Regular public DNS names remain eligible; we never resolve them here.
+        return False
+
+    if isinstance(address, ipaddress.IPv4Address):
+        if any(address in network for network in _NON_PUBLIC_IPV4_NETWORKS):
+            return True
+        return (
+            address in _IPV4_SPECIAL_192_0_0_0_24
+            and address not in _IPV4_GLOBAL_EXCEPTIONS
+        )
+
+    # IPv4-mapped IPv6 literals must inherit the classification of the mapped IPv4.
+    mapped_ipv4 = address.ipv4_mapped
+    if mapped_ipv4 is not None:
+        return _is_non_public_navigation_host(str(mapped_ipv4))
+    return any(address in network for network in _NON_PUBLIC_IPV6_NETWORKS)
+
+
 def _safe_page_url(value: str | None) -> str | None:
     """Normalize HTTP(S) URLs and redact known sensitive query keys and recognizable path identifiers."""
     if value is None or not str(value).strip():
@@ -245,14 +335,24 @@ def _safe_page_url(value: str | None) -> str | None:
     if scheme not in {"http", "https"} or not hostname or parsed.username is not None or parsed.password is not None:
         raise ValueError("page_url debe ser una URL HTTP(S) sin credenciales embebidas.")
     try:
-        normalized_host = str(ipaddress.ip_address(hostname)).lower()
+        # A final dot is insignificant for an IP literal, just as it is in browser URL parsing.
+        normalized_host = str(ipaddress.ip_address(hostname.rstrip("."))).lower()
     except ValueError:
         try:
             normalized_host = hostname.encode("idna").decode("ascii").lower()
         except UnicodeError as exc:
             raise ValueError("El host de page_url no es válido.") from exc
+        if _has_noncanonical_ipv4_host_syntax(normalized_host):
+            raise ValueError(
+                "page_url contiene un host IPv4 ambiguo o no canónico; "
+                "no se admiten destinos locales, privados o de uso especial con formatos alternativos."
+            )
     if len(normalized_host) > 253:
         raise ValueError("El host de page_url es demasiado largo.")
+    if _is_non_public_navigation_host(normalized_host):
+        raise ValueError(
+            "page_url no puede apuntar a destinos locales, privados o de uso especial."
+        )
     netloc = f"[{normalized_host}]" if ":" in normalized_host else normalized_host
     if port is not None and port != (443 if scheme == "https" else 80):
         netloc += f":{port}"
