@@ -116,6 +116,31 @@ def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch)
     assert result["findings"] == []
 
 
+def test_tls_inspection_shares_deadline_between_connect_and_handshake(monkeypatch):
+    _calls, context, raw = _mock_success(monkeypatch)
+    ticks = iter([100.0, 101.75])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
+
+    result = tls_tools._inspect_tls_endpoint_direct("example.com", timeout=2.5)
+
+    assert result["status"] == "ok"
+    assert raw.timeout == pytest.approx(0.75)
+    assert context.server_name == "example.com"
+
+
+def test_tls_inspection_does_not_start_handshake_after_deadline(monkeypatch):
+    _calls, context, raw = _mock_success(monkeypatch)
+    ticks = iter([100.0, 103.01])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
+
+    result = tls_tools._inspect_tls_endpoint_direct("example.com", timeout=3.0)
+
+    assert result["status"] == "timeout"
+    assert result["findings"][0]["code"] == "connection_timeout"
+    assert context.server_name is None
+    assert raw.timeout is None
+
+
 def test_tls_inspection_warns_about_certificate_expiring_soon(monkeypatch):
     _mock_success(monkeypatch, certificate=_certificate(days_until_expiry=5))
 

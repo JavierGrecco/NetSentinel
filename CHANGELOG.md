@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Ajusta el plazo de la inspección TLS aislada: el límite externo contempla el arranque del proceso hijo y la serialización de la respuesta, sin consumir por adelantado todo el timeout de red. Se agregan pruebas para distinguir ambos límites y mantener el proceso terminable.
+- Ajusta la inspección TLS para que TCP y handshake compartan un único plazo monotónico. El proceso padre conserva un límite externo terminable frente a resoluciones DNS bloqueadas y el arranque del proceso hijo; se agregan regresiones sobre los plazos.
 
 - Separa el catálogo y la clasificación de errores del diario JSONL local. Mantiene `record_error_event` en la fachada compatible, fija una frontera de dependencias y amplía las pruebas de privacidad, rotación, permisos y protección frente a enlaces simbólicos.
 

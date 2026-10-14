@@ -11,6 +11,7 @@ import socket
 import ssl
 import subprocess
 import sys
+import time
 from typing import Any
 
 # The outer deadline includes interpreter startup, which is outside the socket timeout.
@@ -111,10 +112,17 @@ def _inspect_tls_endpoint_direct(host: str, port: int = 443, timeout: float = _M
     if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout <= _MAX_TIMEOUT_SECONDS:
         raise ValueError("El tiempo límite debe ser mayor que cero y no superar 3 segundos.")
 
+    # Use a single monotonic budget for TCP setup and the TLS handshake.
+    # DNS implementations may block outside socket timeouts, so the parent
+    # process still enforces the hard wall-clock deadline.
+    deadline = time.monotonic() + float(timeout)
     try:
         context = ssl.create_default_context()
         with socket.create_connection((normalised_host, port), timeout=float(timeout)) as connection:
-            connection.settimeout(float(timeout))
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise socket.timeout("TLS inspection deadline exceeded")
+            connection.settimeout(remaining)
             with context.wrap_socket(connection, server_hostname=normalised_host) as secured:
                 peer_certificate = secured.getpeercert()
                 tls_version = secured.version()
