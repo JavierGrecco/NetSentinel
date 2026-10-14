@@ -67,3 +67,39 @@ def test_panel_formats_validation_errors_and_reports_backend_request_reference()
     assert "Referencia: ${requestId}" in html
     assert "NS-CONN-001" in html
     assert "no queda registrada en el log del backend" in html
+
+
+def test_error_journal_writes_allowlisted_fields_and_rotates(monkeypatch, tmp_path):
+    import json
+
+    from netsentinel import error_reporting
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(error_reporting, "_ERROR_LOG_MAX_BYTES", 300)
+    for index in range(8):
+        assert error_reporting.record_error_event({
+            "error_code": "NS-500-001",
+            "request_id": f"{index:012X}",
+            "category": "unexpected",
+            "severity": "error",
+            "reason": "Safe catalog reason",
+            "message": "PRIVATE_TOKEN=do-not-save",
+            "raw_body": "secret body",
+            "frames": "main.py:123:handler",
+        })
+
+    path = tmp_path / "netsentinel-errors.jsonl"
+    assert path.exists()
+    current_lines = path.read_text(encoding="utf-8").splitlines()
+    assert current_lines
+    parsed = [json.loads(line) for line in current_lines]
+    assert all(record["error_code"] == "NS-500-001" for record in parsed)
+    assert all("message" not in record and "raw_body" not in record for record in parsed)
+    all_logs = "\n".join(
+        candidate.read_text(encoding="utf-8")
+        for candidate in tmp_path.glob("netsentinel-errors.jsonl*")
+        if candidate.is_file()
+    )
+    assert "PRIVATE_TOKEN" not in all_logs
+    assert "secret body" not in all_logs
+    assert (tmp_path / "netsentinel-errors.jsonl.1").exists()
