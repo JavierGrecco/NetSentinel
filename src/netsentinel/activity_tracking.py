@@ -9,7 +9,7 @@ durante una sesión opt-in o mediante importación explícita.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_retention_service, activity_session_service
