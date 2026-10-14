@@ -163,14 +163,14 @@ function normalizedQueryKey(value) {
   let normalized = String(value || "").toLowerCase();
   // Decode nested percent-encoding, but never keep a key that remains encoded
   // after the bounded pass: otherwise a sensitive name could evade the filter.
-  for (let i = 0; i < 8 && /%[0-9a-f]{2}/i.test(normalized); i++) {
+  for (let i = 0; i < 8 && normalized.includes("%"); i++) {
     try {
       normalized = decodeURIComponent(normalized.replace(/\+/g, "%20"));
     } catch {
       return null;
     }
   }
-  if (/%[0-9a-f]{2}/i.test(normalized)) return null;
+  if (normalized.includes("%")) return null;
   return normalized.replace(/[^a-z0-9_]/g, "");
 }
 function isSensitivePathSegment(value) {
@@ -178,13 +178,13 @@ function isSensitivePathSegment(value) {
   for (let i = 0; i < 8; i++) {
     let expanded;
     try { expanded = decodeURIComponent(decoded); } catch {
-      return /%[0-9a-f]{2}/i.test(decoded);
+      return decoded.includes("%");
     }
     if (expanded === decoded) break;
     decoded = expanded;
   }
   // Redact a segment if nested/malformed percent encoding prevents reliable inspection.
-  if (/%[0-9a-f]{2}/i.test(decoded)) return true;
+  if (decoded.includes("%")) return true;
   if (/^[^/\s@]+@[^/\s@]+\.[^/\s@]+$/.test(decoded)) return true;
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decoded)) return true;
   if (/^[+()0-9.\-\s]+$/.test(decoded) && (decoded.match(/\d/g) || []).length >= 10) return true;
