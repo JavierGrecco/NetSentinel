@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Centraliza el catálogo de errores operativos con códigos estables y acciones sugeridas; agrega referencia por solicitud, registro local sin texto de excepciones potencialmente sensible y mensajes claros del panel para validaciones y fallos de conexión.
+- Centraliza el catálogo de errores operativos con códigos estables y acciones sugeridas; agrega referencia por solicitud, registro local sin texto de excepciones potencialmente sensible y mensajes claros del panel para validaciones y fallos de conexión. Las validaciones usan mensajes de plantilla para impedir que un validador refleje valores ingresados.
 
 - Centraliza el conteo y borrado confirmado de eventos en el repositorio de actividad; exige un alcance explícito, valida el dispositivo y ejecuta el recuento final y la eliminación en una transacción SQLite bloqueada para evitar carreras. Añade pruebas de repositorio.
 
