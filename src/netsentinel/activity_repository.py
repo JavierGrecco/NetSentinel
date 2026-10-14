@@ -179,3 +179,61 @@ def insert_event(
         raise RuntimeError("No se pudo recuperar el evento recién guardado.")
     return dict(row)
 
+def _require_device(db: sqlite3.Connection, device_id: int | None) -> None:
+    """Valida la existencia del dispositivo cuando el alcance está acotado por ID."""
+    if device_id is not None and db.execute(
+        "SELECT 1 FROM devices WHERE id = ?", (device_id,)
+    ).fetchone() is None:
+        raise LookupError("No se encontró el dispositivo.")
+
+
+def count_activity_scope(
+    where_sql: str,
+    params: tuple[Any, ...],
+    *,
+    device_id: int | None = None,
+) -> int:
+    """Cuenta eventos de una selección ya validada por la capa de actividad.
+
+    `where_sql` solo puede construirse desde los filtros permitidos por
+    activity_tracking; los valores siempre viajan como parámetros SQL.
+    """
+    with database.connect() as db:
+        _require_device(db, device_id)
+        row = db.execute(
+            "SELECT COUNT(*) FROM activity_events" + where_sql, params
+        ).fetchone()
+        return int(row[0])
+
+
+def delete_activity_scope(
+    where_sql: str,
+    params: tuple[Any, ...],
+    *,
+    device_id: int | None,
+    confirmation: str,
+) -> int:
+    """Borra una selección confirmada dentro de una transacción de escritura.
+
+    El bloqueo se toma antes de volver a contar: otra escritura no puede cambiar
+    el número entre la verificación de la confirmación y el DELETE.
+    """
+    if not isinstance(confirmation, str) or len(confirmation) > 40:
+        raise PermissionError("La frase de confirmación no es válida.")
+
+    with database.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        _require_device(db, device_id)
+        row = db.execute(
+            "SELECT COUNT(*) FROM activity_events" + where_sql, params
+        ).fetchone()
+        count = int(row[0])
+        expected = f"BORRAR {count}"
+        if confirmation != expected:
+            raise PermissionError(
+                f"No se borró nada: la selección contiene {count} evento(s). "
+                f"Escribí exactamente «{expected}» para confirmar."
+            )
+        cursor = db.execute("DELETE FROM activity_events" + where_sql, params)
+        return int(cursor.rowcount)
+
