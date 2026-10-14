@@ -3,6 +3,18 @@ const EVENTS_KEY = "netsentinelEvents";
 const $ = id => document.getElementById(id);
 const DEFAULTS = { enabled: false, capturePages: true, captureSearches: true, retentionDays: 7, excludeDomains: [] };
 
+function normalizeRetentionDays(value) {
+  // Do not let malformed storage values become NaN and hide every saved event.
+  if (value === undefined || value === null || value === "") return DEFAULTS.retentionDays;
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d+$/.test(value.trim())
+      ? Number(value.trim())
+      : NaN;
+  if (!Number.isSafeInteger(parsed)) return DEFAULTS.retentionDays;
+  return Math.max(1, Math.min(90, parsed));
+}
+
 function escapeCsv(value) {
   let text = String(value ?? "");
   if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
@@ -15,7 +27,7 @@ function when(value) {
 async function getState() {
   const stored = await chrome.storage.local.get([SETTINGS_KEY, EVENTS_KEY]);
   const settings = { ...DEFAULTS, ...(stored[SETTINGS_KEY] || {}) };
-  settings.retentionDays = Math.max(1, Math.min(90, Number(settings.retentionDays || 7)));
+  settings.retentionDays = normalizeRetentionDays(settings.retentionDays);
   settings.excludeDomains = Array.isArray(settings.excludeDomains) ? settings.excludeDomains : [];
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
@@ -108,5 +120,5 @@ function initializePopup() {
 if (typeof document !== "undefined" && typeof chrome !== "undefined") initializePopup();
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { DEFAULTS, escapeCsv, buildCsv, getState };
+  module.exports = { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState };
 }

@@ -29,6 +29,7 @@ const {
   SETTINGS_KEY,
   EVENTS_KEY,
   MAX_EVENTS,
+  normalizeRetentionDays,
   captureNavigation,
   cleanUrl,
   isExcluded,
@@ -353,4 +354,32 @@ test("event clearing shares the queue with navigation writes", async () => {
   const pages = mockStore[EVENTS_KEY].filter(event => event.event_type === "page_visit");
   assert.equal(pages.length, 1);
   assert.equal(pages[0].page_url, "https://example.net/after-clear");
+});
+
+
+test("corrupt or non-integer retention settings fall back instead of dropping saved events", async () => {
+  const now = Date.now();
+  const retainedEvent = {
+    event_type: "page_visit",
+    observed_at: new Date(now - 3 * 86400000).toISOString(),
+    page_url: "https://example.com/retained"
+  };
+
+  for (const badValue of ["not-a-number", {}, true, 1.5]) {
+    setState(enabledSettings({ retentionDays: badValue }), [retainedEvent]);
+    const state = await loadState();
+    assert.equal(state.settings.retentionDays, 7, "invalid setting should use the default");
+    assert.equal(state.events.length, 1, "the event is inside the default retention window");
+  }
+});
+
+test("retention normalization accepts integer values and clamps supported bounds", () => {
+  assert.equal(normalizeRetentionDays(1), 1);
+  assert.equal(normalizeRetentionDays("7"), 7);
+  assert.equal(normalizeRetentionDays(90), 90);
+  assert.equal(normalizeRetentionDays(0), 1);
+  assert.equal(normalizeRetentionDays(120), 90);
+  assert.equal(normalizeRetentionDays("bad"), 7);
+  assert.equal(normalizeRetentionDays(true), 7);
+  assert.equal(normalizeRetentionDays(1.5), 7);
 });

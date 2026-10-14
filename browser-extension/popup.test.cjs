@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const manifest = require("./manifest.json");
-const { DEFAULTS, escapeCsv, buildCsv, getState } = require("./popup.js");
+const { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState } = require("./popup.js");
 
 test("popup remains opt-in and manifest uses the narrow MV3 permission set", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -86,6 +86,52 @@ test("popup state reads do not write an old events snapshot back to storage", as
     const state = await getState();
     assert.equal(state.events.length, 1);
     assert.equal(writes, 0, "reading popup state must not overwrite events concurrently captured by the service worker");
+  } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+
+test("popup retention normalization handles invalid persisted values", () => {
+  assert.equal(normalizeRetentionDays(1), 1);
+  assert.equal(normalizeRetentionDays("7"), 7);
+  assert.equal(normalizeRetentionDays(90), 90);
+  assert.equal(normalizeRetentionDays(0), 1);
+  assert.equal(normalizeRetentionDays(120), 90);
+  assert.equal(normalizeRetentionDays("not-a-number"), 7);
+  assert.equal(normalizeRetentionDays({}), 7);
+  assert.equal(normalizeRetentionDays(true), 7);
+  assert.equal(normalizeRetentionDays(1.5), 7);
+});
+
+test("popup preserves still-retained events when stored retention setting is malformed", async () => {
+  const previousChrome = global.chrome;
+  const settingsKey = "netsentinelSettings";
+  const eventsKey = "netsentinelEvents";
+  const retained = {
+    observed_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    event_type: "page_visit",
+    page_url: "https://example.com/retained"
+  };
+  global.chrome = {
+    storage: {
+      local: {
+        async get() {
+          return {
+            [settingsKey]: { enabled: true, retentionDays: "invalid" },
+            [eventsKey]: [retained]
+          };
+        },
+        async set() { throw new Error("getState must stay read-only"); }
+      }
+    }
+  };
+  try {
+    const state = await getState();
+    assert.equal(state.settings.retentionDays, 7);
+    assert.equal(state.events.length, 1);
+    assert.equal(state.events[0].page_url, "https://example.com/retained");
   } finally {
     if (previousChrome === undefined) delete global.chrome;
     else global.chrome = previousChrome;
