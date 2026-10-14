@@ -16,7 +16,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
@@ -27,6 +27,7 @@ from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
 from .api.findings import router as findings_router
 from .api.inventory import router as inventory_router
 from .api.monitoring import router as monitoring_router
+from .api.pages import router as pages_router
 
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,7 @@ app.include_router(activity_router)
 app.include_router(findings_router)
 app.include_router(inventory_router)
 app.include_router(monitoring_router)
+app.include_router(pages_router)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
@@ -290,32 +292,6 @@ def api_docs() -> Response:
         "img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'"
     )
     return response
-
-@app.get("/", include_in_schema=False)
-def index() -> FileResponse:
-    return FileResponse(_STATIC)
-
-
-@app.get("/monitors", include_in_schema=False)
-def monitors_page() -> FileResponse:
-    return FileResponse(_MONITORS_STATIC)
-
-
-@app.get("/activity", include_in_schema=False)
-def activity_page() -> FileResponse:
-    return FileResponse(_ACTIVITY_STATIC)
-
-
-@app.get("/findings", include_in_schema=False)
-def findings_page() -> FileResponse:
-    """Muestra la bandeja local de hallazgos con evidencia."""
-    return FileResponse(_STATIC_DIR / "findings.html")
-
-
-@app.get("/tools", include_in_schema=False)
-def tools_page() -> FileResponse:
-    return FileResponse(_STATIC_DIR / "tools.html")
-
 
 # Sirve CSS y otros recursos desde el paquete local.
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
