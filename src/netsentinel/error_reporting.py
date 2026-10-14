@@ -41,6 +41,13 @@ def describe_unhandled_exception(exc: Exception) -> ErrorDescription:
                 "Liberá espacio en el disco y revisá que la carpeta de datos tenga espacio disponible antes de reintentar.",
                 "error", "SQLite storage full",
             )
+        if "disk i/o" in reason or "disk io" in reason:
+            return ErrorDescription(
+                "NS-DB-007", "database_io",
+                "La base de datos local devolvió un error de lectura o escritura.",
+                "No repitas una operación destructiva. Conservá una copia del archivo de datos y comprobá el estado del disco antes de volver a intentar.",
+                "error", "SQLite disk I/O failure",
+            )
         if "readonly" in reason or "read-only" in reason or "permission denied" in reason or "unable to open database file" in reason:
             return ErrorDescription(
                 "NS-DB-004", "database_access",
@@ -48,7 +55,7 @@ def describe_unhandled_exception(exc: Exception) -> ErrorDescription:
                 "Comprobá los permisos de la carpeta de datos y que el archivo no esté en una ubicación de solo lectura.",
                 "error", "SQLite database access denied or unavailable",
             )
-        if "malformed" in reason or "no such table" in reason or "no such column" in reason:
+        if "malformed" in reason or "not a database" in reason or "no such table" in reason or "no such column" in reason:
             return ErrorDescription(
                 "NS-DB-005", "database_integrity_or_schema",
                 "La base local no tiene la estructura esperada o no pudo leerse correctamente.",
