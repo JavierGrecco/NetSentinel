@@ -23,9 +23,15 @@ class SourceModule:
 
 API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.tools": {
+        "netsentinel.api.security",
         "netsentinel.dns_config",
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
+    },
+    "netsentinel.api.security": set(),
+    "netsentinel.api.error_handling": {
+        "netsentinel.api.security",
+        "netsentinel.error_reporting",
     },
     "netsentinel.api.activity": {
         "netsentinel.activity_tracking",

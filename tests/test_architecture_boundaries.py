@@ -26,9 +26,15 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.tools"] == {
+        "netsentinel.api.security",
         "netsentinel.dns_config",
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
+    }
+    assert graph["netsentinel.api.security"] == set()
+    assert graph["netsentinel.api.error_handling"] == {
+        "netsentinel.api.security",
+        "netsentinel.error_reporting",
     }
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
