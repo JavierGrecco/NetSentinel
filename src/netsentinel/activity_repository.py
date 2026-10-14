@@ -179,6 +179,7 @@ def insert_event(
         raise RuntimeError("No se pudo recuperar el evento recién guardado.")
     return dict(row)
 
+
 def _require_device(db: sqlite3.Connection, device_id: int | None) -> None:
     """Valida la existencia del dispositivo cuando el alcance está acotado por ID."""
     if device_id is not None and db.execute(
@@ -198,7 +199,10 @@ _ALLOWED_ACTIVITY_SCOPE_CLAUSES = frozenset({
 
 def _require_bounded_scope(where_sql: str) -> None:
     """Limita el SQL de alcance a predicados generados por los filtros permitidos."""
-    if not isinstance(where_sql, str) or not where_sql.startswith(" WHERE "):
+    if (
+        not isinstance(where_sql, str)
+        or not where_sql.startswith(" WHERE ")
+    ):
         raise ValueError("El repositorio requiere un alcance explícito de actividad.")
     clauses = where_sql[7:].strip().split(" AND ")
     if (
