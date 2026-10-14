@@ -63,7 +63,7 @@ def _normalized_query_key(value: str) -> str | None:
     """Normalize encoded parameter names, rejecting keys that remain ambiguous."""
     normalized = value.lower()
     for _ in range(8):
-        if not re.search(r"%[0-9a-f]{2}", normalized, re.IGNORECASE):
+        if "%" not in normalized:
             break
         try:
             decoded = unquote_plus(normalized, errors="strict")
@@ -73,7 +73,7 @@ def _normalized_query_key(value: str) -> str | None:
             break
         normalized = decoded
     # Do not allow a deeply encoded sensitive name to evade redaction.
-    if re.search(r"%[0-9a-f]{2}", normalized, re.IGNORECASE):
+    if "%" in normalized:
         return None
     return re.sub(r"[^a-z0-9_]", "", normalized)
 
@@ -85,12 +85,12 @@ def _sensitive_path_segment(value: str) -> bool:
         try:
             expanded = unquote(decoded, errors="strict")
         except UnicodeDecodeError:
-            return bool(re.search(r"%[0-9a-f]{2}", decoded, re.IGNORECASE))
+            return "%" in decoded
         if expanded == decoded:
             break
         decoded = expanded
     # A segment still carrying valid escapes cannot be inspected reliably.
-    if re.search(r"%[0-9a-f]{2}", decoded, re.IGNORECASE):
+    if "%" in decoded:
         return True
     if _PATH_EMAIL.fullmatch(decoded) or _PATH_UUID.fullmatch(decoded):
         return True
