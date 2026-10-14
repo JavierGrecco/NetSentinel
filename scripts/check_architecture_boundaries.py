@@ -33,6 +33,11 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.findings": {
         "netsentinel.findings_service",
     },
+    "netsentinel.api.inventory": {
+        "netsentinel.database",
+        "netsentinel.local_discovery",
+        "netsentinel.dns_tools",
+    },
 }
 
 # SQLite may use a small set of shared infrastructure helpers and neutral contracts.
