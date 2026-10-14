@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa las consultas del panel y el formato de exportación de `activity_tracking.py`. Los filtros puros, el catálogo de actividad, el modelo de lectura y las consultas SQLite quedan en módulos con límites explícitos; se valida que el SQL solo reciba predicados permitidos y valores parametrizados.
+
 - Separa la importación CSV en `activity_import_service.py` y mueve la validación de retención, deduplicación y escritura atómica al repositorio SQLite. La vista previa permanece de solo lectura; se añaden pruebas del repositorio para importación idempotente y rechazo completo de lotes fuera de retención.
 
 - Conserva mensajes de DNS seguros para ayudar a diagnosticar errores y oculta cualquier detalle 5xx que no esté autorizado. Los timeouts DNS se identifican como una condición de red y no se registran como fallo interno; los pasos de diagnóstico omitidos informan correctamente que no fueron registrados.
