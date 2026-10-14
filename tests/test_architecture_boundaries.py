@@ -141,6 +141,21 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
 
 
 
+def test_monitoring_is_split_into_validation_probe_and_notification_adapters() -> None:
+    """La validación pura no importa SQLite ni los adaptadores que producen efectos."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.monitoring"] >= {
+        "netsentinel.monitoring_validation",
+        "netsentinel.monitoring_probe",
+        "netsentinel.monitoring_notifications",
+    }
+    assert graph["netsentinel.monitoring_validation"] == set()
+    assert graph["netsentinel.monitoring_notifications"] == {"netsentinel.monitoring_probe"}
+    assert "netsentinel.database" not in graph["netsentinel.monitoring_validation"]
+    assert "netsentinel.database" not in graph["netsentinel.monitoring_probe"]
+
 def test_database_facade_keeps_existing_public_operations() -> None:
     """La API interna histórica sigue disponible tras dividir los repositorios."""
     for operation in (
@@ -167,6 +182,9 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "events_repository.py",
         "dashboard_repository.py",
         "monitoring_repository.py",
+        "monitoring_validation.py",
+        "monitoring_probe.py",
+        "monitoring_notifications.py",
         "data_export_service.py",
         "monitoring_export_service.py",
         "discovery.py",
