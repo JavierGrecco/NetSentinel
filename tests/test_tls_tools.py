@@ -110,7 +110,7 @@ def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch)
         "cipher_bits": 256,
     }
     assert calls == {"address": ("example.com", 8443), "timeout": 2.5}
-    assert raw.timeout == 2.5
+    assert raw.timeout == pytest.approx(2.5)
     assert context.server_name == "example.com"
     assert "HTTP" in result["notice"]
     assert result["findings"] == []
