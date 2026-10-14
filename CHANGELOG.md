@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae 14 endpoints de monitores, analítica, tendencias de latencia, incidentes, notificaciones y diagnósticos al router `api/monitoring.py`; el ciclo de vida del supervisor sigue en `main.py`. Añade comprobaciones de rutas y dependencias arquitectónicas.
+
 - Extrae 14 endpoints de inventario y registros locales desde `main.py` al router `api/inventory.py`, incluyendo descubrimiento bajo demanda, cambios de confianza, historial y exportaciones. Conserva los contratos HTTP y agrega pruebas de rutas y dependencias permitidas.
 
 - Fortalece el guardián de arquitectura: las dependencias internas de nuevos servicios/repositorios requieren una lista explícita, SQLite solo admite un conjunto pequeño de apoyos compartidos declarados y todo módulo nuevo fuera de la API se comprueba automáticamente para evitar dependencias HTTP. Añade regresiones con módulos sintéticos para asegurar que las reglas también cubran componentes futuros.
