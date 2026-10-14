@@ -9,4 +9,7 @@ def test_diagnostic_ui_labels_timeout_as_timeout_not_skipped():
     html = DASHBOARD.read_text(encoding="utf-8")
 
     assert "c.status==='timeout'?'warn'" in html
-    assert "c.status==='timeout'?'Tiempo agotado':'Omitido'" in html
+    assert "c.status==='error'?'Error de ejecución':'Omitido'" in html
+    assert "c.error_code" in html
+    assert "Falla local registrada en el log de NetSentinel." in html
+    assert "No se registra como fallo interno" in html
