@@ -67,9 +67,10 @@ CSV_HEADER_ALIASES = {
 
 def _normalized_csv_header(value: str | None) -> str:
     raw = str(value or "").strip().lstrip(chr(0xFEFF))
-    # Provider exports commonly use camelCase fields such as receivedDateTime.
+    # Las exportaciones de proveedores suelen usar camelCase, por ejemplo receivedDateTime.
     raw = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", raw)
     return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
+
 
 def _is_sensitive_csv_header(value: str | None) -> bool:
     normalized = _normalized_csv_header(value)
@@ -78,7 +79,7 @@ def _is_sensitive_csv_header(value: str | None) -> bool:
     parts = set(normalized.split("_"))
     if parts.intersection({"body", "content", "payload", "attachment", "attachments"}):
         return True
-    # A message identifier is harmless metadata; a message/body/content column is not.
+    # Un identificador de mensaje es metadato; el cuerpo o contenido del mensaje no se importa.
     return "message" in parts and "id" not in parts and "subject" not in parts
 
 
@@ -92,6 +93,7 @@ def _canonical_csv_header(value: str | None) -> str | None:
         if normalized in aliases:
             return canonical
     return normalized
+
 
 def _now() -> datetime:
     """Devuelve la hora UTC usada para fijar la transacción de importación."""
@@ -109,8 +111,8 @@ def import_csv(
         raise ValueError("El archivo CSV supera el máximo de 1 MB.")
     reader = csv.DictReader(io.StringIO(csv_data))
     try:
-        # Accessing fieldnames reads the CSV header and can itself raise csv.Error
-        # when an input field exceeds the standard library's parser limit.
+        # Leer fieldnames también puede generar csv.Error si una cabecera supera
+        # el límite de tamaño definido por el analizador de la biblioteca estándar.
         raw_headers = list(reader.fieldnames or [])
     except csv.Error as exc:
         raise ValueError("El CSV contiene una cabecera inválida o demasiado grande.") from exc
@@ -138,8 +140,8 @@ def import_csv(
     unknown = set(effective_headers) - CSV_FIELDS
     if unknown:
         raise ValueError("Cabeceras CSV no admitidas: " + ", ".join(sorted(unknown)) + ".")
-    # Stop parsing as soon as row 1001 is reached instead of materializing an
-    # attacker-controlled number of dictionaries before applying the import cap.
+    # Detener la lectura al llegar a la fila 1001 para no cargar en memoria un
+    # número de filas no confiable antes de aplicar el límite de importación.
     raw_rows: list[dict[str, Any]] = []
     try:
         for row in reader:
