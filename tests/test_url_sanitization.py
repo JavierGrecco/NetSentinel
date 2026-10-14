@@ -36,8 +36,8 @@ from netsentinel.activity_tracking import _safe_page_url
             "https://example.com/reset/%5Bredacted%5D",
         ),
         (
-            "https://[2001:0db8:0:0:0:0:0:1]:443/docs?lang=es#top",
-            "https://[2001:db8::1]/docs?lang=es",
+            "https://[2001:4860:4860:0:0:0:0:8888]:443/docs?lang=es#top",
+            "https://[2001:4860:4860::8888]/docs?lang=es",
         ),
         (
             "https://www.google.com/search?q=private+search&lang=es",
