@@ -59,25 +59,39 @@ def _domain(value: str | None) -> str | None:
     return normalized
 
 
-def _normalized_query_key(value: str) -> str:
-    """Normalize repeatedly encoded parameter names before sensitive-key checks."""
+def _normalized_query_key(value: str) -> str | None:
+    """Normalize encoded parameter names, rejecting keys that remain ambiguous."""
     normalized = value.lower()
-    for _ in range(3):
-        decoded = unquote_plus(normalized)
+    for _ in range(8):
+        if not re.search(r"%[0-9a-f]{2}", normalized, re.IGNORECASE):
+            break
+        try:
+            decoded = unquote_plus(normalized, errors="strict")
+        except UnicodeDecodeError:
+            return None
         if decoded == normalized:
             break
         normalized = decoded
+    # Do not allow a deeply encoded sensitive name to evade redaction.
+    if re.search(r"%[0-9a-f]{2}", normalized, re.IGNORECASE):
+        return None
     return re.sub(r"[^a-z0-9_]", "", normalized)
 
 
 def _sensitive_path_segment(value: str) -> bool:
-    """Redact common high-confidence PII/token path segments, not arbitrary usernames."""
+    """Redact common PII and fail closed on paths hidden by nested encoding."""
     decoded = value
-    for _ in range(3):
-        expanded = unquote(decoded)
+    for _ in range(8):
+        try:
+            expanded = unquote(decoded, errors="strict")
+        except UnicodeDecodeError:
+            return bool(re.search(r"%[0-9a-f]{2}", decoded, re.IGNORECASE))
         if expanded == decoded:
             break
         decoded = expanded
+    # A segment still carrying valid escapes cannot be inspected reliably.
+    if re.search(r"%[0-9a-f]{2}", decoded, re.IGNORECASE):
+        return True
     if _PATH_EMAIL.fullmatch(decoded) or _PATH_UUID.fullmatch(decoded):
         return True
     if _PATH_PHONE.fullmatch(decoded) and sum(ch.isdigit() for ch in decoded) >= 10:
@@ -236,7 +250,8 @@ def _safe_page_url(value: str | None) -> str | None:
     for key, item_value in query_pairs:
         normalized_key = _normalized_query_key(key)
         if (
-            SENSITIVE_QUERY_KEY.search(normalized_key)
+            normalized_key is None
+            or SENSITIVE_QUERY_KEY.search(normalized_key)
             or normalized_key in TRACKING_QUERY_KEYS
             or normalized_key.startswith("utm_")
             or normalized_key in SEARCH_QUERY_KEYS
