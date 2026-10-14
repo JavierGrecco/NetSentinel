@@ -303,7 +303,7 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
 
     script_source = Path("src/netsentinel/static", script_asset).read_text(encoding="utf-8")
     assert script_response.status_code == 200
-    assert script_response.text == script_source
+    assert script_response.text.replace("\r\n", "\n").replace("\r", "\n") == script_source
     assert script_response.text.strip()
     policy = response.headers["content-security-policy"]
     script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
