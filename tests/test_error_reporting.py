@@ -103,3 +103,19 @@ def test_error_journal_writes_allowlisted_fields_and_rotates(monkeypatch, tmp_pa
     assert "PRIVATE_TOKEN" not in all_logs
     assert "secret body" not in all_logs
     assert (tmp_path / "netsentinel-errors.jsonl.1").exists()
+
+def test_error_journal_returns_false_when_persistence_is_unavailable(monkeypatch, tmp_path):
+    from netsentinel import error_reporting
+
+    blocked_dir = tmp_path / "not-a-file"
+    blocked_dir.mkdir()
+    monkeypatch.setattr(error_reporting, "data_dir", lambda: blocked_dir)
+    (blocked_dir / "netsentinel-errors.jsonl").mkdir()
+
+    assert error_reporting.record_error_event({
+        "error_code": "NS-500-001",
+        "category": "unexpected",
+        "severity": "error",
+        "reason": "Safe catalog reason",
+    }) is False
+
