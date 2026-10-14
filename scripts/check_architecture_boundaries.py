@@ -59,10 +59,14 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.activity_filters",
         "netsentinel.activity_repository",
     },
+    "netsentinel.activity_retention_service": {
+        "netsentinel.activity_repository",
+    },
     "netsentinel.activity_session_service": {
         "netsentinel.activity_catalog",
         "netsentinel.activity_event_service",
         "netsentinel.activity_repository",
+        "netsentinel.activity_retention_service",
         "netsentinel.database",
     },
     "netsentinel.activity_event_service": {
