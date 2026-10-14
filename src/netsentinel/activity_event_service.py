@@ -24,8 +24,10 @@ def _iso(value: datetime) -> str:
 
 
 def _parse_timestamp(value: str | None) -> str:
-    if not value:
+    if value is None or value == "":
         return _iso(_now())
+    if not isinstance(value, str):
+        raise ValueError("La fecha debe ser ISO 8601, por ejemplo 2026-10-11T18:30:00Z.")
     try:
         parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     except (TypeError, ValueError) as exc:
