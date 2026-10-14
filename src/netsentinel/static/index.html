@@ -82,7 +82,39 @@
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
   function latestLocalAddresses() { const scan=state.scans.find(item=>(item.discovery?.networks||[]).length); return new Set((scan?.discovery?.networks||[]).map(network=>network.local_address).filter(Boolean)); }
-  async function api(url, options={}) { const response=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}}); if(!response.ok){let reason=`Error HTTP ${response.status}`;try{const body=await response.json();reason=body.detail||reason;}catch{}throw new Error(reason);}return response.json(); }
+  async function api(url, options={}) {
+    let response;
+    try {
+      response=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+    } catch {
+      throw new Error('No se pudo contactar con el servidor local de NetSentinel. Código NS-CONN-001. Verificá que la aplicación siga abierta y volvé a probar. Esta falla ocurre antes de que el servidor reciba la solicitud, por lo que no queda registrada en el log del backend.');
+    }
+    let body;
+    try { body=await response.json(); }
+    catch { body=null; }
+    if(!response.ok){
+      let reason=`La solicitud falló (HTTP ${response.status}).`;
+      if(typeof body?.detail==='string') reason=body.detail;
+      else if(Array.isArray(body?.detail)){
+        reason=body.detail.map(item=>{
+          const field=Array.isArray(item.loc)?item.loc.filter(part=>part!=='body'&&part!=='query'&&part!=='path').join('.'):'';
+          const message=typeof item.msg==='string'?item.msg:'Dato inválido';
+          return field?`${field}: ${message}`:message;
+        }).join(' · ')||reason;
+      }
+      const code=typeof body?.error_code==='string'?body.error_code:null;
+      const requestId=typeof body?.request_id==='string'?body.request_id:response.headers.get('X-Request-ID');
+      const extra=[code?`Código: ${code}`:null,requestId?`Referencia: ${requestId}`:null].filter(Boolean);
+      if(extra.length) reason+=` [${extra.join(' · ')}]`;
+      if(typeof body?.next_action==='string'&&body.next_action) reason+=` Acción sugerida: ${body.next_action}`;
+      if(body?.should_log===true&&body?.registered_in_log===true) reason+=' Registro: la incidencia se guardó en netsentinel-errors.jsonl.';
+      else if(body?.should_log===true&&body?.registered_in_log===false) reason+=' Registro: no se pudo escribir netsentinel-errors.jsonl; revisá permisos y espacio en disco.';
+      else if(body?.should_log===false) reason+=' Registro: no se guarda como fallo interno porque es una validación o un rechazo previsto.';
+      throw new Error(reason);
+    }
+    if(body===null) { const requestId=response.headers.get('X-Request-ID'); throw new Error('El servidor local devolvió una respuesta que no se pudo interpretar. Código NS-CONN-002.'+(requestId?' Referencia: '+requestId+'.':'')+' Recargá el panel; si persiste, compartí el registro de la solicitud.'); }
+    return body;
+  }
   async function refresh() {
     try {
       const [summary,devices,events,scans]=await Promise.all([api('/api/summary'),api('/api/devices?q='+encodeURIComponent($('searchInput').value)),api('/api/events?limit=30'),api('/api/scans?limit=12')]);
@@ -159,7 +191,7 @@
   $('editForm').addEventListener('submit',async(event)=>{event.preventDefault();const dialog=$('editDialog');const id=dialog.dataset.deviceId;try{await api(`/api/devices/${id}`,{method:'PATCH',body:JSON.stringify({display_name:$('editName').value,notes:$('editNotes').value})});dialog.close();toast('Ficha del dispositivo actualizada.');await refresh();}catch(e){toast(e.message);}});
   $('refreshBtn').addEventListener('click',refresh);
   $('searchInput').addEventListener('input',()=>{window.clearTimeout(refresh.searchTimer);refresh.searchTimer=window.setTimeout(refresh,180);});
-  $('diagBtn').addEventListener('click',async()=>{if(!window.confirm('El diagnóstico consultará DNS para example.com y enviará ping al router (si se detecta) y a 1.1.1.1. Estas pruebas generan tráfico de salida. ¿Querés continuar?'))return;const button=$('diagBtn');button.disabled=true;button.textContent='Comprobando…';$('diagnosticsBox').innerHTML='<div class="empty">Ejecutando comprobaciones…</div>';try{const result=await api('/api/diagnostics',{method:'POST'});const a=result.assessment;const summary='<div class="check diagnosis-summary"><div class="check-top"><strong>'+escapeHtml(a.title)+'</strong><span class="pill '+(a.status==='ok'?'good':'warn')+'">'+(a.status==='ok'?'Buen resultado':'Revisar')+'</span></div><div class="check-detail">'+escapeHtml(a.summary)+'</div>'+((a.next_steps||[]).length?'<ol class="diagnosis-steps">'+a.next_steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+'</ol>':'')+'</div>';$('diagnosticsBox').innerHTML=`<div class="diagnostics">${summary}${result.checks.map(c=>`<div class="check"><div class="check-top"><span>${escapeHtml(c.name)}</span><span class="pill ${c.status==='ok'?'good':c.status==='warning'||c.status==='timeout'?'warn':'info'}">${c.status==='ok'?'Correcto':c.status==='warning'?'Revisar':c.status==='timeout'?'Tiempo agotado':'Omitido'}</span></div><div class="check-detail">${escapeHtml(c.detail)}</div></div>`).join('')}<div class="check-detail">${escapeHtml(result.notice)}</div></div>`;}catch(e){$('diagnosticsBox').innerHTML=`<div class="empty">${escapeHtml(e.message)}</div>`;}finally{button.disabled=false;button.textContent='◉ Diagnóstico';}});
+  $('diagBtn').addEventListener('click',async()=>{if(!window.confirm('El diagnóstico consultará DNS para example.com y enviará ping al router (si se detecta) y a 1.1.1.1. Estas pruebas generan tráfico de salida. ¿Querés continuar?'))return;const button=$('diagBtn');button.disabled=true;button.textContent='Comprobando…';$('diagnosticsBox').innerHTML='<div class="empty">Ejecutando comprobaciones…</div>';try{const result=await api('/api/diagnostics',{method:'POST'});const a=result.assessment;const summary='<div class="check diagnosis-summary"><div class="check-top"><strong>'+escapeHtml(a.title)+'</strong><span class="pill '+(a.status==='ok'?'good':'warn')+'">'+(a.status==='ok'?'Buen resultado':'Revisar')+'</span></div><div class="check-detail">'+escapeHtml(a.summary)+'</div>'+((a.next_steps||[]).length?'<ol class="diagnosis-steps">'+a.next_steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+'</ol>':'')+'</div>';$('diagnosticsBox').innerHTML=`<div class="diagnostics">${summary}${result.checks.map(c=>`<div class="check"><div class="check-top"><span>${escapeHtml(c.name)}</span><span class="pill ${c.status==='ok'?'good':c.status==='error'||c.status==='warning'||c.status==='timeout'?'warn':'info'}">${c.status==='ok'?'Correcto':c.status==='warning'?'Revisar':c.status==='timeout'?'Tiempo agotado':c.status==='error'?'Error de ejecución':'Omitido'}</span></div><div class="check-detail">${escapeHtml(c.detail)}</div>${c.error_code?'<div class="check-detail"><strong>'+escapeHtml(c.error_code)+'</strong> · '+(c.should_log?(c.logged?'Falla local registrada en netsentinel-errors.jsonl.':'No se pudo guardar el registro local; revisá permisos y espacio en disco.'):'No se registra como fallo interno: es un resultado de entorno/red o una prueba sin respuesta.')+'</div>':''}</div>`).join('')}<div class="check-detail">${escapeHtml(result.notice)}${result.request_id?' Referencia: '+escapeHtml(result.request_id)+'.':''}</div></div>`;}catch(e){$('diagnosticsBox').innerHTML=`<div class="empty">${escapeHtml(e.message)}</div>`;}finally{button.disabled=false;button.textContent='◉ Diagnóstico';}});
   api('/api/health').then(info=>{ $('appVersion').textContent='NetSentinel v'+info.version+' · Datos guardados en tu computadora'; }).catch(()=>{});
   refresh();
 </script>

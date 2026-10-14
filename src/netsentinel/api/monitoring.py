@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -151,5 +151,6 @@ def notifications(limit: int = Query(default=50, ge=1, le=200)) -> dict:
 
 
 @router.post("/api/diagnostics")
-def diagnostics() -> dict:
-    return run_diagnostics()
+def diagnostics(request: Request) -> dict:
+    request_id = getattr(request.state, "request_id", None)
+    return run_diagnostics(request_id=request_id)
