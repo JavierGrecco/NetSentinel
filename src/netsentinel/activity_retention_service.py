@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import sqlite3
 from typing import Any
 
-from . import activity_repository, database
+from . import activity_repository
 
 
 MIN_RETENTION_DAYS = 1
