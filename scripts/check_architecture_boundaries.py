@@ -55,6 +55,10 @@ DATABASE_ALLOWED_INTERNAL_IMPORTS = {
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.activity_event_service": {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_privacy",
+    },
     # El servicio coordina evidencia y llama al formateador puro. No depende del transporte.
     "netsentinel.activity_read_service": {
         "netsentinel.activity_catalog",
