@@ -279,14 +279,39 @@ async def handle_request_validation_error(request: Request, exc: RequestValidati
     )
 
 
+# Mensajes propios y revisados que pueden conservarse para errores DNS conocidos.
+# Cualquier detalle 5xx que no esté en esta lista se reemplaza por un mensaje genérico.
+_DNS_TIMEOUT_DETAIL = "El resolvedor DNS no respondió a tiempo; probá nuevamente."
+_SAFE_HTTP_5XX_DETAILS = {
+    502: frozenset({
+        "No se pudo resolver el nombre con el DNS configurado en el sistema.",
+        "No se pudo obtener un registro PTR con el DNS configurado en el sistema.",
+        "El resolvedor DNS devolvió un error.",
+        "El resolvedor DNS devolvió un error al consultar PTR.",
+        "No se pudo iniciar una consulta limitada al resolvedor del sistema.",
+    }),
+    503: frozenset({_DNS_TIMEOUT_DETAIL}),
+}
+
+
 @app.exception_handler(StarletteHTTPException)
 async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    """Attach stable error metadata without logging expected client-side rejections."""
+    """Añade referencias y códigos sin revelar texto arbitrario de errores del servidor."""
     code, next_action = describe_http_error(exc.status_code)
     request_id = _request_id(request)
-    registered = False
     safe_path = getattr(request.scope.get("route"), "path", "<unmatched-route>")
-    if exc.status_code >= 500:
+
+    # Un timeout del resolvedor es una condición de red esperable, no necesariamente
+    # un fallo del programa. Conservamos su mensaje conocido y no lo registramos como
+    # un error interno; otros errores 5xx siguen la política normal de registro.
+    is_dns_timeout = (
+        exc.status_code == 503
+        and isinstance(exc.detail, str)
+        and exc.detail == _DNS_TIMEOUT_DETAIL
+    )
+    should_log = exc.status_code >= 500 and not is_dns_timeout
+    registered = False
+    if should_log:
         registered = record_error_event({
             "error_code": code,
             "request_id": request_id,
@@ -301,17 +326,19 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
             "HTTP server failure code=%s request_id=%s status=%s method=%s path=%s persisted=%s",
             code, request_id, exc.status_code, request.method, safe_path, registered,
         )
-    # An explicit HTTP 5xx detail may contain exception text or secrets. Keep
-    # server-error payloads fixed and actionable; preserve expected 4xx details.
+
     safe_detail = exc.detail
     if exc.status_code >= 500:
-        safe_detail = {
-            502: "La comprobación externa no pudo completarse.",
-            503: "El servicio todavía no está disponible temporalmente.",
-        }.get(
-            exc.status_code,
-            "NetSentinel no pudo completar la operación por un error interno.",
-        )
+        allowed_details = _SAFE_HTTP_5XX_DETAILS.get(exc.status_code, frozenset())
+        if not isinstance(exc.detail, str) or exc.detail not in allowed_details:
+            safe_detail = {
+                502: "La comprobación externa no pudo completarse.",
+                503: "El servicio todavía no está disponible temporalmente.",
+            }.get(
+                exc.status_code,
+                "NetSentinel no pudo completar la operación por un error interno.",
+            )
+
     return _error_response(
         request,
         status_code=exc.status_code,
@@ -320,7 +347,7 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
             "error_code": code,
             "request_id": request_id,
             "next_action": next_action,
-            "should_log": exc.status_code >= 500,
+            "should_log": should_log,
             "registered_in_log": registered,
         },
         headers=dict(exc.headers or {}),
