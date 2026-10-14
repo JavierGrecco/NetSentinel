@@ -92,7 +92,11 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         assert client.get("/api/scans").json()[0]["devices_found"] == 1
         device = client.get("/api/devices").json()[0]
         assert client.get(f"/api/devices/{device['id']}/addresses").json()[0]["ip_address"] == "192.168.5.2"
-        assert client.get("/api/devices/999/addresses").status_code == 404
+        missing = client.get("/api/devices/999/addresses")
+        assert missing.status_code == 404
+        assert missing.json()["error_code"] == "NS-HTTP-404"
+        assert missing.json()["request_id"] == missing.headers["x-request-id"]
+        assert missing.json()["registered_in_log"] is False
 
 
 def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
