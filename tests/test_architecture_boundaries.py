@@ -33,7 +33,32 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
-    assert graph["netsentinel.activity_repository"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_deletion_repository",
+        "netsentinel.activity_import_repository",
+        "netsentinel.activity_read_repository",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+        "netsentinel.activity_session_repository",
+    }
+    assert graph["netsentinel.activity_repository_support"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_retention_repository"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_session_repository"] == set()
+    assert graph["netsentinel.activity_import_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    }
+    assert graph["netsentinel.activity_deletion_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+    }
+    assert graph["netsentinel.activity_read_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    }
     assert "netsentinel.activity_repository" not in graph["netsentinel.activity_tracking"]
     assert "netsentinel.database" not in graph["netsentinel.activity_tracking"]
     assert graph["netsentinel.activity_retention_service"] == {"netsentinel.activity_repository"}
@@ -99,6 +124,12 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "activity_filters.py",
         "activity_read_service.py",
         "activity_repository.py",
+        "activity_repository_support.py",
+        "activity_retention_repository.py",
+        "activity_session_repository.py",
+        "activity_import_repository.py",
+        "activity_deletion_repository.py",
+        "activity_read_repository.py",
         "network_models.py",
     }
     for name in expected:

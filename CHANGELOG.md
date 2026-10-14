@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Divide la persistencia SQLite de actividad en repositorios para retención, sesiones, importaciones, borrado y lectura. Mantiene `activity_repository.py` como fachada compatible y amplía las pruebas automáticas que vigilan las dependencias entre módulos.
+
 - Hace que la lectura de preferencias de seguimiento falle de forma segura: solo acepta booleanos reales para activar el registro y las opciones de captura; valores persistidos como texto ("false"/"true") u otros tipos se deshabilitan en lugar de evaluarse como truthy. Añade pruebas en el service worker y popup.
 
 - Mejora el diagnóstico del popup: las fallas al cargar, guardar, exportar o borrar muestran un mensaje comprensible y registran en consola solo la operación y el tipo de error, sin exponer URLs, búsquedas ni registros. Además, la retención al guardar vuelve a validar valores inesperados en la interfaz.

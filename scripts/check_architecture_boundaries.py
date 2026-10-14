@@ -90,9 +90,33 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
 }
 
 REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
-    # El repositorio de actividad solo usa la fábrica SQLite compartida.
+    # Fachada histórica: expone las operaciones de los repositorios especializados.
     "netsentinel.activity_repository": {
         "netsentinel.database",
+        "netsentinel.activity_deletion_repository",
+        "netsentinel.activity_import_repository",
+        "netsentinel.activity_read_repository",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+        "netsentinel.activity_session_repository",
+    },
+    "netsentinel.activity_retention_repository": {
+        "netsentinel.database",
+    },
+    "netsentinel.activity_session_repository": set(),
+    "netsentinel.activity_import_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    },
+    "netsentinel.activity_deletion_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+    },
+    "netsentinel.activity_read_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
     },
 }
 
