@@ -94,7 +94,7 @@ def test_dns_resolver_rejects_failed_child_response(monkeypatch):
     addresses, error = diagnostics._resolve_hostname("example.com")
 
     assert addresses == []
-    assert error == "error"
+    assert error == "name_resolution_failed"
 
 
 def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
@@ -104,3 +104,52 @@ def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
     assert result["title"] == "La consulta DNS tardó demasiado"
     assert "no confirma una avería permanente" in result["summary"]
     assert any("No cambies" in step for step in result["next_steps"])
+
+def test_diagnostic_command_failures_have_stable_codes_and_logging_policy(monkeypatch):
+    from netsentinel import diagnostics
+
+    logged = []
+
+    def missing_command(command, **kwargs):
+        raise FileNotFoundError(command[0])
+
+    monkeypatch.setattr(diagnostics.subprocess, "run", missing_command)
+    monkeypatch.setattr(diagnostics.logger, "warning", lambda *args, **kwargs: logged.append(args))
+
+    result = diagnostics.run_diagnostics()
+    assert len(result["checks"]) == 4
+    failures = [check for check in result["checks"] if "error_code" in check]
+    assert failures
+    assert all(check["error_code"].startswith("NS-DIAG-") for check in failures)
+    assert any(check["logged"] for check in failures)
+    assert logged
+    assert all("detail" in check for check in failures)
+
+
+def test_ping_nonresponse_is_mapped_but_not_logged_as_program_failure(monkeypatch):
+    from netsentinel import diagnostics
+
+    monkeypatch.setattr(diagnostics.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(diagnostics, "_find_default_gateway_result", lambda: ("192.168.1.1", None))
+    monkeypatch.setattr(
+        diagnostics,
+        "_run_diagnostic",
+        lambda command, timeout=3.0: (
+            subprocess.CompletedProcess(command, 1, stdout="", stderr=""),
+            "nonzero_exit",
+        ),
+    )
+    logged = []
+    monkeypatch.setattr(diagnostics.logger, "warning", lambda *args, **kwargs: logged.append(args))
+    monkeypatch.setattr(diagnostics, "_resolve_hostname", lambda hostname, timeout=3.0: (["93.184.216.34"], None))
+
+    result = diagnostics.run_diagnostics()
+    router = next(check for check in result["checks"] if check["name"] == "Respuesta del router")
+    external = next(check for check in result["checks"] if check["name"] == "Conectividad IP externa")
+
+    assert router["error_code"] == "NS-DIAG-ROUTER-005"
+    assert external["error_code"] == "NS-DIAG-EXT-005"
+    assert router["logged"] is False
+    assert external["logged"] is False
+    assert not logged
+
