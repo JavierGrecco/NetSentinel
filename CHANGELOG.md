@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae la vista previa y el borrado selectivo a `activity_deletion_service.py`; preserva las respuestas y firmas públicas, valida la confirmación antes de escribir y agrega pruebas de delegación, rechazo de confirmaciones inválidas y errores por recuentos desactualizados.
+
 - Separa el ciclo de vida de sesiones e ingestión de eventos en `activity_session_service.py`. La sesión comprueba su fuente, ventana de tiempo y token; solo almacena el hash del token y rechaza eventos fuera de retención o posteriores al cierre. La fachada pública se mantiene y se agregan pruebas directas de regresión.
 
 - Extrae la validación y normalización de eventos a `activity_event_service.py`, dejando en `activity_tracking.py` una capa de coordinación y compatibilidad. Añade pruebas específicas de validación de fechas, IPs, fuentes y valores de control y registra las dependencias permitidas en el guardián arquitectónico.
