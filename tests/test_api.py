@@ -289,11 +289,11 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
         script_response = client.get(f"/static/{script_asset}")
 
     assert response.status_code == 200
-    assert response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n") == Path(
+    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
         "src/netsentinel/static", html_asset
     ).read_text(encoding="utf-8")
     scripts = list(re.finditer(
-        r"<script\\b([^>]*)>(.*?)</script\\s*>",
+        r"<script\b([^>]*)>(.*?)</script\s*>",
         response.text,
         flags=re.IGNORECASE | re.DOTALL,
     ))
