@@ -36,6 +36,15 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.activity_repository"] == {"netsentinel.database"}
     assert "netsentinel.activity_repository" in graph["netsentinel.activity_tracking"]
     assert "netsentinel.activity_import_service" in graph["netsentinel.activity_tracking"]
+    assert "netsentinel.activity_read_service" in graph["netsentinel.activity_tracking"]
+    assert graph["netsentinel.activity_catalog"] == set()
+    assert graph["netsentinel.activity_filters"] == {"netsentinel.activity_catalog"}
+    assert graph["netsentinel.activity_read_service"] == {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_filters",
+        "netsentinel.activity_repository",
+        "netsentinel.csv_safety",
+    }
     assert graph["netsentinel.activity_import_service"] == {"netsentinel.activity_repository"}
     assert "netsentinel.activity_privacy" in graph["netsentinel.activity_tracking"]
     assert graph["netsentinel.activity_privacy"] == set()
@@ -59,6 +68,9 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "activity_tracking.py",
         "activity_import_service.py",
         "activity_privacy.py",
+        "activity_catalog.py",
+        "activity_filters.py",
+        "activity_read_service.py",
         "activity_repository.py",
         "network_models.py",
     }
