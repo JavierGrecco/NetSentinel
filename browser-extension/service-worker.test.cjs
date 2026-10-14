@@ -30,6 +30,7 @@ const {
   EVENTS_KEY,
   MAX_EVENTS,
   normalizeRetentionDays,
+  normalizeStoredBoolean,
   captureNavigation,
   cleanUrl,
   isExcluded,
@@ -416,4 +417,45 @@ test("loadState and navigation safely discard malformed stored event records", a
     persisted.map(event => event.page_url),
     ["https://example.com/retained", "https://example.net/new-event"]
   );
+});
+
+
+test("stored capture switches require booleans and fail closed on corrupted values", async () => {
+  const activeEvent = {
+    event_type: "page_visit",
+    observed_at: new Date().toISOString(),
+    page_url: "https://example.com/should-not-capture"
+  };
+
+  for (const invalidEnabled of ["false", "true", "0", 1, {}, []]) {
+    setState(enabledSettings({ enabled: invalidEnabled }), [activeEvent]);
+    const state = await loadState();
+    assert.equal(state.settings.enabled, false, "malformed enabled flag must not turn tracking on");
+    await captureNavigation({
+      frameId: 0, tabId: 909, url: "https://example.net/private", timeStamp: Date.now()
+    });
+    assert.deepEqual(mockStore[EVENTS_KEY], [activeEvent], "navigation must not write while the opt-in flag is corrupt");
+  }
+
+  for (const flag of ["capturePages", "captureSearches"]) {
+    for (const invalidValue of ["false", "true", 1, {}, []]) {
+      setState(enabledSettings({ [flag]: invalidValue }), []);
+      const state = await loadState();
+      assert.equal(state.settings[flag], false, flag + " with corrupt storage must be disabled");
+    }
+  }
+});
+
+test("missing stored switches keep documented defaults and the boolean helper is strict", async () => {
+  setState({});
+  const state = await loadState();
+  assert.equal(state.settings.enabled, false);
+  assert.equal(state.settings.capturePages, true);
+  assert.equal(state.settings.captureSearches, true);
+
+  assert.equal(normalizeStoredBoolean({ enabled: true }, "enabled", false), true);
+  assert.equal(normalizeStoredBoolean({ enabled: false }, "enabled", true), false);
+  assert.equal(normalizeStoredBoolean({}, "enabled", false), false);
+  assert.equal(normalizeStoredBoolean({ enabled: "true" }, "enabled", false), false);
+  assert.equal(normalizeStoredBoolean({ enabled: "false" }, "enabled", true), false);
 });

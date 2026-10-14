@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const manifest = require("./manifest.json");
-const { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState, render, saveSettings } = require("./popup.js");
+const { DEFAULTS, normalizeRetentionDays, normalizeStoredBoolean, escapeCsv, buildCsv, getState, render, saveSettings } = require("./popup.js");
 
 test("popup remains opt-in and manifest uses the narrow MV3 permission set", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -310,4 +310,47 @@ test("popup reports settings-write failures without leaking exception details", 
     if (previousChrome === undefined) delete global.chrome;
     else global.chrome = previousChrome;
   }
+});
+
+
+test("popup treats malformed stored capture switches as disabled, never truthy strings", async () => {
+  const previousChrome = global.chrome;
+  const settingsKey = "netsentinelSettings";
+  const eventsKey = "netsentinelEvents";
+  global.chrome = {
+    storage: {
+      local: {
+        async get() {
+          return {
+            [settingsKey]: {
+              enabled: "false",
+              capturePages: "false",
+              captureSearches: "true",
+              retentionDays: 7
+            },
+            [eventsKey]: []
+          };
+        },
+        async set() { throw new Error("getState must remain read-only"); }
+      }
+    }
+  };
+  try {
+    const state = await getState();
+    assert.equal(state.settings.enabled, false);
+    assert.equal(state.settings.capturePages, false);
+    assert.equal(state.settings.captureSearches, false);
+  } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+test("popup boolean normalization preserves defaults only for missing settings", () => {
+  assert.equal(normalizeStoredBoolean({}, "capturePages", true), true);
+  assert.equal(normalizeStoredBoolean({}, "enabled", false), false);
+  assert.equal(normalizeStoredBoolean({ capturePages: false }, "capturePages", true), false);
+  assert.equal(normalizeStoredBoolean({ capturePages: "false" }, "capturePages", true), false);
+  assert.equal(normalizeStoredBoolean({ enabled: "true" }, "enabled", false), false);
+  assert.equal(normalizeStoredBoolean({ enabled: true }, "enabled", false), true);
 });

@@ -27,6 +27,13 @@ function normalizeRetentionDays(value) {
   if (!Number.isSafeInteger(parsed)) return DEFAULTS.retentionDays;
   return Math.max(1, Math.min(90, parsed));
 }
+function normalizeStoredBoolean(settings, key, fallback) {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
+  if (!Object.prototype.hasOwnProperty.call(settings, key)) return fallback;
+  // Only real booleans are trusted. Malformed persisted values fail closed so
+  // strings like "false" cannot accidentally enable browser tracking.
+  return typeof settings[key] === "boolean" ? settings[key] : false;
+}
 function isRetainedEvent(event, cutoff) {
   // Storage can contain stale or malformed records. Reject them before UI or
   // navigation code reads their fields; keep valid records inside the window.
@@ -226,9 +233,15 @@ function searchInfo(url) {
 }
 async function loadState() {
   const stored = await chrome.storage.local.get([SETTINGS_KEY, EVENTS_KEY]);
-  const raw = stored[SETTINGS_KEY] || {};
+  const savedSettings = stored[SETTINGS_KEY];
+  const raw = savedSettings && typeof savedSettings === "object" && !Array.isArray(savedSettings)
+    ? savedSettings
+    : {};
   const settings = {
     ...DEFAULTS, ...raw,
+    enabled: normalizeStoredBoolean(raw, "enabled", DEFAULTS.enabled),
+    capturePages: normalizeStoredBoolean(raw, "capturePages", DEFAULTS.capturePages),
+    captureSearches: normalizeStoredBoolean(raw, "captureSearches", DEFAULTS.captureSearches),
     retentionDays: normalizeRetentionDays(raw.retentionDays),
     excludeDomains: Array.isArray(raw.excludeDomains) ? raw.excludeDomains.map(normalizedDomain).filter(Boolean).slice(0, 100) : []
   };
@@ -327,6 +340,7 @@ if (typeof module !== "undefined" && module.exports) {
     MAX_EVENTS,
     normalizedDomain,
     normalizeRetentionDays,
+    normalizeStoredBoolean,
     privateOrLocalHost,
     isExcluded,
     normalizedQueryKey,
