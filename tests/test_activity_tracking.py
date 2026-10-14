@@ -332,6 +332,35 @@ def test_csv_preview_rejects_message_content_and_unknown_columns(client):
     assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
 
 
+
+@pytest.mark.parametrize(
+    "private_url",
+    [
+        "http://192.168.1.1/admin",
+        "https://router.local/status",
+        "http://[::1]/",
+        "https://[::ffff:192.168.1.1]/admin",
+        "https://[2001:db8::1]/docs",
+    ],
+)
+def test_csv_import_rejects_non_public_navigation_urls(client, private_url):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+    csv_data = (
+        "observed_at,event_type,page_url\\n"
+        f"{stamp},page_visit,{private_url}\\n"
+    )
+
+    response = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+
+    assert response.status_code == 422
+    assert "destinos locales, privados o de uso especial" in response.json()["detail"]
+    assert client.get("/api/activity").json()["events"] == []
+
+
 def test_browser_csv_import_captures_page_urls_and_search_queries_safely(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
