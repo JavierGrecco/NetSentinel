@@ -104,9 +104,13 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
     if port in ("", None):
         port = None
     else:
+        # No truncar flotantes ni convertir True en el puerto 1. Las cadenas
+        # enteras se conservan por compatibilidad con CSV y fuentes antiguas.
+        if isinstance(port, bool) or not isinstance(port, (int, str)):
+            raise ValueError("destination_port debe ser un entero entre 1 y 65535.")
         try:
             port = int(port)
-        except (ValueError, TypeError) as exc:
+        except (ValueError, TypeError, OverflowError) as exc:
             raise ValueError("destination_port debe ser un entero entre 1 y 65535.") from exc
         if not 1 <= port <= 65535:
             raise ValueError("destination_port debe ser un entero entre 1 y 65535.")
@@ -132,8 +136,16 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         if normalized_blocked not in {"", "0", "1", "true", "false", "yes", "no"}:
             raise ValueError("blocked debe ser verdadero o falso.")
         blocked = normalized_blocked in {"1", "true", "yes"}
-    else:
+    elif isinstance(blocked_value, bool):
+        blocked = blocked_value
+    elif isinstance(blocked_value, int) and blocked_value in (0, 1):
         blocked = bool(blocked_value)
+    elif blocked_value is None:
+        blocked = False
+    else:
+        # Evita que valores truthy como 2, 0.5, listas o diccionarios se
+        # conviertan silenciosamente en un indicador de bloqueo.
+        raise ValueError("blocked debe ser verdadero o falso.")
     return {
         "observed_at": _parse_timestamp(payload.get("observed_at")),
         "event_type": event_type,
