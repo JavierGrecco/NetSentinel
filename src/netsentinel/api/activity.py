@@ -31,7 +31,7 @@ class ActivityEventIngest(BaseModel):
     observed_at: str | None = Field(default=None, max_length=64)
     domain: str | None = Field(default=None, max_length=253)
     destination_ip: str | None = Field(default=None, max_length=64)
-    destination_port: int | None = Field(default=None, ge=1, le=65535)
+    destination_port: int | None = Field(default=None, ge=1, le=65535, strict=True)
     protocol: str | None = Field(default=None, max_length=16)
     app_name: str | None = Field(default=None, max_length=100)
     page_url: str | None = Field(default=None, max_length=4096)
@@ -50,7 +50,7 @@ class ActivityCSVImport(BaseModel):
 
 
 class ActivityRetentionUpdate(BaseModel):
-    retention_days: int = Field(ge=1, le=90)
+    retention_days: int = Field(ge=1, le=90, strict=True)
 
 
 class ActivityDeleteSelection(BaseModel):
