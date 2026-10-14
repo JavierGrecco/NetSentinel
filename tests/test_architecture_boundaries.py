@@ -180,9 +180,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert len(routes) == 14
-    # Two paths intentionally serve more than one HTTP method.
-    assert len(paths) == 12
+    assert len(paths) == 14
 
 
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
@@ -216,14 +214,16 @@ def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
         "/api/notifications",
         "/api/diagnostics",
     } <= paths
-    assert len(paths) == 14
+    assert len(routes) == 14
+    # Two paths intentionally serve more than one HTTP method.
+    assert len(paths) == 12
 
 
 def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
     """El router de monitorización se limita a persistencia y servicios de dominio."""
     root = Path(__file__).resolve().parents[1]
     violations, graph = check_architecture(root)
-    assert not violations, "\\n".join(violations)
+    assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.monitoring"] == {
         "netsentinel.database",
         "netsentinel.diagnostics",
