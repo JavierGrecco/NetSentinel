@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from . import activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, activity_session_service, database
+from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, activity_session_service, database
 from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
 from .activity_session_service import InvalidCollectorToken
 from .activity_privacy import _domain, _email_address_list, _safe_page_url
@@ -116,22 +116,14 @@ def preview_delete_activity(
     to_date: str | None = None,
     source: str | None = None,
 ) -> dict[str, Any]:
-    """Count matching activity rows without writing or running retention cleanup."""
-    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date, source)
-    count = activity_repository.count_activity_scope(
-        where_sql, params, device_id=device_id
+    """Conserva la API histórica y delega la vista previa al servicio de borrado."""
+    return activity_deletion_service.preview_delete_activity(
+        device_id=device_id,
+        event_type=event_type,
+        from_date=from_date,
+        to_date=to_date,
+        source=source,
     )
-    return {
-        "device_id": device_id,
-        "event_type": event_type or None,
-        "from_date": from_date or None,
-        "to_date": to_date or None,
-        "source": source or None,
-        "matching_events": count,
-        "confirmation_required": f"BORRAR {count}",
-        "deleted": False,
-        "note": "Vista previa únicamente: no se borró ningún evento.",
-    }
 
 
 def delete_activity(
@@ -142,23 +134,15 @@ def delete_activity(
     confirmation: str,
     source: str | None = None,
 ) -> dict[str, Any]:
-    """Delete only a scoped selection after matching the exact current count."""
-    where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date, source)
-    if not isinstance(confirmation, str) or len(confirmation) > 40:
-        raise PermissionError("La frase de confirmación no es válida.")
-
-    deleted = activity_repository.delete_activity_scope(
-        where_sql, params, device_id=device_id, confirmation=confirmation
+    """Conserva la firma pública y delega el borrado con confirmación exacta."""
+    return activity_deletion_service.delete_activity(
+        device_id=device_id,
+        event_type=event_type,
+        from_date=from_date,
+        to_date=to_date,
+        confirmation=confirmation,
+        source=source,
     )
-    return {
-        "deleted_events": deleted,
-        "device_id": device_id,
-        "event_type": event_type or None,
-        "from_date": from_date or None,
-        "to_date": to_date or None,
-        "source": source or None,
-        "note": "Se borraron únicamente los eventos que coincidían con el alcance confirmado.",
-    }
 
 
 def export_activity_csv(
