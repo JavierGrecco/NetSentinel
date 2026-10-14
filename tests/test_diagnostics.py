@@ -158,3 +158,27 @@ def test_ping_nonresponse_is_mapped_but_not_logged_as_program_failure(monkeypatc
     assert external["logged"] is False
     assert not logged
 
+def test_diagnostic_codes_propagate_request_reference_and_log_result(monkeypatch, tmp_path):
+    from netsentinel import diagnostics
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(diagnostics, "_find_default_gateway_result", lambda: (None, "command_unavailable"))
+    monkeypatch.setattr(diagnostics, "_resolve_hostname", lambda hostname, timeout=3.0: ([], "timeout"))
+    monkeypatch.setattr(
+        diagnostics,
+        "_run_diagnostic",
+        lambda command, timeout=3.0: (None, "timeout"),
+    )
+
+    result = diagnostics.run_diagnostics(request_id="ABCDEF012345")
+    assert result["request_id"] == "ABCDEF012345"
+    route = next(check for check in result["checks"] if check["name"] == "Puerta de enlace")
+    dns = next(check for check in result["checks"] if check["name"] == "Resolución DNS")
+    assert route["logged"] is True
+    assert route["should_log"] is True
+    assert dns["logged"] is False
+    assert dns["should_log"] is False
+    stored = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
+    assert "ABCDEF012345" in stored
+    assert "example.com" not in stored
+
