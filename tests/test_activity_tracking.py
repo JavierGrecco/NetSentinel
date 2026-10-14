@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from netsentinel import database
+from netsentinel import activity_tracking, database
 from netsentinel.discovery import Neighbor
 from netsentinel.main import app
 
@@ -846,3 +846,30 @@ def test_csv_import_rejects_entire_batch_if_any_row_is_expired(client):
     assert response.status_code == 422
     assert "Fila 3" in response.json()["detail"]
     assert client.get(f"/api/activity?device_id={selected}").json()["events"] == []
+
+
+@pytest.mark.parametrize(
+    ("address", "expected"),
+    [
+        ("192.0.2.15", "192.0.2.15"),
+        ("2001:0db8:0:0:0:0:0:1", "2001:db8::1"),
+    ],
+)
+def test_normalize_event_canonicalizes_destination_ip(address, expected):
+    """Las direcciones IPv4 e IPv6 válidas se normalizan sin fallar por un import ausente."""
+    event = activity_tracking.normalize_event({
+        "event_type": "connection",
+        "source": "router_flow",
+        "destination_ip": address,
+    })
+    assert event["destination_ip"] == expected
+
+
+def test_normalize_event_reports_invalid_destination_ip():
+    """Una IP inválida debe producir un error de validación claro, no NameError."""
+    with pytest.raises(ValueError, match="destination_ip debe ser una dirección"):
+        activity_tracking.normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "not-an-ip",
+        })
