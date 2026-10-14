@@ -376,6 +376,7 @@ async def protect_local_app(request: Request, call_next):
                 "error_code": "NS-HTTP-400",
                 "request_id": request_id,
                 "next_action": "Abrí NetSentinel usando la dirección local indicada por la aplicación.",
+                "should_log": False,
                 "registered_in_log": False,
             },
         )
@@ -397,6 +398,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Iniciá la consulta desde el panel local de NetSentinel.",
+                    "should_log": False,
                     "registered_in_log": False,
                 },
             )
@@ -416,6 +418,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Iniciá la operación desde el panel local de NetSentinel.",
+                    "should_log": False,
                     "registered_in_log": False,
                 },
             )
@@ -429,6 +432,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Recargá el panel local y volvé a intentar la operación desde allí.",
+                    "should_log": False,
                     "registered_in_log": False,
                 },
             )
