@@ -92,3 +92,49 @@ def test_blocked_field_rejects_ambiguous_strings(value):
             "destination_ip": "192.0.2.15",
             "blocked": value,
         })
+
+@pytest.mark.parametrize("value", [80.5, 443.0, True, False, [], {}, object()])
+def test_destination_port_rejects_coercible_non_integer_values(value):
+    with pytest.raises(ValueError, match="destination_port debe ser un entero"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "destination_port": value,
+        })
+
+
+@pytest.mark.parametrize("value", [2, -1, 2.0, 1.0, [], {}, object()])
+def test_blocked_field_rejects_non_boolean_non_binary_values(value):
+    with pytest.raises(ValueError, match="blocked debe ser verdadero o falso"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked": value,
+        })
+
+
+@pytest.mark.parametrize("value, expected", [
+    (True, 1), (False, 0), (1, 1), (0, 0),
+    ("true", 1), ("YES", 1), ("false", 0), ("0", 0), ("", 0), (None, 0),
+])
+def test_blocked_field_accepts_explicit_boolean_representations(value, expected):
+    event = normalize_event({
+        "event_type": "connection",
+        "source": "router_flow",
+        "destination_ip": "192.0.2.15",
+        "blocked": value,
+    })
+    assert event["blocked"] == expected
+
+
+@pytest.mark.parametrize("value, expected", [(80, 80), ("443", 443), (" 53 ", 53)])
+def test_destination_port_preserves_integer_and_csv_text_compatibility(value, expected):
+    event = normalize_event({
+        "event_type": "connection",
+        "source": "router_flow",
+        "destination_ip": "192.0.2.15",
+        "destination_port": value,
+    })
+    assert event["destination_port"] == expected
