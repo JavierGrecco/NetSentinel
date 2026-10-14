@@ -12,9 +12,6 @@ from threading import Event, Thread, current_thread
 from typing import Any
 
 from . import database
-
-logger = logging.getLogger(__name__)
-
 from .monitoring_validation import (
     MAX_INTERVAL_SECONDS,
     MAX_TIMEOUT_SECONDS,
@@ -26,6 +23,9 @@ from .monitoring_validation import (
 )
 from .monitoring_probe import _NoRedirectHandler, _NO_REDIRECT_OPENER, _probe_direct
 from .monitoring_notifications import _WEBHOOK_TOTAL_TIMEOUT_SECONDS, _send_webhook_direct
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_MONITOR_HISTORY_DAYS = 90
 MAX_MONITOR_HISTORY_DAYS = 3650
@@ -65,24 +65,6 @@ def monitor_history_retention_days() -> int | None:
         )
         return None
     return days
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 _PROBE_CHILD_SCRIPT = """
 import json
@@ -171,13 +153,6 @@ def probe(kind: str, target: str, timeout_seconds: int) -> dict[str, Any]:
     if isinstance(elapsed_child, (int, float)) and not isinstance(elapsed_child, bool):
         output["elapsed_ms"] = max(0.0, min(float(elapsed_child), 600_000.0))
     return output
-
-
-
-
-
-
-
 
 _WEBHOOK_CHILD_SCRIPT = """
 import json
