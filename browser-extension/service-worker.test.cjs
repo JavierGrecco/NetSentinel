@@ -473,7 +473,9 @@ test("removes deeply encoded sensitive query keys and does not preserve unresolv
     cleanUrl("https://example.com/profile?%25FF=must-not-persist&lang=es"),
     "https://example.com/profile?lang=es"
   );
-  assert.equal(normalizedQueryKey("%2525252525255F"), null, "unresolved nested encoding must be treated as suspicious");
+  let unresolvedEscape = "%5F";
+  for (let i = 0; i < 10; i++) unresolvedEscape = encodeURIComponent(unresolvedEscape);
+  assert.equal(normalizedQueryKey(unresolvedEscape), null, "unresolved nested encoding must be treated as suspicious");
 });
 
 test("redacts identifiers that remain hidden by deep encoding in URL path segments", () => {
