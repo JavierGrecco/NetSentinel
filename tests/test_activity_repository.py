@@ -230,3 +230,82 @@ def test_activity_scope_repository_checks_bounds_and_confirmation(monkeypatch, t
         where_sql, params, device_id=device_id
     ) == 0
 
+
+
+def _manual_event(now: datetime, domain: str) -> dict:
+    """Crea un evento ya normalizado para probar la frontera de persistencia."""
+    return {
+        "observed_at": _iso(now),
+        "event_type": "dns_query",
+        "source": "manual_import",
+        "domain": domain,
+        "destination_ip": None,
+        "destination_port": None,
+        "protocol": None,
+        "app_name": None,
+        "page_url": None,
+        "search_engine": None,
+        "search_terms": None,
+        "email_provider": None,
+        "email_from": None,
+        "email_to": None,
+        "email_subject": None,
+        "blocked": 0,
+    }
+
+
+def test_manual_import_repository_keeps_preview_read_only_and_deduplicates(monkeypatch, tmp_path):
+    """La previsualización no escribe y una importación repetida no duplica datos."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+
+    events = [_manual_event(now, "csv.example")]
+    lines = [2]
+    activity_repository.require_device_exists(device_id)
+    preview = activity_repository.import_manual_events(
+        device_id, events, lines, now=now, preview=True
+    )
+    assert preview == {
+        "imported": 1,
+        "skipped_duplicates": 0,
+        "preview_dispositions": ["new"],
+    }
+    with database.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0] == 0
+
+    first = activity_repository.import_manual_events(
+        device_id, events, lines, now=now, preview=False
+    )
+    duplicate = activity_repository.import_manual_events(
+        device_id, events, lines, now=now, preview=False
+    )
+    assert first["imported"] == 1
+    assert first["skipped_duplicates"] == 0
+    assert duplicate["imported"] == 0
+    assert duplicate["skipped_duplicates"] == 1
+    with database.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0] == 1
+
+
+def test_manual_import_repository_rejects_old_rows_before_writing(monkeypatch, tmp_path):
+    """Un lote fuera de retención se rechaza completo, sin inserciones parciales."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+        db.execute("UPDATE activity_settings SET retention_days = 2 WHERE id = 1")
+
+    events = [_manual_event(now - timedelta(days=1), "recent.example"),
+              _manual_event(now - timedelta(days=3), "expired.example")]
+    with pytest.raises(ValueError, match="fuera de la retención configurada"):
+        activity_repository.import_manual_events(
+            device_id, events, [2, 3], now=now, preview=False
+        )
+
+    with database.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0] == 0
