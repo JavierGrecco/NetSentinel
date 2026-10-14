@@ -217,54 +217,42 @@ jobs:
               source = Path(path).read_text(encoding="utf-8")
               assert "enabled: false" in source, f"Tracking default must remain off in {path}"
           PY
-      - name: Validate embedded dashboard JavaScript
+      - name: Validate local interface JavaScript
         run: |
           python - <<'PY'
-          import re
           from pathlib import Path
-
-          html = Path("src/netsentinel/static/index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
-          assert scripts, "No embedded script found in index.html"
-          Path("dashboard-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
-          PY
-          node --check dashboard-inline-check.js
-      - name: Validate embedded activity page JavaScript
-        run: |
-          python - <<'PY'
           import re
-          from pathlib import Path
 
-          html = Path("src/netsentinel/static/activity.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
-          assert scripts, "No embedded script found in activity.html"
-          Path("activity-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
-          PY
-          node --check activity-inline-check.js
-      - name: Validate embedded tools page JavaScript
-        run: |
-          python - <<'PY'
-          import re
-          from pathlib import Path
+          static_dir = Path("src/netsentinel/static")
+          pages = {
+              "index.html": "index.js",
+              "monitors.html": "monitors.js",
+              "activity.html": "activity.js",
+              "findings.html": "findings.js",
+              "tools.html": "tools.js",
+          }
 
-          html = Path("src/netsentinel/static/tools.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
-          assert scripts, "No embedded script found in tools.html"
-          Path("tools-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
-          PY
-          node --check tools-inline-check.js
-      - name: Validate embedded findings page JavaScript
-        run: |
-          python - <<'PY'
-          import re
-          from pathlib import Path
+          for page_name, script_name in pages.items():
+              html = (static_dir / page_name).read_text(encoding="utf-8")
+              scripts = list(re.finditer(
+                  r"<script\\b([^>]*)>(.*?)</script\\s*>",
+                  html,
+                  flags=re.IGNORECASE | re.DOTALL,
+              ))
+              assert len(scripts) == 1, f"{page_name} must load exactly one script."
+              script = scripts[0]
+              expected = f'src="/static/{script_name}" defer'
+              assert script.group(1).strip() == expected, (
+                  f"{page_name} must load {script_name} from the local static directory."
+              )
+              assert not script.group(2).strip(), f"{page_name} must not contain inline JavaScript."
+              assert (static_dir / script_name).is_file(), f"Missing {script_name}."
 
-          html = Path("src/netsentinel/static/findings.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
-          assert scripts, "No embedded script found in findings.html"
-          Path("findings-inline-check.js").write_text("\n;\n".join(scripts), encoding="utf-8")
+          print("All five pages use their local JavaScript files.")
           PY
-          node --check findings-inline-check.js
+          for script in src/netsentinel/static/*.js; do
+            node --check "$script"
+          done
       - name: Verify extension source files
         run: |
           python - <<'PY'
@@ -314,8 +302,13 @@ jobs:
                   "netsentinel/static/tools.html",
                   "netsentinel/static/activity.html",
                   "netsentinel/static/findings.html",
+                  "netsentinel/static/index.js",
+                  "netsentinel/static/monitors.js",
+                  "netsentinel/static/activity.js",
+                  "netsentinel/static/findings.js",
+                  "netsentinel/static/tools.js",
               }
               missing = required - names
               assert not missing, f"Missing UI assets in wheel: {sorted(missing)}"
-          print(f"Validated NetSentinel {expected_version}: HTML and CSS included.")
+          print(f"Validated NetSentinel {expected_version}: HTML, CSS and JavaScript included.")
           PY

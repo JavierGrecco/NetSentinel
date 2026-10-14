@@ -9,9 +9,25 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 - **Actividad:** `api/activity.py` define los contratos HTTP. `activity_catalog.py` mantiene el catálogo de eventos y fuentes; `activity_privacy.py` sanea dominios, URLs y direcciones de correo; `activity_event_service.py` valida y normaliza eventos sin tocar SQLite; `activity_session_service.py` gestiona tokens de recopilación e ingestión autorizada; `activity_retention_service.py` centraliza el reloj UTC, la normalización temporal y la aplicación de retención; `activity_filters.py` valida filtros sin abrir la base de datos; `activity_import_service.py` valida cabeceras y filas CSV y arma la vista previa; `activity_read_service.py` compone las consultas del panel y genera el CSV seguro; `activity_deletion_service.py` coordina la vista previa y el borrado selectivo con confirmación exacta; `activity_tracking.py` mantiene la fachada compatible para las rutas existentes; `activity_repository.py` conserva una fachada compatible sobre repositorios separados para retención, sesiones, importaciones, borrado y lectura. `activity_repository_support.py` reúne las comprobaciones compartidas. El detalle está en [ACTIVITY_PERSISTENCE.md](ACTIVITY_PERSISTENCE.md). Los contratos HTTP y el formato CSV existente se conservan.
 - **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS y fabricantes. `diagnostics.py` coordina sondas explícitas y acotadas; `diagnostics_assessment.py` convierte sus resultados en explicaciones y pasos prudentes sin depender de comandos del sistema.
 - **Monitorización y hallazgos:** `monitoring.py` conserva el supervisor y la coordinación de comprobaciones; `monitoring_validation.py` valida objetivos sin efectos de red; `monitoring_probe.py` implementa las sondas acotadas; `monitoring_notifications.py` se ocupa del envío opcional de webhooks. Las operaciones de SQLite permanecen en `monitoring_repository.py` y los CSV en `monitoring_export_service.py`. La presentación normalizada de hallazgos tiene su servicio propio.
-- **Interfaz:** páginas HTML y estilos están separados por pantalla; la extensión vive en `browser-extension/`.
+- **Interfaz:** cada pantalla mantiene su HTML, sus estilos y su JavaScript en archivos separados; los scripts se sirven desde `/static/`. La extensión vive en `browser-extension/`.
 
 La separación por archivos ya existe, pero no todas las fronteras representan responsabilidades completas. La API y la persistencia concentran varios dominios, y las rutas conocen detalles de servicios y almacenamiento. Al crecer las fuentes de evidencia, esa estructura puede hacer que un cambio de una función afecte a otras que no deberían depender de ella.
+
+## Mantenimiento de la interfaz
+
+Cada vista tiene un archivo HTML para la estructura y un JavaScript propio para su comportamiento:
+
+| Vista | HTML | JavaScript |
+| --- | --- | --- |
+| Inventario | `static/index.html` | `static/index.js` |
+| Monitorización | `static/monitors.html` | `static/monitors.js` |
+| Actividad | `static/activity.html` | `static/activity.js` |
+| Hallazgos | `static/findings.html` | `static/findings.js` |
+| Herramientas | `static/tools.html` | `static/tools.js` |
+
+Los HTML cargan el archivo correspondiente con `defer`. Así el navegador termina de leer la página antes de ejecutar el código y no hace falta insertar bloques JavaScript dentro del HTML. Los archivos se sirven desde el mismo origen, permitido por la política CSP; no se habilita `unsafe-inline`.
+
+Al modificar una pantalla, cambiá su archivo JavaScript salvo que también necesites cambiar la estructura o los estilos. Si agregás un recurso nuevo, verificá que esté incluido en `pyproject.toml`, en la comprobación de archivos del wheel y en la validación de sintaxis de CI. Las pruebas HTTP comprueban que la página y su script se sirven con las cabeceras defensivas habituales.
 
 ## Dirección propuesta
 

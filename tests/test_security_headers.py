@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -127,7 +129,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, expected_title):
-    """Every local HTML route keeps CSP hashes and defensive response headers."""
+    """Every page loads its own external script and keeps the same-origin CSP."""
     response = client.get(path)
 
     assert response.status_code == 200
@@ -140,8 +142,44 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, ex
     assert "script-src 'self'" in policy
     assert "'unsafe-inline'" not in policy
 
-    # CSP must permit the trusted inline scripts from this exact packaged page.
-    trusted_hashes = main_module._inline_script_hashes(path)
-    assert trusted_hashes, "Each packaged page should have at least one trusted inline-script hash."
-    for source in trusted_hashes:
-        assert source in policy
+    scripts = re.findall(
+        r"<script\b([^>]*)>(.*?)</script\s*>",
+        response.text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    assert len(scripts) == 1, "Each page should load one external JavaScript file."
+    attributes, inline_body = scripts[0]
+    script_name = {
+        "/": "index.js",
+        "/monitors": "monitors.js",
+        "/activity": "activity.js",
+        "/findings": "findings.js",
+        "/tools": "tools.js",
+    }[path]
+    assert attributes.strip() == f'src="/static/{script_name}" defer'
+    assert not inline_body.strip(), "Page scripts must stay in separate files."
+    assert main_module._inline_script_hashes(path) == ()
+
+
+@pytest.mark.parametrize(
+    "asset",
+    [
+        "/static/index.js",
+        "/static/monitors.js",
+        "/static/activity.js",
+        "/static/findings.js",
+        "/static/tools.js",
+    ],
+)
+def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
+    response = client.get(asset)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith(("text/javascript", "application/javascript"))
+    assert response.text.strip()
+    assert_defensive_headers(response)
+
+    policy = response.headers["content-security-policy"]
+    assert "script-src 'self'" in policy
+    assert "'unsafe-inline'" not in policy
+    assert "sha256-" not in policy

@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa el JavaScript de las cinco pantallas principales en archivos independientes. Las páginas cargan su módulo local con `defer`, y CI valida su sintaxis y comprueba que los archivos estén incluidos en el paquete.
+
 - Separa la evaluación del diagnóstico de conectividad en una función pura, aislada de los comandos y de la ejecución de sondas, para poder probar sus recomendaciones sin tocar la red.
 
 - Separa la validación de objetivos, las sondas TCP/HTTP/ping y el transporte de webhooks del supervisor de monitorización, conservando los contratos públicos y los límites de tiempo de las comprobaciones.
