@@ -288,6 +288,10 @@ def _email_address_list(value: str | None, *, field: str, required: bool) -> lis
         if any(ch.isspace() for ch in local) or any(ch in local for ch in "<>,;"):
             continue
         address = f"{local}@{domain}"
+        # IDNA can expand the domain, so enforce the mailbox limit again
+        # against the canonical address that will actually be stored.
+        if len(address) > 254:
+            continue
         if address not in normalized:
             normalized.append(address)
     if not normalized and required:

@@ -61,6 +61,18 @@ def test_email_addresses_reject_invalid_idna_domains() -> None:
         )
 
 
+def test_email_addresses_reject_mailbox_that_exceeds_limit_after_idna() -> None:
+    hostname = ".".join(["é" * 45] * 4)
+    raw_address = f"{'l' * 64}@{hostname}"
+    encoded_domain = ".".join(label.encode("idna").decode("ascii") for label in hostname.split("."))
+    assert len(raw_address) <= 254
+    assert len(encoded_domain) <= 253
+    assert len(f"{'l' * 64}@{encoded_domain}") > 254
+
+    with pytest.raises(ValueError, match="no contiene una dirección"):
+        _email_address_list(raw_address, field="email_to", required=True)
+
+
 def test_email_addresses_are_normalized_and_limited_to_metadata() -> None:
     """Se guardan direcciones, nunca cuerpos ni contenido del mensaje."""
     assert _email_address_list(
