@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa la importación CSV en `activity_import_service.py` y mueve la validación de retención, deduplicación y escritura atómica al repositorio SQLite. La vista previa permanece de solo lectura; se añaden pruebas del repositorio para importación idempotente y rechazo completo de lotes fuera de retención.
+
 - Extrae el saneamiento de dominios, URLs y direcciones de correo a `activity_privacy.py`, separado de la coordinación de sesiones e importaciones. Conserva los contratos actuales y añade pruebas unitarias de privacidad y de fronteras arquitectónicas.
 
 - Centraliza el conteo y borrado confirmado de eventos en el repositorio de actividad; exige un alcance explícito, valida el dispositivo y ejecuta el recuento final y la eliminación en una transacción SQLite bloqueada para evitar carreras. Añade pruebas de repositorio.
