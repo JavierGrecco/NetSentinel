@@ -421,13 +421,13 @@ def test_pages_router_has_no_internal_domain_dependencies() -> None:
 def test_error_journal_cannot_import_unrelated_domains(tmp_path: Path) -> None:
     """El diario solo depende de la ubicación de datos, no del resto del programa."""
     package = _write_minimal_package(tmp_path)
-    (package / "config.py").write_text("def data_dir(): return None\\n", encoding="utf-8")
-    (package / "database.py").write_text("VALUE = 1\\n", encoding="utf-8")
+    (package / "config.py").write_text("def data_dir(): return None\n", encoding="utf-8")
+    (package / "database.py").write_text("VALUE = 1\n", encoding="utf-8")
     (package / "error_reporting.py").write_text(
-        "from .error_journal import record_error_event\\n", encoding="utf-8"
+        "from .error_journal import record_error_event\n", encoding="utf-8"
     )
     (package / "error_journal.py").write_text(
-        "from . import config, database\\n", encoding="utf-8"
+        "from . import config, database\n", encoding="utf-8"
     )
 
     violations, _ = check_architecture(tmp_path)
@@ -437,4 +437,3 @@ def test_error_journal_cannot_import_unrelated_domains(tmp_path: Path) -> None:
         in violation
         for violation in violations
     )
-
