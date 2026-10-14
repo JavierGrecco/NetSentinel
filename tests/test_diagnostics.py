@@ -94,7 +94,7 @@ def test_dns_resolver_rejects_failed_child_response(monkeypatch):
     addresses, error = diagnostics._resolve_hostname("example.com")
 
     assert addresses == []
-    assert error == "error"
+    assert error == "name_resolution_failed"
 
 
 def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
@@ -104,3 +104,109 @@ def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
     assert result["title"] == "La consulta DNS tardó demasiado"
     assert "no confirma una avería permanente" in result["summary"]
     assert any("No cambies" in step for step in result["next_steps"])
+
+def test_diagnostic_command_failures_have_stable_codes_and_logging_policy(monkeypatch, tmp_path):
+    from netsentinel import diagnostics
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    logged = []
+
+    def missing_command(command, **kwargs):
+        raise FileNotFoundError(command[0])
+
+    monkeypatch.setattr(diagnostics.subprocess, "run", missing_command)
+    monkeypatch.setattr(diagnostics.logger, "warning", lambda *args, **kwargs: logged.append(args))
+
+    result = diagnostics.run_diagnostics()
+    assert len(result["checks"]) == 4
+    failures = [check for check in result["checks"] if "error_code" in check]
+    assert failures
+    assert all(check["error_code"].startswith("NS-DIAG-") for check in failures)
+    assert any(check["logged"] for check in failures)
+    assert logged
+    assert all("detail" in check for check in failures)
+    assert any(check["should_log"] and check["logged"] for check in failures)
+    assert (tmp_path / "netsentinel-errors.jsonl").exists()
+
+
+def test_ping_nonresponse_is_mapped_but_not_logged_as_program_failure(monkeypatch):
+    from netsentinel import diagnostics
+
+    monkeypatch.setattr(diagnostics.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(diagnostics, "_find_default_gateway_result", lambda: ("192.168.1.1", None))
+    monkeypatch.setattr(
+        diagnostics,
+        "_run_diagnostic",
+        lambda command, timeout=3.0: (
+            subprocess.CompletedProcess(command, 1, stdout="", stderr=""),
+            "nonzero_exit",
+        ),
+    )
+    logged = []
+    monkeypatch.setattr(diagnostics.logger, "warning", lambda *args, **kwargs: logged.append(args))
+    monkeypatch.setattr(diagnostics, "_resolve_hostname", lambda hostname, timeout=3.0: (["93.184.216.34"], None))
+
+    result = diagnostics.run_diagnostics()
+    router = next(check for check in result["checks"] if check["name"] == "Respuesta del router")
+    external = next(check for check in result["checks"] if check["name"] == "Conectividad IP externa")
+
+    assert router["error_code"] == "NS-DIAG-ROUTER-005"
+    assert external["error_code"] == "NS-DIAG-EXT-005"
+    assert router["should_log"] is False
+    assert external["should_log"] is False
+    assert router["logged"] is False
+    assert external["logged"] is False
+    assert not logged
+
+def test_diagnostic_codes_propagate_request_reference_and_log_result(monkeypatch, tmp_path):
+    from netsentinel import diagnostics
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(diagnostics, "_find_default_gateway_result", lambda: (None, "command_unavailable"))
+    monkeypatch.setattr(diagnostics, "_resolve_hostname", lambda hostname, timeout=3.0: ([], "timeout"))
+    monkeypatch.setattr(
+        diagnostics,
+        "_run_diagnostic",
+        lambda command, timeout=3.0: (None, "timeout"),
+    )
+
+    result = diagnostics.run_diagnostics(request_id="ABCDEF012345")
+    assert result["request_id"] == "ABCDEF012345"
+    route = next(check for check in result["checks"] if check["name"] == "Puerta de enlace")
+    dns = next(check for check in result["checks"] if check["name"] == "Resolución DNS")
+    assert route["logged"] is True
+    assert route["should_log"] is True
+    assert dns["logged"] is False
+    assert dns["should_log"] is False
+    stored = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
+    assert "ABCDEF012345" in stored
+    assert "example.com" not in stored
+
+def test_route_command_failure_is_persisted_but_dns_timeout_is_not(monkeypatch, tmp_path):
+    from netsentinel import diagnostics
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(diagnostics, "_find_default_gateway_result", lambda: (None, "route_command_failed"))
+    monkeypatch.setattr(diagnostics, "_resolve_hostname", lambda hostname, timeout=3.0: ([], "timeout"))
+    monkeypatch.setattr(
+        diagnostics,
+        "_run_diagnostic",
+        lambda command, timeout=3.0: (None, "timeout"),
+    )
+
+    result = diagnostics.run_diagnostics(request_id="F00DBAADCAFE")
+    route = next(check for check in result["checks"] if check["name"] == "Puerta de enlace")
+    router = next(check for check in result["checks"] if check["name"] == "Respuesta del router")
+    dns = next(check for check in result["checks"] if check["name"] == "Resolución DNS")
+    external = next(check for check in result["checks"] if check["name"] == "Conectividad IP externa")
+
+    assert route["should_log"] is True and route["logged"] is True
+    assert router["should_log"] is False  # Not run because no gateway could be identified.
+    assert dns["should_log"] is False  # DNS timeout is a diagnosed network condition.
+    assert external["should_log"] is True and external["logged"] is True
+    log = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
+    assert "NS-DIAG-ROUTE-011" in log
+    assert "NS-DIAG-EXT-003" in log
+    assert "F00DBAADCAFE" in log
+    assert "example.com" not in log
+

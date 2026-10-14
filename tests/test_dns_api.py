@@ -76,6 +76,9 @@ def test_dns_lookup_api_returns_service_unavailable_for_temporary_failure(monkey
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/tools/dns/lookup", params={"hostname": "example.com"})
     assert response.status_code == 503
+    assert "no respondió a tiempo" in response.json()["detail"]
+    assert response.json()["should_log"] is False
+    assert response.json()["registered_in_log"] is False
 
 
 
@@ -91,3 +94,5 @@ def test_dns_lookup_api_classifies_ptr_and_dns_temporarily_unavailable(monkeypat
         response = client.get("/api/tools/dns/reverse", params={"address": "192.0.2.8"})
     assert response.status_code == 503
     assert "no respondió a tiempo" in response.json()["detail"]
+    assert response.json()["should_log"] is False
+    assert response.json()["registered_in_log"] is False

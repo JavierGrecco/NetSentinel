@@ -23,6 +23,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         health = client.get("/api/health")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+        assert len(health.headers["x-request-id"]) == 12
         page = client.get("/")
         assert page.status_code == 200
         assert "NetSentinel" in page.text
@@ -34,7 +35,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
 
 
-def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path):
+def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path, caplog):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     secret = "TOKEN_LEAK"
@@ -59,6 +60,14 @@ def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_
     assert "type" in errors[0]
     assert "input" not in errors[0]
     assert "ctx" not in errors[0]
+    assert "TOKEN_LEAK" not in errors[0]["msg"]
+    assert "TOKEN_LEAK" not in caplog.text
+    assert not (tmp_path / "netsentinel-errors.jsonl").exists()
+    assert response.json()["error_code"] == "NS-REQ-422"
+    assert response.json()["request_id"] == response.headers["x-request-id"]
+    assert response.json()["next_action"]
+    assert response.json()["registered_in_log"] is False
+    assert response.json()["should_log"] is False
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
 
@@ -85,7 +94,13 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         assert client.get("/api/scans").json()[0]["devices_found"] == 1
         device = client.get("/api/devices").json()[0]
         assert client.get(f"/api/devices/{device['id']}/addresses").json()[0]["ip_address"] == "192.168.5.2"
-        assert client.get("/api/devices/999/addresses").status_code == 404
+        missing = client.get("/api/devices/999/addresses")
+        assert missing.status_code == 404
+        assert missing.json()["error_code"] == "NS-HTTP-404"
+        assert missing.json()["request_id"] == missing.headers["x-request-id"]
+        assert missing.json()["registered_in_log"] is False
+        assert missing.json()["should_log"] is False
+        assert not (tmp_path / "netsentinel-errors.jsonl").exists()
 
 
 def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
@@ -145,11 +160,14 @@ def test_sqlite_backup_download_is_openable(monkeypatch, tmp_path):
         assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
 
-def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tmp_path):
+def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tmp_path, caplog):
+    import logging
+
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    secret = "PRIVATE_TOKEN=must-not-be-logged"
 
     def fail_summary():
-        raise RuntimeError("private backend detail must not reach the client")
+        raise RuntimeError(secret)
 
     monkeypatch.setattr(main_module.database, "get_summary", fail_summary)
     with TestClient(
@@ -160,8 +178,16 @@ def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tm
         response = client.get("/api/summary")
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Error interno de NetSentinel."}
-    assert "private backend detail" not in response.text
+    body = response.json()
+    assert body["error_code"] == "NS-500-001"
+    assert body["request_id"] == response.headers["x-request-id"]
+    assert body["next_action"]
+    assert body["registered_in_log"] is True
+    assert body["should_log"] is True
+    assert (tmp_path / "netsentinel-errors.jsonl").exists()
+    assert "PRIVATE_TOKEN" not in response.text
+    assert "PRIVATE_TOKEN" not in caplog.text
+    assert body["detail"] == "NetSentinel no pudo completar la operación por un error interno."
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["pragma"] == "no-cache"
     assert response.headers["x-content-type-options"] == "nosniff"
@@ -428,3 +454,51 @@ def test_device_history_limits_observation_count(monkeypatch, tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/devices/9999/history?limit=10000")
     assert response.status_code == 422
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_detail"),
+    [
+        (500, "NetSentinel no pudo completar la operación por un error interno."),
+        (502, "La comprobación externa no pudo completarse."),
+        (503, "El servicio todavía no está disponible temporalmente."),
+    ],
+)
+def test_http_5xx_details_are_sanitized(monkeypatch, tmp_path, status_code, expected_detail):
+    import asyncio
+    import json
+
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    secret = "PRIVATE_HTTP_DETAIL=must-not-be-returned"
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/api/test",
+        "raw_path": b"/api/test",
+        "query_string": b"",
+        "headers": [(b"host", b"127.0.0.1")],
+        "client": ("testclient", 12345),
+        "server": ("testserver", 80),
+    }
+    request = Request(scope)
+
+    response = asyncio.run(
+        main_module.handle_http_exception(
+            request,
+            HTTPException(status_code=status_code, detail=secret),
+        )
+    )
+    body = json.loads(response.body)
+
+    assert response.status_code == status_code
+    assert body["detail"] == expected_detail
+    assert secret not in response.body.decode("utf-8")
+    assert body["should_log"] is True
+    assert body["registered_in_log"] is True
+    journal = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
+    assert secret not in journal
