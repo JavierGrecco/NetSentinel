@@ -86,6 +86,9 @@ def _is_network_side_effect_get(path: str) -> bool:
 
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+_STATIC = _STATIC_DIR / "index.html"
+_MONITORS_STATIC = _STATIC_DIR / "monitors.html"
+_ACTIVITY_STATIC = _STATIC_DIR / "activity.html"
 _APP_HTML_PATHS = {
     "/": _STATIC,
     "/monitors": _MONITORS_STATIC,
