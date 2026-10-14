@@ -106,6 +106,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.database"] == {
         "netsentinel.config",
         "netsentinel.database_storage",
+        "netsentinel.database_schema",
         "netsentinel.network_models",
         "netsentinel.events_repository",
         "netsentinel.inventory_repository",
@@ -115,6 +116,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.monitoring_export_service",
     }
     assert graph["netsentinel.database_storage"] == {"netsentinel.config"}
+    assert graph["netsentinel.database_schema"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.inventory_repository"] == {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
@@ -178,6 +180,7 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
     expected = {
         "database.py",
         "database_storage.py",
+        "database_schema.py",
         "inventory_repository.py",
         "events_repository.py",
         "dashboard_repository.py",

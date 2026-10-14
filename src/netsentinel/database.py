@@ -21,6 +21,7 @@ from .database_storage import (
     _harden_database_file,
     utc_now,
 )
+from .database_schema import initialize as _initialize
 from .events_repository import _insert_event, acknowledge_event, get_events
 from .inventory_repository import (
     _device_dict,
@@ -72,7 +73,7 @@ def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
 
 def initialize(path: Path | None = None) -> None:
     """Inicializa el esquema o aplica sus migraciones aditivas."""
-    _storage.initialize(path, default_path_provider=database_path)
+    _initialize(path, default_path_provider=database_path)
 
 
 def export_sqlite_backup(path: Path | None = None) -> bytes:

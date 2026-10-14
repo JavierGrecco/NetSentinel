@@ -56,6 +56,7 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
 DATABASE_ALLOWED_INTERNAL_IMPORTS = {
     "netsentinel.config",
     "netsentinel.database_storage",
+    "netsentinel.database_schema",
     "netsentinel.network_models",
     "netsentinel.events_repository",
     "netsentinel.inventory_repository",
@@ -68,6 +69,10 @@ DATABASE_ALLOWED_INTERNAL_IMPORTS = {
 # La infraestructura SQLite solo conoce configuración y ciclo de vida del archivo.
 DATABASE_STORAGE_ALLOWED_INTERNAL_IMPORTS = {
     "netsentinel.config",
+}
+
+DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.database_storage",
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
@@ -344,6 +349,12 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
     for dependency in sorted(storage_dependencies - DATABASE_STORAGE_ALLOWED_INTERNAL_IMPORTS):
         violations.append(
             f"netsentinel.database_storage imports {dependency}, which is not an allowed infrastructure dependency."
+        )
+
+    schema_dependencies = graph.get("netsentinel.database_schema", set())
+    for dependency in sorted(schema_dependencies - DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS):
+        violations.append(
+            f"netsentinel.database_schema imports {dependency}, which is not an allowed schema dependency."
         )
 
     for source, module in sorted(modules.items()):
