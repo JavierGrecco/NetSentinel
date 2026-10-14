@@ -362,6 +362,9 @@ def run_diagnostics(request_id: str | None = None) -> dict[str, Any]:
             "name": "Respuesta del router",
             "status": "skipped",
             "detail": "No se pudo probar el router porque no se identificó la puerta de enlace.",
+            # Un paso omitido no es un fallo del programa y no requiere registro.
+            "should_log": False,
+            "logged": False,
         })
 
     addresses, dns_error = _resolve_hostname("example.com", timeout=3.0)
