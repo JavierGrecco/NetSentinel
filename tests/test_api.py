@@ -454,3 +454,51 @@ def test_device_history_limits_observation_count(monkeypatch, tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/devices/9999/history?limit=10000")
     assert response.status_code == 422
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_detail"),
+    [
+        (500, "NetSentinel no pudo completar la operación por un error interno."),
+        (502, "La comprobación externa no pudo completarse."),
+        (503, "El servicio todavía no está disponible temporalmente."),
+    ],
+)
+def test_http_5xx_details_are_sanitized(monkeypatch, tmp_path, status_code, expected_detail):
+    import asyncio
+    import json
+
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    secret = "PRIVATE_HTTP_DETAIL=must-not-be-returned"
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/api/test",
+        "raw_path": b"/api/test",
+        "query_string": b"",
+        "headers": [(b"host", b"127.0.0.1")],
+        "client": ("testclient", 12345),
+        "server": ("testserver", 80),
+    }
+    request = Request(scope)
+
+    response = asyncio.run(
+        main_module.handle_http_exception(
+            request,
+            HTTPException(status_code=status_code, detail=secret),
+        )
+    )
+    body = json.loads(response.body)
+
+    assert response.status_code == status_code
+    assert body["detail"] == expected_detail
+    assert secret not in response.body.decode("utf-8")
+    assert body["should_log"] is True
+    assert body["registered_in_log"] is True
+    journal = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
+    assert secret not in journal

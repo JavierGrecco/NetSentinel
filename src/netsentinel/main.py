@@ -301,11 +301,22 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
             "HTTP server failure code=%s request_id=%s status=%s method=%s path=%s persisted=%s",
             code, request_id, exc.status_code, request.method, safe_path, registered,
         )
+    # An explicit HTTP 5xx detail may contain exception text or secrets. Keep
+    # server-error payloads fixed and actionable; preserve expected 4xx details.
+    safe_detail = exc.detail
+    if exc.status_code >= 500:
+        safe_detail = {
+            502: "La comprobación externa no pudo completarse.",
+            503: "El servicio todavía no está disponible temporalmente.",
+        }.get(
+            exc.status_code,
+            "NetSentinel no pudo completar la operación por un error interno.",
+        )
     return _error_response(
         request,
         status_code=exc.status_code,
         content={
-            "detail": exc.detail,
+            "detail": safe_detail,
             "error_code": code,
             "request_id": request_id,
             "next_action": next_action,
