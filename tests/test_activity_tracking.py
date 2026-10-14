@@ -347,8 +347,8 @@ def test_csv_import_rejects_non_public_navigation_urls(client, private_url):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
     csv_data = (
-        "observed_at,event_type,page_url\\n"
-        f"{stamp},page_visit,{private_url}\\n"
+        "observed_at,event_type,page_url\n"
+        f"{stamp},page_visit,{private_url}\n"
     )
 
     response = client.post(
