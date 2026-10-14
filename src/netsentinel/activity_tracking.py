@@ -275,6 +275,18 @@ _NON_PUBLIC_HOST_SUFFIXES = frozenset(
 )
 
 
+def _has_noncanonical_ipv4_host_syntax(hostname: str) -> bool:
+    """Detect WHATWG-style numeric host spellings that Python's ipaddress rejects."""
+    host = str(hostname or "").strip().rstrip(".").lower()
+    final_label = host.rsplit(".", 1)[-1]
+    # Browsers canonicalize forms such as 127.1, 2130706433, 0177.0.0.1
+    # and 0x7f000001 to IPv4 literals before navigation events are delivered.
+    return bool(
+        re.fullmatch(r"[0-9]+", final_label)
+        or re.fullmatch(r"0x[0-9a-f]*", final_label)
+    )
+
+
 def _is_non_public_navigation_host(hostname: str) -> bool:
     """Return whether a navigation host is local or a documented special-use address."""
     host = str(hostname or "").strip().rstrip(".").lower()
@@ -323,12 +335,18 @@ def _safe_page_url(value: str | None) -> str | None:
     if scheme not in {"http", "https"} or not hostname or parsed.username is not None or parsed.password is not None:
         raise ValueError("page_url debe ser una URL HTTP(S) sin credenciales embebidas.")
     try:
-        normalized_host = str(ipaddress.ip_address(hostname)).lower()
+        # A final dot is insignificant for an IP literal, just as it is in browser URL parsing.
+        normalized_host = str(ipaddress.ip_address(hostname.rstrip("."))).lower()
     except ValueError:
         try:
             normalized_host = hostname.encode("idna").decode("ascii").lower()
         except UnicodeError as exc:
             raise ValueError("El host de page_url no es válido.") from exc
+        if _has_noncanonical_ipv4_host_syntax(normalized_host):
+            raise ValueError(
+                "page_url contiene un host IPv4 ambiguo o no canónico; "
+                "no se admiten destinos locales, privados o de uso especial con formatos alternativos."
+            )
     if len(normalized_host) > 253:
         raise ValueError("El host de page_url es demasiado largo.")
     if _is_non_public_navigation_host(normalized_host):
