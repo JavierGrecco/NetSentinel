@@ -107,6 +107,8 @@
       const extra=[code?`Código: ${code}`:null,requestId?`Referencia: ${requestId}`:null].filter(Boolean);
       if(extra.length) reason+=` [${extra.join(' · ')}]`;
       if(typeof body?.next_action==='string'&&body.next_action) reason+=` Acción sugerida: ${body.next_action}`;
+      if(body?.registered_in_log===true) reason+=' Registro: el fallo se emitió al registro local de la aplicación.';
+      else if(body?.registered_in_log===false) reason+=' Registro: no se registró como fallo del programa porque es una validación o un rechazo previsto.';
       throw new Error(reason);
     }
     if(body===null) throw new Error('El servidor local devolvió una respuesta que no se pudo interpretar. Código NS-CONN-002. Recargá el panel; si persiste, compartí el registro de la solicitud.');
