@@ -5,7 +5,7 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 ## Cómo está organizado hoy
 
 - **Composición y API:** `main.py` crea la aplicación, configura los controles transversales y registra los routers. `api/inventory.py` concentra inventario, historial, descubrimiento bajo demanda y exportaciones; `api/activity.py` gestiona las rutas de actividad autorizada; `api/monitoring.py` concentra monitores, incidentes, exportaciones de métricas y diagnósticos; `api/pages.py` sirve las cinco páginas HTML locales; `api/findings.py` y `api/tools.py` atienden hallazgos y herramientas DNS/TLS. `findings_service.py` coordina la consulta de evidencia sin depender del transporte HTTP.
-- **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios. Los tipos de observación que comparten descubrimiento e inventario se definen en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
+- **Persistencia:** `database.py` es una fachada de compatibilidad; `database_storage.py` mantiene conexiones, permisos y migraciones SQLite; `inventory_repository.py`, `events_repository.py` y `monitoring_repository.py` poseen sus consultas. `dashboard_repository.py` contiene el resumen transversal, y las exportaciones se mantienen en servicios de solo lectura. Los tipos compartidos de observación viven en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
 - **Actividad:** `api/activity.py` define los contratos HTTP. `activity_catalog.py` mantiene el catálogo de eventos y fuentes; `activity_privacy.py` sanea dominios, URLs y direcciones de correo; `activity_event_service.py` valida y normaliza eventos sin tocar SQLite; `activity_session_service.py` gestiona tokens de recopilación e ingestión autorizada; `activity_retention_service.py` centraliza el reloj UTC, la normalización temporal y la aplicación de retención; `activity_filters.py` valida filtros sin abrir la base de datos; `activity_import_service.py` valida cabeceras y filas CSV y arma la vista previa; `activity_read_service.py` compone las consultas del panel y genera el CSV seguro; `activity_deletion_service.py` coordina la vista previa y el borrado selectivo con confirmación exacta; `activity_tracking.py` mantiene la fachada compatible para las rutas existentes; `activity_repository.py` conserva una fachada compatible sobre repositorios separados para retención, sesiones, importaciones, borrado y lectura. `activity_repository_support.py` reúne las comprobaciones compartidas. El detalle está en [ACTIVITY_PERSISTENCE.md](ACTIVITY_PERSISTENCE.md). Los contratos HTTP y el formato CSV existente se conservan.
 - **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
 - **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
@@ -61,3 +61,18 @@ Las pruebas automatizadas usan datos sintéticos y no requieren una red real. Gi
 
 
 La composición de FastAPI se mantiene en `main.py`. Los controles de host/origen, cabeceras y CSP viven en `api/security.py`; los manejadores HTTP y sus mensajes seguros viven en `api/error_handling.py`. Esta separación conserva los contratos, facilita probar la protección por separado y evita que el arranque acumule lógica transversal.
+
+
+### Persistencia por responsabilidad
+
+| Módulo | Para qué sirve | Qué no debe absorber |
+| --- | --- | --- |
+| `database.py` | Mantener la API interna histórica y delegar operaciones | SQL nuevo o reglas de negocio |
+| `database_storage.py` | Abrir/cerrar conexiones, proteger el archivo, crear y migrar el esquema | Consultas funcionales del inventario o de monitorización |
+| `inventory_repository.py` | Registrar exploraciones y mantener dispositivos, direcciones y observaciones | Eventos generales o estadísticas de monitorización |
+| `events_repository.py` | Crear, listar y reconocer eventos del sistema | Reglas de sesión de navegador o lógica de checks |
+| `monitoring_repository.py` | Persistir monitores, comprobaciones, incidentes y notificaciones | Construir CSV o respuestas HTTP |
+| `dashboard_repository.py` | Consultar el resumen que combina indicadores de distintos dominios | Convertirse en repositorio de escritura de cada dominio |
+| `data_export_service.py` / `monitoring_export_service.py` | Producir exportaciones seguras y copias consistentes | Modificar las tablas de origen |
+
+Las tablas y migraciones siguen juntas en `database_storage.py` en esta etapa: cambiarlas de sitio a la vez que las consultas elevaría demasiado el riesgo para los datos existentes. Se revisará esa frontera por separado después de consolidar la extracción de consultas y conservar pruebas de migración/backup.

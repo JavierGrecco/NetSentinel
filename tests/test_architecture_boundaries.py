@@ -6,6 +6,7 @@ from pathlib import Path
 from netsentinel.api import activity, findings, inventory, monitoring, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
+from netsentinel import database
 from scripts.check_architecture_boundaries import check_architecture
 
 
@@ -102,9 +103,53 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_privacy",
     }
     assert graph["netsentinel.activity_privacy"] == set()
-    assert "netsentinel.network_models" in graph["netsentinel.database"]
+    assert graph["netsentinel.database"] == {
+        "netsentinel.config",
+        "netsentinel.database_storage",
+        "netsentinel.network_models",
+        "netsentinel.events_repository",
+        "netsentinel.inventory_repository",
+        "netsentinel.dashboard_repository",
+        "netsentinel.data_export_service",
+        "netsentinel.monitoring_repository",
+        "netsentinel.monitoring_export_service",
+    }
+    assert graph["netsentinel.database_storage"] == {"netsentinel.config"}
+    assert graph["netsentinel.inventory_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+        "netsentinel.network_models",
+        "netsentinel.vendor",
+    }
+    assert graph["netsentinel.events_repository"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.dashboard_repository"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.monitoring_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+    }
+    assert graph["netsentinel.data_export_service"] == {
+        "netsentinel.config",
+        "netsentinel.csv_safety",
+        "netsentinel.database_storage",
+        "netsentinel.inventory_repository",
+    }
+    assert graph["netsentinel.monitoring_export_service"] == {
+        "netsentinel.csv_safety",
+        "netsentinel.monitoring_repository",
+    }
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
+
+
+def test_database_facade_keeps_existing_public_operations() -> None:
+    """La API interna histórica sigue disponible tras dividir los repositorios."""
+    for operation in (
+        "connect", "initialize", "list_devices", "record_scan", "get_events",
+        "get_summary", "export_json", "export_csv", "export_sqlite_backup",
+        "create_monitor", "record_monitor_check", "get_incidents",
+        "get_activity_snapshot", "import_manual_events", "delete_activity_scope",
+    ):
+        assert callable(getattr(database, operation, None)), operation
 
 def test_neighbor_type_is_shared_but_old_import_path_still_works() -> None:
     """El tipo compartido conserva compatibilidad con el módulo de descubrimiento."""
@@ -116,6 +161,13 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
     package_root = Path(__file__).resolve().parents[1] / "src" / "netsentinel"
     expected = {
         "database.py",
+        "database_storage.py",
+        "inventory_repository.py",
+        "events_repository.py",
+        "dashboard_repository.py",
+        "monitoring_repository.py",
+        "data_export_service.py",
+        "monitoring_export_service.py",
         "discovery.py",
         "findings.py",
         "monitoring.py",

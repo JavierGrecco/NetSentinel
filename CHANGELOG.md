@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Divide la capa SQLite general en infraestructura de conexión/esquema, repositorios de inventario, eventos, monitorización y resumen transversal; separa los exportadores. `database.py` conserva una fachada de compatibilidad y los contratos externos no cambian.
+
 - Divide la persistencia SQLite de actividad en repositorios para retención, sesiones, importaciones, borrado y lectura. Mantiene `activity_repository.py` como fachada compatible y amplía las pruebas automáticas que vigilan las dependencias entre módulos.
 
 - Hace que la lectura de preferencias de seguimiento falle de forma segura: solo acepta booleanos reales para activar el registro y las opciones de captura; valores persistidos como texto ("false"/"true") u otros tipos se deshabilitan en lugar de evaluarse como truthy. Añade pruebas en el service worker y popup.
