@@ -9,27 +9,22 @@ durante una sesión opt-in o mediante importación explícita.
 """
 from __future__ import annotations
 
-import csv
 import hashlib
 import hmac
-import io
+import ipaddress
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlsplit
 
-from . import activity_import_service, activity_repository, database
-from .csv_safety import spreadsheet_safe_text as _csv_safe_text
+from . import activity_filters, activity_import_service, activity_read_service, activity_repository, database
+from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
 from .activity_privacy import _domain, _email_address_list, _safe_page_url
 
 class InvalidCollectorToken(PermissionError):
     """El secreto de una sesión de recopilación no coincide."""
 
 
-SESSION_SOURCES = {"router_dns", "router_flow", "device_agent"}
-EVENT_SOURCES = SESSION_SOURCES
-EVENT_TYPES = {"dns_query", "connection", "tls_sni", "app_usage", "blocked", "page_visit", "search_query", "email_metadata"}
-PROTOCOLS = {"tcp", "udp", "quic", "icmp", "other"}
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -267,47 +262,8 @@ def _activity_filter_values(
     to_date: str | None,
     source: str | None = None,
 ) -> tuple[list[str], list[Any]]:
-    """Validate event type/source and inclusive UTC calendar-date filters."""
-    clauses: list[str] = []
-    params: list[Any] = []
-    if event_type not in (None, ""):
-        normalized_type = str(event_type).strip().lower()
-        if normalized_type not in EVENT_TYPES:
-            raise ValueError("El tipo de evento no es válido.")
-        clauses.append("event_type = ?")
-        params.append(normalized_type)
-
-    if source not in (None, ""):
-        normalized_source = str(source).strip().lower()
-        if normalized_source not in EVENT_SOURCES and normalized_source != "manual_import":
-            raise ValueError("La fuente de actividad no es válida.")
-        clauses.append("source = ?")
-        params.append(normalized_source)
-
-    parsed_from: datetime | None = None
-    parsed_to: datetime | None = None
-    for raw, name in ((from_date, "from_date"), (to_date, "to_date")):
-        if raw in (None, ""):
-            continue
-        try:
-            parsed = datetime.strptime(str(raw), "%Y-%m-%d").replace(tzinfo=timezone.utc)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"{name} debe tener formato AAAA-MM-DD.") from exc
-        if name == "from_date":
-            parsed_from = parsed
-        else:
-            parsed_to = parsed
-
-    if parsed_from and parsed_to and parsed_from > parsed_to:
-        raise ValueError("La fecha inicial no puede ser posterior a la fecha final.")
-    if parsed_from:
-        clauses.append("observed_at >= ?")
-        params.append(_iso(parsed_from))
-    if parsed_to:
-        clauses.append("observed_at < ?")
-        params.append(_iso(parsed_to + timedelta(days=1)))
-    return clauses, params
-
+    """Mantiene el punto de entrada histórico y delega la validación pura."""
+    return activity_filters.activity_filter_values(event_type, from_date, to_date, source)
 
 def _activity_delete_scope(
     device_id: int | None,
@@ -316,17 +272,10 @@ def _activity_delete_scope(
     to_date: str | None,
     source: str | None = None,
 ) -> tuple[str, tuple[Any, ...]]:
-    """Build a scoped DELETE/COUNT predicate; an unbounded operation is never allowed."""
-    if device_id is None and event_type in (None, "") and from_date in (None, "") and to_date in (None, "") and source in (None, ""):
-        raise ValueError("Elegí al menos un alcance: dispositivo, tipo de evento, fuente o fechas.")
-    clauses, params = _activity_filter_values(event_type, from_date, to_date, source)
-    if device_id is not None:
-        if int(device_id) < 1:
-            raise ValueError("device_id debe ser un entero positivo.")
-        clauses.insert(0, "device_id = ?")
-        params.insert(0, int(device_id))
-    return " WHERE " + " AND ".join(clauses), tuple(params)
-
+    """Mantiene el punto de entrada histórico para construir un alcance seguro."""
+    return activity_filters.activity_delete_scope(
+        device_id, event_type, from_date, to_date, source
+    )
 
 def preview_delete_activity(
     device_id: int | None = None,
@@ -388,64 +337,15 @@ def export_activity_csv(
     limit: int = 10000,
     source: str | None = None,
 ) -> str:
-    """Export up to 10,000 filtered activity metadata rows as formula-safe CSV."""
-    clauses, filter_params = _activity_filter_values(event_type, from_date, to_date, source)
-    if device_id is not None:
-        if int(device_id) < 1:
-            raise ValueError("device_id debe ser un entero positivo.")
-        clauses.insert(0, "e.device_id = ?")
-        filter_params.insert(0, int(device_id))
-    where_sql = " WHERE " + " AND ".join(clauses) if clauses else ""
-    with database.connect() as db:
-        _cleanup(db)
-        if device_id is not None and db.execute(
-            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
-        ).fetchone() is None:
-            raise LookupError("No se encontró el dispositivo.")
-        events = db.execute(
-            f"""SELECT e.*, d.display_name, d.ip_address
-                FROM activity_events e
-                JOIN devices d ON d.id = e.device_id
-                {where_sql}
-                ORDER BY e.observed_at DESC, e.id DESC
-                LIMIT ?""",
-            (*filter_params, max(1, min(int(limit), 10000))),
-        ).fetchall()
-
-    buffer = io.StringIO(newline="")
-    fields = [
-        "observed_at", "event_type", "device_id", "device_name", "ip_address", "source",
-        "domain", "page_url", "search_engine", "search_terms", "destination_ip",
-        "destination_port", "protocol", "app_name", "blocked", "email_provider",
-        "email_from", "email_to", "email_subject",
-    ]
-    writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
-    writer.writeheader()
-    for event in events:
-        row = {
-            "observed_at": event["observed_at"],
-            "event_type": event["event_type"],
-            "device_id": event["device_id"],
-            "device_name": event["display_name"],
-            "ip_address": event["ip_address"],
-            "source": event["source"],
-            "domain": event["domain"],
-            "page_url": event["page_url"],
-            "search_engine": event["search_engine"],
-            "search_terms": event["search_terms"],
-            "destination_ip": event["destination_ip"],
-            "destination_port": event["destination_port"],
-            "protocol": event["protocol"],
-            "app_name": event["app_name"],
-            "blocked": event["blocked"],
-            "email_provider": event["email_provider"],
-            "email_from": event["email_from"],
-            "email_to": event["email_to"],
-            "email_subject": event["email_subject"],
-        }
-        writer.writerow({key: _csv_safe_text(value) for key, value in row.items()})
-    return "\ufeff" + buffer.getvalue()
-
+    """Conserva la API pública y delega la consulta y el formato del CSV."""
+    return activity_read_service.export_activity_csv(
+        device_id=device_id,
+        event_type=event_type,
+        from_date=from_date,
+        to_date=to_date,
+        limit=limit,
+        source=source,
+    )
 
 def get_activity(
     device_id: int | None = None,
@@ -455,72 +355,12 @@ def get_activity(
     to_date: str | None = None,
     source: str | None = None,
 ) -> dict[str, Any]:
-    event_clauses, event_params = _activity_filter_values(event_type, from_date, to_date, source)
-    if device_id is not None:
-        if int(device_id) < 1:
-            raise ValueError("device_id debe ser un entero positivo.")
-        event_clauses.insert(0, "e.device_id = ?")
-        event_params.insert(0, int(device_id))
-    event_filter = "WHERE " + " AND ".join(event_clauses) if event_clauses else ""
-    with database.connect() as db:
-        _cleanup(db)
-        params: tuple[Any, ...] = (device_id,) if device_id is not None else ()
-        if device_id is not None and db.execute("SELECT 1 FROM devices WHERE id=?", (device_id,)).fetchone() is None:
-            raise LookupError("No se encontró el dispositivo.")
-        session_filter = "WHERE s.device_id = ?" if device_id is not None else ""
-        sessions = db.execute(
-            f"""SELECT s.id, s.device_id, s.source_mode, s.started_at, s.ends_at, s.stopped_at, s.status,
-                       d.display_name, d.ip_address, d.mac_address
-                FROM activity_sessions s JOIN devices d ON d.id=s.device_id
-                {session_filter} ORDER BY s.started_at DESC, s.id DESC LIMIT 100""",
-            params,
-        ).fetchall()
-        events = db.execute(
-            f"""SELECT e.*, d.display_name, d.ip_address, d.mac_address
-                FROM activity_events e JOIN devices d ON d.id=e.device_id
-                {event_filter} ORDER BY e.observed_at DESC, e.id DESC LIMIT ?""",
-            (*event_params, max(1, min(int(limit), 500))),
-        ).fetchall()
-        domain_filter = "WHERE domain IS NOT NULL AND domain <> ''" if device_id is None else "WHERE device_id = ? AND domain IS NOT NULL AND domain <> ''"
-        domain_params: tuple[Any, ...] = () if device_id is None else (device_id,)
-        top_domains = db.execute(
-            f"""SELECT domain, COUNT(*) AS events, MAX(observed_at) AS last_seen
-                FROM activity_events {domain_filter}
-                GROUP BY domain ORDER BY events DESC, last_seen DESC LIMIT 15""",
-            domain_params,
-        ).fetchall()
-        blocked_params: tuple[Any, ...] = () if device_id is None else (device_id,)
-        blocked_count = db.execute(
-            "SELECT COUNT(*) FROM activity_events WHERE blocked = 1" + ("" if device_id is None else " AND device_id = ?"),
-            blocked_params,
-        ).fetchone()[0]
-        retention_days = activity_repository.get_retention_days(db)
-        session_count_sql = "SELECT COUNT(*) FROM activity_sessions WHERE status='active'" + ("" if device_id is None else " AND device_id = ?")
-        event_count_sql = "SELECT COUNT(*) FROM activity_events" + ("" if device_id is None else " WHERE device_id = ?")
-        active_count = db.execute(session_count_sql, blocked_params).fetchone()[0]
-        event_count = db.execute(event_count_sql, blocked_params).fetchone()[0]
-        devices = db.execute(
-            "SELECT id, display_name, ip_address, mac_address FROM devices ORDER BY display_name, ip_address"
-        ).fetchall()
-    return {
-        "sessions": [dict(row) for row in sessions],
-        "events": [dict(row) for row in events],
-        "top_domains": [dict(row) for row in top_domains],
-        "blocked_events": int(blocked_count),
-        "devices": [dict(row) for row in devices],
-        "retention_days": retention_days,
-        "active_sessions": int(active_count),
-        "total_events": int(event_count),
-        "sources": sorted(SESSION_SOURCES),
-        "activity_sources": sorted(EVENT_SOURCES | {"manual_import"}),
-        "event_types": sorted(EVENT_TYPES),
-        "note": (
-            "La aplicación no captura tráfico por sí misma. El correo solo se incorpora como metadatos importados "
-            "de registros autorizados, sin cuerpos ni adjuntos. Las sesiones habilitan una ventana para que un adaptador "
-            "autorizado envíe metadatos; la importación CSV añade registros históricos. No se guardan credenciales, "
-            "cookies ni cargas útiles. Las URLs de navegación se normalizan: se quitan fragmentos y parámetros "
-            "conocidos sensibles, y se redactan algunos identificadores reconocibles en la ruta; otros segmentos o "
-            "parámetros no reconocidos pueden persistir. DNS/SNI/conexiones son indicios de tráfico, no prueba de "
-            "que una persona haya usado una cuenta o visto una página concreta."
-        ),
-    }
+    """Conserva el contrato que consume la API y delega el modelo de lectura."""
+    return activity_read_service.get_activity(
+        device_id=device_id,
+        limit=limit,
+        event_type=event_type,
+        from_date=from_date,
+        to_date=to_date,
+        source=source,
+    )
