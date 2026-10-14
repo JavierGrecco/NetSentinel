@@ -8,6 +8,7 @@ from netsentinel.main import app
 
 ROOT = Path(__file__).resolve().parents[1]
 FINDINGS_PAGE = ROOT / "src/netsentinel/static/findings.html"
+FINDINGS_SCRIPT = ROOT / "src/netsentinel/static/findings.js"
 NAV_PAGES = [
     ROOT / "src/netsentinel/static/index.html",
     ROOT / "src/netsentinel/static/monitors.html",
@@ -49,10 +50,12 @@ def test_all_primary_navigation_pages_link_to_findings():
 
 def test_findings_ui_uses_safe_text_rendering_and_no_store_fetches():
     page = FINDINGS_PAGE.read_text(encoding="utf-8")
-    assert 'cache: "no-store"' in page
-    assert "textContent" in page
-    assert "innerHTML" not in page
-    assert 'method: "PATCH"' in page
-    assert 'JSON.stringify({acknowledged:true})' in page
-    assert "DNS/TLS" in page
-    assert "no demuestra identidad, ataque ni causa raíz" in page
+    script = FINDINGS_SCRIPT.read_text(encoding="utf-8")
+    source = page + script
+    assert 'cache: "no-store"' in script
+    assert "textContent" in script
+    assert "innerHTML" not in script
+    assert 'method: "PATCH"' in script
+    assert 'JSON.stringify({acknowledged:true})' in script
+    assert "DNS/TLS" in source
+    assert "no demuestra identidad, ataque ni causa raíz" in source

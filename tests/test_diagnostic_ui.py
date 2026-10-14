@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DASHBOARD = ROOT / "src/netsentinel/static/index.html"
+DASHBOARD = ROOT / "src/netsentinel/static/index.js"
 
 
 def test_diagnostic_ui_labels_timeout_as_timeout_not_skipped():

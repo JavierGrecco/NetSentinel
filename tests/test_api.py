@@ -27,9 +27,11 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         page = client.get("/")
         assert page.status_code == 200
         assert "NetSentinel" in page.text
-        assert "IP local de esta computadora según la última lectura" in page.text
-        assert "Equipo local identificado" in page.text
-        assert "La observación proviene de una interfaz Apple de enlace local" in page.text
+        from pathlib import Path
+        ui_source = page.text + Path("src/netsentinel/static/index.js").read_text(encoding="utf-8")
+        assert "IP local de esta computadora según la última lectura" in ui_source
+        assert "Equipo local identificado" in ui_source
+        assert "La observación proviene de una interfaz Apple de enlace local" in ui_source
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
@@ -266,49 +268,49 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("route", "asset"),
+    ("route", "html_asset", "script_asset"),
     [
-        ("/", "index.html"),
-        ("/monitors", "monitors.html"),
-        ("/activity", "activity.html"),
-        ("/tools", "tools.html"),
-        ("/findings", "findings.html"),
+        ("/", "index.html", "index.js"),
+        ("/monitors", "monitors.html", "monitors.js"),
+        ("/activity", "activity.html", "activity.js"),
+        ("/tools", "tools.html", "tools.js"),
+        ("/findings", "findings.html", "findings.js"),
     ],
 )
-def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_path, route, asset):
-    import base64
-    import hashlib
+def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
+    monkeypatch, tmp_path, route, html_asset, script_asset
+):
     import re
     from pathlib import Path
 
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get(route)
+        script_response = client.get(f"/static/{script_asset}")
 
     assert response.status_code == 200
-    # HTML parsing normalizes CRLF/CR to LF before CSP hashing; mirror that
-    # behavior so these regression checks are stable on Windows checkouts too.
-    scripts = [
-        match.group(1).replace("\r\n", "\n").replace("\r", "\n")
-        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
-        if match.group(1).strip()
-    ]
-    assert scripts, f"{route} should have a known inline script fixture"
+    assert response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n") == Path(
+        "src/netsentinel/static", html_asset
+    ).read_text(encoding="utf-8")
+    scripts = list(re.finditer(
+        r"<script\\b([^>]*)>(.*?)</script\\s*>",
+        response.text,
+        flags=re.IGNORECASE | re.DOTALL,
+    ))
+    assert len(scripts) == 1, f"{route} should load exactly one external script."
+    assert scripts[0].group(1).strip() == f'src="/static/{script_asset}" defer'
+    assert not scripts[0].group(2).strip(), "Inline JavaScript must not be reintroduced."
 
-    expected = {
-        "'sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii") + "'"
-        for script in scripts
-    }
+    script_source = Path("src/netsentinel/static", script_asset).read_text(encoding="utf-8")
+    assert script_response.status_code == 200
+    assert script_response.text == script_source
+    assert script_response.text.strip()
     policy = response.headers["content-security-policy"]
     script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
-    observed = {token for token in script_policy.split()[1:] if token.startswith("'sha256-")}
-
-    assert expected == observed
+    assert "'self'" in script_policy
     assert "'unsafe-inline'" not in script_policy
+    assert "'sha256-" not in script_policy
     assert "https://cdn.jsdelivr.net" not in script_policy
-    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
-        "src/netsentinel/static", asset
-    ).read_text(encoding="utf-8")
 
 
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
@@ -318,7 +320,7 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
     for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
         content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
         assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
-            f"{asset} contains an inline event handler incompatible with hash-only script CSP"
+            f"{asset} contains an inline event handler incompatible with the local CSP policy"
         )
 
 

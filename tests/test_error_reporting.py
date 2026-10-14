@@ -60,13 +60,14 @@ def test_http_errors_have_stable_codes_and_next_steps():
 
 
 def test_panel_formats_validation_errors_and_reports_backend_request_reference():
-    html = (Path(__file__).resolve().parents[1] / "src/netsentinel/static/index.html").read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[1] / "src/netsentinel/static"
+    source = (root / "index.html").read_text(encoding="utf-8") + (root / "index.js").read_text(encoding="utf-8")
 
-    assert "item.loc.filter" in html
-    assert "Código: ${code}" in html
-    assert "Referencia: ${requestId}" in html
-    assert "NS-CONN-001" in html
-    assert "no queda registrada en el log del backend" in html
+    assert "item.loc.filter" in source
+    assert "Código: ${code}" in source
+    assert "Referencia: ${requestId}" in source
+    assert "NS-CONN-001" in source
+    assert "no queda registrada en el log del backend" in source
 
 
 def test_error_journal_writes_allowlisted_fields_and_rotates(monkeypatch, tmp_path):
