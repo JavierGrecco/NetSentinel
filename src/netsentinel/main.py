@@ -13,21 +13,20 @@ from urllib.parse import urlsplit
 from typing import AsyncIterator
 import os
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
 
 from . import __version__
 from . import database
-from .diagnostics import run_diagnostics
-from .monitoring import MonitorSupervisor, check_once, validate_spec
+from .monitoring import MonitorSupervisor
 from .api.activity import router as activity_router
 from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
 from .api.findings import router as findings_router
 from .api.inventory import router as inventory_router
+from .api.monitoring import router as monitoring_router
 
 
 logger = logging.getLogger(__name__)
@@ -129,6 +128,7 @@ app.include_router(tools_router)
 app.include_router(activity_router)
 app.include_router(findings_router)
 app.include_router(inventory_router)
+app.include_router(monitoring_router)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 _STATIC = _STATIC_DIR / "index.html"
@@ -291,21 +291,6 @@ def api_docs() -> Response:
     )
     return response
 
-class MonitorCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    kind: str = Field(min_length=1, max_length=16)
-    target: str = Field(min_length=1, max_length=500)
-    interval_seconds: int = Field(default=60, ge=15, le=86400)
-    timeout_seconds: int = Field(default=3, ge=1, le=10)
-
-
-class MonitorUpdate(BaseModel):
-    enabled: bool | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    interval_seconds: int | None = Field(default=None, ge=15, le=86400)
-    timeout_seconds: int | None = Field(default=None, ge=1, le=10)
-
-
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(_STATIC)
@@ -331,126 +316,6 @@ def findings_page() -> FileResponse:
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
 
-
-@app.get("/api/monitors")
-def monitors() -> list[dict]:
-    return database.list_monitors()
-
-
-@app.get("/api/monitoring/summary")
-def monitoring_summary(hours: int = Query(default=24, ge=1, le=168)) -> dict:
-    """Resume los resultados medidos en las últimas horas (máximo siete días)."""
-    return database.get_monitor_analytics(window_hours=hours)
-
-
-@app.get("/api/export/monitoring.csv")
-def export_monitoring_csv(hours: int = Query(default=24, ge=1, le=168)) -> Response:
-    return Response(
-        content=database.export_monitoring_csv(window_hours=hours),
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": 'attachment; filename="netsentinel-monitoring-report.csv"',
-            "Cache-Control": "no-store",
-        },
-    )
-
-
-@app.get("/api/export/incidents.csv")
-def export_incidents_csv(status: str | None = Query(default=None)) -> Response:
-    if status not in {None, "open", "resolved"}:
-        raise HTTPException(status_code=422, detail="El estado debe ser open o resolved.")
-    return Response(
-        content=database.export_incidents_csv(status=status),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-incidents.csv"', "Cache-Control": "no-store"},
-    )
-
-
-@app.get("/api/monitors/{monitor_id}/latency")
-def monitor_latency_trend(monitor_id: int, hours: int = Query(default=24, ge=1, le=168)) -> dict:
-    trend = database.get_monitor_latency_trend(monitor_id, window_hours=hours)
-    if trend is None:
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    return trend
-
-
-@app.get("/api/export/monitor-latency.csv")
-def export_monitor_latency_csv(monitor_id: int = Query(ge=1),
-                               hours: int = Query(default=24, ge=1, le=168)) -> Response:
-    content = database.export_monitor_latency_csv(monitor_id, window_hours=hours)
-    if content is None:
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    return Response(
-        content=content,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="netsentinel-latency-trend.csv"', "Cache-Control": "no-store"},
-    )
-
-
-@app.post("/api/monitors", status_code=201)
-def add_monitor(body: MonitorCreate) -> dict:
-    try:
-        kind, target, interval, timeout = validate_spec(body.kind, body.target, body.interval_seconds, body.timeout_seconds)
-        return database.create_monitor(body.name, kind, target, interval, timeout)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@app.patch("/api/monitors/{monitor_id}")
-def edit_monitor(monitor_id: int, body: MonitorUpdate) -> dict:
-    try:
-        result = database.update_monitor(monitor_id, **body.model_dump(exclude_unset=True))
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    if result is None:
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    return result
-
-
-@app.delete("/api/monitors/{monitor_id}")
-def remove_monitor(monitor_id: int) -> dict[str, bool]:
-    if not database.delete_monitor(monitor_id):
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    return {"ok": True}
-
-
-@app.post("/api/monitors/{monitor_id}/check")
-def run_monitor_check(monitor_id: int) -> dict:
-    monitor = next((item for item in database.list_monitors() if item["id"] == monitor_id), None)
-    if monitor is None:
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    try:
-        return check_once(monitor)
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@app.get("/api/monitors/{monitor_id}/checks")
-def monitor_checks(monitor_id: int, limit: int = Query(default=30, ge=1, le=200)) -> list[dict]:
-    checks = database.get_monitor_checks(monitor_id, limit=limit)
-    if checks is None:
-        raise HTTPException(status_code=404, detail="No se encontró el monitor.")
-    return checks
-
-
-@app.get("/api/incidents")
-def incidents(limit: int = Query(default=50, ge=1, le=200), status: str | None = Query(default=None)) -> list[dict]:
-    if status not in {None, "open", "resolved"}:
-        raise HTTPException(status_code=422, detail="El estado debe ser open o resolved.")
-    return database.get_incidents(limit=limit, status=status)
-
-
-@app.get("/api/notifications")
-def notifications(limit: int = Query(default=50, ge=1, le=200)) -> dict:
-    return {
-        "webhook_configured": bool(os.environ.get("NETSENTINEL_WEBHOOK_URL", "").strip()),
-        "history": database.get_notification_log(limit=limit),
-    }
-
-
-@app.post("/api/diagnostics")
-def diagnostics() -> dict:
-    return run_diagnostics()
 
 # Sirve CSS y otros recursos desde el paquete local.
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
