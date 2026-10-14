@@ -65,6 +65,7 @@ def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_
     assert response.json()["error_code"] == "NS-REQ-422"
     assert response.json()["request_id"] == response.headers["x-request-id"]
     assert response.json()["next_action"]
+    assert response.json()["registered_in_log"] is False
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
 
@@ -173,6 +174,7 @@ def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tm
     assert body["error_code"] == "NS-500-001"
     assert body["request_id"] == response.headers["x-request-id"]
     assert body["next_action"]
+    assert body["registered_in_log"] is True
     assert "PRIVATE_TOKEN" not in response.text
     assert "PRIVATE_TOKEN" not in caplog.text
     assert body["detail"] == "NetSentinel no pudo completar la operación por un error interno."
