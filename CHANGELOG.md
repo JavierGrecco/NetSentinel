@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa la evaluación del diagnóstico de conectividad en una función pura, aislada de los comandos y de la ejecución de sondas, para poder probar sus recomendaciones sin tocar la red.
+
 - Separa la validación de objetivos, las sondas TCP/HTTP/ping y el transporte de webhooks del supervisor de monitorización, conservando los contratos públicos y los límites de tiempo de las comprobaciones.
 
 - Divide la capa SQLite en infraestructura de conexión/permisos (`database_storage.py`), esquema/migraciones aditivas (`database_schema.py`), repositorios por dominio y servicios de exportación. `database.py` conserva una fachada de compatibilidad y los contratos externos no cambian.

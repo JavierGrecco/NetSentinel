@@ -158,6 +158,17 @@ def test_monitoring_is_split_into_validation_probe_and_notification_adapters() -
     assert "netsentinel.database" not in graph["netsentinel.monitoring_validation"]
     assert "netsentinel.database" not in graph["netsentinel.monitoring_probe"]
 
+def test_diagnostic_assessment_is_pure_and_separated_from_os_commands() -> None:
+    """El resumen del diagnóstico no depende de comandos ni de persistencia."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.diagnostics_assessment"] == set()
+    assert graph["netsentinel.diagnostics"] == {
+        "netsentinel.diagnostics_assessment",
+        "netsentinel.error_reporting",
+    }
+
 def test_database_facade_keeps_existing_public_operations() -> None:
     """La API interna histórica sigue disponible tras dividir los repositorios."""
     for operation in (
@@ -193,6 +204,8 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "discovery.py",
         "findings.py",
         "monitoring.py",
+        "diagnostics.py",
+        "diagnostics_assessment.py",
         "activity_tracking.py",
         "activity_deletion_service.py",
         "activity_session_service.py",
