@@ -83,7 +83,7 @@ def test_session_service_stores_only_token_hash_and_accepts_valid_event(
 def test_session_service_rejects_invalid_session_parameters(
     duration, source, message
 ):
-    with pytest.raises((ValueError, AttributeError), match=message):
+    with pytest.raises(ValueError, match=message):
         activity_session_service.start_session(1, duration, source)
 
 
