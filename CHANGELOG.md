@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Centraliza el reloj UTC y la validación de la retención de actividad en `activity_retention_service.py`; evita depender de la zona horaria local para fechas sin zona, rechaza días fraccionarios/booleanos y elimina el acceso directo al repositorio desde la fachada. Añade pruebas de política, delegación y normalización temporal.
+
 - Extrae la vista previa y el borrado selectivo a `activity_deletion_service.py`; preserva las respuestas y firmas públicas, valida la confirmación antes de escribir y agrega pruebas de delegación, rechazo de confirmaciones inválidas y errores por recuentos desactualizados.
 
 - Separa el ciclo de vida de sesiones e ingestión de eventos en `activity_session_service.py`. La sesión comprueba su fuente, ventana de tiempo y token; solo almacena el hash del token y rechaza eventos fuera de retención o posteriores al cierre. La fachada pública se mantiene y se agregan pruebas directas de regresión.

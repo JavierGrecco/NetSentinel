@@ -8,10 +8,10 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
-from . import activity_event_service, activity_repository, database
+from . import activity_event_service, activity_repository, activity_retention_service, database
 from .activity_catalog import SESSION_SOURCES
 
 
@@ -20,18 +20,18 @@ class InvalidCollectorToken(PermissionError):
 
 
 def _now() -> datetime:
-    """Devuelve la hora actual con zona horaria UTC."""
-    return datetime.now(timezone.utc)
+    """Mantiene el reloj privado histórico y delega al servicio de retención."""
+    return activity_retention_service.now()
 
 
 def _iso(value: datetime) -> str:
-    """Serializa una fecha en UTC con la precisión usada en la base de datos."""
-    return value.astimezone(timezone.utc).isoformat(timespec="seconds")
+    """Mantiene el serializador histórico y delega la normalización UTC."""
+    return activity_retention_service.iso(value)
 
 
 def _cleanup(db) -> int:
-    """Aplica retención y vence sesiones sin cambiar el esquema."""
-    return activity_repository.cleanup(db, now=_now())
+    """Aplica la política de retención compartida sobre la conexión actual."""
+    return activity_retention_service.cleanup(db)
 
 
 def start_session(

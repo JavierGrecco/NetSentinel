@@ -9,10 +9,10 @@ durante una sesión opt-in o mediante importación explícita.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
-from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, activity_session_service, database
+from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_retention_service, activity_session_service
 from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
 from .activity_session_service import InvalidCollectorToken
 from .activity_privacy import _domain, _email_address_list, _safe_page_url
@@ -20,11 +20,13 @@ from .activity_privacy import _domain, _email_address_list, _safe_page_url
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    """Mantiene el helper histórico y delega el reloj UTC compartido."""
+    return activity_retention_service.now()
 
 
 def _iso(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat(timespec="seconds")
+    """Mantiene el helper histórico y delega la normalización UTC."""
+    return activity_retention_service.iso(value)
 
 
 def _parse_timestamp(value: str | None) -> str:
@@ -41,8 +43,8 @@ def normalize_event(
     )
 
 def _cleanup(db) -> int:
-    """Delegación temporal al repositorio mientras se migra el resto del dominio."""
-    return activity_repository.cleanup(db, now=_now())
+    """Mantiene el helper histórico y delega la política de retención."""
+    return activity_retention_service.cleanup(db)
 
 
 def start_session(
@@ -83,9 +85,8 @@ def preview_csv(device_id: int, csv_data: str) -> dict[str, Any]:
 
 
 def update_retention(retention_days: int) -> dict[str, Any]:
-    if not 1 <= int(retention_days) <= 90:
-        raise ValueError("La retención debe ser de 1 a 90 días.")
-    return activity_repository.update_retention(int(retention_days), now=_now())
+    """Conserva la firma pública y delega la política de retención."""
+    return activity_retention_service.update_retention(retention_days)
 
 
 def _activity_filter_values(
