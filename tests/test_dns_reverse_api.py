@@ -1,3 +1,4 @@
+from pathlib import Path
 from fastapi.testclient import TestClient
 
 import netsentinel.main as main_module
