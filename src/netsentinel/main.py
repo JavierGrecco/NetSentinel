@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 import logging
+from pathlib import Path
+import sqlite3
+import traceback
+import uuid
 import base64
 import hashlib
 import ipaddress
@@ -15,12 +19,14 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from . import database
+from .error_reporting import describe_http_error, describe_unhandled_exception
 from .monitoring import MonitorSupervisor
 from .api.activity import router as activity_router
 from .api.tools import NETWORK_SIDE_EFFECT_GET_PATHS, router as tools_router
@@ -196,6 +202,29 @@ def _apply_security_headers(response: Response, *, page_path: str = "") -> Respo
     return response
 
 
+def _request_id(request: Request) -> str:
+    """Return the identifier created for this request, including handler fallbacks."""
+    current = getattr(request.state, "request_id", None)
+    if isinstance(current, str) and re.fullmatch(r"[A-F0-9]{12}", current):
+        return current
+    return uuid.uuid4().hex[:12].upper()
+
+
+def _error_response(
+    request: Request,
+    *,
+    status_code: int,
+    content: dict,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
+    """Add correlation metadata and the app's defensive headers to an error."""
+    response_headers = dict(headers or {})
+    response_headers["X-Request-ID"] = _request_id(request)
+    return _apply_security_headers(
+        JSONResponse(status_code=status_code, content=content, headers=response_headers)
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def handle_request_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Return actionable validation details without reflecting submitted field values."""
@@ -210,32 +239,85 @@ async def handle_request_validation_error(request: Request, exc: RequestValidati
             "msg": str(error.get("msg", "Solicitud inválida"))[:200],
             "type": str(error.get("type", "value_error"))[:100],
         })
-    response = JSONResponse(status_code=422, content={"detail": safe_errors})
-    return _apply_security_headers(response)
+    return _error_response(
+        request,
+        status_code=422,
+        content={
+            "detail": safe_errors,
+            "error_code": "NS-REQ-422",
+            "request_id": _request_id(request),
+            "next_action": "Corregí los campos indicados y volvé a enviar la solicitud.",
+        },
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """Attach stable error metadata without logging expected client-side rejections."""
+    code, next_action = describe_http_error(exc.status_code)
+    request_id = _request_id(request)
+    if exc.status_code >= 500:
+        logger.error(
+            "HTTP server failure code=%s request_id=%s status=%s method=%s path=%s",
+            code, request_id, exc.status_code, request.method, request.url.path,
+        )
+    return _error_response(
+        request,
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "error_code": code,
+            "request_id": request_id,
+            "next_action": next_action,
+        },
+        headers=dict(exc.headers or {}),
+    )
 
 
 @app.exception_handler(Exception)
 async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
-    """Return a generic 500 response with security headers, without exposing internals."""
-    logger.error(
-        "Error interno no controlado en %s %s",
-        request.method,
-        request.url.path,
-        exc_info=(type(exc), exc, exc.__traceback__),
+    """Log a classified failure without exception text, request values, or query strings."""
+    error = describe_unhandled_exception(exc)
+    request_id = _request_id(request)
+    # Traceback locations help developers find the fault without formatting exception
+    # messages or source lines that could contain submitted secrets.
+    frames = " <- ".join(
+        f"{Path(frame.filename).name}:{frame.lineno}:{frame.name}"
+        for frame in traceback.extract_tb(exc.__traceback__)
     )
-    response = JSONResponse(
+    logger.log(
+        getattr(logging, error.log_level.upper(), logging.ERROR),
+        "Application failure code=%s request_id=%s category=%s exception_type=%s method=%s path=%s reason=%s frames=%s",
+        error.code, request_id, error.category, type(exc).__name__,
+        request.method, request.url.path, error.log_reason, frames,
+    )
+    return _error_response(
+        request,
         status_code=500,
-        content={"detail": "Error interno de NetSentinel."},
+        content={
+            "detail": error.message,
+            "error_code": error.code,
+            "request_id": request_id,
+            "next_action": error.next_action,
+        },
     )
-    return _apply_security_headers(response)
 
 
 @app.middleware("http")
 async def protect_local_app(request: Request, call_next):
     """Mitiga DNS rebinding/CSRF y aplica cabeceras a todas las respuestas."""
+    request_id = uuid.uuid4().hex[:12].upper()
+    request.state.request_id = request_id
     if not _host_is_allowed(request.url.hostname):
-        return _apply_security_headers(
-            JSONResponse(status_code=400, content={"detail": "Host no permitido para NetSentinel."})
+        return _error_response(
+            request,
+            status_code=400,
+            content={
+                "detail": "Host no permitido para NetSentinel.",
+                "error_code": "NS-HTTP-400",
+                "request_id": request_id,
+                "next_action": "Abrí NetSentinel usando la dirección local indicada por la aplicación.",
+            },
         )
 
     if request.method.upper() == "GET" and _is_network_side_effect_get(request.url.path):
@@ -247,11 +329,15 @@ async def protect_local_app(request: Request, call_next):
         cross_site_fetch = fetch_site and fetch_site not in {"same-origin", "none"}
         cross_origin_header = origin and not _same_origin(origin, request)
         if cross_site_fetch or cross_origin_header:
-            return _apply_security_headers(
-                JSONResponse(
-                    status_code=403,
-                    content={"detail": "Consulta de red iniciada desde otro origen bloqueada."},
-                )
+            return _error_response(
+                request,
+                status_code=403,
+                content={
+                    "detail": "Consulta de red iniciada desde otro origen bloqueada.",
+                    "error_code": "NS-HTTP-403",
+                    "request_id": request_id,
+                    "next_action": "Iniciá la consulta desde el panel local de NetSentinel.",
+                },
             )
 
     if request.method.upper() in _MUTATING_METHODS:
@@ -261,16 +347,31 @@ async def protect_local_app(request: Request, call_next):
         # Fetch Metadata is available even when an Origin header is omitted.
         non_same_origin_fetch = fetch_site and fetch_site not in {"same-origin", "none"}
         if non_same_origin_fetch:
-            return _apply_security_headers(
-                JSONResponse(status_code=403, content={"detail": "Solicitud desde otro origen bloqueada."})
+            return _error_response(
+                request,
+                status_code=403,
+                content={
+                    "detail": "Solicitud desde otro origen bloqueada.",
+                    "error_code": "NS-HTTP-403",
+                    "request_id": request_id,
+                    "next_action": "Iniciá la operación desde el panel local de NetSentinel.",
+                },
             )
         origin = request.headers.get("origin")
         if origin and not _same_origin(origin, request):
-            return _apply_security_headers(
-                JSONResponse(status_code=403, content={"detail": "Origen no permitido para esta operación."})
+            return _error_response(
+                request,
+                status_code=403,
+                content={
+                    "detail": "Origen no permitido para esta operación.",
+                    "error_code": "NS-HTTP-403",
+                    "request_id": request_id,
+                    "next_action": "Recargá el panel local y volvé a intentar la operación desde allí.",
+                },
             )
 
     response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
     return _apply_security_headers(response, page_path=request.url.path)
 
 
