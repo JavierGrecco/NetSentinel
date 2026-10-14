@@ -213,4 +213,4 @@ def record_error_event(event: Mapping[str, object]) -> bool:
         return True
     except (OSError, ValueError, TypeError):
         return False
-\n
+
