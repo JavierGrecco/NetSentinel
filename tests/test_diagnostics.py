@@ -105,9 +105,10 @@ def test_assessment_explains_dns_timeout_without_claiming_permanent_failure():
     assert "no confirma una avería permanente" in result["summary"]
     assert any("No cambies" in step for step in result["next_steps"])
 
-def test_diagnostic_command_failures_have_stable_codes_and_logging_policy(monkeypatch):
+def test_diagnostic_command_failures_have_stable_codes_and_logging_policy(monkeypatch, tmp_path):
     from netsentinel import diagnostics
 
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     logged = []
 
     def missing_command(command, **kwargs):
@@ -124,6 +125,8 @@ def test_diagnostic_command_failures_have_stable_codes_and_logging_policy(monkey
     assert any(check["logged"] for check in failures)
     assert logged
     assert all("detail" in check for check in failures)
+    assert any(check["should_log"] and check["logged"] for check in failures)
+    assert (tmp_path / "netsentinel-errors.jsonl").exists()
 
 
 def test_ping_nonresponse_is_mapped_but_not_logged_as_program_failure(monkeypatch):
@@ -149,6 +152,8 @@ def test_ping_nonresponse_is_mapped_but_not_logged_as_program_failure(monkeypatc
 
     assert router["error_code"] == "NS-DIAG-ROUTER-005"
     assert external["error_code"] == "NS-DIAG-EXT-005"
+    assert router["should_log"] is False
+    assert external["should_log"] is False
     assert router["logged"] is False
     assert external["logged"] is False
     assert not logged
