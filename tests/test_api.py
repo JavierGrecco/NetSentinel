@@ -23,6 +23,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         health = client.get("/api/health")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+        assert len(health.headers["x-request-id"]) == 12
         page = client.get("/")
         assert page.status_code == 200
         assert "NetSentinel" in page.text
@@ -34,7 +35,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
 
 
-def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path):
+def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path, caplog):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     secret = "TOKEN_LEAK"
@@ -59,6 +60,8 @@ def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_
     assert "type" in errors[0]
     assert "input" not in errors[0]
     assert "ctx" not in errors[0]
+    assert "TOKEN_LEAK" not in errors[0]["msg"]
+    assert "TOKEN_LEAK" not in caplog.text
     assert response.json()["error_code"] == "NS-REQ-422"
     assert response.json()["request_id"] == response.headers["x-request-id"]
     assert response.json()["next_action"]
