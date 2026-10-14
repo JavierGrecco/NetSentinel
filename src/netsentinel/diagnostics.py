@@ -11,6 +11,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
+from .error_reporting import record_error_event
+
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +252,8 @@ _DIAGNOSTIC_FAILURE_SUFFIXES = {
 
 
 def _failure_check(
-    name: str, component: str, failure: str, detail: str, *, status: str = "warning"
+    name: str, component: str, failure: str, detail: str, *,
+    status: str = "warning", request_id: str | None = None,
 ) -> dict[str, Any]:
     """Build a diagnostic result with its root-cause class and logging policy."""
     suffix = _DIAGNOSTIC_FAILURE_SUFFIXES.get(failure, "999")
@@ -259,17 +262,29 @@ def _failure_check(
         "command_unavailable", "permission_denied", "system_error",
         "invalid_response", "resolver_failed",
     }
+    logged = False
     if should_log:
+        logged = record_error_event({
+            "error_code": code,
+            "request_id": request_id or "",
+            "category": "diagnostic",
+            "severity": "warning",
+            "reason": "Diagnostic command execution failure",
+            "component": component,
+            "failure": failure,
+            "platform": platform.system(),
+        })
         logger.warning(
-            "Diagnostic operational failure code=%s component=%s failure=%s platform=%s",
-            code, component, failure, platform.system(),
+            "Diagnostic operational failure code=%s request_id=%s component=%s failure=%s platform=%s persisted=%s",
+            code, request_id or "-", component, failure, platform.system(), logged,
         )
     return {
         "name": name,
         "status": status,
         "detail": detail,
         "error_code": code,
-        "logged": should_log,
+        "should_log": should_log,
+        "logged": logged,
     }
 
 
@@ -298,7 +313,7 @@ def _command_failure_detail(failure: str, operation: str) -> str:
     return f"La comprobación no pudo completar la operación para {operation}."
 
 
-def run_diagnostics() -> dict[str, Any]:
+def run_diagnostics(request_id: str | None = None) -> dict[str, Any]:
     """Run explicitly requested, bounded probes and classify each failed check."""
     checks: list[dict[str, Any]] = []
     gateway, gateway_error = _find_default_gateway_result()
@@ -313,6 +328,7 @@ def run_diagnostics() -> dict[str, Any]:
         checks.append(_failure_check(
             "Puerta de enlace", "ROUTE", failure,
             _command_failure_detail(failure, "detectar la puerta de enlace"),
+            request_id=request_id,
             status="error" if failure in {
                 "command_unavailable", "permission_denied", "system_error",
                 "invalid_response", "route_command_failed",
@@ -331,12 +347,14 @@ def run_diagnostics() -> dict[str, Any]:
             checks.append(_failure_check(
                 "Respuesta del router", "ROUTER", failure,
                 "No hubo respuesta al ping; algunos routers bloquean ICMP, así que esto no confirma una avería.",
+                request_id=request_id,
             ))
         else:
             failure = failure or "system_error"
             checks.append(_failure_check(
                 "Respuesta del router", "ROUTER", failure,
                 _command_failure_detail(failure, "probar la puerta de enlace"),
+                request_id=request_id,
                 status="timeout" if failure == "timeout" else "error",
             ))
     else:
@@ -363,7 +381,7 @@ def run_diagnostics() -> dict[str, Any]:
         else:
             detail = _command_failure_detail(dns_error, "resolver example.com")
             status = "error"
-        checks.append(_failure_check("Resolución DNS", "DNS", dns_error, detail, status=status))
+        checks.append(_failure_check("Resolución DNS", "DNS", dns_error, detail, status=status, request_id=request_id))
 
     result, failure = _run_diagnostic(_ping_command("1.1.1.1"), timeout=3.5)
     if failure is None and result is not None:
@@ -376,17 +394,20 @@ def run_diagnostics() -> dict[str, Any]:
         checks.append(_failure_check(
             "Conectividad IP externa", "EXT", failure,
             "No hubo respuesta de 1.1.1.1; ICMP puede estar filtrado por la red. Esto no demuestra por sí solo una caída de Internet.",
+            request_id=request_id,
         ))
     else:
         failure = failure or "system_error"
         checks.append(_failure_check(
             "Conectividad IP externa", "EXT", failure,
             _command_failure_detail(failure, "probar conectividad IP externa"),
+            request_id=request_id,
             status="timeout" if failure == "timeout" else "error",
         ))
 
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "request_id": request_id,
         "notice": "Las pruebas DNS y ping generan tráfico de salida. Una falta de respuesta puede ser de red/ICMP; fallos de ejecución local se registran con su código.",
         "assessment": build_assessment(checks),
         "checks": checks,
