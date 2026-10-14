@@ -309,3 +309,65 @@ def test_manual_import_repository_rejects_old_rows_before_writing(monkeypatch, t
 
     with database.connect() as db:
         assert db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0] == 0
+
+
+def test_activity_read_repository_validates_filters_and_preserves_summary_scope(
+    monkeypatch, tmp_path
+):
+    """Las lecturas solo aceptan filtros permitidos y no cambian el contrato de resúmenes."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now_text = _iso(now)
+
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+        dns_event = _manual_event(now, "dns.example")
+        search_event = _manual_event(now, "search.example")
+        search_event.update(
+            event_type="search_query",
+            search_engine="Google",
+            search_terms="weather",
+        )
+        activity_repository.insert_event(
+            db, None, device_id, dns_event, received_at=now_text
+        )
+        activity_repository.insert_event(
+            db, None, device_id, search_event, received_at=now_text
+        )
+
+    snapshot = activity_repository.get_activity_snapshot(
+        device_id=device_id,
+        event_filter="WHERE event_type = ?",
+        event_params=("dns_query",),
+        limit=100,
+    )
+    assert [event["event_type"] for event in snapshot["events"]] == ["dns_query"]
+    # La API documenta que los filtros afectan a la lista, no a los indicadores globales.
+    assert snapshot["total_events"] == 2
+    assert {item["domain"] for item in snapshot["top_domains"]} == {
+        "dns.example", "search.example"
+    }
+
+    exported = activity_repository.get_activity_export_rows(
+        where_sql=" WHERE e.device_id = ?",
+        params=(device_id,),
+        device_id=device_id,
+        limit=100,
+    )
+    assert len(exported) == 2
+
+    with pytest.raises(ValueError, match="filtros de lectura"):
+        activity_repository.get_activity_snapshot(
+            device_id=device_id,
+            event_filter="WHERE 1=1",
+            event_params=(),
+            limit=100,
+        )
+    with pytest.raises(ValueError, match="no coinciden"):
+        activity_repository.get_activity_export_rows(
+            where_sql="",
+            params=(device_id,),
+            device_id=device_id,
+            limit=100,
+        )
