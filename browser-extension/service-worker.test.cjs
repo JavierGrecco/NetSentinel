@@ -487,3 +487,15 @@ test("redacts identifiers that remain hidden by deep encoding in URL path segmen
   );
   assert.equal(isSensitivePathSegment("%252525252525FF"), true, "unreadable nested path escapes must be redacted");
 });
+
+
+test("drops query keys with mixed malformed and valid percent escapes", () => {
+  assert.equal(
+    cleanUrl("https://example.com/profile?access%25ZZ%255Ftoken=must-not-persist&lang=es"),
+    "https://example.com/profile?lang=es"
+  );
+  assert.equal(
+    cleanUrl("https://example.com/profile/%ZZsecret"),
+    "https://example.com/profile/%5Bredacted%5D"
+  );
+});
