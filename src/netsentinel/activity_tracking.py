@@ -17,6 +17,7 @@ from typing import Any
 
 from . import activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, database
 from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
+from .activity_privacy import _domain, _email_address_list, _safe_page_url
 
 class InvalidCollectorToken(PermissionError):
     """El secreto de una sesión de recopilación no coincide."""
