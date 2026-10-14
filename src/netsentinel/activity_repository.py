@@ -187,6 +187,12 @@ def _require_device(db: sqlite3.Connection, device_id: int | None) -> None:
         raise LookupError("No se encontró el dispositivo.")
 
 
+def _require_bounded_scope(where_sql: str) -> None:
+    """Impide que una operación de selección se convierta en un barrido total accidental."""
+    if not isinstance(where_sql, str) or not where_sql.startswith(" WHERE ") or not where_sql[7:].strip():
+        raise ValueError("El repositorio requiere un alcance explícito de actividad.")
+
+
 def count_activity_scope(
     where_sql: str,
     params: tuple[Any, ...],
@@ -198,6 +204,7 @@ def count_activity_scope(
     `where_sql` solo puede construirse desde los filtros permitidos por
     activity_tracking; los valores siempre viajan como parámetros SQL.
     """
+    _require_bounded_scope(where_sql)
     with database.connect() as db:
         _require_device(db, device_id)
         row = db.execute(
@@ -218,6 +225,7 @@ def delete_activity_scope(
     El bloqueo se toma antes de volver a contar: otra escritura no puede cambiar
     el número entre la verificación de la confirmación y el DELETE.
     """
+    _require_bounded_scope(where_sql)
     if not isinstance(confirmation, str) or len(confirmation) > 40:
         raise PermissionError("La frase de confirmación no es válida.")
 
