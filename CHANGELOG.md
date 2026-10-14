@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Endurece la validación de metadatos: rechaza puertos que se convertirían silenciosamente desde booleanos o decimales y evita que valores arbitrarios truthy se registren como bloqueos. Los campos numéricos de puerto y retención de la API exigen enteros reales; se agregan pruebas unitarias y de contrato para valores válidos e inválidos.
+
 - Centraliza el reloj UTC y la validación de la retención de actividad en `activity_retention_service.py`; evita depender de la zona horaria local para fechas sin zona, rechaza días fraccionarios/booleanos y elimina el acceso directo al repositorio desde la fachada. Añade pruebas de política, delegación y normalización temporal.
 
 - Extrae la vista previa y el borrado selectivo a `activity_deletion_service.py`; preserva las respuestas y firmas públicas, valida la confirmación antes de escribir y agrega pruebas de delegación, rechazo de confirmaciones inválidas y errores por recuentos desactualizados.
