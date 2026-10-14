@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, findings, inventory, monitoring, tools
+from netsentinel.api import activity, findings, inventory, monitoring, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from scripts.check_architecture_boundaries import check_architecture
@@ -229,3 +229,19 @@ def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
         "netsentinel.diagnostics",
         "netsentinel.monitoring",
     }
+
+
+
+def test_html_pages_belong_to_pages_router() -> None:
+    """Las cinco páginas HTML se sirven desde su router dedicado."""
+    paths = {route.path for route in pages.router.routes}
+    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools"}
+    assert all(not route.include_in_schema for route in pages.router.routes)
+
+
+def test_pages_router_has_no_internal_domain_dependencies() -> None:
+    """El router de páginas solo selecciona recursos HTML empaquetados."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.api.pages"] == set()
