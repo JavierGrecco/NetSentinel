@@ -23,7 +23,9 @@ def test_sqlite_storage_and_access_failures_have_distinct_codes():
 
     assert full.code == "NS-DB-003"
     assert readonly.code == "NS-DB-004"
+    io_error = describe_unhandled_exception(sqlite3.OperationalError("disk I/O error"))
     assert malformed.code == "NS-DB-005"
+    assert io_error.code == "NS-DB-007"
     assert full.code != readonly.code != malformed.code
 
 
