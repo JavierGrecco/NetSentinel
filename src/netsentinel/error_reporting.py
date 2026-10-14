@@ -17,6 +17,7 @@ import threading
 
 from .config import data_dir
 
+
 _ERROR_LOG_NAME = "netsentinel-errors.jsonl"
 _ERROR_LOG_MAX_BYTES = 512 * 1024
 _ERROR_LOG_BACKUPS = 3
@@ -151,35 +152,6 @@ def describe_http_error(status_code: int) -> tuple[str, str]:
     if 500 <= status_code <= 599:
         return "NS-HTTP-5XX", "El servidor no pudo completar la solicitud. Comunicá la referencia de seguimiento."
     return f"NS-HTTP-{status_code}", "Revisá la solicitud y volvé a intentarlo."
-
-import json
-import os
-import threading
-from datetime import datetime, timezone
-from pathlib import Path
-from collections.abc import Mapping
-
-from .config import data_dir
-
-_ERROR_LOG_NAME = "netsentinel-errors.jsonl"
-_ERROR_LOG_MAX_BYTES = 512 * 1024
-_ERROR_LOG_BACKUPS = 3
-_ERROR_LOG_LOCK = threading.Lock()
-_ERROR_LOG_FIELDS = {
-    "error_code": 64,
-    "request_id": 16,
-    "category": 80,
-    "severity": 16,
-    "exception_type": 96,
-    "method": 12,
-    "path": 220,
-    "reason": 120,
-    "frames": 1200,
-    "component": 40,
-    "failure": 64,
-    "platform": 40,
-}
-
 
 def _rotate_error_log(path: Path) -> None:
     """Rotate the private, bounded error journal without reading prior records."""
