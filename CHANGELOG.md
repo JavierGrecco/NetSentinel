@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Descarta de forma segura registros de navegación corruptos (nulos, no-objetos o con fecha inválida) tanto al leer el popup como al procesar eventos nuevos; mantiene los eventos válidos y evita que un elemento dañado interrumpa la captura. Añade pruebas de regresión para ambos contextos.
+
 - Endurece el manejo de preferencias locales de la extensión: si `retentionDays` contiene un valor corrupto o no entero, el popup y el service worker vuelven a los 7 días predeterminados en lugar de generar un corte temporal `NaN` que descarte eventos conservados. Se agregan pruebas de regresión en ambos contextos.
 
 - Endurece la validación de metadatos: rechaza puertos que se convertirían silenciosamente desde booleanos o decimales y evita que valores arbitrarios truthy se registren como bloqueos. Los campos numéricos de puerto y retención de la API exigen enteros reales; se agregan pruebas unitarias y de contrato para valores válidos e inválidos.

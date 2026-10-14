@@ -27,6 +27,14 @@ function normalizeRetentionDays(value) {
   if (!Number.isSafeInteger(parsed)) return DEFAULTS.retentionDays;
   return Math.max(1, Math.min(90, parsed));
 }
+function isRetainedEvent(event, cutoff) {
+  // Storage can contain stale or malformed records. Reject them before UI or
+  // navigation code reads their fields; keep valid records inside the window.
+  if (!event || typeof event !== "object" || Array.isArray(event)) return false;
+  let observedAt;
+  try { observedAt = Date.parse(event.observed_at); } catch { return false; }
+  return Number.isFinite(observedAt) && observedAt >= cutoff;
+}
 function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
 function isPrivateOrLocalIPv4(host) {
   const parts = String(host || "").split(".");
@@ -226,7 +234,7 @@ async function loadState() {
   };
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
-    .filter(event => Date.parse(event.observed_at) >= cutoff).slice(-MAX_EVENTS);
+    .filter(event => isRetainedEvent(event, cutoff)).slice(-MAX_EVENTS);
   return { settings, events };
 }
 async function captureNavigation(details) {
@@ -263,7 +271,7 @@ async function captureNavigation(details) {
       Math.abs(now - Date.parse(old.observed_at)) < 4000);
     if (!duplicate) events.push(event);
   }
-  events = events.filter(event => Date.parse(event.observed_at) >= now - settings.retentionDays * 86400000).slice(-MAX_EVENTS);
+  events = events.filter(event => isRetainedEvent(event, now - settings.retentionDays * 86400000)).slice(-MAX_EVENTS);
   await chrome.storage.local.set({ [EVENTS_KEY]: events });
 }
 // Chrome can deliver several navigation events while storage operations are

@@ -15,6 +15,13 @@ function normalizeRetentionDays(value) {
   return Math.max(1, Math.min(90, parsed));
 }
 
+function isRetainedEvent(event, cutoff) {
+  // Storage can contain stale or malformed records. Reject them before rendering.
+  if (!event || typeof event !== "object" || Array.isArray(event)) return false;
+  let observedAt;
+  try { observedAt = Date.parse(event.observed_at); } catch { return false; }
+  return Number.isFinite(observedAt) && observedAt >= cutoff;
+}
 function escapeCsv(value) {
   let text = String(value ?? "");
   if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
@@ -31,7 +38,7 @@ async function getState() {
   settings.excludeDomains = Array.isArray(settings.excludeDomains) ? settings.excludeDomains : [];
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
-    .filter(event => Date.parse(event.observed_at) >= cutoff).slice(-1000);
+    .filter(event => isRetainedEvent(event, cutoff)).slice(-1000);
   // Reading/rendering must not write a stale event snapshot back over new
   // navigation events created by the service worker in another extension context.
   return { settings, events };

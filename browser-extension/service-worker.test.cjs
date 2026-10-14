@@ -383,3 +383,37 @@ test("retention normalization accepts integer values and clamps supported bounds
   assert.equal(normalizeRetentionDays(true), 7);
   assert.equal(normalizeRetentionDays(1.5), 7);
 });
+
+
+test("loadState and navigation safely discard malformed stored event records", async () => {
+  const now = Date.now();
+  const retained = {
+    event_type: "page_visit",
+    observed_at: new Date(now - 3 * 86400000).toISOString(),
+    page_url: "https://example.com/retained"
+  };
+  const malformed = [
+    null,
+    undefined,
+    "not-an-event",
+    [],
+    { observed_at: "not-a-date", event_type: "page_visit" }
+  ];
+  setState(enabledSettings(), [...malformed, retained]);
+
+  const state = await loadState();
+  assert.deepEqual(state.events, [retained], "only valid, in-retention event objects should be returned");
+
+  await captureNavigation({
+    frameId: 0,
+    tabId: 707,
+    url: "https://example.net/new-event",
+    timeStamp: Date.now()
+  });
+  const persisted = mockStore[EVENTS_KEY];
+  assert.equal(persisted.some(event => event === null || event === undefined), false);
+  assert.deepEqual(
+    persisted.map(event => event.page_url),
+    ["https://example.com/retained", "https://example.net/new-event"]
+  );
+});

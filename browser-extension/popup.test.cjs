@@ -137,3 +137,44 @@ test("popup preserves still-retained events when stored retention setting is mal
     else global.chrome = previousChrome;
   }
 });
+
+
+test("popup ignores malformed stored event records and preserves valid retained events", async () => {
+  const previousChrome = global.chrome;
+  const settingsKey = "netsentinelSettings";
+  const eventsKey = "netsentinelEvents";
+  const retained = {
+    observed_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    event_type: "page_visit",
+    page_url: "https://example.com/retained"
+  };
+  let writes = 0;
+  global.chrome = {
+    storage: {
+      local: {
+        async get() {
+          return {
+            [settingsKey]: { enabled: true, retentionDays: 7 },
+            [eventsKey]: [
+              null,
+              undefined,
+              "not-an-event",
+              [],
+              { observed_at: "not-a-date", event_type: "page_visit" },
+              retained
+            ]
+          };
+        },
+        async set() { writes += 1; }
+      }
+    }
+  };
+  try {
+    const state = await getState();
+    assert.deepEqual(state.events, [retained]);
+    assert.equal(writes, 0, "cleaning the in-memory view must not cause a stale storage write");
+  } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
