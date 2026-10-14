@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Extrae la validación y normalización de eventos a `activity_event_service.py`, dejando en `activity_tracking.py` una capa de coordinación y compatibilidad. Añade pruebas específicas de validación de fechas, IPs, fuentes y valores de control y registra las dependencias permitidas en el guardián arquitectónico.
+
 - Separa las consultas del panel y el formato de exportación de `activity_tracking.py`. Los filtros puros, el catálogo de actividad, el modelo de lectura y las consultas SQLite quedan en módulos con límites explícitos; se valida que el SQL solo reciba predicados permitidos y valores parametrizados.
 
 - Separa la importación CSV en `activity_import_service.py` y mueve la validación de retención, deduplicación y escritura atómica al repositorio SQLite. La vista previa permanece de solo lectura; se añaden pruebas del repositorio para importación idempotente y rechazo completo de lotes fuera de retención.
