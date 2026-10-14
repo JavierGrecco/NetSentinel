@@ -116,9 +116,6 @@ def _harden_database_file(db_path: Path) -> None:
 
 
 @contextmanager
-
-
-@contextmanager
 def connect(path: Path | None = None, *, default_path_provider: Callable[[], Path] | None = None) -> Iterator[sqlite3.Connection]:
     """Abre una conexión transaccional y asegura que se cierre al terminar."""
     db_path = path or (default_path_provider or database_path)()
