@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import platform
 import re
 import subprocess
@@ -11,42 +12,68 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-def _run(command: list[str], timeout: float = 3.0) -> subprocess.CompletedProcess[str] | None:
+logger = logging.getLogger(__name__)
+
+
+def _run_diagnostic(
+    command: list[str], timeout: float = 3.0
+) -> tuple[subprocess.CompletedProcess[str] | None, str | None]:
+    """Run a local probe and preserve its failure class for user-facing diagnosis."""
     try:
-        return subprocess.run(command, capture_output=True, text=True, errors="replace", timeout=timeout, check=False)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
+        result = subprocess.run(
+            command, capture_output=True, text=True, errors="replace",
+            timeout=timeout, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "timeout"
+    except FileNotFoundError:
+        return None, "command_unavailable"
+    except PermissionError:
+        return None, "permission_denied"
+    except OSError:
+        return None, "system_error"
+    return (result, None) if result.returncode == 0 else (result, "nonzero_exit")
+
+
+def _run(command: list[str], timeout: float = 3.0) -> subprocess.CompletedProcess[str] | None:
+    """Compatibility wrapper for callers that only need the command result."""
+    result, _ = _run_diagnostic(command, timeout=timeout)
+    return result
+
+
+def _find_default_gateway_result() -> tuple[str | None, str | None]:
+    """Return gateway plus a stable local failure class without command-output leaks."""
+    system = platform.system()
+    if system == "Darwin":
+        command, pattern = ["route", "-n", "get", "default"], r"(?m)^\s*gateway:\s*(\S+)"
+    elif system == "Linux":
+        command, pattern = ["ip", "route", "show", "default"], r"(?m)^default via (\S+)"
+    elif system == "Windows":
+        command = ["route", "print", "-4"]
+        pattern = r"(?m)^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d{1,3}(?:\.\d{1,3}){3})"
+    else:
+        return None, "unsupported_platform"
+
+    result, failure = _run_diagnostic(command, timeout=3.0)
+    if failure == "nonzero_exit":
+        return None, "route_command_failed"
+    if failure:
+        return None, failure
+    if result is None:
+        return None, "system_error"
+    match = re.search(pattern, result.stdout)
+    return (match.group(1), None) if match else (None, "not_detected")
 
 
 def find_default_gateway() -> str | None:
-    system = platform.system()
-    if system == "Darwin":
-        result = _run(["route", "-n", "get", "default"])
-        if result:
-            match = re.search(r"(?m)^\s*gateway:\s*(\S+)", result.stdout)
-            if match:
-                return match.group(1)
-    elif system == "Linux":
-        result = _run(["ip", "route", "show", "default"])
-        if result:
-            match = re.search(r"(?m)^default via (\S+)", result.stdout)
-            if match:
-                return match.group(1)
-    elif system == "Windows":
-        result = _run(["route", "print", "-4"])
-        if result:
-            match = re.search(r"(?m)^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d{1,3}(?:\.\d{1,3}){3})", result.stdout)
-            if match:
-                return match.group(1)
-    return None
+    """Return the default gateway when the current OS route command can identify it."""
+    gateway, _ = _find_default_gateway_result()
+    return gateway
+
 
 
 def _resolve_hostname(hostname: str, timeout: float = 3.0) -> tuple[list[str], str | None]:
-    """Resolve a host in a killable child process with a strict timeout.
-
-    A timeout in the calling thread does not stop the operating system resolver.
-    The child process can be terminated when the deadline expires.
-    """
+    """Resolve a host in a killable child process and classify failures safely."""
     resolver_script = chr(10).join(
         [
             "import json, socket, sys",
@@ -58,28 +85,31 @@ def _resolve_hostname(hostname: str, timeout: float = 3.0) -> tuple[list[str], s
             "    sys.exit(1)",
         ]
     )
+    command = [sys.executable, "-c", resolver_script, hostname]
     try:
         result = subprocess.run(
-            [sys.executable, "-c", resolver_script, hostname],
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=timeout,
-            check=False,
+            command, capture_output=True, text=True, errors="replace",
+            timeout=timeout, check=False,
         )
     except subprocess.TimeoutExpired:
         return [], "timeout"
+    except FileNotFoundError:
+        return [], "command_unavailable"
+    except PermissionError:
+        return [], "permission_denied"
     except OSError:
-        return [], "unavailable"
+        return [], "system_error"
 
     try:
         payload = json.loads(result.stdout.strip())
     except (json.JSONDecodeError, TypeError):
-        return [], "error"
-    if result.returncode != 0 or not isinstance(payload, list):
-        return [], "error"
-    if not all(isinstance(address, str) for address in payload):
-        return [], "error"
+        return [], "invalid_response"
+    if result.returncode != 0:
+        if isinstance(payload, dict) and payload.get("error") == "gaierror":
+            return [], "name_resolution_failed"
+        return [], "resolver_failed"
+    if not isinstance(payload, list) or not all(isinstance(address, str) for address in payload):
+        return [], "invalid_response"
     return sorted(set(payload)), None
 
 
@@ -204,63 +234,160 @@ def build_assessment(checks: list[dict[str, Any]]) -> dict[str, Any]:
     return {"status": status, "title": title, "summary": summary, "next_steps": next_steps}
 
 
-def run_diagnostics() -> dict[str, Any]:
-    """Ejecuta comprobaciones solo después de una solicitud explícita del usuario.
+_DIAGNOSTIC_FAILURE_SUFFIXES = {
+    "command_unavailable": "001",
+    "permission_denied": "002",
+    "timeout": "003",
+    "system_error": "004",
+    "nonzero_exit": "005",
+    "not_detected": "006",
+    "name_resolution_failed": "007",
+    "invalid_response": "008",
+    "resolver_failed": "009",
+    "unsupported_platform": "010",
+    "route_command_failed": "011",
+}
 
-    La resolución DNS usa example.com; la prueba de conectividad externa intenta
-    contactar 1.1.1.1 mediante ping. Ambas implican tráfico de salida.
-    """
+
+def _failure_check(
+    name: str, component: str, failure: str, detail: str, *, status: str = "warning"
+) -> dict[str, Any]:
+    """Build a diagnostic result with its root-cause class and logging policy."""
+    suffix = _DIAGNOSTIC_FAILURE_SUFFIXES.get(failure, "999")
+    code = f"NS-DIAG-{component}-{suffix}"
+    should_log = failure in {
+        "command_unavailable", "permission_denied", "system_error",
+        "invalid_response", "resolver_failed",
+    }
+    if should_log:
+        logger.warning(
+            "Diagnostic operational failure code=%s component=%s failure=%s platform=%s",
+            code, component, failure, platform.system(),
+        )
+    return {
+        "name": name,
+        "status": status,
+        "detail": detail,
+        "error_code": code,
+        "logged": should_log,
+    }
+
+
+def _command_failure_detail(failure: str, operation: str) -> str:
+    """Translate operating-system command failures without exposing stdout/stderr."""
+    if failure == "command_unavailable":
+        return f"No se encontró el comando que NetSentinel necesita para {operation}."
+    if failure == "permission_denied":
+        return f"El sistema operativo no permitió ejecutar la comprobación para {operation}."
+    if failure == "timeout":
+        return f"La comprobación para {operation} superó el tiempo de espera y se detuvo."
+    if failure == "system_error":
+        return f"No se pudo ejecutar la comprobación para {operation} por un error del sistema."
+    if failure == "route_command_failed":
+        return "El comando de rutas no pudo consultar la ruta predeterminada."
+    if failure == "unsupported_platform":
+        return "La detección automática de puerta de enlace no está implementada para este sistema operativo."
+    if failure == "not_detected":
+        return "El comando terminó, pero no se reconoció una puerta de enlace en su salida."
+    if failure == "name_resolution_failed":
+        return "El resolvedor del sistema no pudo traducir example.com a una dirección."
+    if failure == "invalid_response":
+        return "La comprobación local devolvió una respuesta que NetSentinel no pudo interpretar."
+    if failure == "resolver_failed":
+        return "El proceso aislado de DNS falló y no pudo completar la consulta."
+    return f"La comprobación no pudo completar la operación para {operation}."
+
+
+def run_diagnostics() -> dict[str, Any]:
+    """Run explicitly requested, bounded probes and classify each failed check."""
     checks: list[dict[str, Any]] = []
-    gateway = find_default_gateway()
-    checks.append({
-        "name": "Puerta de enlace",
-        "status": "ok" if gateway else "warning",
-        "detail": gateway or "No se pudo determinar automáticamente la puerta de enlace.",
-    })
+    gateway, gateway_error = _find_default_gateway_result()
+    if gateway:
+        checks.append({
+            "name": "Puerta de enlace",
+            "status": "ok",
+            "detail": gateway,
+        })
+    else:
+        failure = gateway_error or "not_detected"
+        checks.append(_failure_check(
+            "Puerta de enlace", "ROUTE", failure,
+            _command_failure_detail(failure, "detectar la puerta de enlace"),
+            status="error" if failure in {
+                "command_unavailable", "permission_denied", "system_error",
+                "invalid_response", "route_command_failed",
+            } else "warning",
+        ))
 
     if gateway:
-        result = _run(_ping_command(gateway), timeout=3.5)
-        reachable = bool(result and result.returncode == 0)
+        result, failure = _run_diagnostic(_ping_command(gateway), timeout=3.5)
+        if failure is None and result is not None:
+            checks.append({
+                "name": "Respuesta del router",
+                "status": "ok",
+                "detail": "La puerta de enlace respondió al ping.",
+            })
+        elif failure == "nonzero_exit":
+            checks.append(_failure_check(
+                "Respuesta del router", "ROUTER", failure,
+                "No hubo respuesta al ping; algunos routers bloquean ICMP, así que esto no confirma una avería.",
+            ))
+        else:
+            failure = failure or "system_error"
+            checks.append(_failure_check(
+                "Respuesta del router", "ROUTER", failure,
+                _command_failure_detail(failure, "probar la puerta de enlace"),
+                status="timeout" if failure == "timeout" else "error",
+            ))
+    else:
         checks.append({
             "name": "Respuesta del router",
-            "status": "ok" if reachable else "warning",
-            "detail": "La puerta de enlace respondió al ping." if reachable else "No hubo respuesta al ping; algunos routers bloquean ICMP.",
+            "status": "skipped",
+            "detail": "No se pudo probar el router porque no se identificó la puerta de enlace.",
         })
-    else:
-        checks.append({"name": "Respuesta del router", "status": "skipped", "detail": "No se encontró la puerta de enlace para probarla."})
 
     addresses, dns_error = _resolve_hostname("example.com", timeout=3.0)
-    if dns_error == "timeout":
-        checks.append({
-            "name": "Resolución DNS",
-            "status": "timeout",
-            "detail": "La consulta superó el límite de 3 segundos. La espera se detuvo para que el diagnóstico pueda continuar.",
-        })
-    elif dns_error:
-        checks.append({
-            "name": "Resolución DNS",
-            "status": "warning",
-            "detail": "El resolvedor no pudo completar la consulta de example.com. Puede ser un problema temporal o de configuración.",
-        })
-    else:
+    if dns_error is None:
         checks.append({
             "name": "Resolución DNS",
             "status": "ok",
             "detail": f"example.com resolvió a {', '.join(addresses[:3])}.",
         })
+    else:
+        if dns_error == "timeout":
+            detail = "La consulta DNS superó el límite de 3 segundos; se detuvo para que el diagnóstico pudiera continuar."
+            status = "timeout"
+        elif dns_error == "name_resolution_failed":
+            detail = _command_failure_detail(dns_error, "resolver example.com")
+            status = "warning"
+        else:
+            detail = _command_failure_detail(dns_error, "resolver example.com")
+            status = "error"
+        checks.append(_failure_check("Resolución DNS", "DNS", dns_error, detail, status=status))
 
-    ping_target = "1.1.1.1"
-    result = _run(_ping_command(ping_target), timeout=3.5)
-    reachable = bool(result and result.returncode == 0)
-    checks.append({
-        "name": "Conectividad IP externa",
-        "status": "ok" if reachable else "warning",
-        "detail": "1.1.1.1 respondió al ping." if reachable else "No hubo respuesta de 1.1.1.1; ICMP puede estar filtrado por la red.",
-    })
+    result, failure = _run_diagnostic(_ping_command("1.1.1.1"), timeout=3.5)
+    if failure is None and result is not None:
+        checks.append({
+            "name": "Conectividad IP externa",
+            "status": "ok",
+            "detail": "1.1.1.1 respondió al ping.",
+        })
+    elif failure == "nonzero_exit":
+        checks.append(_failure_check(
+            "Conectividad IP externa", "EXT", failure,
+            "No hubo respuesta de 1.1.1.1; ICMP puede estar filtrado por la red. Esto no demuestra por sí solo una caída de Internet.",
+        ))
+    else:
+        failure = failure or "system_error"
+        checks.append(_failure_check(
+            "Conectividad IP externa", "EXT", failure,
+            _command_failure_detail(failure, "probar conectividad IP externa"),
+            status="timeout" if failure == "timeout" else "error",
+        ))
 
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "notice": "Las pruebas DNS y ping generan tráfico de salida. Un ping bloqueado no demuestra por sí solo una caída de Internet.",
+        "notice": "Las pruebas DNS y ping generan tráfico de salida. Una falta de respuesta puede ser de red/ICMP; fallos de ejecución local se registran con su código.",
         "assessment": build_assessment(checks),
         "checks": checks,
     }
