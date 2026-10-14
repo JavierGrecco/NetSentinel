@@ -59,6 +59,9 @@ def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_
     assert "type" in errors[0]
     assert "input" not in errors[0]
     assert "ctx" not in errors[0]
+    assert response.json()["error_code"] == "NS-REQ-422"
+    assert response.json()["request_id"] == response.headers["x-request-id"]
+    assert response.json()["next_action"]
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
 
@@ -145,11 +148,14 @@ def test_sqlite_backup_download_is_openable(monkeypatch, tmp_path):
         assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
 
-def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tmp_path):
+def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tmp_path, caplog):
+    import logging
+
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    secret = "PRIVATE_TOKEN=must-not-be-logged"
 
     def fail_summary():
-        raise RuntimeError("private backend detail must not reach the client")
+        raise RuntimeError(secret)
 
     monkeypatch.setattr(main_module.database, "get_summary", fail_summary)
     with TestClient(
@@ -160,8 +166,13 @@ def test_unhandled_error_is_sanitized_and_keeps_security_headers(monkeypatch, tm
         response = client.get("/api/summary")
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Error interno de NetSentinel."}
-    assert "private backend detail" not in response.text
+    body = response.json()
+    assert body["error_code"] == "NS-500-001"
+    assert body["request_id"] == response.headers["x-request-id"]
+    assert body["next_action"]
+    assert "PRIVATE_TOKEN" not in response.text
+    assert "PRIVATE_TOKEN" not in caplog.text
+    assert body["detail"] == "NetSentinel no pudo completar la operación por un error interno."
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["pragma"] == "no-cache"
     assert response.headers["x-content-type-options"] == "nosniff"
