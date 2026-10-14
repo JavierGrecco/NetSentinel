@@ -199,13 +199,14 @@ def test_activity_scope_repository_requires_existing_device_and_exact_confirmati
         where_sql, params, device_id=device_id
     ) == 2
 
-    with pytest.raises(ValueError, match="alcance explícito"):
-        activity_repository.count_activity_scope("", ())
+    for unbounded_sql in ("", " WHERE 1=1", " WHERE device_id = ? OR 1=1"):
+        with pytest.raises(ValueError, match="alcance explícito"):
+            activity_repository.count_activity_scope(unbounded_sql, ())
 
-    with pytest.raises(ValueError, match="alcance explícito"):
-        activity_repository.delete_activity_scope(
-            "", (), device_id=device_id, confirmation="BORRAR 2"
-        )
+        with pytest.raises(ValueError, match="alcance explícito"):
+            activity_repository.delete_activity_scope(
+                unbounded_sql, (), device_id=device_id, confirmation="BORRAR 2"
+            )
 
     with pytest.raises(LookupError, match="No se encontró el dispositivo"):
         activity_repository.count_activity_scope(
