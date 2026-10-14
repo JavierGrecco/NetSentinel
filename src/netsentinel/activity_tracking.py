@@ -9,18 +9,14 @@ durante una sesión opt-in o mediante importación explícita.
 """
 from __future__ import annotations
 
-import hashlib
-import hmac
-import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
-from . import activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, database
+from . import activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_repository, activity_session_service, database
 from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
+from .activity_session_service import InvalidCollectorToken
 from .activity_privacy import _domain, _email_address_list, _safe_page_url
 
-class InvalidCollectorToken(PermissionError):
-    """El secreto de una sesión de recopilación no coincide."""
 
 
 def _now() -> datetime:
@@ -49,73 +45,27 @@ def _cleanup(db) -> int:
     return activity_repository.cleanup(db, now=_now())
 
 
-def start_session(device_id: int, duration_minutes: int, source_mode: str) -> dict[str, Any]:
-    """Abre una ventana temporal y devuelve un token de ingestión de un solo vistazo."""
-    if not 5 <= int(duration_minutes) <= 720:
-        raise ValueError("La duración debe estar entre 5 minutos y 12 horas.")
-    source_mode = source_mode.strip().lower()
-    if source_mode not in SESSION_SOURCES:
-        raise ValueError("Fuente elegible: router_dns, router_flow o device_agent.")
-    now = _now()
-    started_at = _iso(now)
-    ends_at = _iso(now + timedelta(minutes=int(duration_minutes)))
-    collector_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
-    with database.connect() as db:
-        _cleanup(db)
-        result = activity_repository.start_session(
-            db,
-            device_id=device_id,
-            source_mode=source_mode,
-            started_at=started_at,
-            ends_at=ends_at,
-            token_hash=token_hash,
-        )
-    result["collector_token"] = collector_token
-    result["token_note"] = "Copiá este token ahora. Solo se almacena su hash y no volverá a mostrarse."
-    return result
+def start_session(
+    device_id: int, duration_minutes: int, source_mode: str
+) -> dict[str, Any]:
+    """Mantiene la API histórica y delega la apertura de sesión."""
+    return activity_session_service.start_session(
+        device_id, duration_minutes, source_mode
+    )
 
 
 def stop_session(session_id: int) -> dict[str, Any] | None:
-    now = _iso(_now())
-    with database.connect() as db:
-        _cleanup(db)
-        return activity_repository.stop_session(db, session_id, now=now)
+    """Mantiene la API histórica y delega el cierre de sesión."""
+    return activity_session_service.stop_session(session_id)
 
 
 def ingest_event(
     session_id: int, device_id: int, collector_token: str, payload: dict[str, Any]
 ) -> dict[str, Any]:
-    """Guarda metadatos si sesión, dispositivo, fuente, plazo y token coinciden."""
-    event = normalize_event(payload)
-    now = _iso(_now())
-    supplied_hash = hashlib.sha256(collector_token.encode("utf-8")).hexdigest()
-    with database.connect() as db:
-        _cleanup(db)
-        session = activity_repository.get_session_for_device(db, session_id, device_id)
-        if session is None:
-            raise LookupError("No existe una sesión para ese dispositivo.")
-        if not hmac.compare_digest(session["collector_token_hash"], supplied_hash):
-            raise InvalidCollectorToken("El token de recopilación no es válido.")
-        if session["status"] != "active" or session["ends_at"] <= now:
-            raise PermissionError("La sesión no está activa; iniciá otra ventana de seguimiento.")
-        if event["source"] != session["source_mode"]:
-            raise ValueError("La fuente del evento no coincide con la fuente elegida para esta sesión.")
-
-        # Live collectors can deliver delayed telemetry. Do not accept an event
-        # older than the active retention window only to delete it on the next read.
-        retention_days = activity_repository.get_retention_days(db)
-        retention_cutoff = _iso(_now() - timedelta(days=retention_days))
-        if event["observed_at"] < retention_cutoff:
-            raise ValueError(
-                f"La fecha queda fuera de la retención configurada de {retention_days} día(s). "
-                "No se guardó el evento."
-            )
-
-        return activity_repository.insert_event(
-            db, session_id, device_id, event, received_at=now
-        )
-
+    """Mantiene la API histórica y delega la ingesta validada."""
+    return activity_session_service.ingest_event(
+        session_id, device_id, collector_token, payload
+    )
 
 def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[str, Any]:
     """Delega la validación CSV al servicio y conserva la firma pública actual."""
