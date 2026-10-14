@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+from urllib.parse import quote
 
 from netsentinel.activity_privacy import (
     _domain,
@@ -46,3 +47,24 @@ def test_email_addresses_are_normalized_and_limited_to_metadata() -> None:
         field="email_to",
         required=True,
     ) == ["ana@example.com", "bob@example.org"]
+
+
+def test_page_url_redacts_sensitive_keys_after_deep_percent_encoding() -> None:
+    key = "access_token"
+    for _ in range(6):
+        key = quote(key, safe="")
+    url = f"https://example.com/profile?lang=es&{key}=must-not-persist"
+    assert _safe_page_url(url) == "https://example.com/profile?lang=es"
+
+
+def test_page_url_drops_unreadable_encoded_keys_and_redacts_deep_path_identifiers() -> None:
+    assert _safe_page_url(
+        "https://example.com/profile?%25FF=must-not-persist&lang=es"
+    ) == "https://example.com/profile?lang=es"
+
+    email = "jane@example.com"
+    for _ in range(6):
+        email = quote(email, safe="")
+    assert _safe_page_url(
+        f"https://example.com/users/{email}/profile"
+    ) == "https://example.com/users/%5Bredacted%5D/profile"
