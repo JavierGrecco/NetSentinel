@@ -55,6 +55,10 @@ DATABASE_ALLOWED_INTERNAL_IMPORTS = {
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.activity_deletion_service": {
+        "netsentinel.activity_filters",
+        "netsentinel.activity_repository",
+    },
     "netsentinel.activity_session_service": {
         "netsentinel.activity_catalog",
         "netsentinel.activity_event_service",
