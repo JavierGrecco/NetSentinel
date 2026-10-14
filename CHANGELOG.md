@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Alinea el saneamiento de URL del backend con las exclusiones de privacidad de la extensión: bloquea direcciones locales/privadas y rangos IPv4/IPv6 de uso especial en importaciones CSV, conserva hosts públicos válidos y añade regresiones unitarias y de integración.
+
 - Añade pruebas de integración para las cinco páginas HTML locales: verifican contenido/identidad de cada ruta, cabeceras `no-store` y CSP restrictiva con hashes de scripts confiables.
 
 - Extrae las cinco rutas HTML del panel y módulos a `api/pages.py`; `main.py` conserva middleware, CSP, montaje de estáticos y ciclo de vida. Añade pruebas de rutas fuera del esquema OpenAPI y de independencia respecto de dominios internos.
