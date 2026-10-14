@@ -82,7 +82,36 @@
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
   function latestLocalAddresses() { const scan=state.scans.find(item=>(item.discovery?.networks||[]).length); return new Set((scan?.discovery?.networks||[]).map(network=>network.local_address).filter(Boolean)); }
-  async function api(url, options={}) { const response=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}}); if(!response.ok){let reason=`Error HTTP ${response.status}`;try{const body=await response.json();reason=body.detail||reason;}catch{}throw new Error(reason);}return response.json(); }
+  async function api(url, options={}) {
+    let response;
+    try {
+      response=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+    } catch {
+      throw new Error('No se pudo contactar con el servidor local de NetSentinel. Código NS-CONN-001. Verificá que la aplicación siga abierta y volvé a probar. Esta falla ocurre antes de que el servidor reciba la solicitud, por lo que no queda registrada en el log del backend.');
+    }
+    let body;
+    try { body=await response.json(); }
+    catch { body=null; }
+    if(!response.ok){
+      let reason=`La solicitud falló (HTTP ${response.status}).`;
+      if(typeof body?.detail==='string') reason=body.detail;
+      else if(Array.isArray(body?.detail)){
+        reason=body.detail.map(item=>{
+          const field=Array.isArray(item.loc)?item.loc.filter(part=>part!=='body'&&part!=='query'&&part!=='path').join('.'):'';
+          const message=typeof item.msg==='string'?item.msg:'Dato inválido';
+          return field?`${field}: ${message}`:message;
+        }).join(' · ')||reason;
+      }
+      const code=typeof body?.error_code==='string'?body.error_code:null;
+      const requestId=typeof body?.request_id==='string'?body.request_id:response.headers.get('X-Request-ID');
+      const extra=[code?`Código: ${code}`:null,requestId?`Referencia: ${requestId}`:null].filter(Boolean);
+      if(extra.length) reason+=` [${extra.join(' · ')}]`;
+      if(typeof body?.next_action==='string'&&body.next_action) reason+=` Acción sugerida: ${body.next_action}`;
+      throw new Error(reason);
+    }
+    if(body===null) throw new Error('El servidor local devolvió una respuesta que no se pudo interpretar. Código NS-CONN-002. Recargá el panel; si persiste, compartí el registro de la solicitud.');
+    return body;
+  }
   async function refresh() {
     try {
       const [summary,devices,events,scans]=await Promise.all([api('/api/summary'),api('/api/devices?q='+encodeURIComponent($('searchInput').value)),api('/api/events?limit=30'),api('/api/scans?limit=12')]);
