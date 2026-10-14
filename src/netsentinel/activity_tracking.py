@@ -292,7 +292,7 @@ def _is_non_public_navigation_host(hostname: str) -> bool:
         return False
 
     if isinstance(address, ipaddress.IPv4Address):
-        if address in _NON_PUBLIC_IPV4_NETWORKS:
+        if any(address in network for network in _NON_PUBLIC_IPV4_NETWORKS):
             return True
         return (
             address in _IPV4_SPECIAL_192_0_0_0_24
