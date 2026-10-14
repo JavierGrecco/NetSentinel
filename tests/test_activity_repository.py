@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from netsentinel import activity_repository, database
 
 
@@ -172,3 +174,59 @@ def test_event_repository_inserts_validated_metadata(monkeypatch, tmp_path):
     assert inserted["source"] == "router_dns"
     assert inserted["domain"] == "example.com"
     assert "collector_token_hash" not in inserted
+
+
+def test_activity_scope_repository_checks_bounds_and_confirmation(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+    now_text = _iso(now)
+
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+        event = {
+            "observed_at": now_text, "event_type": "dns_query", "source": "manual_import",
+            "domain": "example.com", "destination_ip": None, "destination_port": None,
+            "protocol": None, "app_name": None, "page_url": None, "search_engine": None,
+            "search_terms": None, "email_provider": None, "email_from": None,
+            "email_to": None, "email_subject": None, "blocked": 0,
+        }
+        activity_repository.insert_event(db, None, device_id, event, received_at=now_text)
+        activity_repository.insert_event(db, None, device_id, event, received_at=now_text)
+
+    where_sql = " WHERE device_id = ? AND event_type = ?"
+    params = (device_id, "dns_query")
+    assert activity_repository.count_activity_scope(
+        where_sql, params, device_id=device_id
+    ) == 2
+
+    for unbounded_sql in ("", " WHERE 1=1", " WHERE device_id = ? OR 1=1"):
+        with pytest.raises(ValueError, match="alcance explícito"):
+            activity_repository.count_activity_scope(unbounded_sql, ())
+
+        with pytest.raises(ValueError, match="alcance explícito"):
+            activity_repository.delete_activity_scope(
+                unbounded_sql, (), device_id=device_id, confirmation="BORRAR 2"
+            )
+
+    with pytest.raises(LookupError, match="No se encontró el dispositivo"):
+        activity_repository.count_activity_scope(
+            where_sql, (device_id + 9999, "dns_query"), device_id=device_id + 9999
+        )
+
+    with pytest.raises(PermissionError, match="No se borró nada"):
+        activity_repository.delete_activity_scope(
+            where_sql, params, device_id=device_id, confirmation="BORRAR 1"
+        )
+    # A stale or incorrect confirmation must never partially delete rows.
+    assert activity_repository.count_activity_scope(
+        where_sql, params, device_id=device_id
+    ) == 2
+
+    assert activity_repository.delete_activity_scope(
+        where_sql, params, device_id=device_id, confirmation="BORRAR 2"
+    ) == 2
+    assert activity_repository.count_activity_scope(
+        where_sql, params, device_id=device_id
+    ) == 0
+
