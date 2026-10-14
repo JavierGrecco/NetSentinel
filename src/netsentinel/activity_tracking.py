@@ -17,6 +17,7 @@ import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 from . import activity_repository, database
 from .csv_safety import spreadsheet_safe_text as _csv_safe_text
