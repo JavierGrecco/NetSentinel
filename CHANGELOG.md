@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- La extensión Chromium omite URL con más de 200 parámetros de consulta antes de exportarlas, igual que el importador; prueba los límites 200/201 y el caso con parámetros sensibles que se filtran después.
+
 - Alinea el saneamiento de URL del backend con las exclusiones de privacidad de la extensión: bloquea direcciones locales/privadas y rangos IPv4/IPv6 de uso especial en importaciones CSV, conserva hosts públicos válidos y añade regresiones unitarias y de integración.
 
 - Añade pruebas de integración para las cinco páginas HTML locales: verifican contenido/identidad de cada ruta, cabeceras `no-store` y CSP restrictiva con hashes de scripts confiables.
