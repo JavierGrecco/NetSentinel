@@ -41,7 +41,7 @@ En redes conmutadas o Wi-Fi, un equipo ordinario no suele ver todo el tráfico u
 
 ## Auditoría TLS puntual
 
-La inspección TLS de Herramientas se inicia explícitamente con un host/IP y puerto introducidos por el operador. Realiza una única conexión TLS con la validación normal de certificados del sistema; muestra solo metadatos del certificado y del handshake. No envía solicitudes HTTP, no descarga páginas, no captura credenciales, no intercepta tráfico y no persiste los resultados. Un error de conexión no demuestra por sí solo que un servicio esté comprometido o mal configurado. Ejecutá pruebas solo contra endpoints propios o autorizados; los hallazgos son orientación técnica, no una certificación de cumplimiento.
+La inspección TLS de Herramientas se inicia explícitamente con un host/IP y puerto introducidos por el operador. Realiza una única conexión TLS con la validación normal de certificados del sistema; muestra solo metadatos del certificado y del handshake. El timeout de red admite hasta 3 segundos y el proceso hijo tiene un margen adicional de hasta 1 segundo para arrancar y devolver el resultado; el límite externo sigue siendo terminable, incluso si la resolución DNS queda bloqueada. No envía solicitudes HTTP, no descarga páginas, no captura credenciales, no intercepta tráfico y no persiste los resultados. Un error de conexión no demuestra por sí solo que un servicio esté comprometido o mal configurado. Ejecutá pruebas solo contra endpoints propios o autorizados; los hallazgos son orientación técnica, no una certificación de cumplimiento.
 
 ## Funciones que exigen revisión específica
 

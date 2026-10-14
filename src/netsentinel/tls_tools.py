@@ -13,6 +13,8 @@ import subprocess
 import sys
 from typing import Any
 
+# The outer deadline includes interpreter startup, which is outside the socket timeout.
+_CHILD_PROCESS_STARTUP_GRACE_SECONDS = 1.0
 _MAX_TIMEOUT_SECONDS = 3.0
 _HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 _LEGACY_TLS_VERSIONS = {"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"}
@@ -247,7 +249,9 @@ def inspect_tls_endpoint(host: str, port: int = 443, timeout: float = _MAX_TIMEO
             capture_output=True,
             text=True,
             errors="replace",
-            timeout=float(timeout),
+            # Keep the total operation bounded without charging child startup
+            # and JSON serialization against the network timeout itself.
+            timeout=float(timeout) + _CHILD_PROCESS_STARTUP_GRACE_SECONDS,
             check=False,
         )
     except subprocess.TimeoutExpired:

@@ -207,18 +207,26 @@ def test_tls_inspection_wrapper_enforces_child_process_deadline(monkeypatch):
     assert calls["command"][1] == str(__import__("pathlib").Path(tls_tools.__file__).resolve())
     assert calls["command"][2] == "--inspect-child"
     assert calls["command"][-2:] == ["443", "3.0"]
-    assert calls["kwargs"]["timeout"] == 3.0
+    assert calls["kwargs"]["timeout"] == pytest.approx(
+        3.0 + tls_tools._CHILD_PROCESS_STARTUP_GRACE_SECONDS
+    )
     assert calls["kwargs"]["capture_output"] is True
     assert calls["kwargs"]["check"] is False
 
 
 def test_tls_inspection_wrapper_returns_timeout_if_dns_child_hangs(monkeypatch):
+    calls = {}
+
     def timeout_run(command, **kwargs):
+        calls["timeout"] = kwargs["timeout"]
         raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
 
     monkeypatch.setattr(tls_tools.subprocess, "run", timeout_run)
     result = tls_tools.inspect_tls_endpoint("example.com", timeout=0.5)
 
+    assert calls["timeout"] == pytest.approx(
+        0.5 + tls_tools._CHILD_PROCESS_STARTUP_GRACE_SECONDS
+    )
     assert result["status"] == "timeout"
     assert result["findings"][0]["code"] == "inspection_timeout"
     assert "resolución DNS" in result["summary"]

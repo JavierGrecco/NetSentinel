@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Ajusta el plazo de la inspección TLS aislada: el límite externo contempla el arranque del proceso hijo y la serialización de la respuesta, sin consumir por adelantado todo el timeout de red. Se agregan pruebas para distinguir ambos límites y mantener el proceso terminable.
+
 - Separa el catálogo y la clasificación de errores del diario JSONL local. Mantiene `record_error_event` en la fachada compatible, fija una frontera de dependencias y amplía las pruebas de privacidad, rotación, permisos y protección frente a enlaces simbólicos.
 
 - Separa el JavaScript de las cinco pantallas principales en archivos independientes. Las páginas cargan su módulo local con `defer`, y CI valida su sintaxis y comprueba que los archivos estén incluidos en el paquete.
