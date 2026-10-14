@@ -59,6 +59,9 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
     },
+    "netsentinel.activity_import_service": {
+        "netsentinel.activity_repository",
+    },
     "netsentinel.findings_service": {
         "netsentinel.database",
         "netsentinel.findings",
