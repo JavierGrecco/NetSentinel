@@ -168,6 +168,8 @@ def test_diagnostic_assessment_is_pure_and_separated_from_os_commands() -> None:
         "netsentinel.diagnostics_assessment",
         "netsentinel.error_reporting",
     }
+    assert graph["netsentinel.error_reporting"] == {"netsentinel.error_journal"}
+    assert graph["netsentinel.error_journal"] == {"netsentinel.config"}
 
 def test_database_facade_keeps_existing_public_operations() -> None:
     """La API interna histórica sigue disponible tras dividir los repositorios."""
@@ -224,6 +226,8 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "activity_deletion_repository.py",
         "activity_read_repository.py",
         "network_models.py",
+        "error_reporting.py",
+        "error_journal.py",
     }
     for name in expected:
         source = (package_root / name).read_text(encoding="utf-8")
@@ -414,3 +418,24 @@ def test_pages_router_has_no_internal_domain_dependencies() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\\n".join(violations)
     assert graph["netsentinel.api.pages"] == set()
+
+def test_error_journal_cannot_import_unrelated_domains(tmp_path: Path) -> None:
+    """El diario solo depende de la ubicación de datos, no del resto del programa."""
+    package = _write_minimal_package(tmp_path)
+    (package / "config.py").write_text("def data_dir(): return None\\n", encoding="utf-8")
+    (package / "database.py").write_text("VALUE = 1\\n", encoding="utf-8")
+    (package / "error_reporting.py").write_text(
+        "from .error_journal import record_error_event\\n", encoding="utf-8"
+    )
+    (package / "error_journal.py").write_text(
+        "from . import config, database\\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.error_journal imports netsentinel.database, which is not an allowed journal dependency"
+        in violation
+        for violation in violations
+    )
+

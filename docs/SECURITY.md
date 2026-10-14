@@ -79,3 +79,9 @@ No publiques detalles explotables, credenciales, tokens, exportaciones ni datos 
 
 ### Importación de correo
 La funcionalidad de correo es exclusivamente una importación explícita de metadatos desde una exportación de auditoría autorizada. Guarda fecha/proveedor/emisor/destinatarios/asunto opcional, nunca cuerpos ni adjuntos. La aplicación no se autentica en buzones, no extrae mensajes desde webmail y rechaza columnas de contenido. Los CSV importados deben tratarse como datos sensibles y mantenerse solo el tiempo necesario.
+
+## Diario local de errores
+
+NetSentinel guarda los fallos operativos que necesitan seguimiento en `netsentinel-errors.jsonl`, dentro de su carpeta local de datos. El archivo tiene un límite de 512 KiB y conserva hasta tres copias rotadas. En POSIX el archivo se crea con permisos de usuario (`0600`); la escritura rechaza enlaces simbólicos en la ruta del diario.
+
+El registro copia solo los campos aprobados, con longitudes acotadas. No guarda cuerpos de solicitudes ni el texto completo de las excepciones. Si no se puede escribir el registro, la API informa que el guardado falló en vez de afirmar que quedó registrado. Para modificar estos límites o agregar campos, revisá `error_journal.py` y las pruebas de privacidad y rotación en `tests/test_error_journal.py`.

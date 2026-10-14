@@ -61,6 +61,14 @@ El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueb
 - Las fuentes variables —por ejemplo, tablas de vecinos del sistema o futuras integraciones de router— se conectan mediante adaptadores pequeños. Solo se generaliza una interfaz cuando existe una necesidad concreta de soportar más de una implementación.
 - La evidencia compartida lleva procedencia y hora, y conserva la diferencia entre dato observado e interpretación.
 
+## Catálogo de errores y diario local
+
+La clasificación y el almacenamiento son responsabilidades distintas. `error_reporting.py` asigna códigos estables, mensajes y acciones sugeridas sin devolver el texto crudo de una excepción. `error_journal.py` se ocupa del archivo JSONL local, los campos permitidos, los límites de tamaño y la rotación.
+
+Los manejadores HTTP siguen importando `record_error_event` desde `error_reporting.py`; esa fachada se conserva para no cambiar los contratos internos. El diario solo depende de `config.py` para conocer la ubicación de los datos. El control de arquitectura verifica esta frontera y evita que el módulo de persistencia importe dominios ajenos.
+
+Al cambiar el formato del registro, sus límites o sus permisos, actualizá `tests/test_error_journal.py` y la guía de seguridad. Las pruebas deben confirmar que no se guardan cuerpos de solicitud ni campos que no formen parte de la lista permitida, y que un fallo de escritura se informa como tal.
+
 ## Límites de seguridad y privacidad
 
 La app continúa enlazada a loopback y usa SQLite local. La modularización no justifica abrir la API a la red, añadir telemetría externa, capturar contenido sensible, cambiar la configuración del router ni activar automáticamente la extensión. Cada nueva fuente debe tener alcance, autorización, límite de tiempo, tratamiento de errores, política de retención y forma de desactivación documentados.

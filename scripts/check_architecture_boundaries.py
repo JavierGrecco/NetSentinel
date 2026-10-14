@@ -75,6 +75,14 @@ DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS = {
     "netsentinel.database_storage",
 }
 
+# La clasificación de errores delega el almacenamiento en el diario local.
+ERROR_REPORTING_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.error_journal",
+}
+ERROR_JOURNAL_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.config",
+}
+
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.activity_deletion_service": {
         "netsentinel.activity_filters",
@@ -355,6 +363,27 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
     for dependency in sorted(schema_dependencies - DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS):
         violations.append(
             f"netsentinel.database_schema imports {dependency}, which is not an allowed schema dependency."
+        )
+
+    error_reporting_dependencies = graph.get("netsentinel.error_reporting", set())
+    if "netsentinel.error_reporting" in graph:
+        if "netsentinel.error_journal" not in error_reporting_dependencies:
+            violations.append(
+                "netsentinel.error_reporting must delegate journal persistence to netsentinel.error_journal."
+            )
+        for dependency in sorted(
+            error_reporting_dependencies - ERROR_REPORTING_ALLOWED_INTERNAL_IMPORTS
+        ):
+            violations.append(
+                f"netsentinel.error_reporting imports {dependency}, which is not an allowed error-catalog dependency."
+            )
+
+    error_journal_dependencies = graph.get("netsentinel.error_journal", set())
+    for dependency in sorted(
+        error_journal_dependencies - ERROR_JOURNAL_ALLOWED_INTERNAL_IMPORTS
+    ):
+        violations.append(
+            f"netsentinel.error_journal imports {dependency}, which is not an allowed journal dependency."
         )
 
     for source, module in sorted(modules.items()):
