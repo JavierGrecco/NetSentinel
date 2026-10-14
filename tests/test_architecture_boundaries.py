@@ -180,7 +180,9 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert len(paths) == 14
+    assert len(routes) == 14
+    # Two paths intentionally serve more than one HTTP method.
+    assert len(paths) == 12
 
 
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
@@ -198,7 +200,8 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
 
 def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
     """Las rutas de monitores, incidentes y diagnóstico viven en su router."""
-    paths = {route.path for route in monitoring.router.routes}
+    routes = monitoring.router.routes
+    paths = {route.path for route in routes}
     assert {
         "/api/monitors",
         "/api/monitoring/summary",
