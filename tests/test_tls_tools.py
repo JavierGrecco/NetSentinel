@@ -85,11 +85,22 @@ def _mock_success(monkeypatch, certificate=None):
 
 @pytest.mark.parametrize("host", [
     "", "https://example.com", "example.com/path", "user@example.com",
-    "example.com:443", "-bad.example", "bad..example", "example.com?token=x",
+    "example.com:443", "-bad.example", "bad..example", "example.com..", "example.com?token=x",
 ])
 def test_tls_inspection_rejects_url_paths_credentials_and_invalid_hosts(host):
     with pytest.raises(ValueError):
         tls_tools.inspect_tls_endpoint(host)
+
+
+def test_tls_inspection_rejects_hostname_that_exceeds_dns_limit_after_idna():
+    hostname = ".".join(["é" * 48] * 5)
+    encoded = ".".join(label.encode("idna").decode("ascii") for label in hostname.split("."))
+    assert len(hostname) <= 253
+    assert all(len(label) <= 63 for label in encoded.split("."))
+    assert len(encoded) > 253
+
+    with pytest.raises(ValueError, match="nombre de host"):
+        tls_tools._normalise_host(hostname)
 
 
 def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch):

@@ -23,8 +23,16 @@ _LEGACY_TLS_VERSIONS = {"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"}
 
 def _normalise_host(host: str) -> str:
     """Acepta un nombre de host o IP; no acepta URL, rutas ni credenciales."""
-    value = host.strip().rstrip(".")
-    if not value or len(value) > 253 or any(ord(char) <= 32 for char in value):
+    value = host.strip()
+    # Accept one terminal root dot, but reject repeated trailing dots.
+    if value.endswith("."):
+        value = value[:-1]
+    if (
+        not value
+        or value.endswith(".")
+        or len(value) > 253
+        or any(ord(char) <= 32 for char in value)
+    ):
         raise ValueError("Ingresá un nombre de host o una dirección IP, sin URL ni ruta.")
     if any(char in value for char in "/\\?#@[]"):
         raise ValueError("Ingresá solo el host o la IP, sin esquema, ruta ni credenciales.")
@@ -37,6 +45,10 @@ def _normalise_host(host: str) -> str:
             value = value.encode("idna").decode("ascii").lower()
         except UnicodeError as exc:
             raise ValueError("El nombre de host no es válido.") from exc
+        # IDNA can expand Unicode characters; validate the encoded DNS name
+        # too, so the resolver never receives an overlong hostname.
+        if len(value) > 253:
+            raise ValueError("El nombre de host no es válido.")
         labels = value.split(".")
         if not all(_HOST_LABEL.fullmatch(label) for label in labels):
             raise ValueError("El nombre de host no es válido.")
