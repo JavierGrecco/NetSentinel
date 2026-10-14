@@ -51,7 +51,10 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.csv_safety",
     }
     assert graph["netsentinel.activity_import_service"] == {"netsentinel.activity_repository"}
-    assert "netsentinel.activity_privacy" in graph["netsentinel.activity_tracking"]
+    assert graph["netsentinel.activity_event_service"] == {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_privacy",
+    }
     assert graph["netsentinel.activity_privacy"] == set()
     assert "netsentinel.network_models" in graph["netsentinel.database"]
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
