@@ -144,10 +144,11 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
 def test_database_facade_keeps_existing_public_operations() -> None:
     """La API interna histórica sigue disponible tras dividir los repositorios."""
     for operation in (
-        "connect", "initialize", "list_devices", "record_scan", "get_events",
-        "get_summary", "export_json", "export_csv", "export_sqlite_backup",
-        "create_monitor", "record_monitor_check", "get_incidents",
-        "get_activity_snapshot", "import_manual_events", "delete_activity_scope",
+        "connect", "initialize", "list_devices", "get_device_history",
+        "record_scan", "get_events", "get_summary", "export_json",
+        "export_csv", "export_sqlite_backup", "create_monitor",
+        "record_monitor_check", "get_monitor_latency_trend", "get_incidents",
+        "export_monitoring_csv",
     ):
         assert callable(getattr(database, operation, None)), operation
 
