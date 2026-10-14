@@ -187,9 +187,25 @@ def _require_device(db: sqlite3.Connection, device_id: int | None) -> None:
         raise LookupError("No se encontró el dispositivo.")
 
 
+_ALLOWED_ACTIVITY_SCOPE_CLAUSES = frozenset({
+    "device_id = ?",
+    "event_type = ?",
+    "source = ?",
+    "observed_at >= ?",
+    "observed_at < ?",
+})
+
+
 def _require_bounded_scope(where_sql: str) -> None:
-    """Impide que una operación de selección se convierta en un barrido total accidental."""
-    if not isinstance(where_sql, str) or not where_sql.startswith(" WHERE ") or not where_sql[7:].strip():
+    """Limita el SQL de alcance a predicados generados por los filtros permitidos."""
+    if not isinstance(where_sql, str) or not where_sql.startswith(" WHERE "):
+        raise ValueError("El repositorio requiere un alcance explícito de actividad.")
+    clauses = where_sql[7:].strip().split(" AND ")
+    if (
+        not clauses
+        or any(clause not in _ALLOWED_ACTIVITY_SCOPE_CLAUSES for clause in clauses)
+        or len(set(clauses)) != len(clauses)
+    ):
         raise ValueError("El repositorio requiere un alcance explícito de actividad.")
 
 
