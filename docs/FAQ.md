@@ -55,7 +55,7 @@ Abrí un issue en GitHub con el sistema operativo, la versión de NetSentinel, l
 
 ## ¿Cómo informo un error de NetSentinel?
 
-Cuando una solicitud falla, el panel muestra un código estable y, si el servidor recibió la solicitud, una referencia de seguimiento. Copiá ambos datos al informar el problema. Los fallos internos y de herramientas locales que requieren investigación intentan guardarse en `netsentinel-errors.jsonl`, dentro de la carpeta de datos de NetSentinel (`~/.netsentinel/` por defecto o la indicada por `NETSENTINEL_DATA_DIR`). El archivo se rota y está limitado en tamaño.
+Cuando una solicitud falla, el panel muestra un código estable y, si el servidor recibió la solicitud, una referencia de seguimiento. Copiá ambos datos al informar el problema. Los fallos internos y de herramientas locales que requieren investigación intentan guardarse en `netsentinel-errors.jsonl`, dentro de la carpeta de datos de NetSentinel (`~/.netsentinel/` por defecto o la indicada por `NETSENTINEL_DATA_DIR`). El archivo se rota y está limitado en tamaño. Si una falla inesperada impide escribirlo, el panel lo indica y la aplicación también emite un resumen seguro a su salida de registro.
 
 El registro solo contiene campos técnicos permitidos, como código, categoría, ruta de API sin parámetros de consulta, tipo de excepción y ubicación del código. No conserva cuerpos de solicitud, tokens ni el texto original de las excepciones. Validaciones normales, rechazos de seguridad y pings sin respuesta no se guardan como fallos internos. Si el panel dice que no pudo escribir el registro, revisá el espacio disponible y los permisos de la carpeta de datos.
 
