@@ -115,3 +115,33 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["hostname"] == "example.test"
+
+@pytest.mark.parametrize(
+    ("path", "expected_title"),
+    [
+        ("/", "NetSentinel · Red local"),
+        ("/monitors", "NetSentinel · Monitorización"),
+        ("/activity", "NetSentinel · Actividad y telemetría"),
+        ("/findings", "NetSentinel · Hallazgos"),
+        ("/tools", "Herramientas · NetSentinel"),
+    ],
+)
+def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, expected_title):
+    """Every local HTML route keeps CSP hashes and defensive response headers."""
+    response = client.get(path)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert expected_title in response.text
+    assert_defensive_headers(response)
+
+    policy = response.headers["content-security-policy"]
+    assert "default-src 'self'" in policy
+    assert "script-src 'self'" in policy
+    assert "'unsafe-inline'" not in policy
+
+    # CSP must permit the trusted inline scripts from this exact packaged page.
+    trusted_hashes = main_module._inline_script_hashes(path)
+    assert trusted_hashes, "Each packaged page should have at least one trusted inline-script hash."
+    for source in trusted_hashes:
+        assert source in policy

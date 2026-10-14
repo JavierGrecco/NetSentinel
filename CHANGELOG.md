@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade pruebas de integración para las cinco páginas HTML locales: verifican contenido/identidad de cada ruta, cabeceras `no-store` y CSP restrictiva con hashes de scripts confiables.
+
 - Extrae las cinco rutas HTML del panel y módulos a `api/pages.py`; `main.py` conserva middleware, CSP, montaje de estáticos y ciclo de vida. Añade pruebas de rutas fuera del esquema OpenAPI y de independencia respecto de dominios internos.
 
 - Extrae 14 endpoints de monitores, analítica, tendencias de latencia, incidentes, notificaciones y diagnósticos al router `api/monitoring.py`; el ciclo de vida del supervisor sigue en `main.py`. Añade comprobaciones de rutas y dependencias arquitectónicas.
