@@ -14,6 +14,13 @@ function normalizeRetentionDays(value) {
   if (!Number.isSafeInteger(parsed)) return DEFAULTS.retentionDays;
   return Math.max(1, Math.min(90, parsed));
 }
+function normalizeStoredBoolean(settings, key, fallback) {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
+  if (!Object.prototype.hasOwnProperty.call(settings, key)) return fallback;
+  // Only real booleans are trusted. Malformed persisted values fail closed so
+  // strings like "false" cannot accidentally enable browser tracking.
+  return typeof settings[key] === "boolean" ? settings[key] : false;
+}
 
 function isRetainedEvent(event, cutoff) {
   // Storage can contain stale or malformed records. Reject them before rendering.
@@ -52,7 +59,14 @@ function when(value) {
 }
 async function getState() {
   const stored = await chrome.storage.local.get([SETTINGS_KEY, EVENTS_KEY]);
-  const settings = { ...DEFAULTS, ...(stored[SETTINGS_KEY] || {}) };
+  const savedSettings = stored[SETTINGS_KEY];
+  const raw = savedSettings && typeof savedSettings === "object" && !Array.isArray(savedSettings)
+    ? savedSettings
+    : {};
+  const settings = { ...DEFAULTS, ...raw };
+  settings.enabled = normalizeStoredBoolean(raw, "enabled", DEFAULTS.enabled);
+  settings.capturePages = normalizeStoredBoolean(raw, "capturePages", DEFAULTS.capturePages);
+  settings.captureSearches = normalizeStoredBoolean(raw, "captureSearches", DEFAULTS.captureSearches);
   settings.retentionDays = normalizeRetentionDays(settings.retentionDays);
   settings.excludeDomains = Array.isArray(settings.excludeDomains) ? settings.excludeDomains : [];
   const cutoff = Date.now() - settings.retentionDays * 86400000;
@@ -187,5 +201,5 @@ function initializePopup() {
 if (typeof document !== "undefined" && typeof chrome !== "undefined") initializePopup();
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState, render, saveSettings };
+  module.exports = { DEFAULTS, normalizeRetentionDays, normalizeStoredBoolean, escapeCsv, buildCsv, getState, render, saveSettings };
 }
