@@ -273,6 +273,7 @@ async def handle_request_validation_error(request: Request, exc: RequestValidati
             "error_code": "NS-REQ-422",
             "request_id": _request_id(request),
             "next_action": "Corregí los campos indicados y volvé a enviar la solicitud.",
+            "registered_in_log": False,
         },
     )
 
@@ -295,6 +296,7 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
             "error_code": code,
             "request_id": request_id,
             "next_action": next_action,
+            "registered_in_log": exc.status_code >= 500,
         },
         headers=dict(exc.headers or {}),
     )
@@ -325,6 +327,7 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
             "error_code": error.code,
             "request_id": request_id,
             "next_action": error.next_action,
+            "registered_in_log": True,
         },
     )
 
@@ -343,6 +346,7 @@ async def protect_local_app(request: Request, call_next):
                 "error_code": "NS-HTTP-400",
                 "request_id": request_id,
                 "next_action": "Abrí NetSentinel usando la dirección local indicada por la aplicación.",
+                "registered_in_log": False,
             },
         )
 
@@ -363,6 +367,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Iniciá la consulta desde el panel local de NetSentinel.",
+                    "registered_in_log": False,
                 },
             )
 
@@ -381,6 +386,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Iniciá la operación desde el panel local de NetSentinel.",
+                    "registered_in_log": False,
                 },
             )
         origin = request.headers.get("origin")
@@ -393,6 +399,7 @@ async def protect_local_app(request: Request, call_next):
                     "error_code": "NS-HTTP-403",
                     "request_id": request_id,
                     "next_action": "Recargá el panel local y volvé a intentar la operación desde allí.",
+                    "registered_in_log": False,
                 },
             )
 
