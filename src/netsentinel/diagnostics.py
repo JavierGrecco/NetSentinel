@@ -260,8 +260,8 @@ def _failure_check(
     code = f"NS-DIAG-{component}-{suffix}"
     should_log = failure in {
         "command_unavailable", "permission_denied", "system_error",
-        "invalid_response", "resolver_failed",
-    }
+        "invalid_response", "resolver_failed", "route_command_failed",
+    } or (failure == "timeout" and component in {"ROUTE", "ROUTER", "EXT"})
     logged = False
     if should_log:
         logged = record_error_event({
