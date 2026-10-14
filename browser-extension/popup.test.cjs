@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const manifest = require("./manifest.json");
-const { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState } = require("./popup.js");
+const { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState, render, saveSettings } = require("./popup.js");
 
 test("popup remains opt-in and manifest uses the narrow MV3 permission set", () => {
   assert.equal(manifest.manifest_version, 3);
@@ -174,6 +174,139 @@ test("popup ignores malformed stored event records and preserves valid retained 
     assert.deepEqual(state.events, [retained]);
     assert.equal(writes, 0, "cleaning the in-memory view must not cause a stale storage write");
   } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+
+function makeElement() {
+  const classes = new Set();
+  const attrs = {};
+  return {
+    checked: false, value: "", textContent: "", disabled: false, className: "",
+    children: [], listeners: {},
+    classList: {
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      contains(name) { return classes.has(name); }
+    },
+    attributes: attrs,
+    setAttribute(name, value) { attrs[name] = value; },
+    addEventListener(name, callback) { this.listeners[name] = callback; },
+    replaceChildren(...children) { this.children = [...children]; },
+    append(...children) { this.children.push(...children); },
+    click() { if (this.listeners.click) return this.listeners.click(); }
+  };
+}
+
+function installPopupDom() {
+  const ids = [
+    "enabled", "capturePages", "captureSearches", "retention", "excludeDomains",
+    "count", "statusText", "recent", "export", "saveSettings", "clear"
+  ];
+  const elements = Object.fromEntries(ids.map(id => [id, makeElement()]));
+  const previousDocument = global.document;
+  global.document = {
+    getElementById(id) { return elements[id] || null; },
+    createElement() { return makeElement(); }
+  };
+  return {
+    elements,
+    restore() {
+      if (previousDocument === undefined) delete global.document;
+      else global.document = previousDocument;
+    }
+  };
+}
+
+test("popup load failure gives an actionable message and logs no raw storage error", async () => {
+  const previousChrome = global.chrome;
+  const dom = installPopupDom();
+  const previousConsoleError = console.error;
+  const logged = [];
+  console.error = (...args) => logged.push(args.join(" "));
+  global.chrome = {
+    storage: { local: { async get() { throw new Error("sensitive stored URL must not be logged"); } } }
+  };
+  try {
+    const rendered = await render();
+    assert.equal(rendered, false);
+    assert.match(dom.elements.statusText.textContent, /No se pudieron cargar/);
+    assert.equal(dom.elements.statusText.classList.contains("error"), true);
+    assert.equal(dom.elements.statusText.attributes.role, "alert");
+    assert.equal(dom.elements.export.disabled, true);
+    assert.equal(logged.length, 1);
+    assert.match(logged[0], /cargar el estado local \(Error\)/);
+    assert.doesNotMatch(logged[0], /sensitive stored URL/);
+  } finally {
+    console.error = previousConsoleError;
+    dom.restore();
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+test("saving an invalid retention control value uses the validated default", async () => {
+  const previousChrome = global.chrome;
+  const dom = installPopupDom();
+  const settingsKey = "netsentinelSettings";
+  const eventsKey = "netsentinelEvents";
+  const store = {
+    [settingsKey]: { enabled: false, capturePages: true, captureSearches: true, retentionDays: 7, excludeDomains: [] },
+    [eventsKey]: []
+  };
+  let writes = 0;
+  global.chrome = {
+    storage: {
+      local: {
+        async get() { return { [settingsKey]: store[settingsKey], [eventsKey]: store[eventsKey] }; },
+        async set(values) { writes += 1; Object.assign(store, values); }
+      }
+    }
+  };
+  dom.elements.retention.value = "NaN";
+  dom.elements.excludeDomains.value = "";
+  try {
+    const saved = await saveSettings();
+    assert.equal(saved, true);
+    assert.equal(writes, 1);
+    assert.equal(store[settingsKey].retentionDays, DEFAULTS.retentionDays);
+    assert.equal(Number.isNaN(store[settingsKey].retentionDays), false);
+    assert.equal(dom.elements.statusText.classList.contains("error"), false);
+  } finally {
+    dom.restore();
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+test("popup reports settings-write failures without leaking exception details", async () => {
+  const previousChrome = global.chrome;
+  const dom = installPopupDom();
+  const previousConsoleError = console.error;
+  const logged = [];
+  console.error = (...args) => logged.push(args.join(" "));
+  global.chrome = {
+    storage: {
+      local: {
+        async get() { return { netsentinelSettings: {}, netsentinelEvents: [] }; },
+        async set() { throw new Error("private browsing URL in backend exception"); }
+      }
+    }
+  };
+  dom.elements.retention.value = "7";
+  dom.elements.excludeDomains.value = "";
+  try {
+    const saved = await saveSettings();
+    assert.equal(saved, false);
+    assert.match(dom.elements.statusText.textContent, /No se pudo guardar la configuración/);
+    assert.equal(dom.elements.statusText.classList.contains("error"), true);
+    assert.match(logged[0], /guardar la configuración \(Error\)/);
+    assert.doesNotMatch(logged[0], /private browsing URL/);
+  } finally {
+    console.error = previousConsoleError;
+    dom.restore();
     if (previousChrome === undefined) delete global.chrome;
     else global.chrome = previousChrome;
   }

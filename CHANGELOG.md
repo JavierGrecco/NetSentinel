@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Mejora el diagnóstico del popup: las fallas al cargar, guardar, exportar o borrar muestran un mensaje comprensible y registran en consola solo la operación y el tipo de error, sin exponer URLs, búsquedas ni registros. Además, la retención al guardar vuelve a validar valores inesperados en la interfaz.
+
 - Descarta de forma segura registros de navegación corruptos (nulos, no-objetos o con fecha inválida) tanto al leer el popup como al procesar eventos nuevos; mantiene los eventos válidos y evita que un elemento dañado interrumpa la captura. Añade pruebas de regresión para ambos contextos.
 
 - Endurece el manejo de preferencias locales de la extensión: si `retentionDays` contiene un valor corrupto o no entero, el popup y el service worker vuelven a los 7 días predeterminados en lugar de generar un corte temporal `NaN` que descarte eventos conservados. Se agregan pruebas de regresión en ambos contextos.

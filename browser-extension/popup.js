@@ -22,6 +22,25 @@ function isRetainedEvent(event, cutoff) {
   try { observedAt = Date.parse(event.observed_at); } catch { return false; }
   return Number.isFinite(observedAt) && observedAt >= cutoff;
 }
+function setStatus(message, { error = false } = {}) {
+  const status = $("statusText");
+  if (!status) return;
+  status.textContent = message;
+  if (status.classList) {
+    if (error) status.classList.add("error");
+    else status.classList.remove("error");
+  }
+  if (typeof status.setAttribute === "function") status.setAttribute("role", error ? "alert" : "status");
+}
+
+function reportPopupFailure(operation, userMessage, error) {
+  const rawName = error && typeof error.name === "string" ? error.name : "Error";
+  const safeName = rawName.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40) || "Error";
+  // Never log URLs, search terms, stored records, or raw exception messages.
+  console.error("NetSentinel: error al " + operation + " (" + safeName + ").");
+  setStatus(userMessage, { error: true });
+}
+
 function escapeCsv(value) {
   let text = String(value ?? "");
   if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
@@ -60,35 +79,56 @@ function renderRecent(events) {
   }
 }
 async function render() {
-  const { settings, events } = await getState();
-  $("enabled").checked = Boolean(settings.enabled);
-  $("capturePages").checked = Boolean(settings.capturePages);
-  $("captureSearches").checked = Boolean(settings.captureSearches);
-  $("retention").value = String(settings.retentionDays);
-  $("excludeDomains").value = settings.excludeDomains.join("\n");
-  $("count").textContent = String(events.length);
-  $("statusText").textContent = settings.enabled
-    ? "Activo. Los nuevos eventos quedan guardados en este navegador."
-    : "Detenido. No se registra navegación.";
-  renderRecent(events);
-  $("export").disabled = events.length === 0;
+  try {
+    const { settings, events } = await getState();
+    $("enabled").checked = Boolean(settings.enabled);
+    $("capturePages").checked = Boolean(settings.capturePages);
+    $("captureSearches").checked = Boolean(settings.captureSearches);
+    $("retention").value = String(settings.retentionDays);
+    $("excludeDomains").value = settings.excludeDomains.join("\n");
+    $("count").textContent = String(events.length);
+    setStatus(settings.enabled
+      ? "Activo. Los nuevos eventos quedan guardados en este navegador."
+      : "Detenido. No se registra navegación.");
+    renderRecent(events);
+    $("export").disabled = events.length === 0;
+    return true;
+  } catch (error) {
+    reportPopupFailure(
+      "cargar el estado local",
+      "No se pudieron cargar la configuración y los registros locales. Comprobá que la extensión siga habilitada y volvé a abrir el panel.",
+      error
+    );
+    const exportButton = $("export");
+    if (exportButton) exportButton.disabled = true;
+    return false;
+  }
 }
 async function saveSettings({ confirmEnable = false } = {}) {
-  const oldState = await getState();
-  let enabled = $("enabled").checked;
-  if (confirmEnable && enabled && !oldState.settings.enabled) {
-    const accepted = window.confirm("Vas a registrar localmente páginas visitadas y búsquedas compatibles de este navegador. No captura contraseñas ni formularios. ¿Activar el registro?");
-    if (!accepted) { $("enabled").checked = false; enabled = false; }
+  try {
+    const oldState = await getState();
+    let enabled = $("enabled").checked;
+    if (confirmEnable && enabled && !oldState.settings.enabled) {
+      const accepted = window.confirm("Vas a registrar localmente páginas visitadas y búsquedas compatibles de este navegador. No captura contraseñas ni formularios. ¿Activar el registro?");
+      if (!accepted) { $("enabled").checked = false; enabled = false; }
+    }
+    const settings = {
+      enabled,
+      capturePages: $("capturePages").checked,
+      captureSearches: $("captureSearches").checked,
+      retentionDays: normalizeRetentionDays($("retention").value),
+      excludeDomains: $("excludeDomains").value.split(/\r?\n/).map(s => s.trim().toLowerCase().replace(/^\.+|\.+$/g, "")).filter(Boolean).slice(0, 100)
+    };
+    await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+  } catch (error) {
+    reportPopupFailure(
+      "guardar la configuración",
+      "No se pudo guardar la configuración. Los cambios no están confirmados; volvé a intentarlo.",
+      error
+    );
+    return false;
   }
-  const settings = {
-    enabled,
-    capturePages: $("capturePages").checked,
-    captureSearches: $("captureSearches").checked,
-    retentionDays: Math.max(1, Math.min(90, Number($("retention").value || 7))),
-    excludeDomains: $("excludeDomains").value.split(/\r?\n/).map(s => s.trim().toLowerCase().replace(/^\.+|\.+$/g, "")).filter(Boolean).slice(0, 100)
-  };
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
-  await render();
+  return render();
 }
 function buildCsv(events) {
   const columns = ["observed_at", "event_type", "domain", "destination_ip", "destination_port",
@@ -111,15 +151,35 @@ function initializePopup() {
   $("capturePages").addEventListener("change", () => { void saveSettings(); });
   $("captureSearches").addEventListener("change", () => { void saveSettings(); });
   $("saveSettings").addEventListener("click", () => { void saveSettings(); });
-  $("export").addEventListener("click", async () => { const { events } = await getState(); if (events.length) exportCsv(events); });
+  $("export").addEventListener("click", async () => {
+    try {
+      const { events } = await getState();
+      if (!events.length) {
+        setStatus("No hay registros dentro del período de retención para exportar.");
+        return;
+      }
+      exportCsv(events);
+      setStatus("CSV preparado. Los registros originales siguen guardados localmente.");
+    } catch (error) {
+      reportPopupFailure(
+        "exportar los registros",
+        "No se pudo preparar el CSV. Los registros siguen en este navegador; volvé a intentarlo.",
+        error
+      );
+    }
+  });
   $("clear").addEventListener("click", async () => {
     if (!window.confirm("Se borrarán todos los registros que esta extensión conserva en este navegador. ¿Continuar?")) return;
     try {
       const response = await chrome.runtime.sendMessage({ type: "NETSENTINEL_CLEAR_EVENTS" });
       if (!response || response.ok !== true) throw new Error("clear failed");
       await render();
-    } catch {
-      $("statusText").textContent = "No se pudieron borrar los registros. Volvé a intentarlo.";
+    } catch (error) {
+      reportPopupFailure(
+        "borrar los registros",
+        "No se pudieron borrar los registros. No se confirmó el borrado; volvé a intentarlo.",
+        error
+      );
     }
   });
   void render();
@@ -127,5 +187,5 @@ function initializePopup() {
 if (typeof document !== "undefined" && typeof chrome !== "undefined") initializePopup();
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState };
+  module.exports = { DEFAULTS, normalizeRetentionDays, escapeCsv, buildCsv, getState, render, saveSettings };
 }
