@@ -56,6 +56,12 @@ DATABASE_ALLOWED_INTERNAL_IMPORTS = {
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     # El servicio coordina evidencia y llama al formateador puro. No depende del transporte.
+    "netsentinel.activity_read_service": {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_filters",
+        "netsentinel.activity_repository",
+        "netsentinel.csv_safety",
+    },
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
     },
