@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa la importación CSV en `activity_import_service.py` y mueve la validación de retención, deduplicación y escritura atómica al repositorio SQLite. La vista previa permanece de solo lectura; se añaden pruebas del repositorio para importación idempotente y rechazo completo de lotes fuera de retención.
+
 - Conserva mensajes de DNS seguros para ayudar a diagnosticar errores y oculta cualquier detalle 5xx que no esté autorizado. Los timeouts DNS se identifican como una condición de red y no se registran como fallo interno; los pasos de diagnóstico omitidos informan correctamente que no fueron registrados.
 
 - Centraliza el catálogo de errores operativos con códigos estables y acciones sugeridas; agrega referencia por solicitud, registro local sin texto de excepciones potencialmente sensible y mensajes claros del panel para validaciones y fallos de conexión. Las validaciones usan mensajes de plantilla para impedir que un validador refleje valores ingresados. El diagnóstico diferencia timeout, comandos ausentes, permisos, fallos del resolvedor y falta de respuesta ICMP; la interfaz aclara qué incidencias se registran. Las fallas operativas relevantes quedan en un diario JSONL local rotativo, limitado en tamaño y con campos permitidos para evitar guardar entradas, tokens o mensajes crudos de excepción.
