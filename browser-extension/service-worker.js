@@ -14,6 +14,19 @@ const SENSITIVE_KEY = /access.?token|refresh.?token|id.?token|client.?secret|cli
 function normalizedDomain(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 }
+
+function normalizeRetentionDays(value) {
+  // Storage is persistent but not type-safe: tolerate old/corrupt values without
+  // letting NaN turn the retention cutoff into a filter that discards every event.
+  if (value === undefined || value === null || value === "") return DEFAULTS.retentionDays;
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d+$/.test(value.trim())
+      ? Number(value.trim())
+      : NaN;
+  if (!Number.isSafeInteger(parsed)) return DEFAULTS.retentionDays;
+  return Math.max(1, Math.min(90, parsed));
+}
 function hostMatches(host, rule) { return host === rule || host.endsWith("." + rule); }
 function isPrivateOrLocalIPv4(host) {
   const parts = String(host || "").split(".");
@@ -208,7 +221,7 @@ async function loadState() {
   const raw = stored[SETTINGS_KEY] || {};
   const settings = {
     ...DEFAULTS, ...raw,
-    retentionDays: Math.max(1, Math.min(90, Number(raw.retentionDays || DEFAULTS.retentionDays))),
+    retentionDays: normalizeRetentionDays(raw.retentionDays),
     excludeDomains: Array.isArray(raw.excludeDomains) ? raw.excludeDomains.map(normalizedDomain).filter(Boolean).slice(0, 100) : []
   };
   const cutoff = Date.now() - settings.retentionDays * 86400000;
@@ -305,6 +318,7 @@ if (typeof module !== "undefined" && module.exports) {
     EVENTS_KEY,
     MAX_EVENTS,
     normalizedDomain,
+    normalizeRetentionDays,
     privateOrLocalHost,
     isExcluded,
     normalizedQueryKey,
