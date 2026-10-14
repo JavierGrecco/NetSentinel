@@ -285,7 +285,7 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
     code, next_action = describe_http_error(exc.status_code)
     request_id = _request_id(request)
     registered = False
-    safe_path = getattr(request.scope.get("route"), "path", request.url.path)
+    safe_path = getattr(request.scope.get("route"), "path", "<unmatched-route>")
     if exc.status_code >= 500:
         registered = record_error_event({
             "error_code": code,
@@ -327,7 +327,7 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
         f"{Path(frame.filename).name}:{frame.lineno}:{frame.name}"
         for frame in traceback.extract_tb(exc.__traceback__)
     )
-    safe_path = getattr(request.scope.get("route"), "path", request.url.path)
+    safe_path = getattr(request.scope.get("route"), "path", "<unmatched-route>")
     registered = record_error_event({
         "error_code": error.code,
         "request_id": request_id,
