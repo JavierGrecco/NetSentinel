@@ -155,8 +155,18 @@ def _run_resolver_child(operation: str, value: str) -> dict:
 
 def _normalize_hostname(hostname: str) -> str:
     """Valida un nombre DNS simple; no admite URLs, puertos ni credenciales."""
-    value = hostname.strip().rstrip(".")
-    if not value or len(value) > 253 or "://" in value or any(ch in value for ch in "/\\@?#"):
+    value = hostname.strip()
+    # A valid FQDN may include one final root dot. Do not silently accept
+    # repeated dots at the end, which can hide a malformed label.
+    if value.endswith("."):
+        value = value[:-1]
+    if (
+        not value
+        or value.endswith(".")
+        or len(value) > 253
+        or "://" in value
+        or any(ch in value for ch in "/\\@?#")
+    ):
         raise ValueError("Ingresá un nombre de host válido, sin protocolo, ruta ni puerto.")
     if value.startswith("[") or value.endswith("]"):
         raise ValueError("Ingresá el nombre de host sin corchetes.")
@@ -170,6 +180,10 @@ def _normalize_hostname(hostname: str) -> str:
         ascii_name = value.encode("idna").decode("ascii").lower()
     except UnicodeError as exc:
         raise ValueError("El nombre de host no es válido.") from exc
+    # IDNA may expand Unicode input. DNS limits apply to the encoded name,
+    # not just the number of characters the operator entered.
+    if len(ascii_name) > 253:
+        raise ValueError("El nombre de host no es válido.")
     labels = ascii_name.split(".")
     if any(not label or len(label) > 63 or label.startswith("-") or label.endswith("-")
            or not all(ch.isalnum() or ch == "-" for ch in label) for label in labels):
@@ -220,9 +234,14 @@ def reverse_lookup_ip(address: str) -> dict:
     hostname = payload.get("hostname")
     if not isinstance(hostname, str):
         raise DNSLookupError(_resolver_error_message("reverse", "resolver_error"), "resolver_error")
-    hostname = hostname.rstrip(".").lower()
-    if not hostname:
-        raise DNSLookupError(_resolver_error_message("reverse", "resolver_error"), "resolver_error")
+    try:
+        # A PTR target is resolver-provided data, not trusted input. Validate
+        # it before returning it so malformed answers become resolver failures.
+        hostname = _normalize_hostname(hostname)
+    except ValueError as exc:
+        raise DNSLookupError(
+            _resolver_error_message("reverse", "resolver_error"), "resolver_error"
+        ) from exc
     return {
         "ip": normalized_ip,
         "hostname": hostname,

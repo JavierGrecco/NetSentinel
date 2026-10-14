@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Endurece la validación DNS tras conversión IDNA y rechaza nombres cuyo tamaño ASCII supera el límite DNS; valida también los objetivos PTR devueltos por el resolvedor y los clasifica como fallo DNS si están malformados. Añade pruebas para los límites y las respuestas anómalas.
+
 - Ajusta la inspección TLS para que TCP y handshake compartan un único plazo monotónico. El proceso padre conserva un límite externo terminable frente a resoluciones DNS bloqueadas y el arranque del proceso hijo; se agregan regresiones sobre los plazos.
 
 - Separa el catálogo y la clasificación de errores del diario JSONL local. Mantiene `record_error_event` en la fachada compatible, fija una frontera de dependencias y amplía las pruebas de privacidad, rotación, permisos y protección frente a enlaces simbólicos.
