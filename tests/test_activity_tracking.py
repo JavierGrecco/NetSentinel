@@ -337,6 +337,9 @@ def test_csv_preview_rejects_message_content_and_unknown_columns(client):
     "private_url",
     [
         "http://192.168.1.1/admin",
+        "http://127.1/admin",
+        "http://2130706433/admin",
+        "http://0x7f000001/admin",
         "https://router.local/status",
         "http://[::1]/",
         "https://[::ffff:192.168.1.1]/admin",
