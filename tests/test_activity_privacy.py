@@ -68,3 +68,12 @@ def test_page_url_drops_unreadable_encoded_keys_and_redacts_deep_path_identifier
     assert _safe_page_url(
         f"https://example.com/users/{email}/profile"
     ) == "https://example.com/users/%5Bredacted%5D/profile"
+
+
+def test_page_url_drops_mixed_malformed_and_valid_percent_escapes() -> None:
+    assert _safe_page_url(
+        "https://example.com/profile?access%25ZZ%255Ftoken=must-not-persist&lang=es"
+    ) == "https://example.com/profile?lang=es"
+    assert _safe_page_url(
+        "https://example.com/profile/%ZZsecret"
+    ) == "https://example.com/profile/%5Bredacted%5D"
