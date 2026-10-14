@@ -336,7 +336,7 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
     database_dependencies = graph.get("netsentinel.database", set())
     for dependency in sorted(database_dependencies - DATABASE_ALLOWED_INTERNAL_IMPORTS):
         violations.append(
-            f"netsentinel.database imports {dependency}, which is not an allowed facade dependency; "
+            f"netsentinel.database imports {dependency}, which is not an allowed persistence dependency; "
             "keep query implementation in an explicitly owned module."
         )
 
