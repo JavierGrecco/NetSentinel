@@ -2,7 +2,7 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
-- Centraliza el conteo y borrado confirmado de eventos en el repositorio de actividad; el conteo y la eliminación ocurren en una transacción SQLite bloqueada para evitar carreras, y se agregan pruebas de repositorio.
+- Centraliza el conteo y borrado confirmado de eventos en el repositorio de actividad; exige un alcance explícito, valida el dispositivo y ejecuta el recuento final y la eliminación en una transacción SQLite bloqueada para evitar carreras. Añade pruebas de repositorio.
 
 - La extensión Chromium omite URL con más de 200 parámetros de consulta antes de exportarlas, igual que el importador; prueba los límites 200/201 y el caso con parámetros sensibles que se filtran después.
 
