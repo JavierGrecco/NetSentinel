@@ -880,14 +880,9 @@ def preview_delete_activity(
 ) -> dict[str, Any]:
     """Count matching activity rows without writing or running retention cleanup."""
     where_sql, params = _activity_delete_scope(device_id, event_type, from_date, to_date, source)
-    with database.connect() as db:
-        if device_id is not None and db.execute(
-            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
-        ).fetchone() is None:
-            raise LookupError("No se encontró el dispositivo.")
-        count = int(db.execute(
-            "SELECT COUNT(*) FROM activity_events" + where_sql, params
-        ).fetchone()[0])
+    count = activity_repository.count_activity_scope(
+        where_sql, params, device_id=device_id
+    )
     return {
         "device_id": device_id,
         "event_type": event_type or None,
@@ -914,25 +909,9 @@ def delete_activity(
     if not isinstance(confirmation, str) or len(confirmation) > 40:
         raise PermissionError("La frase de confirmación no es válida.")
 
-    with database.connect() as db:
-        # Lock the SQLite write transaction before counting, so inserts/deletes cannot
-        # race between checking the count and deleting the selected rows.
-        db.execute("BEGIN IMMEDIATE")
-        if device_id is not None and db.execute(
-            "SELECT 1 FROM devices WHERE id = ?", (device_id,)
-        ).fetchone() is None:
-            raise LookupError("No se encontró el dispositivo.")
-        count = int(db.execute(
-            "SELECT COUNT(*) FROM activity_events" + where_sql, params
-        ).fetchone()[0])
-        expected = f"BORRAR {count}"
-        if confirmation != expected:
-            raise PermissionError(
-                f"No se borró nada: la selección contiene {count} evento(s). "
-                f"Escribí exactamente «{expected}» para confirmar."
-            )
-        cursor = db.execute("DELETE FROM activity_events" + where_sql, params)
-        deleted = int(cursor.rowcount)
+    deleted = activity_repository.delete_activity_scope(
+        where_sql, params, device_id=device_id, confirmation=confirmation
+    )
     return {
         "deleted_events": deleted,
         "device_id": device_id,
