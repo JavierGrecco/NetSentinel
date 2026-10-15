@@ -495,3 +495,126 @@ html[data-theme] th {
     animation: none !important;
   }
 }
+/* Estructura única del encabezado en las cinco secciones principales. */
+html[data-theme] .app-header {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--theme-line);
+  margin-bottom: 22px !important;
+}
+
+html[data-theme] .app-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+html[data-theme] .app-brand .logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #155e75, #1e3a5f);
+  border: 1px solid #3b718b;
+  font-size: 24px;
+}
+
+html[data-theme] .app-brand-copy {
+  min-width: 0;
+}
+
+html[data-theme] .app-brand-copy .eyebrow {
+  color: var(--theme-accent);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+html[data-theme] .app-header-content {
+  min-width: 0;
+}
+
+html[data-theme] .app-header-content .primary-nav {
+  margin-top: 0;
+  gap: 6px;
+}
+
+html[data-theme] .app-header-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+html[data-theme] .app-header-utilities .theme-control {
+  margin-top: 0;
+}
+
+html[data-theme] .app-page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+html[data-theme] main > p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  html[data-theme] .app-header {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+  }
+
+  html[data-theme] .app-header-content .primary-nav {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  html[data-theme] .app-header {
+    gap: 12px;
+    padding-bottom: 14px;
+  }
+
+  html[data-theme] .app-brand {
+    align-items: flex-start;
+  }
+
+  html[data-theme] .app-brand .logo {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    font-size: 22px;
+  }
+
+  html[data-theme] .app-header-utilities {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  html[data-theme] .app-page-actions {
+    justify-content: flex-start;
+  }
+
+  html[data-theme] .app-page-actions button {
+    flex: 1 1 auto;
+  }
+}
