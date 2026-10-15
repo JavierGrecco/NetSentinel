@@ -16,6 +16,8 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
     with connect(path, default_path_provider=default_path_provider) as db:
         db.executescript(
             """
+            BEGIN IMMEDIATE;
+            -- Incluye el esquema inicial y las migraciones siguientes en la misma transacción.
             CREATE TABLE IF NOT EXISTS devices (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mac_address TEXT NOT NULL UNIQUE,

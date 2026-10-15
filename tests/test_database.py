@@ -205,6 +205,43 @@ def test_migrates_v01_device_schema(tmp_path: Path):
     assert database.get_scans(path=db) == []
 
 
+def test_schema_initialization_rolls_back_when_the_initial_script_fails(tmp_path: Path):
+    """Un error de migración no debe dejar tablas nuevas a medio crear."""
+    import sqlite3
+
+    db = tmp_path / "failed-schema.sqlite3"
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            """CREATE TABLE activity_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                retention_days INTEGER NOT NULL DEFAULT 7 CHECK (retention_days BETWEEN 1 AND 90)
+            )"""
+        )
+        connection.execute(
+            """CREATE TRIGGER reject_activity_settings_seed
+               BEFORE INSERT ON activity_settings
+               BEGIN
+                   SELECT RAISE(ABORT, 'simulated schema initialization failure');
+               END"""
+        )
+
+    with pytest.raises(sqlite3.IntegrityError, match="simulated schema initialization failure"):
+        database.initialize(db)
+
+    with sqlite3.connect(db) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+
+    # La tabla preexistente se conserva, pero no quedan tablas nuevas a medio crear.
+    assert "activity_settings" in tables
+    assert "devices" not in tables
+    assert "scans" not in tables
+
+
 def test_uses_local_oui_file_and_records_lookup_provenance(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     (tmp_path / "oui.csv").write_text("prefix,vendor\nAABBCC,Proveedor de ejemplo\n", encoding="utf-8")
