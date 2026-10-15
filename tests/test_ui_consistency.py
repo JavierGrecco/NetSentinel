@@ -21,6 +21,9 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
     assert "min-height: 112px" in css
     assert ".theme-option-icon" in css
+    assert "background: #101827" in css
+    assert "background: #dfe5ec" in css
+    assert "background: #ffffff" in css
     assert 'input[type="radio"]:checked + .theme-option-card' in css
     assert 'input[type="radio"]:focus-visible + .theme-option-card' in css
     assert "prefers-reduced-motion: reduce" in css
