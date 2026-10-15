@@ -84,7 +84,7 @@ No se considera terminada una extracción solo porque el código haya cambiado d
 Las pruebas automatizadas usan datos sintéticos y no requieren una red real. GitHub Actions valida la instalación y la suite de pruebas en Windows, macOS y Ubuntu con distintas versiones de Python. Las comprobaciones automatizadas no sustituyen la validación manual de sistemas y navegadores reales descrita en la matriz de validación.
 
 
-La composición de FastAPI se mantiene en `main.py`. El middleware y las reglas de host/origen viven en `api/security.py`; las cabeceras defensivas, la CSP y las respuestas de error correlacionadas están en `api/security_headers.py`. Los manejadores globales de excepciones y sus mensajes seguros viven en `api/error_handling.py`. La API de seguridad conserva los nombres históricos como reexportaciones para no cambiar el arranque ni los puntos de prueba existentes.
+La composición de FastAPI se mantiene en `main.py`. El middleware y las reglas de host/origen viven en `api/security.py`; las cabeceras defensivas, la CSP y las respuestas de error correlacionadas están en `api/security_headers.py`. `api/validation_errors.py` prepara las respuestas 422 sin reflejar valores enviados; `api/error_handling.py` mantiene los manejadores de excepciones HTTP y fallos inesperados, y reexporta el manejador de validación para conservar el punto de registro histórico. La API de seguridad conserva los nombres históricos como reexportaciones para no cambiar el arranque ni los puntos de prueba existentes.
 
 
 ### Persistencia por responsabilidad
