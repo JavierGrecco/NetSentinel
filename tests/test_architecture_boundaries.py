@@ -136,8 +136,17 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_repository_support",
         "netsentinel.activity_retention_repository",
     }
-    assert "netsentinel.activity_repository" not in graph["netsentinel.activity_tracking"]
-    assert "netsentinel.database" not in graph["netsentinel.activity_tracking"]
+    assert graph["netsentinel.activity_tracking"] == {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_deletion_service",
+        "netsentinel.activity_event_service",
+        "netsentinel.activity_filters",
+        "netsentinel.activity_import_service",
+        "netsentinel.activity_privacy",
+        "netsentinel.activity_read_service",
+        "netsentinel.activity_retention_service",
+        "netsentinel.activity_session_service",
+    }
     assert graph["netsentinel.activity_retention_service"] == {"netsentinel.activity_repository"}
     assert "netsentinel.activity_event_service" in graph["netsentinel.activity_tracking"]
     assert graph["netsentinel.activity_event_service"] == {
@@ -380,6 +389,25 @@ def _write_minimal_package(root: Path) -> Path:
         '"""Punto de composición de prueba."""\n', encoding="utf-8"
     )
     return package
+
+
+def test_activity_tracking_facade_cannot_import_storage_directly(tmp_path: Path) -> None:
+    """Una fachada no puede saltarse sus servicios e importar la persistencia."""
+    package = _write_minimal_package(tmp_path)
+    (package / "database.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (package / "activity_tracking.py").write_text(
+        "from . import database\n",
+        encoding="utf-8",
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.activity_tracking imports netsentinel.database, "
+        "which is not an allowed facade dependency."
+        in violation
+        for violation in violations
+    )
 
 
 def test_validation_handler_keeps_the_historical_import_path() -> None:
