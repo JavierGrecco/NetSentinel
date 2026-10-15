@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa las consultas de lectura del inventario de las escrituras de descubrimiento. `inventory_repository.py` conserva sus nombres históricos; `record_scan` sigue registrando la exploración, los dispositivos, las direcciones, observaciones y eventos dentro de una única transacción.
+
 - Divide la persistencia de monitorización en configuración, consultas analíticas, estado/transiciones y notificaciones. `monitoring_repository.py` conserva la fachada histórica y los cambios que coordinan checks, incidentes y eventos siguen en una única transacción.
 
 - Separa el tratamiento de errores de validación HTTP en `api/validation_errors.py`. `api/error_handling.py` conserva la interfaz histórica mediante reexportaciones; las respuestas 422 siguen usando mensajes fijos y no reflejan valores ingresados.

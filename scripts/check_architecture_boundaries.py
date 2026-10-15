@@ -216,9 +216,16 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.inventory_repository": {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
+        "netsentinel.inventory_read_repository",
+        "netsentinel.inventory_repository_support",
         "netsentinel.network_models",
         "netsentinel.vendor",
     },
+    "netsentinel.inventory_read_repository": {
+        "netsentinel.database_storage",
+        "netsentinel.inventory_repository_support",
+    },
+    "netsentinel.inventory_repository_support": set(),
     "netsentinel.events_repository": {
         "netsentinel.database_storage",
     },

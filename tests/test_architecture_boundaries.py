@@ -33,6 +33,9 @@ from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from netsentinel import (
     database,
+    inventory_read_repository,
+    inventory_repository as inventory_repository_compat,
+    inventory_repository_support,
     monitoring_analytics_repository,
     monitoring_config_repository,
     monitoring_notifications_repository,
@@ -187,9 +190,16 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.inventory_repository"] == {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
+        "netsentinel.inventory_read_repository",
+        "netsentinel.inventory_repository_support",
         "netsentinel.network_models",
         "netsentinel.vendor",
     }
+    assert graph["netsentinel.inventory_read_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.inventory_repository_support",
+    }
+    assert graph["netsentinel.inventory_repository_support"] == set()
     assert graph["netsentinel.events_repository"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.dashboard_repository"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.monitoring_repository"] == {
@@ -585,6 +595,18 @@ def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
     assert graph["netsentinel.api.monitoring_reports"] == {"netsentinel.database"}
     assert graph["netsentinel.api.diagnostics"] == {"netsentinel.diagnostics"}
 
+
+
+def test_inventory_repository_facade_keeps_read_and_write_imports_compatible() -> None:
+    """Los exports históricos siguen disponibles aunque las lecturas estén separadas."""
+    assert inventory_repository_compat.list_devices is inventory_read_repository.list_devices
+    assert inventory_repository_compat.get_device_addresses is inventory_read_repository.get_device_addresses
+    assert inventory_repository_compat.get_device_history is inventory_read_repository.get_device_history
+    assert inventory_repository_compat.get_scans is inventory_read_repository.get_scans
+    assert inventory_repository_compat._device_dict is inventory_repository_support._device_dict
+    assert inventory_repository_compat._ip_sort_key is inventory_repository_support._ip_sort_key
+    assert database.list_devices is inventory_repository_compat.list_devices
+    assert database.record_scan is inventory_repository_compat.record_scan
 
 
 def test_monitoring_repository_facade_reexports_historical_functions() -> None:
