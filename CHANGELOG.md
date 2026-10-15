@@ -6,6 +6,8 @@
 
 - Unifica el marco visual de las cinco pantallas: ancho máximo, márgenes adaptables, jerarquía tipográfica, paneles, controles y espaciado. Evita saltos laterales al navegar y añade pruebas que vigilan la carga de la capa de diseño compartida.
 
+- Reordena la cabecera después de la revisión visual: conserva el logo y la marca NetSentinel en todas las secciones, separa el título y la descripción de la sección, ensancha la navegación y reduce el selector de temas para que sea una preferencia secundaria.
+
 - Unifica la apariencia en Inventario, Hallazgos, Monitorización, Herramientas y Actividad: permite elegir tema oscuro, medio o claro y conserva la preferencia entre páginas. Reorganiza Monitorización y Actividad en sectores navegables, aclara cuándo se ejecutan los monitores y qué necesita una fuente de telemetría, y agrega acciones de triaje para distinguir entre reconocer un dispositivo y marcar un evento como revisado.
 - Aclara los requisitos reales de las fuentes de Actividad: las ventanas generan una recepción temporal con token, pero no conectan el router ni instalan agentes. Añade orientación contextual por tipo de fuente y documenta una futura integración central vía registros DNS o flujos del router/firewall para redes autorizadas, con límites explícitos frente a HTTPS, VPN y DNS cifrado.
 
