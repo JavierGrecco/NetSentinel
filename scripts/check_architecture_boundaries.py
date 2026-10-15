@@ -23,9 +23,15 @@ class SourceModule:
 
 API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.tools": {
+        "netsentinel.api.security",
         "netsentinel.dns_config",
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
+    },
+    "netsentinel.api.security": set(),
+    "netsentinel.api.error_handling": {
+        "netsentinel.api.security",
+        "netsentinel.error_reporting",
     },
     "netsentinel.api.activity": {
         "netsentinel.activity_tracking",
@@ -45,13 +51,36 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 
-# SQLite may use a small set of shared infrastructure helpers and neutral contracts.
-# All other internal dependencies require a deliberate architecture change.
+# La fachada pública puede delegar en los repositorios especializados, pero no debe
+# contener consultas. Los repositorios no pueden volver a importar esta fachada.
 DATABASE_ALLOWED_INTERNAL_IMPORTS = {
-    "netsentinel.config",       # Ubicación del archivo de datos.
-    "netsentinel.csv_safety",   # Exportaciones CSV seguras.
-    "netsentinel.network_models",  # Contrato de vecinos compartido.
-    "netsentinel.vendor",       # Consulta OUI local, sin acceso a red.
+    "netsentinel.config",
+    "netsentinel.database_storage",
+    "netsentinel.database_schema",
+    "netsentinel.network_models",
+    "netsentinel.events_repository",
+    "netsentinel.inventory_repository",
+    "netsentinel.dashboard_repository",
+    "netsentinel.data_export_service",
+    "netsentinel.monitoring_repository",
+    "netsentinel.monitoring_export_service",
+}
+
+# La infraestructura SQLite solo conoce configuración y ciclo de vida del archivo.
+DATABASE_STORAGE_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.config",
+}
+
+DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.database_storage",
+}
+
+# La clasificación de errores delega el almacenamiento en el diario local.
+ERROR_REPORTING_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.error_journal",
+}
+ERROR_JOURNAL_ALLOWED_INTERNAL_IMPORTS = {
+    "netsentinel.config",
 }
 
 SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
@@ -73,7 +102,6 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.activity_catalog",
         "netsentinel.activity_privacy",
     },
-    # El servicio coordina evidencia y llama al formateador puro. No depende del transporte.
     "netsentinel.activity_read_service": {
         "netsentinel.activity_catalog",
         "netsentinel.activity_filters",
@@ -87,15 +115,62 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.database",
         "netsentinel.findings",
     },
-}
-
-REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
-    # El repositorio de actividad solo usa la fábrica SQLite compartida.
-    "netsentinel.activity_repository": {
-        "netsentinel.database",
+    "netsentinel.data_export_service": {
+        "netsentinel.config",
+        "netsentinel.csv_safety",
+        "netsentinel.database_storage",
+        "netsentinel.inventory_repository",
+    },
+    "netsentinel.monitoring_export_service": {
+        "netsentinel.csv_safety",
+        "netsentinel.monitoring_repository",
     },
 }
-
+REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.activity_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_deletion_repository",
+        "netsentinel.activity_import_repository",
+        "netsentinel.activity_read_repository",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+        "netsentinel.activity_session_repository",
+    },
+    "netsentinel.activity_retention_repository": {
+        "netsentinel.database",
+    },
+    "netsentinel.activity_session_repository": set(),
+    "netsentinel.activity_import_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    },
+    "netsentinel.activity_deletion_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+    },
+    "netsentinel.activity_read_repository": {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    },
+    "netsentinel.inventory_repository": {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+        "netsentinel.network_models",
+        "netsentinel.vendor",
+    },
+    "netsentinel.events_repository": {
+        "netsentinel.database_storage",
+    },
+    "netsentinel.dashboard_repository": {
+        "netsentinel.database_storage",
+    },
+    "netsentinel.monitoring_repository": {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+    },
+}
 # Only the composition root and API routers may import the HTTP framework.
 # This rule applies automatically to new domain modules as they are added.
 HTTP_FRAMEWORK_ALLOWED_MODULES = {
@@ -275,7 +350,40 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
     for dependency in sorted(database_dependencies - DATABASE_ALLOWED_INTERNAL_IMPORTS):
         violations.append(
             f"netsentinel.database imports {dependency}, which is not an allowed persistence dependency; "
-            "keep shared contracts in neutral modules."
+            "keep query implementation in an explicitly owned module."
+        )
+
+    storage_dependencies = graph.get("netsentinel.database_storage", set())
+    for dependency in sorted(storage_dependencies - DATABASE_STORAGE_ALLOWED_INTERNAL_IMPORTS):
+        violations.append(
+            f"netsentinel.database_storage imports {dependency}, which is not an allowed infrastructure dependency."
+        )
+
+    schema_dependencies = graph.get("netsentinel.database_schema", set())
+    for dependency in sorted(schema_dependencies - DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS):
+        violations.append(
+            f"netsentinel.database_schema imports {dependency}, which is not an allowed schema dependency."
+        )
+
+    error_reporting_dependencies = graph.get("netsentinel.error_reporting", set())
+    if "netsentinel.error_reporting" in graph:
+        if "netsentinel.error_journal" not in error_reporting_dependencies:
+            violations.append(
+                "netsentinel.error_reporting must delegate journal persistence to netsentinel.error_journal."
+            )
+        for dependency in sorted(
+            error_reporting_dependencies - ERROR_REPORTING_ALLOWED_INTERNAL_IMPORTS
+        ):
+            violations.append(
+                f"netsentinel.error_reporting imports {dependency}, which is not an allowed error-catalog dependency."
+            )
+
+    error_journal_dependencies = graph.get("netsentinel.error_journal", set())
+    for dependency in sorted(
+        error_journal_dependencies - ERROR_JOURNAL_ALLOWED_INTERNAL_IMPORTS
+    ):
+        violations.append(
+            f"netsentinel.error_journal imports {dependency}, which is not an allowed journal dependency."
         )
 
     for source, module in sorted(modules.items()):

@@ -6,6 +6,7 @@ from pathlib import Path
 from netsentinel.api import activity, findings, inventory, monitoring, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
+from netsentinel import database
 from scripts.check_architecture_boundaries import check_architecture
 
 
@@ -26,14 +27,45 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.tools"] == {
+        "netsentinel.api.security",
         "netsentinel.dns_config",
         "netsentinel.dns_tools",
         "netsentinel.tls_tools",
     }
+    assert graph["netsentinel.api.security"] == set()
+    assert graph["netsentinel.api.error_handling"] == {
+        "netsentinel.api.security",
+        "netsentinel.error_reporting",
+    }
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
-    assert graph["netsentinel.activity_repository"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_deletion_repository",
+        "netsentinel.activity_import_repository",
+        "netsentinel.activity_read_repository",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+        "netsentinel.activity_session_repository",
+    }
+    assert graph["netsentinel.activity_repository_support"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_retention_repository"] == {"netsentinel.database"}
+    assert graph["netsentinel.activity_session_repository"] == set()
+    assert graph["netsentinel.activity_import_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    }
+    assert graph["netsentinel.activity_deletion_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+    }
+    assert graph["netsentinel.activity_read_repository"] == {
+        "netsentinel.database",
+        "netsentinel.activity_repository_support",
+        "netsentinel.activity_retention_repository",
+    }
     assert "netsentinel.activity_repository" not in graph["netsentinel.activity_tracking"]
     assert "netsentinel.database" not in graph["netsentinel.activity_tracking"]
     assert graph["netsentinel.activity_retention_service"] == {"netsentinel.activity_repository"}
@@ -71,9 +103,84 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_privacy",
     }
     assert graph["netsentinel.activity_privacy"] == set()
-    assert "netsentinel.network_models" in graph["netsentinel.database"]
+    assert graph["netsentinel.database"] == {
+        "netsentinel.config",
+        "netsentinel.database_storage",
+        "netsentinel.database_schema",
+        "netsentinel.network_models",
+        "netsentinel.events_repository",
+        "netsentinel.inventory_repository",
+        "netsentinel.dashboard_repository",
+        "netsentinel.data_export_service",
+        "netsentinel.monitoring_repository",
+        "netsentinel.monitoring_export_service",
+    }
+    assert graph["netsentinel.database_storage"] == {"netsentinel.config"}
+    assert graph["netsentinel.database_schema"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.inventory_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+        "netsentinel.network_models",
+        "netsentinel.vendor",
+    }
+    assert graph["netsentinel.events_repository"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.dashboard_repository"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.monitoring_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.events_repository",
+    }
+    assert graph["netsentinel.data_export_service"] == {
+        "netsentinel.config",
+        "netsentinel.csv_safety",
+        "netsentinel.database_storage",
+        "netsentinel.inventory_repository",
+    }
+    assert graph["netsentinel.monitoring_export_service"] == {
+        "netsentinel.csv_safety",
+        "netsentinel.monitoring_repository",
+    }
     assert "netsentinel.discovery" not in graph["netsentinel.database"]
 
+
+
+def test_monitoring_is_split_into_validation_probe_and_notification_adapters() -> None:
+    """La validación pura no importa SQLite ni los adaptadores que producen efectos."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.monitoring"] >= {
+        "netsentinel.monitoring_validation",
+        "netsentinel.monitoring_probe",
+        "netsentinel.monitoring_notifications",
+    }
+    assert graph["netsentinel.monitoring_validation"] == set()
+    assert graph["netsentinel.monitoring_notifications"] == {"netsentinel.monitoring_probe"}
+    assert "netsentinel.database" not in graph["netsentinel.monitoring_validation"]
+    assert "netsentinel.database" not in graph["netsentinel.monitoring_probe"]
+
+def test_diagnostic_assessment_is_pure_and_separated_from_os_commands() -> None:
+    """El resumen del diagnóstico no depende de comandos ni de persistencia."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.diagnostics_assessment"] == set()
+    assert graph["netsentinel.diagnostics"] == {
+        "netsentinel.diagnostics_assessment",
+        "netsentinel.error_reporting",
+    }
+    assert graph["netsentinel.error_reporting"] == {"netsentinel.error_journal"}
+    assert graph["netsentinel.error_journal"] == {"netsentinel.config"}
+
+def test_database_facade_keeps_existing_public_operations() -> None:
+    """La API interna histórica sigue disponible tras dividir los repositorios."""
+    for operation in (
+        "connect", "initialize", "list_devices", "get_device_history",
+        "record_scan", "get_events", "get_summary", "export_json",
+        "export_csv", "export_sqlite_backup", "create_monitor",
+        "record_monitor_check", "get_monitor_latency_trend", "get_incidents",
+        "export_monitoring_csv",
+    ):
+        assert callable(getattr(database, operation, None)), operation
 
 def test_neighbor_type_is_shared_but_old_import_path_still_works() -> None:
     """El tipo compartido conserva compatibilidad con el módulo de descubrimiento."""
@@ -85,9 +192,22 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
     package_root = Path(__file__).resolve().parents[1] / "src" / "netsentinel"
     expected = {
         "database.py",
+        "database_storage.py",
+        "database_schema.py",
+        "inventory_repository.py",
+        "events_repository.py",
+        "dashboard_repository.py",
+        "monitoring_repository.py",
+        "monitoring_validation.py",
+        "monitoring_probe.py",
+        "monitoring_notifications.py",
+        "data_export_service.py",
+        "monitoring_export_service.py",
         "discovery.py",
         "findings.py",
         "monitoring.py",
+        "diagnostics.py",
+        "diagnostics_assessment.py",
         "activity_tracking.py",
         "activity_deletion_service.py",
         "activity_session_service.py",
@@ -99,7 +219,15 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "activity_filters.py",
         "activity_read_service.py",
         "activity_repository.py",
+        "activity_repository_support.py",
+        "activity_retention_repository.py",
+        "activity_session_repository.py",
+        "activity_import_repository.py",
+        "activity_deletion_repository.py",
+        "activity_read_repository.py",
         "network_models.py",
+        "error_reporting.py",
+        "error_journal.py",
     }
     for name in expected:
         source = (package_root / name).read_text(encoding="utf-8")
@@ -290,3 +418,24 @@ def test_pages_router_has_no_internal_domain_dependencies() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\\n".join(violations)
     assert graph["netsentinel.api.pages"] == set()
+
+
+def test_error_journal_cannot_import_unrelated_domains(tmp_path: Path) -> None:
+    """El diario solo depende de la ubicación de datos, no del resto del programa."""
+    package = _write_minimal_package(tmp_path)
+    (package / "config.py").write_text("def data_dir(): return None\n", encoding="utf-8")
+    (package / "database.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (package / "error_reporting.py").write_text(
+        "from .error_journal import record_error_event\n", encoding="utf-8"
+    )
+    (package / "error_journal.py").write_text(
+        "from . import config, database\n", encoding="utf-8"
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.error_journal imports netsentinel.database, which is not an allowed journal dependency"
+        in violation
+        for violation in violations
+    )

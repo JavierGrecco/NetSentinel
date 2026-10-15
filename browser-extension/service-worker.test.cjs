@@ -2,7 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 function listenerSlot() {
-  return { addListener() {} };
+  return {
+    listener: null,
+    addListener(listener) { this.listener = listener; }
+  };
 }
 
 let mockStore = {};
@@ -40,6 +43,7 @@ const {
   enqueueNavigation,
   clearStoredEvents,
   privateOrLocalHost,
+  sanitizeStoredEvent,
   searchInfo
 } = require("./service-worker.js");
 
@@ -95,6 +99,18 @@ test("canonicalizes IPv6, removes default port and drops fragment", () => {
     cleanUrl("https://[2001:0db8:0:0:0:0:0:1]:443/docs?lang=es#top"),
     "https://[2001:db8::1]/docs?lang=es"
   );
+});
+
+test("normalizes one DNS root dot and rejects malformed or overlong hostnames", () => {
+  assert.equal(cleanUrl("https://Example.com./docs"), "https://example.com/docs");
+  assert.equal(cleanUrl("https://example.com../docs"), null);
+  assert.equal(cleanUrl("https://.example.com/docs"), null);
+  assert.equal(cleanUrl("https://" + "a".repeat(64) + ".example/docs"), null);
+
+  // Every label is within 63 characters, but the ASCII hostname exceeds 253.
+  const overlongHostname = Array(4).fill("a".repeat(63)).join(".");
+  assert.equal(overlongHostname.length, 255);
+  assert.equal(cleanUrl("https://" + overlongHostname + "/docs"), null);
 });
 
 test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
@@ -174,6 +190,10 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
     "[100:0:0:1::1]",              // dummy IPv6 prefix (RFC 9780)
     "[2001:10::1]",                // deprecated ORCHID
     "[2001:10:f::1]",              // upper address range still inside /28
+    "[2001:10:10::1]",             // /28 prefix applies to the second hextet, not the third
+    "[2001:1f:ffff::1]",           // upper boundary of deprecated ORCHID /28
+    "[2001:20::1]",                // first address range of ORCHIDv2 /28 (RFC 7343)
+    "[2001:2f:ffff::1]",           // upper boundary of ORCHIDv2 /28
     "[5f00::1]",                   // SRv6 Segment Routing SIDs
     "[2001::1]",                    // Teredo
     "[2002:c000:0204::1]",          // 6to4
@@ -186,7 +206,7 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
   for (const host of [
     "[2001:4860:4860::8888]",       // ordinary global unicast
     "[2001:2:1::1]",                // just outside 2001:2::/48
-    "[2001:10:10::1]",             // just outside deprecated ORCHID /28
+    "[2001:30::1]",                // just outside both ORCHID /28 ranges
     "[5eff:ffff::1]",              // just outside SRv6 prefix
     "[3fff:1000::1]",               // just outside 3fff::/20
     "[100:0:0:2::1]",               // just outside dummy and discard-only prefixes
@@ -208,6 +228,101 @@ test("sanitizer preserves unknown non-sensitive path and query values", () => {
   assert.equal(cleanUrl(raw), raw);
 });
 
+
+test("sanitizes historical stored events before exposing them", async () => {
+  const timestamp = new Date().toISOString();
+  const oldEvent = {
+    observed_at: timestamp,
+    event_type: "page_visit",
+    domain: "wrong.example",
+    page_url: "https://Example.com./users/alice%40private.org?access_token=legacy-secret&lang=es#private-fragment",
+    app_name: "old raw value with personal data",
+    blocked: true,
+    email_body: "must-not-survive-migration",
+    _dedupeKey: "page_visit:27:https://Example.com/users/alice%40private.org?access_token=legacy-secret"
+  };
+  setState(enabledSettings(), [oldEvent]);
+
+  const state = await loadState();
+  assert.equal(state.events.length, 1);
+  const safe = state.events[0];
+  assert.equal(safe.page_url, "https://example.com/users/%5Bredacted%5D?lang=es");
+  assert.equal(safe.domain, "example.com", "domain must come from the canonical URL, not stale stored metadata");
+  assert.equal(safe.app_name, "NetSentinel Browser Extension (Chromium)");
+  assert.equal(safe.blocked, false);
+  assert.equal(safe._dedupeKey, "page_visit:27:" + safe.page_url);
+  assert.doesNotMatch(JSON.stringify(safe), /legacy-secret|private-fragment|private\.org|must-not-survive|wrong\.example/i);
+  assert.equal(mockStore[EVENTS_KEY][0], oldEvent, "loadState must remain read-only until migration is committed under the queue");
+});
+
+test("drops legacy records with private URLs, malformed hostnames, unsupported types or invalid search metadata", async () => {
+  const timestamp = new Date().toISOString();
+  const base = { observed_at: timestamp, event_type: "page_visit", page_url: "https://example.com/path" };
+  for (const bad of [
+    { ...base, page_url: "http://192.168.1.1/admin" },
+    { ...base, page_url: "https://example.com../path" },
+    { ...base, event_type: "raw_payload" },
+    { ...base, event_type: "search_query", search_engine: "Unknown", search_terms: "query" },
+    { ...base, event_type: "search_query", search_engine: "Google", search_terms: "   " }
+  ]) {
+    assert.equal(sanitizeStoredEvent(bad, Date.now() - 86400000), null);
+  }
+});
+
+test("normalizes legacy search metadata and IP-literal page domains safely", () => {
+  const timestamp = new Date().toISOString();
+  const search = sanitizeStoredEvent({
+    observed_at: timestamp, event_type: "search_query", page_url: "https://www.google.com/search",
+    search_engine: "Google", search_terms: "  hello\tworld\u0000  "
+  });
+  assert.equal(search.search_terms, "hello world");
+  assert.equal(search.domain, "www.google.com");
+  const ipPage = sanitizeStoredEvent({
+    observed_at: timestamp, event_type: "page_visit", page_url: "https://8.8.8.8/help", domain: "8.8.8.8"
+  });
+  assert.equal(ipPage.domain, "", "IP literals belong in page_url, not the DNS domain field");
+});
+
+test("safe-event message persists sanitized legacy events without losing concurrent navigation", async () => {
+  const observedAt = new Date().toISOString();
+  const legacy = {
+    observed_at: observedAt,
+    event_type: "page_visit",
+    domain: "stale.example",
+    page_url: "https://example.com/account?access_token=legacy-secret#private",
+    email_body: "must-not-persist"
+  };
+  setState(enabledSettings(), [legacy]);
+
+  let response;
+  const handler = global.chrome.runtime.onMessage.listener;
+  assert.equal(typeof handler, "function", "service worker must register its message handler");
+  assert.equal(
+    handler({ type: "NETSENTINEL_GET_SAFE_EVENTS" }, {}, value => { response = value; }),
+    true,
+    "asynchronous response must keep the message channel open"
+  );
+
+  const navigation = enqueueNavigation({
+    frameId: 0,
+    tabId: 778,
+    url: "https://example.net/new-navigation",
+    timeStamp: Date.now()
+  });
+  await navigation;
+
+  assert.ok(response && response.ok, "background should respond successfully after migration");
+  assert.equal(response.events.length, 1, "the migration response should contain the prior safe event only");
+  assert.equal(response.events[0].page_url, "https://example.com/account");
+  assert.equal(response.events[0].domain, "example.com");
+  assert.doesNotMatch(JSON.stringify(response.events), /legacy-secret|private|must-not-persist|stale\.example/i);
+
+  const persisted = mockStore[EVENTS_KEY];
+  assert.equal(persisted.length, 2, "the sanitized old event and new navigation must both be persisted");
+  assert.equal(persisted[0].page_url, "https://example.com/account");
+  assert.equal(persisted[1].page_url, "https://example.net/new-navigation");
+  assert.doesNotMatch(JSON.stringify(persisted), /legacy-secret|private|must-not-persist|stale\.example/i);
+});
 
 test("capture is disabled by default and performs no storage write", async () => {
   mockStore = {};
@@ -235,6 +350,19 @@ test("opt-in capture stores sanitized page and separate search metadata", async 
   await captureNavigation({ frameId: 0, tabId: 42, url, timeStamp: Date.now() });
   events = mockStore[EVENTS_KEY];
   assert.equal(events.length, 2, "rapid duplicate navigation should not be added twice");
+});
+
+test("capture drops malformed DNS hostnames before persisting browser metadata", async () => {
+  setState(enabledSettings(), []);
+  for (const url of [
+    "https://example.com../profile",
+    "https://.example.com/profile",
+    "https://" + "a".repeat(64) + ".example/profile",
+    "https://" + Array(4).fill("b".repeat(63)).join(".") + "/profile"
+  ]) {
+    await captureNavigation({ frameId: 0, tabId: 405, url, timeStamp: Date.now() });
+  }
+  assert.equal(mockStore[EVENTS_KEY].length, 0);
 });
 
 test("capture ignores subframes, private browsing and non-HTTP(S) URLs", async () => {
@@ -286,6 +414,7 @@ test("stored event retention and event limit are enforced when loading state", a
   const freshEvents = Array.from({ length: MAX_EVENTS + 1 }, (_, i) => ({
     event_type: "page_visit",
     observed_at: new Date(now - i).toISOString(),
+    page_url: "https://example.com/item/" + i,
     marker: i
   }));
   setState(enabledSettings({ retentionDays: 1 }), [old, ...freshEvents]);
@@ -405,7 +534,10 @@ test("loadState and navigation safely discard malformed stored event records", a
   setState(enabledSettings(), [...malformed, retained]);
 
   const state = await loadState();
-  assert.deepEqual(state.events, [retained], "only valid, in-retention event objects should be returned");
+  assert.equal(state.events.length, 1, "only valid, in-retention event objects should be returned");
+  assert.equal(state.events[0].page_url, retained.page_url);
+  assert.equal(state.events[0].domain, "example.com");
+  assert.equal(state.events[0].app_name, "NetSentinel Browser Extension (Chromium)");
 
   await captureNavigation({
     frameId: 0,
@@ -468,11 +600,7 @@ test("removes deeply encoded sensitive query keys and does not preserve unresolv
   for (let i = 0; i < 6; i++) hiddenTokenKey = encodeURIComponent(hiddenTokenKey);
   const raw = "https://example.com/profile?lang=es&" + hiddenTokenKey + "=must-not-persist";
   assert.equal(cleanUrl(raw), "https://example.com/profile?lang=es");
-
-  assert.equal(
-    cleanUrl("https://example.com/profile?%25FF=must-not-persist&lang=es"),
-    "https://example.com/profile?lang=es"
-  );
+  assert.equal(cleanUrl("https://example.com/profile?%25FF=must-not-persist&lang=es"), "https://example.com/profile?lang=es");
   let unresolvedEscape = "%5F";
   for (let i = 0; i < 10; i++) unresolvedEscape = encodeURIComponent(unresolvedEscape);
   assert.equal(normalizedQueryKey(unresolvedEscape), null, "unresolved nested encoding must be treated as suspicious");
@@ -481,21 +609,11 @@ test("removes deeply encoded sensitive query keys and does not preserve unresolv
 test("redacts identifiers that remain hidden by deep encoding in URL path segments", () => {
   let hiddenEmail = "jane@example.com";
   for (let i = 0; i < 6; i++) hiddenEmail = encodeURIComponent(hiddenEmail);
-  assert.equal(
-    cleanUrl("https://example.com/users/" + hiddenEmail + "/profile"),
-    "https://example.com/users/%5Bredacted%5D/profile"
-  );
+  assert.equal(cleanUrl("https://example.com/users/" + hiddenEmail + "/profile"), "https://example.com/users/%5Bredacted%5D/profile");
   assert.equal(isSensitivePathSegment("%252525252525FF"), true, "unreadable nested path escapes must be redacted");
 });
 
-
 test("drops query keys with mixed malformed and valid percent escapes", () => {
-  assert.equal(
-    cleanUrl("https://example.com/profile?access%25ZZ%255Ftoken=must-not-persist&lang=es"),
-    "https://example.com/profile?lang=es"
-  );
-  assert.equal(
-    cleanUrl("https://example.com/profile/%ZZsecret"),
-    "https://example.com/profile/%5Bredacted%5D"
-  );
+  assert.equal(cleanUrl("https://example.com/profile?access%25ZZ%255Ftoken=must-not-persist&lang=es"), "https://example.com/profile?lang=es");
+  assert.equal(cleanUrl("https://example.com/profile/%ZZsecret"), "https://example.com/profile/%5Bredacted%5D");
 });

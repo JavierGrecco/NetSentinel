@@ -69,9 +69,16 @@ async function getState() {
   settings.captureSearches = normalizeStoredBoolean(raw, "captureSearches", DEFAULTS.captureSearches);
   settings.retentionDays = normalizeRetentionDays(settings.retentionDays);
   settings.excludeDomains = Array.isArray(settings.excludeDomains) ? settings.excludeDomains : [];
+  let storedEvents = Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [];
+  if (chrome.runtime && typeof chrome.runtime.sendMessage === "function") {
+    const response = await chrome.runtime.sendMessage({ type: "NETSENTINEL_GET_SAFE_EVENTS" });
+    if (!response || response.ok !== true || !Array.isArray(response.events)) {
+      throw new Error("safe events unavailable");
+    }
+    storedEvents = response.events;
+  }
   const cutoff = Date.now() - settings.retentionDays * 86400000;
-  const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
-    .filter(event => isRetainedEvent(event, cutoff)).slice(-1000);
+  const events = storedEvents.filter(event => isRetainedEvent(event, cutoff)).slice(-1000);
   // Reading/rendering must not write a stale event snapshot back over new
   // navigation events created by the service worker in another extension context.
   return { settings, events };

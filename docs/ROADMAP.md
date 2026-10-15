@@ -1,6 +1,6 @@
 # Roadmap maestro de NetSentinel
 
-> **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+> **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 ## Estado del proyecto
 
@@ -8,10 +8,10 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de main revisado para este plan:** [c2c6da9](https://github.com/JavierGrecco/NetSentinel/commit/c2c6da9fd9bd20b96bba26d77ab73f1479bbca65).
-- **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159685).
-- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159672).
-- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38331159674).
+- **Último commit de main revisado para este plan:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff), que integra la corrección de privacidad de la PR #110.
+- **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489725).
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489774).
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489865).
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
@@ -77,7 +77,7 @@ Cada hallazgo debe ser reproducible, tener procedencia/fecha/evidencia y explica
 
 ## Fase 2 — Fuentes reales de infraestructura, de solo lectura
 
-**Objetivo:** sumar contexto fiable sin inventar adaptadores genéricos ni abrir accesos innecesarios.
+**Objetivo:** sumar contexto fiable sin inventar adaptadores genéricos ni abrir accesos innecesarios. La alternativa de observación sin agentes por dispositivo y sus límites están descritos en [NETWORK_VISIBILITY.md](NETWORK_VISIBILITY.md). Las opciones DNS/flujo que aparecen en la interfaz de Actividad todavía no equivalen a un adaptador implementado.
 
 - [ ] **SRC-01 — Selección de la primera integración.** Elegir un modelo/proveedor concreto de router, AP, DHCP o resolvedor a partir de documentación/API disponible y necesidad real. Documentar campos que realmente expone, requisitos de acceso y limitaciones.
 - [ ] **SRC-02 — Contrato del adaptador.** Definir interfaz común para origen, marca de tiempo, alcance, estado de frescura, errores parciales, paginación/límites y saneamiento de datos.
@@ -95,7 +95,7 @@ Una fuente se considera soportada solo si tiene documentación, fixtures, prueba
 - [ ] **OPS-01 — Informe reproducible.** Exportar un informe por periodo/activo con eventos, hallazgos, evidencia, fuentes, tiempos y limitaciones; permitir minimizar datos sensibles y verificar neutralización de fórmulas en formatos tabulares.
 - [ ] **OPS-02 — Métricas Prometheus.** Añadir métricas de cardinalidad controlada, sin etiquetas de alta cardinalidad con IP arbitrarias, URL, nombres de usuario o datos sensibles. Mantener exposición local segura y documentar cómo desactivarlas.
 - [ ] **OPS-03 — Perfiles de red.** Diseñar aislamiento de inventario e historial por sitio/perfil antes de implementar múltiples ubicaciones. Evitar mezclar direcciones repetidas de redes diferentes.
-- [ ] **OPS-04 — Usabilidad y accesibilidad.** Validar teclado, contraste, nombres accesibles, errores accionables y funcionamiento sin depender de notificaciones temporales.
+- [ ] **OPS-04 — Usabilidad y accesibilidad.** Mantener un marco visual común entre Inventario, Hallazgos, Monitorización, Herramientas y Actividad (ancho, tipografía, controles, paneles y espacios); validar teclado, contraste, nombres accesibles, adaptación móvil, errores accionables y funcionamiento sin depender de notificaciones temporales. Registrar el recorrido visual real en la matriz de validación.
 - [ ] **OPS-05 — Métricas del producto.** Medir tiempo hasta inventario útil, recorridos completos sin ayuda, falsos positivos reportados, éxito de restauración y tiempo de reproducción de errores. No recolectar telemetría de uso externa por defecto.
 
 ## Fase 4 — Recolección remota y multi-sede (bloqueada por diseño de seguridad)

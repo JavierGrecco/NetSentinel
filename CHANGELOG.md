@@ -2,7 +2,54 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Sustituye el desplegable de apariencia por tarjetas visuales con iconos y una vista previa de la paleta propia de cada tema (Oscuro, Medio y Claro) en las cinco pantallas. La preferencia sigue persistiendo y sincronizándose entre páginas y pestañas, con controles accesibles por teclado y diseño adaptable.
+
+- Unifica el marco visual de las cinco pantallas: ancho máximo, márgenes adaptables, jerarquía tipográfica, paneles, controles y espaciado. Evita saltos laterales al navegar y añade pruebas que vigilan la carga de la capa de diseño compartida.
+
+- Reordena la cabecera después de la revisión visual: conserva el logo y la marca NetSentinel en todas las secciones, separa el título y la descripción de la sección, ensancha la navegación y reduce el selector de temas para que sea una preferencia secundaria.
+
+- Unifica la apariencia en Inventario, Hallazgos, Monitorización, Herramientas y Actividad: permite elegir tema oscuro, medio o claro y conserva la preferencia entre páginas. Reorganiza Monitorización y Actividad en sectores navegables, aclara cuándo se ejecutan los monitores y qué necesita una fuente de telemetría, y agrega acciones de triaje para distinguir entre reconocer un dispositivo y marcar un evento como revisado.
+- Aclara los requisitos reales de las fuentes de Actividad: las ventanas generan una recepción temporal con token, pero no conectan el router ni instalan agentes. Añade orientación contextual por tipo de fuente y documenta una futura integración central vía registros DNS o flujos del router/firewall para redes autorizadas, con límites explícitos frente a HTTPS, VPN y DNS cifrado.
+
+- Refuerza la rotación del diario de errores: los archivos archivados también reciben permisos privados en sistemas POSIX y la operación no sigue enlaces simbólicos. Añade una prueba para diarios preexistentes con permisos abiertos.
+
+- Evita clasificar un error SQLite por un texto ambiguo cuando la excepción ya proporciona un código nativo no reconocido. El mensaje solo se usa como alternativa en runtimes que no exponen ese código; se agrega una prueba para mensajes contradictorios.
+
+
 - Refuerza el saneamiento de URLs en navegador e importador: inspecciona hasta ocho capas de codificación, elimina parámetros cuyo nombre siga ambiguamente codificado y redacta segmentos de ruta que no puedan examinarse con seguridad. Añade pruebas para tokens/correos codificados en profundidad y mantiene el comportamiento alineado entre JavaScript y Python.
+
+- Hace atómica la inicialización y migración del esquema SQLite. Si una actualización falla, revierte los cambios parciales; se agrega una prueba de regresión.
+
+- Mejora el reconocimiento de cierres de bloques `script` al calcular hashes CSP y agrega pruebas para espacios y atributos inesperados.
+
+
+- Añade saneamiento/migración de eventos históricos de Chromium antes de la vista y exportación: canoniza de nuevo URLs, deriva el dominio desde el host validado, descarta direcciones privadas/locales y tipos/campos inesperados y conserva solo metadatos aprobados. La operación comparte la cola de escritura para no perder eventos nuevos.
+
+- Alinea la validación de hostnames de la extensión Chromium con los límites DNS del backend: normaliza un único punto raíz final y descarta etiquetas vacías/malformadas, etiquetas mayores de 63 caracteres y nombres que superan 253 caracteres ASCII. Añade pruebas de saneamiento y captura.
+
+- Alinea el filtro IPv6 de la extensión con el backend para ORCHID/ORCHIDv2 (`2001:10::/28` y `2001:20::/28`) y corrige la máscara de prefijo: las reglas `/28` se aplican al segundo hexteto, no al tercero. Añade pruebas de límites.
+
+- Excluye las direcciones IPv6 ORCHIDv2 (`2001:20::/28`) de los metadatos de navegación porque son identificadores no destinados al enrutamiento IP convencional; agrega una prueba de regresión para importación CSV.
+
+- Mejora la clasificación de errores SQLite: prioriza códigos nativos (incluidos códigos extendidos) cuando están disponibles y conserva la alternativa compatible basada en mensajes para Python 3.10. Agrega regresiones para bloqueo, espacio, E/S, acceso e integridad/esquema sin exponer detalles internos.
+
+- Unifica la validación de nombres DNS usados en metadatos de actividad, hosts de URL y dominios de correo: comprueba la longitud después de IDNA, los límites por etiqueta y los puntos raíz repetidos. Revalida también la longitud de la dirección de correo ya canonicalizada para cubrir la expansión IDNA. Agrega regresiones para estos límites.
+
+- Endurece la validación de nombres DNS/TLS tras la conversión IDNA y rechaza nombres cuyo tamaño ASCII supera el límite DNS. Valida también los objetivos PTR devueltos por el resolvedor y los clasifica como fallo DNS si están malformados. Añade pruebas para los límites y las respuestas anómalas.
+
+- Ajusta la inspección TLS para que TCP y handshake compartan un único plazo monotónico. El proceso padre conserva un límite externo terminable frente a resoluciones DNS bloqueadas y el arranque del proceso hijo; se agregan regresiones sobre los plazos.
+
+- Separa el catálogo y la clasificación de errores del diario JSONL local. Mantiene `record_error_event` en la fachada compatible, fija una frontera de dependencias y amplía las pruebas de privacidad, rotación, permisos y protección frente a enlaces simbólicos.
+
+- Separa el JavaScript de las cinco pantallas principales en archivos independientes. Las páginas cargan su módulo local con `defer`, y CI valida su sintaxis y comprueba que los archivos estén incluidos en el paquete.
+
+- Separa la evaluación del diagnóstico de conectividad en una función pura, aislada de los comandos y de la ejecución de sondas, para poder probar sus recomendaciones sin tocar la red.
+
+- Separa la validación de objetivos, las sondas TCP/HTTP/ping y el transporte de webhooks del supervisor de monitorización, conservando los contratos públicos y los límites de tiempo de las comprobaciones.
+
+- Divide la capa SQLite en infraestructura de conexión/permisos (`database_storage.py`), esquema/migraciones aditivas (`database_schema.py`), repositorios por dominio y servicios de exportación. `database.py` conserva una fachada de compatibilidad y los contratos externos no cambian.
+
+- Divide la persistencia SQLite de actividad en repositorios para retención, sesiones, importaciones, borrado y lectura. Mantiene `activity_repository.py` como fachada compatible y amplía las pruebas automáticas que vigilan las dependencias entre módulos.
 
 - Hace que la lectura de preferencias de seguimiento falle de forma segura: solo acepta booleanos reales para activar el registro y las opciones de captura; valores persistidos como texto ("false"/"true") u otros tipos se deshabilitan en lugar de evaluarse como truthy. Añade pruebas en el service worker y popup.
 

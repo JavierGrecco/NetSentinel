@@ -5,17 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Herramientas · NetSentinel</title>
 <link rel="stylesheet" href="/static/tools.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body>
 <main>
-<div class="top"><div><div class="muted">Observabilidad local</div><h1>Herramientas de red</h1></div><nav class="primary-nav" aria-label="Navegación principal">
-        <a class="nav-link" href="/">Inventario</a>
-        <a class="nav-link" href="/findings">Hallazgos</a>
-        <a class="nav-link" href="/monitors">Monitorización</a>
-        <a class="nav-link" aria-current="page" href="/tools">Herramientas</a>
-        <a class="nav-link" href="/activity">Actividad</a>
-      </nav></div>
-<p class="muted">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</p>
+<header class="top app-header">
+  <div class="app-header-content">
+    <div class="app-header-brand-row">
+      <div class="app-brand">
+        <div class="logo" aria-hidden="true">⌁</div>
+        <div class="app-brand-copy">
+          <div class="eyebrow">Observabilidad local</div>
+          <div class="app-brand-name">NetSentinel</div>
+        </div>
+      </div>
+      <div class="app-header-utilities">
+        <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+      <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+      <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+        <label class="theme-option">
+          <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="theme-option-label">Oscuro</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Medio</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Claro</span>
+          </span>
+        </label>
+      </div>
+    </div>
+      </div>
+    </div>
+    <div class="app-section-heading-row">
+      <div class="app-section-heading">
+        <h1 class="app-section-title">Herramientas de red</h1>
+        <p class="app-section-description">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</p>
+      </div>
+    </div>
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a class="nav-link" href="/">Inventario</a>
+      <a class="nav-link" href="/findings">Hallazgos</a>
+      <a class="nav-link" href="/monitors">Monitorización</a>
+      <a class="nav-link" aria-current="page" href="/tools">Herramientas</a>
+      <a class="nav-link" href="/activity">Actividad</a>
+    </nav>
+  </div>
+</header>
 <section class="panel" aria-labelledby="dns-title">
 <h2 id="dns-title">Consulta DNS</h2>
 <p>Consulta las direcciones IPv4 e IPv6 que devuelve el resolvedor configurado en esta computadora.</p>
@@ -61,180 +109,6 @@
 <p class="warning">La configuración puede variar por interfaz, VPN o DNS dividido. Esta vista es orientativa y no necesariamente refleja todas las reglas activas del sistema.</p>
 </section>
 </main>
-<script>
-(() => {
-  const configStatus = document.getElementById("config-status");
-  const configServers = document.getElementById("config-servers");
-  fetch("/api/tools/dns/configuration", { headers: { "Accept": "application/json" }, cache: "no-store" })
-    .then(async response => {
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "No se pudo leer la configuración DNS.");
-      configStatus.textContent = data.detected
-        ? data.count + " servidor(es) detectado(s) · Fuente: " + data.source + " · Sistema: " + data.platform
-        : "No se detectaron servidores DNS en la fuente consultada. Sistema: " + data.platform;
-      for (const server of data.servers) {
-        const row = document.createElement("div");
-        row.className = "address";
-        const value = document.createElement("strong");
-        value.textContent = server;
-        row.append(value);
-        configServers.append(row);
-      }
-      const note = document.createElement("p");
-      note.className = "muted";
-      note.textContent = data.note;
-      configServers.append(note);
-    })
-    .catch(error => { configStatus.textContent = error instanceof Error ? error.message : "No se pudo leer la configuración DNS."; });
-
-  const form = document.getElementById("dns-form");
-  const input = document.getElementById("hostname");
-  const button = document.getElementById("submit");
-  const status = document.getElementById("status");
-  const results = document.getElementById("results");
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const hostname = input.value.trim();
-    if (!hostname) return;
-    button.disabled = true;
-    status.textContent = "Consultando el resolvedor del sistema…";
-    results.replaceChildren();
-    try {
-      const response = await fetch("/api/tools/dns/lookup?hostname=" + encodeURIComponent(hostname), {
-        headers: { "Accept": "application/json" },
-        cache: "no-store"
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta.");
-      status.textContent = data.count
-        ? "Se encontraron " + data.count + " dirección(es) para " + data.hostname + "."
-        : "El resolvedor no devolvió direcciones para ese nombre.";
-      for (const item of data.addresses) {
-        const row = document.createElement("div");
-        row.className = "address";
-        const address = document.createElement("strong");
-        address.textContent = item.ip;
-        const family = document.createElement("span");
-        family.className = "tag";
-        family.textContent = item.family;
-        row.append(address, family);
-        results.append(row);
-      }
-    } catch (error) {
-      status.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta.";
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  const ptrForm = document.getElementById("ptr-form");
-  const addressInput = document.getElementById("address");
-  const ptrButton = document.getElementById("ptr-submit");
-  const ptrStatus = document.getElementById("ptr-status");
-  ptrForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const address = addressInput.value.trim();
-    if (!address) return;
-    ptrButton.disabled = true;
-    ptrStatus.textContent = "Consultando DNS inverso…";
-    try {
-      const response = await fetch("/api/tools/dns/reverse?address=" + encodeURIComponent(address), {
-        headers: { "Accept": "application/json" },
-        cache: "no-store"
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "No se pudo completar la consulta PTR.");
-      ptrStatus.textContent = data.ip + " → " + data.hostname + " (registro PTR) · " + (data.cache_hit ? "resultado en caché" : "consulta nueva") + (data.resolved_at ? " · resuelto: " + data.resolved_at : "");
-    } catch (error) {
-      ptrStatus.textContent = error instanceof Error ? error.message : "Error inesperado en la consulta PTR.";
-    } finally {
-      ptrButton.disabled = false;
-    }
-  });
-  const tlsForm = document.getElementById("tls-form");
-  const tlsHost = document.getElementById("tls-host");
-  const tlsPort = document.getElementById("tls-port");
-  const tlsButton = document.getElementById("tls-submit");
-  const tlsStatus = document.getElementById("tls-status");
-  const tlsResults = document.getElementById("tls-results");
-
-  function appendTLSValue(label, value) {
-    if (value === null || value === undefined || value === "") return;
-    const row = document.createElement("div");
-    row.className = "address";
-    const key = document.createElement("strong");
-    key.textContent = label;
-    const text = document.createElement("span");
-    text.className = "tag";
-    text.textContent = String(value);
-    row.append(key, text);
-    tlsResults.append(row);
-  }
-
-  tlsForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const host = tlsHost.value.trim();
-    const port = Number(tlsPort.value);
-    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return;
-    tlsButton.disabled = true;
-    tlsStatus.textContent = "Conectando al endpoint y validando el certificado…";
-    tlsResults.replaceChildren();
-    try {
-      const response = await fetch("/api/tools/tls/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ host, port }),
-        cache: "no-store"
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "No se pudo inspeccionar el endpoint TLS.");
-      tlsStatus.textContent = data.summary || "Inspección TLS completada.";
-      appendTLSValue("Endpoint", data.host + ":" + data.port);
-      appendTLSValue("Estado", data.status);
-      if (data.certificate) {
-        appendTLSValue("Sujeto", data.certificate.subject);
-        appendTLSValue("Emisor", data.certificate.issuer);
-        appendTLSValue("Válido desde", data.certificate.valid_from);
-        appendTLSValue("Vence", data.certificate.valid_until);
-        appendTLSValue("Días hasta el vencimiento", data.certificate.days_remaining);
-        if (data.certificate.dns_names && data.certificate.dns_names.length) {
-          appendTLSValue("Nombres del certificado", data.certificate.dns_names.join(", "));
-        }
-      }
-      if (data.tls) {
-        appendTLSValue("Versión TLS", data.tls.version);
-        appendTLSValue("Cifrado negociado", data.tls.cipher);
-        appendTLSValue("Tamaño de clave del cifrado (bits)", data.tls.cipher_bits);
-      }
-      for (const finding of data.findings || []) {
-        const row = document.createElement("div");
-        row.className = "address";
-        const content = document.createElement("div");
-        const title = document.createElement("strong");
-        title.textContent = finding.title || finding.code || "Hallazgo";
-        const detail = document.createElement("div");
-        detail.className = "tag";
-        detail.textContent = finding.detail || "";
-        content.append(title, detail);
-        const severity = document.createElement("span");
-        severity.className = "tag";
-        severity.textContent = finding.severity || "info";
-        row.append(content, severity);
-        tlsResults.append(row);
-      }
-      if (data.notice) {
-        const note = document.createElement("p");
-        note.className = "muted";
-        note.textContent = data.notice;
-        tlsResults.append(note);
-      }
-    } catch (error) {
-      tlsStatus.textContent = error instanceof Error ? error.message : "No se pudo completar la inspección TLS.";
-    } finally {
-      tlsButton.disabled = false;
-    }
-  });
-})();
-</script>
+<script src="/static/tools.js" defer></script>
 </body>
 </html>

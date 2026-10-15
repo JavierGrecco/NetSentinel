@@ -141,7 +141,8 @@ function privateOrLocalHost(hostname) {
   const sixToFour = words[0] === 0x2002;                 // 2002::/16
   const localUseNat64 = words[0] === 0x0064 && words[1] === 0xff9b && words[2] === 1; // 64:ff9b:1::/48
   const dummyPrefix = words[0] === 0x0100 && words[1] === 0 && words[2] === 0 && words[3] === 1; // 100:0:0:1::/64
-  const deprecatedOrchid = words[0] === 0x2001 && words[1] === 0x0010 && (words[2] & 0xfff0) === 0; // 2001:10::/28
+  const deprecatedOrchid = words[0] === 0x2001 && (words[1] & 0xfff0) === 0x0010; // 2001:10::/28
+  const orchidV2 = words[0] === 0x2001 && (words[1] & 0xfff0) === 0x0020; // 2001:20::/28 (RFC 7343)
   const segmentRouting = words[0] === 0x5f00; // 5f00::/16
   const deprecatedIPv4Compatible = words.slice(0, 6).every(word => word === 0);
 
@@ -149,7 +150,7 @@ function privateOrLocalHost(hostname) {
   // special-use, multicast, documentation, transition, and local-use prefixes.
   return allZero || loopback || uniqueLocal || linkLocal || multicast ||
     documentation || benchmarking || discardOnly || dummyPrefix || teredo || sixToFour ||
-    localUseNat64 || deprecatedOrchid || segmentRouting || deprecatedIPv4Compatible;
+    localUseNat64 || deprecatedOrchid || orchidV2 || segmentRouting || deprecatedIPv4Compatible;
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
@@ -190,10 +191,29 @@ function isSensitivePathSegment(value) {
   if (/^[+()0-9.\-\s]+$/.test(decoded) && (decoded.match(/\d/g) || []).length >= 10) return true;
   return decoded.length >= 32 && /^[A-Za-z0-9._~-]+$/.test(decoded) && /[A-Za-z]/.test(decoded) && /\d/.test(decoded);
 }
+function normalizeDnsHostname(url) {
+  // WHATWG URL canonicalizes IDNs to ASCII, but it does not enforce every DNS
+  // wire-format hostname limit. Mirror the backend's IDNA label/length checks.
+  let hostname = String(url.hostname || "").toLowerCase();
+  if (!hostname) return false;
+  // URL has already parsed IPv6 literals; retain the canonical bracketed form.
+  if (hostname.includes(":")) return hostname.startsWith("[") && hostname.endsWith("]");
+  // A single terminal root dot is valid and insignificant. Repeated dots are not.
+  if (hostname.endsWith(".")) hostname = hostname.slice(0, -1);
+  if (!hostname || hostname.endsWith(".") || hostname.length > 253) return false;
+  const labels = hostname.split(".");
+  if (labels.some(label =>
+    !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
+  )) return false;
+  url.hostname = hostname;
+  return true;
+}
+
 function cleanUrl(rawUrl) {
   let url;
   try { url = new URL(rawUrl); } catch { return null; }
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+  if (!normalizeDnsHostname(url)) return null;
 
   // The backend uses parse_qsl(max_num_fields=200) before removing sensitive
   // query keys. Match that limit here so an exported CSV cannot fail import just
@@ -215,6 +235,56 @@ function cleanUrl(rawUrl) {
   const result = url.toString();
   return result.length <= MAX_SAFE_URL_LENGTH ? result : null;
 }
+const SAFE_SEARCH_ENGINES = new Set(["Google", "Bing", "DuckDuckGo", "Yahoo", "Ecosia", "Brave Search", "Yandex", "Baidu", "YouTube", "Wikipedia", "Amazon", "Reddit", "TikTok"]);
+
+function sanitizeStoredEvent(event, cutoff = Date.now() - DEFAULTS.retentionDays * 86400000) {
+  if (!isRetainedEvent(event, cutoff)) return null;
+  if (event.event_type !== "page_visit" && event.event_type !== "search_query") return null;
+  if (typeof event.page_url !== "string") return null;
+
+  let originalUrl;
+  try { originalUrl = new URL(event.page_url); } catch { return null; }
+  if (!["http:", "https:"].includes(originalUrl.protocol) || !originalUrl.hostname ||
+      originalUrl.username || originalUrl.password || privateOrLocalHost(originalUrl.hostname)) return null;
+
+  const pageUrl = cleanUrl(event.page_url);
+  if (!pageUrl) return null;
+  let safeUrl;
+  try { safeUrl = new URL(pageUrl); } catch { return null; }
+  // Re-check after URL canonicalization, which can rewrite unusual numeric hosts.
+  if (privateOrLocalHost(safeUrl.hostname)) return null;
+
+  const hostname = safeUrl.hostname.toLowerCase().replace(/\.$/, "");
+  const isIpLiteral = hostname.includes(":") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+  const safeEvent = {
+    observed_at: new Date(Date.parse(event.observed_at)).toISOString(),
+    event_type: event.event_type,
+    domain: isIpLiteral ? "" : hostname,
+    app_name: "NetSentinel Browser Extension (Chromium)",
+    blocked: false,
+    page_url: pageUrl
+  };
+
+  if (event.event_type === "search_query") {
+    if (!SAFE_SEARCH_ENGINES.has(event.search_engine) || typeof event.search_terms !== "string") return null;
+    const terms = event.search_terms.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
+    if (!terms) return null;
+    safeEvent.search_engine = event.search_engine;
+    safeEvent.search_terms = terms;
+  }
+
+  // Keep deduplication working without retaining a legacy raw URL in its key.
+  const oldKey = typeof event._dedupeKey === "string" ? event._dedupeKey : "";
+  const keyMatch = oldKey.match(/^(page_visit|search_query):(-?\d+):/);
+  if (keyMatch && keyMatch[1] === event.event_type) {
+    const prefix = event.event_type + ":" + keyMatch[2] + ":";
+    safeEvent._dedupeKey = event.event_type === "page_visit"
+      ? prefix + pageUrl
+      : prefix + safeEvent.search_engine + ":" + safeEvent.search_terms;
+  }
+  return safeEvent;
+}
+
 function googleHost(host) {
   return host === "google.com" || host.endsWith(".google.com") ||
     /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host);
@@ -255,7 +325,9 @@ async function loadState() {
   };
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
-    .filter(event => isRetainedEvent(event, cutoff)).slice(-MAX_EVENTS);
+    .map(event => sanitizeStoredEvent(event, cutoff))
+    .filter(Boolean)
+    .slice(-MAX_EVENTS);
   return { settings, events };
 }
 async function captureNavigation(details) {
@@ -333,7 +405,18 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueue
 chrome.runtime.onStartup.addListener(() => { void normalizeStoredState().catch(() => undefined); });
 chrome.runtime.onInstalled.addListener(() => { void normalizeStoredState().catch(() => undefined); });
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
+  if (!message) return;
+  if (message.type === "NETSENTINEL_GET_SAFE_EVENTS") {
+    // Sanitize and persist legacy rows in the same queue as navigation writes so
+    // opening the popup cannot race a new event and replace it with an old snapshot.
+    void enqueueStorageTask(async () => {
+      const state = await loadState();
+      await chrome.storage.local.set({ [EVENTS_KEY]: state.events });
+      sendResponse({ ok: true, events: state.events });
+    }).catch(() => sendResponse({ ok: false, events: [] }));
+    return true;
+  }
+  if (message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
   void clearStoredEvents().then(
     () => sendResponse({ ok: true }),
     () => sendResponse({ ok: false })
@@ -354,6 +437,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizedQueryKey,
     isSensitivePathSegment,
     cleanUrl,
+    sanitizeStoredEvent,
     searchInfo,
     loadState,
     captureNavigation,

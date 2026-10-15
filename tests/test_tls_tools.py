@@ -85,15 +85,30 @@ def _mock_success(monkeypatch, certificate=None):
 
 @pytest.mark.parametrize("host", [
     "", "https://example.com", "example.com/path", "user@example.com",
-    "example.com:443", "-bad.example", "bad..example", "example.com?token=x",
+    "example.com:443", "-bad.example", "bad..example", "example.com..", "example.com?token=x",
 ])
 def test_tls_inspection_rejects_url_paths_credentials_and_invalid_hosts(host):
     with pytest.raises(ValueError):
         tls_tools.inspect_tls_endpoint(host)
 
 
+def test_tls_inspection_rejects_hostname_that_exceeds_dns_limit_after_idna():
+    hostname = ".".join(["é" * 48] * 5)
+    encoded = ".".join(label.encode("idna").decode("ascii") for label in hostname.split("."))
+    assert len(hostname) <= 253
+    assert all(len(label) <= 63 for label in encoded.split("."))
+    assert len(encoded) > 253
+
+    with pytest.raises(ValueError, match="nombre de host"):
+        tls_tools._normalise_host(hostname)
+
+
 def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch):
     calls, context, raw = _mock_success(monkeypatch)
+    # Freeze the clock here so this test checks the full initial timeout.
+    # The companion deadline test below covers elapsed time between connect and TLS.
+    ticks = iter([100.0, 100.0])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
 
     result = tls_tools._inspect_tls_endpoint_direct("Example.COM.", port=8443, timeout=2.5)
 
@@ -110,10 +125,35 @@ def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch)
         "cipher_bits": 256,
     }
     assert calls == {"address": ("example.com", 8443), "timeout": 2.5}
-    assert raw.timeout == 2.5
+    assert raw.timeout == pytest.approx(2.5, abs=1e-4)
     assert context.server_name == "example.com"
     assert "HTTP" in result["notice"]
     assert result["findings"] == []
+
+
+def test_tls_inspection_shares_deadline_between_connect_and_handshake(monkeypatch):
+    _calls, context, raw = _mock_success(monkeypatch)
+    ticks = iter([100.0, 101.75])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
+
+    result = tls_tools._inspect_tls_endpoint_direct("example.com", timeout=2.5)
+
+    assert result["status"] == "ok"
+    assert raw.timeout == pytest.approx(0.75)
+    assert context.server_name == "example.com"
+
+
+def test_tls_inspection_does_not_start_handshake_after_deadline(monkeypatch):
+    _calls, context, raw = _mock_success(monkeypatch)
+    ticks = iter([100.0, 103.01])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
+
+    result = tls_tools._inspect_tls_endpoint_direct("example.com", timeout=3.0)
+
+    assert result["status"] == "timeout"
+    assert result["findings"][0]["code"] == "connection_timeout"
+    assert context.server_name is None
+    assert raw.timeout is None
 
 
 def test_tls_inspection_warns_about_certificate_expiring_soon(monkeypatch):
@@ -207,18 +247,26 @@ def test_tls_inspection_wrapper_enforces_child_process_deadline(monkeypatch):
     assert calls["command"][1] == str(__import__("pathlib").Path(tls_tools.__file__).resolve())
     assert calls["command"][2] == "--inspect-child"
     assert calls["command"][-2:] == ["443", "3.0"]
-    assert calls["kwargs"]["timeout"] == 3.0
+    assert calls["kwargs"]["timeout"] == pytest.approx(
+        3.0 + tls_tools._CHILD_PROCESS_STARTUP_GRACE_SECONDS
+    )
     assert calls["kwargs"]["capture_output"] is True
     assert calls["kwargs"]["check"] is False
 
 
 def test_tls_inspection_wrapper_returns_timeout_if_dns_child_hangs(monkeypatch):
+    calls = {}
+
     def timeout_run(command, **kwargs):
+        calls["timeout"] = kwargs["timeout"]
         raise subprocess.TimeoutExpired(command, timeout=kwargs["timeout"])
 
     monkeypatch.setattr(tls_tools.subprocess, "run", timeout_run)
     result = tls_tools.inspect_tls_endpoint("example.com", timeout=0.5)
 
+    assert calls["timeout"] == pytest.approx(
+        0.5 + tls_tools._CHILD_PROCESS_STARTUP_GRACE_SECONDS
+    )
     assert result["status"] == "timeout"
     assert result["findings"][0]["code"] == "inspection_timeout"
     assert "resolución DNS" in result["summary"]

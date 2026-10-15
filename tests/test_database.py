@@ -205,6 +205,131 @@ def test_migrates_v01_device_schema(tmp_path: Path):
     assert database.get_scans(path=db) == []
 
 
+def test_migrates_legacy_activity_events_without_losing_rows(tmp_path: Path):
+    """La ampliación del esquema debe conservar metadatos ya guardados."""
+    import sqlite3
+
+    db = tmp_path / "legacy-activity.sqlite3"
+    with sqlite3.connect(db) as connection:
+        connection.executescript(
+            """CREATE TABLE devices (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   mac_address TEXT NOT NULL UNIQUE,
+                   ip_address TEXT NOT NULL,
+                   interface TEXT,
+                   first_seen TEXT NOT NULL,
+                   last_seen TEXT NOT NULL,
+                   trusted INTEGER NOT NULL DEFAULT 0,
+                   display_name TEXT NOT NULL DEFAULT '',
+                   notes TEXT NOT NULL DEFAULT ''
+               );
+               CREATE TABLE activity_sessions (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                   source_mode TEXT NOT NULL,
+                   started_at TEXT NOT NULL,
+                   ends_at TEXT NOT NULL,
+                   stopped_at TEXT,
+                   status TEXT NOT NULL DEFAULT 'active'
+               );
+               CREATE TABLE activity_events (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   session_id INTEGER REFERENCES activity_sessions(id) ON DELETE SET NULL,
+                   device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+                   observed_at TEXT NOT NULL,
+                   received_at TEXT NOT NULL,
+                   event_type TEXT NOT NULL CHECK (
+                       event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked')
+                   ),
+                   source TEXT NOT NULL CHECK (
+                       source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')
+                   ),
+                   domain TEXT,
+                   destination_ip TEXT,
+                   destination_port INTEGER,
+                   protocol TEXT,
+                   app_name TEXT,
+                   blocked INTEGER NOT NULL DEFAULT 0
+               );
+               INSERT INTO devices
+                   (id, mac_address, ip_address, first_seen, last_seen)
+               VALUES
+                   (7, 'AA:BB:CC:DD:EE:77', '192.168.7.7',
+                    '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00');
+               INSERT INTO activity_events
+                   (id, device_id, observed_at, received_at, event_type, source, domain, blocked)
+               VALUES
+                   (19, 7, '2026-01-01T00:01:00+00:00', '2026-01-01T00:01:01+00:00',
+                    'dns_query', 'router_dns', 'legacy.example', 0);"""
+        )
+
+    database.initialize(db)
+
+    with database.connect(db) as connection:
+        event = connection.execute(
+            """SELECT id, device_id, event_type, source, domain, page_url, email_subject
+               FROM activity_events WHERE id = 19"""
+        ).fetchone()
+        assert event is not None
+        assert dict(event) == {
+            "id": 19,
+            "device_id": 7,
+            "event_type": "dns_query",
+            "source": "router_dns",
+            "domain": "legacy.example",
+            "page_url": None,
+            "email_subject": None,
+        }
+
+        # La base migrada debe aceptar los tipos añadidos en versiones posteriores.
+        connection.execute(
+            """INSERT INTO activity_events
+               (device_id, observed_at, received_at, event_type, source, page_url)
+               VALUES (7, '2026-01-02T00:00:00+00:00', '2026-01-02T00:00:01+00:00',
+                       'page_visit', 'manual_import', 'https://example.com/')"""
+        )
+        assert connection.execute(
+            "SELECT COUNT(*) FROM activity_events WHERE event_type = 'page_visit'"
+        ).fetchone()[0] == 1
+
+
+def test_schema_initialization_rolls_back_when_the_initial_script_fails(tmp_path: Path):
+    """Un error de migración no debe dejar tablas nuevas a medio crear."""
+    import sqlite3
+
+    db = tmp_path / "failed-schema.sqlite3"
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            """CREATE TABLE activity_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                retention_days INTEGER NOT NULL DEFAULT 7 CHECK (retention_days BETWEEN 1 AND 90)
+            )"""
+        )
+        connection.execute(
+            """CREATE TRIGGER reject_activity_settings_seed
+               BEFORE INSERT ON activity_settings
+               BEGIN
+                   SELECT RAISE(ABORT, 'simulated schema initialization failure');
+               END"""
+        )
+
+    with pytest.raises(sqlite3.IntegrityError, match="simulated schema initialization failure"):
+        database.initialize(db)
+
+    with sqlite3.connect(db) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+
+    # La tabla preexistente se conserva, pero no quedan tablas nuevas a medio crear.
+    assert "activity_settings" in tables
+    assert "devices" not in tables
+    assert "scans" not in tables
+
+
 def test_uses_local_oui_file_and_records_lookup_provenance(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     (tmp_path / "oui.csv").write_text("prefix,vendor\nAABBCC,Proveedor de ejemplo\n", encoding="utf-8")

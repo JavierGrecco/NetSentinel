@@ -46,6 +46,18 @@ Marcar cada tarea solo después de completar el recorrido en ese sistema y regis
 - [ ] REL-06 — Importación CSV, previsualización, deduplicación, filtros, fórmulas y borrado selectivo.
 - [ ] REL-07 — Importación de metadatos de auditoría de correo autorizados, rechazo de cuerpos/adjuntos y retención.
 
+### Interfaz y facilidad de uso (todas las plataformas, empezar por macOS)
+
+- [ ] UI-01 — Elegir Oscuro, Medio y Claro desde las tarjetas con iconos en cada página; comprobar el estado seleccionado, el uso con teclado y que la preferencia se mantiene al navegar entre Inventario, Hallazgos, Monitorización, Herramientas y Actividad, después de recargar y al cambiarla desde otra pestaña.
+- [ ] UI-02 — En Monitorización, cambiar entre Resumen, Monitores, Incidentes y Avisos; verificar que se distingue un monitor pausado y que la guía aclara que las comprobaciones se detienen al cerrar la app o suspender el equipo.
+- [ ] UI-03 — En Hallazgos, comprobar la diferencia entre marcar un dispositivo como conocido y marcar solo el evento como revisado; confirmar que la acción no borra el registro y no se presenta como verificación automática de seguridad.
+- [ ] UI-04 — En Actividad, navegar por Resumen, Seguimiento, Importar, Eventos y Privacidad y borrado; verificar que queda claro que una ventana temporal no crea una fuente de datos ni instala un agente.
+- [ ] UI-05 — Comprobar que las pestañas funcionan con teclado y que el contenido sigue siendo legible en los tres temas y en una ventana estrecha.
+- [ ] UI-06 — Navegar por las cinco secciones con la misma anchura de ventana; verificar que el marco no se ensancha ni se contrae bruscamente, que los márgenes/títulos/paneles/controles mantienen la escala y que las tablas no ensanchan toda la página. Repetir en escritorio y móvil.
+- [ ] UI-07 — Confirmar que logo y nombre NetSentinel permanecen fijos en las cinco secciones; que el título y la descripción cambian con la sección, la navegación ocupa el ancho disponible y el selector de temas no domina la cabecera.
+
+**Evidencia interfaz:** fecha/versión/commit, temas probados, páginas visitadas, resultado y fallos observados.
+
 **Evidencia macOS:**
 - Fecha/versión/commit:
 - Resultado y observaciones:
@@ -115,6 +127,15 @@ Usar páginas y cuentas de prueba; no capturar credenciales ni datos privados. E
 - [ ] La protección de main se verificó en Settings; ver [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - [ ] Se revisaron individualmente los PRs de Dependabot abiertos y todos los cambios incorporados tienen checks actuales.
 - [ ] La lista de limitaciones conocidas y los cambios de la release están actualizados.
+
+## Revisión manual de interfaz — 15 de octubre de 2026
+
+El responsable del proyecto confirmó que las pruebas manuales locales del recorrido de la aplicación fueron satisfactorias. Las observaciones restantes corresponden a la jerarquía visual, la estructura de navegación y la usabilidad; no se informó una falla funcional bloqueante.
+
+- **Alcance aprobado:** revisión local de interfaz y uso general.
+- **Resultado:** aprobado por el responsable del proyecto para continuar la revisión del PR #111.
+- **Entorno y commit exactos:** no registrados en el mensaje de confirmación.
+- **Pendiente:** esta confirmación no reemplaza los recorridos de instalación, persistencia, seguridad, extensión ni la matriz completa de Windows/macOS/Linux y Chrome/Edge.
 
 ## Registro de sesiones
 

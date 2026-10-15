@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -24,6 +26,28 @@ def assert_defensive_headers(response):
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert response.headers["cross-origin-resource-policy"] == "same-origin"
+
+
+@pytest.mark.parametrize(
+    "closing_tag",
+    [
+        "</script >",
+        "</script\t\n bar>",
+    ],
+)
+def test_inline_script_hashing_handles_unusual_closing_tag_whitespace(closing_tag):
+    """CSP debe calcular el hash del bloque que el navegador reconoce como script."""
+    import base64
+    import hashlib
+
+    from netsentinel.api.security import _inline_script_hashes_in_html
+
+    script = "window.netsentinelReady = true;"
+    html = f"<script>{script}{closing_tag}"
+    digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
+
+    assert _inline_script_hashes_in_html(html) == (f"'sha256-{digest}'",)
+
 
 
 @pytest.mark.parametrize(
@@ -117,17 +141,19 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
     assert response.json()["hostname"] == "example.test"
 
 @pytest.mark.parametrize(
-    ("path", "expected_title"),
+    ("path", "expected_title", "expected_scripts"),
     [
-        ("/", "NetSentinel · Red local"),
-        ("/monitors", "NetSentinel · Monitorización"),
-        ("/activity", "NetSentinel · Actividad y telemetría"),
-        ("/findings", "NetSentinel · Hallazgos"),
-        ("/tools", "Herramientas · NetSentinel"),
+        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/index.js")),
+        ("/monitors", "NetSentinel · Monitorización", ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js")),
+        ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
+        ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
+        ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
     ],
 )
-def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, expected_title):
-    """Every local HTML route keeps CSP hashes and defensive response headers."""
+def test_all_local_html_pages_preserve_csp_and_cache_protection(
+    client, path, expected_title, expected_scripts
+):
+    """Pages allow only their expected external scripts under same-origin CSP."""
     response = client.get(path)
 
     assert response.status_code == 200
@@ -140,8 +166,50 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, ex
     assert "script-src 'self'" in policy
     assert "'unsafe-inline'" not in policy
 
-    # CSP must permit the trusted inline scripts from this exact packaged page.
-    trusted_hashes = main_module._inline_script_hashes(path)
-    assert trusted_hashes, "Each packaged page should have at least one trusted inline-script hash."
-    for source in trusted_hashes:
-        assert source in policy
+    scripts = re.findall(
+        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
+        response.text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    observed_scripts = []
+    for attributes, inline_body in scripts:
+        match = re.fullmatch(r'src="(/static/[^"]+)"( defer)?', attributes.strip())
+        assert match, f"{path} contains a script with unexpected attributes: {attributes}"
+        source = match.group(1)
+        observed_scripts.append(source)
+        assert not inline_body.strip(), "Page scripts must stay in separate files."
+        if source == "/static/theme.js":
+            assert match.group(2) is None, "The shared theme must apply before first paint."
+        else:
+            assert match.group(2) == " defer", "Page behavior scripts must be deferred."
+
+    assert tuple(observed_scripts) == expected_scripts
+    for source in expected_scripts:
+        assert client.get(source).status_code == 200, f"Missing frontend asset: {source}"
+    assert main_module._inline_script_hashes(path) == ()
+
+
+@pytest.mark.parametrize(
+    "asset",
+    [
+        "/static/index.js",
+        "/static/monitors.js",
+        "/static/activity.js",
+        "/static/findings.js",
+        "/static/tools.js",
+        "/static/theme.js",
+        "/static/section-tabs.js",
+    ],
+)
+def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
+    response = client.get(asset)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith(("text/javascript", "application/javascript"))
+    assert response.text.strip()
+    assert_defensive_headers(response)
+
+    policy = response.headers["content-security-policy"]
+    assert "script-src 'self'" in policy
+    assert "'unsafe-inline'" not in policy
+    assert "sha256-" not in policy

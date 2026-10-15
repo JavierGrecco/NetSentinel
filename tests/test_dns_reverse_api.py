@@ -1,3 +1,4 @@
+from pathlib import Path
 from fastapi.testclient import TestClient
 
 import netsentinel.main as main_module
@@ -57,7 +58,8 @@ def test_tools_page_exposes_dns_and_ptr_forms(monkeypatch):
     assert response.status_code == 200
     assert 'id="dns-form"' in response.text
     assert 'id="ptr-form"' in response.text
-    assert "/api/tools/dns/reverse" in response.text
+    script = Path(__file__).resolve().parents[1] / "src/netsentinel/static/tools.js"
+    assert "/api/tools/dns/reverse" in script.read_text(encoding="utf-8")
 
 
 
@@ -126,6 +128,8 @@ def test_inventory_page_exposes_on_demand_ptr_action(monkeypatch):
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/")
     assert response.status_code == 200
-    assert 'data-ptr="${d.id}"' in response.text
-    assert "/dns-reverse" in response.text
-    assert "nombre DNS no verificado" in response.text
+    script = Path(__file__).resolve().parents[1] / "src/netsentinel/static/index.js"
+    source = response.text + script.read_text(encoding="utf-8")
+    assert 'data-ptr="${d.id}"' in source
+    assert "/dns-reverse" in source
+    assert "nombre DNS no verificado" in source

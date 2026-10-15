@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -55,15 +56,17 @@ def test_monitor_api_and_static_css(monkeypatch, tmp_path):
     })
     with TestClient(app, base_url='http://127.0.0.1') as client:
         page = client.get("/monitors")
+        script = client.get("/static/monitors.js")
         assert page.status_code == 200
+        assert script.status_code == 200
         assert 'id="analytics"' in page.text
-        assert "history-timeline" in page.text
+        assert "history-timeline" in (page.text + script.text)
         assert client.get("/static/styles.css").status_code == 200
         monitor_css = client.get("/static/monitors.css")
         assert monitor_css.status_code == 200
         assert ".check-mark.up" in monitor_css.text
         assert ".check-mark.down" in monitor_css.text
-        page_source = page.text
+        page_source = page.text + script.text
         assert "bar.style.height" not in page_source, "CSP blocks inline style changes in the browser"
         assert "bar.dataset.height" in page_source, "Chart height must be represented by a data attribute"
         assert '.latency-bar.up[data-height="13"]' in monitor_css.text
@@ -252,12 +255,15 @@ def test_latency_trend_ui_has_accessible_chart_and_recovery_metrics(monkeypatch,
     database.initialize()
     with TestClient(app, base_url="http://127.0.0.1") as client:
         page = client.get("/monitors")
+        script = client.get("/static/monitors.js")
         css = client.get("/static/monitors.css")
         summary = client.get("/api/monitoring/summary?hours=168")
     assert page.status_code == 200
-    assert "appendLatencyTrend" in page.text
-    assert "latency-chart" in page.text
-    assert "Recuperación media" in page.text
+    assert script.status_code == 200
+    ui_source = page.text + script.text
+    assert "appendLatencyTrend" in script.text
+    assert "latency-chart" in ui_source
+    assert "Recuperación media" in ui_source
     assert ".latency-bar.up" in css.text
     assert summary.status_code == 200
     assert "average_recovery_seconds" in summary.json()["summary"]
@@ -348,12 +354,14 @@ def test_monitor_page_exposes_incident_filter_and_historical_latency_exports(mon
     database.initialize()
     with TestClient(app, base_url="http://127.0.0.1") as client:
         page = client.get("/monitors")
+        script = client.get("/static/monitors.js")
         css = client.get("/static/monitors.css")
     assert page.status_code == 200
+    assert script.status_code == 200
     assert 'id="incidentStatus"' in page.text
     assert 'id="incidentExport"' in page.text
-    assert "appendHistoricalLatencyTrend" in page.text
-    assert "/api/export/monitor-latency.csv" in page.text
+    assert "appendHistoricalLatencyTrend" in script.text
+    assert "/api/export/monitor-latency.csv" in (page.text + script.text)
     assert ".latency-history-bar" in css.text
 
 

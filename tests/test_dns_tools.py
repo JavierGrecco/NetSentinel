@@ -29,11 +29,22 @@ def test_lookup_hostname_deduplicates_and_sorts_addresses(monkeypatch):
 
 @pytest.mark.parametrize("hostname", [
     "", "https://example.com", "example.com:443", "user@example.com",
-    "example.com/path", "192.0.2.1", "-bad.example", "bad..example",
+    "example.com/path", "example.com..", "192.0.2.1", "-bad.example", "bad..example",
 ])
 def test_lookup_hostname_rejects_invalid_input(hostname):
     with pytest.raises(ValueError):
         lookup_hostname(hostname)
+
+
+def test_lookup_hostname_rejects_name_that_exceeds_dns_limit_after_idna():
+    hostname = ".".join(["é" * 48] * 5)
+    encoded = ".".join(label.encode("idna").decode("ascii") for label in hostname.split("."))
+    assert len(hostname) <= 253
+    assert all(len(label) <= 63 for label in encoded.split("."))
+    assert len(encoded) > 253
+
+    with pytest.raises(ValueError, match="nombre de host"):
+        dns_tools._normalize_hostname(hostname)
 
 
 @pytest.mark.parametrize(
@@ -95,3 +106,29 @@ def test_lookup_hostname_rejects_non_ip_child_addresses(monkeypatch):
     with pytest.raises(DNSLookupError) as error:
         lookup_hostname("example.com")
     assert error.value.kind == "resolver_error"
+
+
+
+def test_reverse_lookup_normalizes_valid_ptr_target(monkeypatch):
+    monkeypatch.setattr(
+        dns_tools, "_run_resolver_child", lambda *_args: {"hostname": "Mail.Example.COM."}
+    )
+
+    result = dns_tools.reverse_lookup_ip("192.0.2.10")
+
+    assert result["hostname"] == "mail.example.com"
+    assert result["record_type"] == "PTR"
+    assert result["source"] == "system-resolver"
+
+
+@pytest.mark.parametrize("hostname", ["bad..example", "not a hostname", "192.0.2.10"])
+def test_reverse_lookup_rejects_malformed_ptr_target_as_resolver_error(monkeypatch, hostname):
+    monkeypatch.setattr(
+        dns_tools, "_run_resolver_child", lambda *_args: {"hostname": hostname}
+    )
+
+    with pytest.raises(DNSLookupError) as error:
+        dns_tools.reverse_lookup_ip("192.0.2.10")
+
+    assert error.value.kind == "resolver_error"
+    assert "resolvedor DNS devolvió un error" in str(error.value)

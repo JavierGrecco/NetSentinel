@@ -11,8 +11,11 @@ import socket
 import ssl
 import subprocess
 import sys
+import time
 from typing import Any
 
+# The outer deadline includes interpreter startup, which is outside the socket timeout.
+_CHILD_PROCESS_STARTUP_GRACE_SECONDS = 1.0
 _MAX_TIMEOUT_SECONDS = 3.0
 _HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 _LEGACY_TLS_VERSIONS = {"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"}
@@ -20,8 +23,16 @@ _LEGACY_TLS_VERSIONS = {"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"}
 
 def _normalise_host(host: str) -> str:
     """Acepta un nombre de host o IP; no acepta URL, rutas ni credenciales."""
-    value = host.strip().rstrip(".")
-    if not value or len(value) > 253 or any(ord(char) <= 32 for char in value):
+    value = host.strip()
+    # Accept one terminal root dot, but reject repeated trailing dots.
+    if value.endswith("."):
+        value = value[:-1]
+    if (
+        not value
+        or value.endswith(".")
+        or len(value) > 253
+        or any(ord(char) <= 32 for char in value)
+    ):
         raise ValueError("Ingresá un nombre de host o una dirección IP, sin URL ni ruta.")
     if any(char in value for char in "/\\?#@[]"):
         raise ValueError("Ingresá solo el host o la IP, sin esquema, ruta ni credenciales.")
@@ -34,6 +45,10 @@ def _normalise_host(host: str) -> str:
             value = value.encode("idna").decode("ascii").lower()
         except UnicodeError as exc:
             raise ValueError("El nombre de host no es válido.") from exc
+        # IDNA can expand Unicode characters; validate the encoded DNS name
+        # too, so the resolver never receives an overlong hostname.
+        if len(value) > 253:
+            raise ValueError("El nombre de host no es válido.")
         labels = value.split(".")
         if not all(_HOST_LABEL.fullmatch(label) for label in labels):
             raise ValueError("El nombre de host no es válido.")
@@ -109,10 +124,17 @@ def _inspect_tls_endpoint_direct(host: str, port: int = 443, timeout: float = _M
     if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout <= _MAX_TIMEOUT_SECONDS:
         raise ValueError("El tiempo límite debe ser mayor que cero y no superar 3 segundos.")
 
+    # Use a single monotonic budget for TCP setup and the TLS handshake.
+    # DNS implementations may block outside socket timeouts, so the parent
+    # process still enforces the hard wall-clock deadline.
+    deadline = time.monotonic() + float(timeout)
     try:
         context = ssl.create_default_context()
         with socket.create_connection((normalised_host, port), timeout=float(timeout)) as connection:
-            connection.settimeout(float(timeout))
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise socket.timeout("TLS inspection deadline exceeded")
+            connection.settimeout(remaining)
             with context.wrap_socket(connection, server_hostname=normalised_host) as secured:
                 peer_certificate = secured.getpeercert()
                 tls_version = secured.version()
@@ -247,7 +269,9 @@ def inspect_tls_endpoint(host: str, port: int = 443, timeout: float = _MAX_TIMEO
             capture_output=True,
             text=True,
             errors="replace",
-            timeout=float(timeout),
+            # Keep the total operation bounded without charging child startup
+            # and JSON serialization against the network timeout itself.
+            timeout=float(timeout) + _CHILD_PROCESS_STARTUP_GRACE_SECONDS,
             check=False,
         )
     except subprocess.TimeoutExpired:

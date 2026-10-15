@@ -344,6 +344,10 @@ def test_csv_preview_rejects_message_content_and_unknown_columns(client):
         "http://[::1]/",
         "https://[::ffff:192.168.1.1]/admin",
         "https://[2001:db8::1]/docs",
+        "https://[2001:20::1]/",
+        "https://[2001:10:10::1]/",
+        "https://[2001:1f:ffff::1]/",
+        "https://[2001:2f:ffff::1]/",
     ],
 )
 def test_csv_import_rejects_non_public_navigation_urls(client, private_url):

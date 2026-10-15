@@ -27,9 +27,11 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         page = client.get("/")
         assert page.status_code == 200
         assert "NetSentinel" in page.text
-        assert "IP local de esta computadora según la última lectura" in page.text
-        assert "Equipo local identificado" in page.text
-        assert "La observación proviene de una interfaz Apple de enlace local" in page.text
+        from pathlib import Path
+        ui_source = page.text + Path("src/netsentinel/static/index.js").read_text(encoding="utf-8")
+        assert "IP local de esta computadora según la última lectura" in ui_source
+        assert "Equipo local identificado" in ui_source
+        assert "La observación proviene de una interfaz Apple de enlace local" in ui_source
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
@@ -266,49 +268,116 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("route", "asset"),
+    ("route", "html_asset", "script_asset"),
     [
-        ("/", "index.html"),
-        ("/monitors", "monitors.html"),
-        ("/activity", "activity.html"),
-        ("/tools", "tools.html"),
-        ("/findings", "findings.html"),
+        ("/", "index.html", "index.js"),
+        ("/monitors", "monitors.html", "monitors.js"),
+        ("/activity", "activity.html", "activity.js"),
+        ("/tools", "tools.html", "tools.js"),
+        ("/findings", "findings.html", "findings.js"),
     ],
 )
-def test_inline_scripts_are_authorized_by_page_specific_hashes(monkeypatch, tmp_path, route, asset):
-    import base64
-    import hashlib
+def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
+    monkeypatch, tmp_path, route, html_asset, script_asset
+):
     import re
     from pathlib import Path
 
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
+    if route in {"/monitors", "/activity"}:
+        expected_scripts.add("/static/section-tabs.js")
+
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get(route)
+        script_responses = {source: client.get(source) for source in expected_scripts}
 
     assert response.status_code == 200
-    # HTML parsing normalizes CRLF/CR to LF before CSP hashing; mirror that
-    # behavior so these regression checks are stable on Windows checkouts too.
-    scripts = [
-        match.group(1).replace("\r\n", "\n").replace("\r", "\n")
-        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", response.text, re.IGNORECASE | re.DOTALL)
-        if match.group(1).strip()
-    ]
-    assert scripts, f"{route} should have a known inline script fixture"
+    html = response.text.replace("\r\n", "\n").replace("\r", "\n")
+    assert html == Path("src/netsentinel/static", html_asset).read_text(encoding="utf-8")
+    scripts = list(re.finditer(
+        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
+        html,
+        flags=re.IGNORECASE | re.DOTALL,
+    ))
+    observed_scripts = set()
+    for script in scripts:
+        attributes = script.group(1).strip()
+        match = re.fullmatch(r'src="(/static/[^"]+)"( defer)?', attributes)
+        assert match, f"{route} contains a script with unexpected attributes: {attributes}"
+        source = match.group(1)
+        assert source not in observed_scripts, f"{route} loads {source} more than once"
+        observed_scripts.add(source)
+        assert not script.group(2).strip(), "Inline JavaScript must not be reintroduced."
+        if source.endswith("/theme.js"):
+            assert match.group(2) is None, "The shared theme must apply before first paint."
+        else:
+            assert match.group(2) == " defer", "Application behavior scripts must be deferred."
 
-    expected = {
-        "'sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii") + "'"
-        for script in scripts
-    }
+    assert observed_scripts == expected_scripts, f"{route} has an unexpected script set."
+    for source, script_response in script_responses.items():
+        script_asset_path = source.removeprefix("/static/")
+        script_source = Path("src/netsentinel/static", script_asset_path).read_text(encoding="utf-8")
+        assert script_response.status_code == 200
+        assert script_response.text.replace("\r\n", "\n").replace("\r", "\n") == script_source
+        assert script_response.text.strip()
+
     policy = response.headers["content-security-policy"]
     script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
-    observed = {token for token in script_policy.split()[1:] if token.startswith("'sha256-")}
-
-    assert expected == observed
+    assert "'self'" in script_policy
     assert "'unsafe-inline'" not in script_policy
+    assert "'sha256-" not in script_policy
     assert "https://cdn.jsdelivr.net" not in script_policy
-    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
-        "src/netsentinel/static", asset
-    ).read_text(encoding="utf-8")
+
+
+
+def test_shared_theme_and_task_focused_sections_are_present():
+    from pathlib import Path
+
+    static = Path("src/netsentinel/static")
+    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html")
+    for page_name in page_names:
+        html = (static / page_name).read_text(encoding="utf-8")
+        assert 'id="themeSelect"' in html, f"{page_name} must expose the shared theme selector"
+        assert 'href="/static/theme.css"' in html, f"{page_name} must load the shared theme"
+        assert 'src="/static/theme.js"' in html, f"{page_name} must persist the theme selection"
+        assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
+        assert 'role="radiogroup" aria-label="Tema visual"' in html
+        assert 'class="app-brand-name">NetSentinel</div>' in html
+        assert 'class="app-section-title"' in html
+        assert 'class="app-section-description"' in html
+        assert 'class="theme-option-card"' in html
+        assert 'name="themeSelect" type="radio"' in html
+        assert '<select id="themeSelect"' not in html
+
+    theme_js = (static / "theme.js").read_text(encoding="utf-8")
+    assert 'const STORAGE_KEY = "netsentinel-theme"' in theme_js
+    assert "localStorage.getItem(STORAGE_KEY)" in theme_js
+    assert "localStorage.setItem(STORAGE_KEY, selected)" in theme_js
+
+    for page_name, expected_panels in (
+        ("monitors.html", ("monitor-overview", "monitor-config", "monitor-incidents", "monitor-notifications")),
+        ("activity.html", ("activity-overview", "activity-tracking", "activity-import", "activity-events", "activity-privacy")),
+    ):
+        html = (static / page_name).read_text(encoding="utf-8")
+        assert 'src="/static/section-tabs.js" defer' in html
+        for panel_id in expected_panels:
+            assert f'id="{panel_id}"' in html
+            assert f'data-tab-target="{panel_id}"' in html
+
+    activity_html = (static / "activity.html").read_text(encoding="utf-8")
+    activity_js = (static / "activity.js").read_text(encoding="utf-8")
+    assert 'id="sourceHelp"' in activity_html
+    assert "adaptadores de router no vienen integrados" in activity_html
+    assert "Qué necesitás:" in activity_js
+    assert "router_dns:" in activity_js and "router_flow:" in activity_js and "device_agent:" in activity_js
+    assert "todavía no viene integrado" in activity_js
+
+    findings_js = (static / "findings.js").read_text(encoding="utf-8")
+    assert "Marcar dispositivo como conocido" in findings_js
+    assert "Solo marcar como revisado" in findings_js
+    assert "PATCH" in findings_js and "/api/devices/" in findings_js
+    assert "Esto no equivale a una certificación de seguridad" in findings_js
 
 
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
@@ -318,7 +387,7 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
     for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
         content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
         assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
-            f"{asset} contains an inline event handler incompatible with hash-only script CSP"
+            f"{asset} contains an inline event handler incompatible with the local CSP policy"
         )
 
 
@@ -393,7 +462,7 @@ def test_api_docs_content_security_policy_hashes_initializer_and_scopes_cdn(monk
 
     scripts = [
         match.group(1).replace("\r\n", "\n").replace("\r", "\n")
-        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.IGNORECASE | re.DOTALL)
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script\b[^>]*>", html, re.IGNORECASE | re.DOTALL)
         if match.group(1).strip()
     ]
     assert scripts, "Swagger UI must include an inline initializer that is authorized by hash"

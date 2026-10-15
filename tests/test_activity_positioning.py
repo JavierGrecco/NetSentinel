@@ -13,7 +13,7 @@ def test_activity_module_is_positioned_as_authorized_telemetry():
     readme = README.read_text(encoding="utf-8")
 
     assert "<title>NetSentinel · Actividad y telemetría</title>" in page
-    assert "<h1>Actividad y telemetría</h1>" in page
+    assert ">Actividad y telemetría</h1>" in page
     assert "Fuentes autorizadas" in page
     assert "actividad y telemetría autorizada" in readme.lower()
     assert "Actividad familiar" not in page

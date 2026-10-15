@@ -5,13 +5,29 @@ NetSentinel sigue siendo una aplicación local de una sola instalación: el serv
 ## Cómo está organizado hoy
 
 - **Composición y API:** `main.py` crea la aplicación, configura los controles transversales y registra los routers. `api/inventory.py` concentra inventario, historial, descubrimiento bajo demanda y exportaciones; `api/activity.py` gestiona las rutas de actividad autorizada; `api/monitoring.py` concentra monitores, incidentes, exportaciones de métricas y diagnósticos; `api/pages.py` sirve las cinco páginas HTML locales; `api/findings.py` y `api/tools.py` atienden hallazgos y herramientas DNS/TLS. `findings_service.py` coordina la consulta de evidencia sin depender del transporte HTTP.
-- **Persistencia:** `database.py` contiene conexiones, inicialización del esquema y consultas de varios dominios. Los tipos de observación que comparten descubrimiento e inventario se definen en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
-- **Actividad:** `api/activity.py` define los contratos HTTP. `activity_catalog.py` mantiene el catálogo de eventos y fuentes; `activity_privacy.py` sanea dominios, URLs y direcciones de correo; `activity_event_service.py` valida y normaliza eventos sin tocar SQLite; `activity_session_service.py` gestiona tokens de recopilación e ingestión autorizada; `activity_retention_service.py` centraliza el reloj UTC, la normalización temporal y la aplicación de retención; `activity_filters.py` valida filtros sin abrir la base de datos; `activity_import_service.py` valida cabeceras y filas CSV y arma la vista previa; `activity_read_service.py` compone las consultas del panel y genera el CSV seguro; `activity_deletion_service.py` coordina la vista previa y el borrado selectivo con confirmación exacta; `activity_tracking.py` mantiene la fachada compatible para las rutas existentes; `activity_repository.py` concentra las consultas SQLite y las transacciones de retención, deduplicación y persistencia. Los contratos HTTP y el formato CSV existente se conservan.
-- **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS, fabricantes y diagnósticos.
-- **Monitorización y hallazgos:** hay lógica separada para comprobaciones periódicas, incidentes, notificaciones y la presentación normalizada de hallazgos.
-- **Interfaz:** páginas HTML y estilos están separados por pantalla; la extensión vive en `browser-extension/`.
+- **Persistencia:** `database.py` es una fachada de compatibilidad; `database_storage.py` mantiene conexiones y permisos; `database_schema.py` es responsable del esquema y las migraciones aditivas; `inventory_repository.py`, `events_repository.py` y `monitoring_repository.py` poseen sus consultas. `dashboard_repository.py` contiene el resumen transversal, y las exportaciones se mantienen en servicios de solo lectura. Los tipos compartidos de observación viven en `network_models.py`, sin hacer que la persistencia dependa del motor de descubrimiento.
+- **Actividad:** la validación de dominios y hosts se unifica después de IDNA y aplica los límites DNS antes de guardar datos. `api/activity.py` define los contratos HTTP. `activity_catalog.py` mantiene el catálogo de eventos y fuentes; `activity_privacy.py` sanea dominios, URLs y direcciones de correo; `activity_event_service.py` valida y normaliza eventos sin tocar SQLite; `activity_session_service.py` gestiona tokens de recopilación e ingestión autorizada; `activity_retention_service.py` centraliza el reloj UTC, la normalización temporal y la aplicación de retención; `activity_filters.py` valida filtros sin abrir la base de datos; `activity_import_service.py` valida cabeceras y filas CSV y arma la vista previa; `activity_read_service.py` compone las consultas del panel y genera el CSV seguro; `activity_deletion_service.py` coordina la vista previa y el borrado selectivo con confirmación exacta; `activity_tracking.py` mantiene la fachada compatible para las rutas existentes; `activity_repository.py` conserva una fachada compatible sobre repositorios separados para retención, sesiones, importaciones, borrado y lectura. `activity_repository_support.py` reúne las comprobaciones compartidas. El detalle está en [ACTIVITY_PERSISTENCE.md](ACTIVITY_PERSISTENCE.md). Los contratos HTTP y el formato CSV existente se conservan.
+- **Red y diagnóstico:** módulos separados atienden descubrimiento local, vecinos, DNS, TLS y fabricantes. DNS y TLS validan los nombres también después de IDNA; DNS comprueba además la respuesta PTR antes de exponerla; las consultas DNS y la inspección TLS aíslan el resolvedor en procesos terminables para no dejar un worker bloqueado indefinidamente. En TLS, la conexión TCP y el handshake comparten un plazo monotónico de hasta tres segundos; un límite externo terminable contempla también un posible bloqueo del resolvedor del sistema y permite hasta un segundo de margen para arrancar el proceso hijo y devolver JSON. `diagnostics.py` coordina sondas explícitas y acotadas; `diagnostics_assessment.py` convierte sus resultados en explicaciones y pasos prudentes sin depender de comandos del sistema.
+- **Monitorización y hallazgos:** `monitoring.py` conserva el supervisor y la coordinación de comprobaciones; `monitoring_validation.py` valida objetivos sin efectos de red; `monitoring_probe.py` implementa las sondas acotadas; `monitoring_notifications.py` se ocupa del envío opcional de webhooks. Las operaciones de SQLite permanecen en `monitoring_repository.py` y los CSV en `monitoring_export_service.py`. La presentación normalizada de hallazgos tiene su servicio propio.
+- **Interfaz:** cada pantalla mantiene su HTML, sus estilos y su JavaScript en archivos separados; los scripts se sirven desde `/static/`. La extensión vive en `browser-extension/`.
 
 La separación por archivos ya existe, pero no todas las fronteras representan responsabilidades completas. La API y la persistencia concentran varios dominios, y las rutas conocen detalles de servicios y almacenamiento. Al crecer las fuentes de evidencia, esa estructura puede hacer que un cambio de una función afecte a otras que no deberían depender de ella.
+
+## Mantenimiento de la interfaz
+
+Cada vista tiene un archivo HTML para la estructura y un JavaScript propio para su comportamiento:
+
+| Vista | HTML | JavaScript |
+| --- | --- | --- |
+| Inventario | `static/index.html` | `static/index.js` |
+| Monitorización | `static/monitors.html` | `static/monitors.js` |
+| Actividad | `static/activity.html` | `static/activity.js` |
+| Hallazgos | `static/findings.html` | `static/findings.js` |
+| Herramientas | `static/tools.html` | `static/tools.js` |
+
+Los HTML cargan el archivo correspondiente con `defer`. Así el navegador termina de leer la página antes de ejecutar el código y no hace falta insertar bloques JavaScript dentro del HTML. Los archivos se sirven desde el mismo origen, permitido por la política CSP; no se habilita `unsafe-inline`.
+
+Al modificar una pantalla, cambiá su archivo JavaScript salvo que también necesites cambiar la estructura o los estilos. Si agregás un recurso nuevo, verificá que esté incluido en `pyproject.toml`, en la comprobación de archivos del wheel y en la validación de sintaxis de CI. Las pruebas HTTP comprueban que la página y su script se sirven con las cabeceras defensivas habituales.
 
 ## Dirección propuesta
 
@@ -45,6 +61,14 @@ El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueb
 - Las fuentes variables —por ejemplo, tablas de vecinos del sistema o futuras integraciones de router— se conectan mediante adaptadores pequeños. Solo se generaliza una interfaz cuando existe una necesidad concreta de soportar más de una implementación.
 - La evidencia compartida lleva procedencia y hora, y conserva la diferencia entre dato observado e interpretación.
 
+## Catálogo de errores y diario local
+
+La clasificación y el almacenamiento son responsabilidades distintas. `error_reporting.py` asigna códigos estables, mensajes y acciones sugeridas sin devolver el texto crudo de una excepción. `error_journal.py` se ocupa del archivo JSONL local, los campos permitidos, los límites de tamaño y la rotación.
+
+Los manejadores HTTP siguen importando `record_error_event` desde `error_reporting.py`; esa fachada se conserva para no cambiar los contratos internos. El diario solo depende de `config.py` para conocer la ubicación de los datos. El control de arquitectura verifica esta frontera y evita que el módulo de persistencia importe dominios ajenos.
+
+Al cambiar el formato del registro, sus límites o sus permisos, actualizá `tests/test_error_journal.py` y la guía de seguridad. Las pruebas deben confirmar que no se guardan cuerpos de solicitud ni campos que no formen parte de la lista permitida, y que un fallo de escritura se informa como tal.
+
 ## Límites de seguridad y privacidad
 
 La app continúa enlazada a loopback y usa SQLite local. La modularización no justifica abrir la API a la red, añadir telemetría externa, capturar contenido sensible, cambiar la configuración del router ni activar automáticamente la extensión. Cada nueva fuente debe tener alcance, autorización, límite de tiempo, tratamiento de errores, política de retención y forma de desactivación documentados.
@@ -58,3 +82,22 @@ No se considera terminada una extracción solo porque el código haya cambiado d
 ## Pruebas actuales
 
 Las pruebas automatizadas usan datos sintéticos y no requieren una red real. GitHub Actions valida la instalación y la suite de pruebas en Windows, macOS y Ubuntu con distintas versiones de Python. Las comprobaciones automatizadas no sustituyen la validación manual de sistemas y navegadores reales descrita en la matriz de validación.
+
+
+La composición de FastAPI se mantiene en `main.py`. Los controles de host/origen, cabeceras y CSP viven en `api/security.py`; los manejadores HTTP y sus mensajes seguros viven en `api/error_handling.py`. Esta separación conserva los contratos, facilita probar la protección por separado y evita que el arranque acumule lógica transversal.
+
+
+### Persistencia por responsabilidad
+
+| Módulo | Para qué sirve | Qué no debe absorber |
+| --- | --- | --- |
+| `database.py` | Mantener la API interna histórica y delegar operaciones | SQL nuevo o reglas de negocio |
+| `database_storage.py` | Abrir/cerrar conexiones y proteger el archivo | SQL de negocio y cambios de esquema |
+| `database_schema.py` | Crear tablas, índices y migrar versiones anteriores dentro de una transacción | Consultas de inventario o reglas de negocio |
+| `inventory_repository.py` | Registrar exploraciones y mantener dispositivos, direcciones y observaciones | Eventos generales o estadísticas de monitorización |
+| `events_repository.py` | Crear, listar y reconocer eventos del sistema | Reglas de sesión de navegador o lógica de checks |
+| `monitoring_repository.py` | Persistir monitores, comprobaciones, incidentes y notificaciones | Construir CSV o respuestas HTTP |
+| `dashboard_repository.py` | Consultar el resumen que combina indicadores de distintos dominios | Convertirse en repositorio de escritura de cada dominio |
+| `data_export_service.py` / `monitoring_export_service.py` | Producir exportaciones seguras y copias consistentes | Modificar las tablas de origen |
+
+Las tablas y migraciones siguen juntas en `database_storage.py` en esta etapa: cambiarlas de sitio a la vez que las consultas elevaría demasiado el riesgo para los datos existentes. Se revisará esa frontera por separado después de consolidar la extracción de consultas y conservar pruebas de migración/backup.

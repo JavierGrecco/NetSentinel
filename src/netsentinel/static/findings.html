@@ -8,31 +8,77 @@
   <title>NetSentinel · Hallazgos</title>
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/findings.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body>
 <main class="wrap">
-  <header class="top">
-    <div class="brand">
-      <div class="logo" aria-hidden="true">⌁</div>
-      <div>
-        <div class="eyebrow">Observabilidad local</div>
-        <h1 class="title">Hallazgos con evidencia</h1>
-        <div class="sub">Inventario · Disponibilidad · Revisión</div>
-        <nav class="primary-nav" aria-label="Navegación principal">
-          <a class="nav-link" href="/">Inventario</a>
-          <a class="nav-link" aria-current="page" href="/findings">Hallazgos</a>
-          <a class="nav-link" href="/monitors">Monitorización</a>
-          <a class="nav-link" href="/tools">Herramientas</a>
-          <a class="nav-link" href="/activity">Actividad</a>
-        </nav>
+  <header class="top app-header">
+  <div class="app-header-content">
+    <div class="app-header-brand-row">
+      <div class="app-brand">
+        <div class="logo" aria-hidden="true">⌁</div>
+        <div class="app-brand-copy">
+          <div class="eyebrow">Observabilidad local</div>
+          <div class="app-brand-name">NetSentinel</div>
+        </div>
+      </div>
+      <div class="app-header-utilities">
+        <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+      <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+      <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+        <label class="theme-option">
+          <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="theme-option-label">Oscuro</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Medio</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Claro</span>
+          </span>
+        </label>
       </div>
     </div>
-    <div class="actions">
-      <button type="button" id="refreshBtn" class="quiet">↻ Actualizar</button>
+      </div>
     </div>
-  </header>
+    <div class="app-section-heading-row">
+      <div class="app-section-heading">
+        <h1 class="app-section-title">Hallazgos con evidencia</h1>
+        <p class="app-section-description">Revisá observaciones e incidentes y registrá cada decisión.</p>
+      </div>
+      <div class="actions app-page-actions"><button type="button" id="refreshBtn" class="quiet">↻ Actualizar</button></div>
+    </div>
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a class="nav-link" href="/">Inventario</a>
+      <a class="nav-link" aria-current="page" href="/findings">Hallazgos</a>
+      <a class="nav-link" href="/monitors">Monitorización</a>
+      <a class="nav-link" href="/tools">Herramientas</a>
+      <a class="nav-link" href="/activity">Actividad</a>
+    </nav>
+  </div>
+</header>
 
   <div class="scope-note"><strong>Qué muestra esta vista:</strong> eventos ya registrados en el inventario e incidentes de monitorización. La severidad orienta el triaje y no equivale a impacto confirmado; una observación no demuestra identidad, ataque ni causa raíz. Las inspecciones DNS/TLS puntuales todavía no se incluyen porque sus resultados no se guardan.</div>
+
+  <section class="triage-guide" aria-labelledby="triage-title">
+    <h2 id="triage-title">¿Qué hago con un hallazgo?</h2>
+    <div class="triage-steps">
+      <div><strong>1. Verificá</strong><p>Compará la IP y la MAC con el router, la lista de tus equipos o con quien administra la red. Un primer avistamiento no confirma una intrusión.</p></div>
+      <div><strong>2. Elegí una acción</strong><p>Si reconocés el equipo, marcá “Marcar dispositivo como conocido”. Si todavía no podés identificarlo, dejalo sin confianza y seguí investigando.</p></div>
+      <div><strong>3. Cerrá la revisión</strong><p>“Solo marcar como revisado” lo retira de pendientes, pero no lo borra ni cambia la confianza. Si es un fallo de servicio, abrí su monitor y revisá el historial del incidente.</p></div>
+    </div>
+  </section>
 
   <section class="panel" aria-labelledby="filters-title">
     <div class="panel-head">
@@ -62,197 +108,6 @@
     <p class="footer">Se muestran como máximo 200 registros por consulta. Los contadores describen los resultados devueltos, no la cantidad total histórica.</p>
   </section>
 </main>
-<script>
-(() => {
-  const $ = id => document.getElementById(id);
-  const stateFilter = $("stateFilter");
-  const list = $("findingsList");
-  const status = $("status");
-  const refreshBtn = $("refreshBtn");
-  const exportLink = $("exportLink");
-  let loading = false;
-
-  function node(tag, className, value) {
-    const item = document.createElement(tag);
-    if (className) item.className = className;
-    if (value !== undefined && value !== null) item.textContent = String(value);
-    return item;
-  }
-
-  function dateText(value) {
-    if (!value) return "Sin fecha";
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString();
-  }
-
-  function labelForState(value) {
-    return ({active:"Pendiente", acknowledged:"Revisado", resolved:"Recuperado"})[value] || value || "Sin estado";
-  }
-
-  function labelForCategory(value) {
-    return ({inventory:"Inventario", availability:"Disponibilidad"})[value] || value || "Otro";
-  }
-
-  function evidenceLabel(key) {
-    return ({
-      event_type:"Tipo de evento", created_at:"Fecha del evento", event_severity:"Severidad registrada",
-      message:"Mensaje original", acknowledged:"Reconocido",
-      opened_at:"Inicio del incidente", updated_at:"Última actualización", resolved_at:"Recuperación registrada",
-      failure_count:"Comprobaciones fallidas", last_detail:"Último detalle", monitor_kind:"Tipo de comprobación",
-      target:"Objetivo"
-    })[key] || key.replaceAll("_", " ");
-  }
-
-  function appendSection(card, title, content) {
-    const section = node("section", "finding-section");
-    section.append(node("h3", "", title));
-    if (typeof content === "string") {
-      section.append(node("p", "", content));
-    } else {
-      section.append(content);
-    }
-    card.append(section);
-  }
-
-  function appendEvidence(card, finding) {
-    const details = node("details", "finding-section");
-    details.append(node("summary", "", "Ver evidencia y procedencia"));
-    const evidence = finding.evidence || {};
-    for (const [key, value] of Object.entries(evidence)) {
-      if (value === null || value === undefined || value === "") continue;
-      let printable = value;
-      if (typeof value === "object") {
-        try { printable = JSON.stringify(value); } catch (_) { printable = "[dato no disponible]"; }
-      } else if (typeof value === "boolean") {
-        printable = value ? "Sí" : "No";
-      } else if (key.endsWith("_at")) {
-        printable = dateText(value);
-      }
-      const row = node("p");
-      const strong = node("strong", "", evidenceLabel(key) + ": ");
-      row.append(strong, document.createTextNode(String(printable)));
-      details.append(row);
-    }
-    const source = finding.source || {};
-    const provenance = node("p");
-    provenance.append(
-      node("strong", "", "Fuente: "),
-      document.createTextNode([source.system, source.record_type, source.record_id].filter(v => v !== null && v !== undefined).join(" · ") || "No indicada")
-    );
-    details.append(provenance);
-    card.append(details);
-  }
-
-  function renderFinding(finding) {
-    const card = node("article", "finding-card");
-    const head = node("div", "finding-head");
-    const titleWrap = node("div");
-    titleWrap.append(node("h3", "finding-title", finding.title || "Hallazgo sin título"));
-    titleWrap.append(node("p", "finding-summary", finding.summary || "Sin detalle disponible."));
-    head.append(titleWrap);
-    const tags = node("div", "finding-tags");
-    tags.append(node("span", "finding-tag " + (finding.status || ""), labelForState(finding.status)));
-    tags.append(node("span", "finding-tag " + (finding.severity || ""), "Severidad: " + (finding.severity || "no indicada")));
-    tags.append(node("span", "finding-tag", labelForCategory(finding.category)));
-    head.append(tags);
-    card.append(head);
-
-    const asset = finding.asset || {};
-    card.append(node("div", "finding-meta", "Activo/objetivo: " + (asset.label || "No asociado") + (asset.ip_address ? " · IP " + asset.ip_address : "") + (asset.target ? " · " + asset.target : "")));
-    card.append(node("div", "finding-meta", "Actualizado: " + dateText(finding.updated_at || finding.first_seen_at) + " · Confianza: " + ((finding.confidence || {}).level || "no indicada")));
-    appendSection(card, "Qué significa y sus límites", ((finding.confidence || {}).explanation || "No se indicó una explicación de confianza.") + " " + (finding.severity_basis || ""));
-    appendSection(card, "Próximo paso sugerido", finding.recommended_action || "Contrastá el dato con una fuente independiente.");
-    appendEvidence(card, finding);
-
-    if (Array.isArray(finding.limitations) && finding.limitations.length) {
-      const list = document.createElement("ul");
-      for (const limitation of finding.limitations) list.append(node("li", "", limitation));
-      appendSection(card, "Limitaciones", list);
-    }
-
-    if (finding.source && finding.source.system === "inventory" && finding.status === "active" && Number.isInteger(finding.source.record_id)) {
-      const actions = node("div", "finding-actions");
-      const button = node("button", "primary", "Marcar como revisado");
-      button.type = "button";
-      button.addEventListener("click", () => acknowledgeFinding(finding, button));
-      actions.append(button);
-      card.append(actions);
-    }
-    return card;
-  }
-
-  async function acknowledgeFinding(finding, button) {
-    if (button.disabled) return;
-    button.disabled = true;
-    try {
-      const response = await fetch("/api/events/" + finding.source.record_id, {
-        method: "PATCH",
-        headers: {"Content-Type":"application/json", "Accept":"application/json"},
-        body: JSON.stringify({acknowledged:true}),
-        cache: "no-store"
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.detail || ("Error HTTP " + response.status));
-      status.textContent = "Evento marcado como revisado. Actualizando la bandeja…";
-      await loadFindings();
-    } catch (error) {
-      status.textContent = error instanceof Error ? error.message : "No se pudo actualizar el evento.";
-      button.disabled = false;
-    }
-  }
-
-  async function loadFindings() {
-    if (loading) return;
-    loading = true;
-    refreshBtn.disabled = true;
-    stateFilter.disabled = true;
-    list.setAttribute("aria-busy", "true");
-    list.replaceChildren();
-    const selectedState = stateFilter.value;
-    exportLink.href = "/api/export/findings.json?state=" + encodeURIComponent(selectedState) + "&limit=200";
-    status.textContent = "Consultando hallazgos locales…";
-    try {
-      const response = await fetch("/api/findings?state=" + encodeURIComponent(selectedState) + "&limit=200", {
-        headers: {"Accept":"application/json"},
-        cache: "no-store"
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail || ("Error HTTP " + response.status));
-      const summary = payload.summary || {};
-      $("countReturned").textContent = summary.returned ?? 0;
-      $("countActive").textContent = summary.active ?? 0;
-      $("countClosed").textContent = Number(summary.acknowledged || 0) + Number(summary.resolved || 0);
-      const findings = Array.isArray(payload.findings) ? payload.findings : [];
-      status.textContent = findings.length
-        ? findings.length + " resultado(s) · Estado: " + labelForState(selectedState) + ". " + (payload.notice || "")
-        : "No hay hallazgos en el estado seleccionado. Esta vista refleja solo las fuentes locales disponibles.";
-      if (!findings.length) {
-        const empty = node("div", "empty-state");
-        empty.append(node("strong", "", "No hay resultados en este filtro"), document.createTextNode("Probá otro estado o actualizá cuando se hayan registrado nuevos eventos."));
-        list.append(empty);
-      } else {
-        for (const finding of findings) list.append(renderFinding(finding));
-      }
-    } catch (error) {
-      $("countReturned").textContent = "—";
-      $("countActive").textContent = "—";
-      $("countClosed").textContent = "—";
-      const empty = node("div", "empty-state");
-      empty.append(node("strong", "", "No se pudieron cargar los hallazgos"), document.createTextNode(error instanceof Error ? error.message : "Error inesperado."));
-      list.append(empty);
-      status.textContent = "La consulta falló. Los registros almacenados no se modificaron.";
-    } finally {
-      list.setAttribute("aria-busy", "false");
-      refreshBtn.disabled = false;
-      stateFilter.disabled = false;
-      loading = false;
-    }
-  }
-
-  refreshBtn.addEventListener("click", loadFindings);
-  stateFilter.addEventListener("change", loadFindings);
-  loadFindings();
-})();
-</script>
+<script src="/static/findings.js" defer></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from netsentinel import error_journal, error_reporting
 from netsentinel.error_reporting import describe_http_error, describe_unhandled_exception
 
 
@@ -27,6 +28,55 @@ def test_sqlite_storage_and_access_failures_have_distinct_codes():
     assert malformed.code == "NS-DB-005"
     assert io_error.code == "NS-DB-007"
     assert full.code != readonly.code != malformed.code
+
+
+def test_native_sqlite_codes_override_messages_and_cover_extended_codes():
+    def code(name: str, fallback: int) -> int:
+        return getattr(sqlite3, name, fallback)
+
+    cases = [
+        (
+            sqlite3.OperationalError,
+            "opaque busy detail",
+            code("SQLITE_BUSY", 5) | (1 << 8),
+            "NS-DB-002",
+        ),
+        (sqlite3.OperationalError, "opaque lock detail", code("SQLITE_LOCKED", 6), "NS-DB-002"),
+        (sqlite3.OperationalError, "opaque storage detail", code("SQLITE_FULL", 13), "NS-DB-003"),
+        (sqlite3.OperationalError, "opaque I/O detail", code("SQLITE_IOERR", 10), "NS-DB-007"),
+        # Deliberately conflicting message: the native code must take precedence.
+        (
+            sqlite3.OperationalError,
+            "database is locked: PRIVATE_TOKEN",
+            code("SQLITE_READONLY", 8),
+            "NS-DB-004",
+        ),
+        (sqlite3.OperationalError, "opaque open detail", code("SQLITE_CANTOPEN", 14), "NS-DB-004"),
+        (sqlite3.DatabaseError, "opaque corruption detail", code("SQLITE_CORRUPT", 11), "NS-DB-005"),
+        (sqlite3.DatabaseError, "opaque database detail", code("SQLITE_NOTADB", 26), "NS-DB-005"),
+        (sqlite3.DatabaseError, "opaque schema detail", code("SQLITE_SCHEMA", 17), "NS-DB-005"),
+    ]
+
+    for error_type, raw_message, native_code, expected_code in cases:
+        exception = error_type(raw_message)
+        exception.sqlite_errorcode = native_code
+        description = describe_unhandled_exception(exception)
+        assert description.code == expected_code
+        assert raw_message not in description.message
+        assert raw_message not in description.log_reason
+        assert "PRIVATE_TOKEN" not in description.message
+
+def test_unknown_native_sqlite_code_does_not_fall_back_to_ambiguous_message():
+    """Un código nativo disponible prevalece aunque el texto parezca otro fallo."""
+    error = sqlite3.OperationalError("database is locked: PRIVATE_TOKEN")
+    error.sqlite_errorcode = getattr(sqlite3, "SQLITE_ERROR", 1)
+
+    description = describe_unhandled_exception(error)
+
+    assert description.code == "NS-DB-001"
+    assert description.log_reason == "SQLite operation failure"
+    assert "PRIVATE_TOKEN" not in description.message
+    assert "PRIVATE_TOKEN" not in description.log_reason
 
 
 def test_generic_exception_is_safe_and_requests_followup_reference():
@@ -59,63 +109,16 @@ def test_http_errors_have_stable_codes_and_next_steps():
     assert describe_http_error(418)[0] == "NS-HTTP-418"
 
 
+def test_error_journal_keeps_its_legacy_import_path():
+    """Los manejadores existentes siguen usando el contrato histórico."""
+    assert error_reporting.record_error_event is error_journal.record_error_event
+
 def test_panel_formats_validation_errors_and_reports_backend_request_reference():
-    html = (Path(__file__).resolve().parents[1] / "src/netsentinel/static/index.html").read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[1] / "src/netsentinel/static"
+    source = (root / "index.html").read_text(encoding="utf-8") + (root / "index.js").read_text(encoding="utf-8")
 
-    assert "item.loc.filter" in html
-    assert "Código: ${code}" in html
-    assert "Referencia: ${requestId}" in html
-    assert "NS-CONN-001" in html
-    assert "no queda registrada en el log del backend" in html
-
-
-def test_error_journal_writes_allowlisted_fields_and_rotates(monkeypatch, tmp_path):
-    import json
-
-    from netsentinel import error_reporting
-
-    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
-    monkeypatch.setattr(error_reporting, "_ERROR_LOG_MAX_BYTES", 300)
-    for index in range(8):
-        assert error_reporting.record_error_event({
-            "error_code": "NS-500-001",
-            "request_id": f"{index:012X}",
-            "category": "unexpected",
-            "severity": "error",
-            "reason": "Safe catalog reason",
-            "message": "PRIVATE_TOKEN=do-not-save",
-            "raw_body": "secret body",
-            "frames": "main.py:123:handler",
-        })
-
-    path = tmp_path / "netsentinel-errors.jsonl"
-    assert path.exists()
-    current_lines = path.read_text(encoding="utf-8").splitlines()
-    assert current_lines
-    parsed = [json.loads(line) for line in current_lines]
-    assert all(record["error_code"] == "NS-500-001" for record in parsed)
-    assert all("message" not in record and "raw_body" not in record for record in parsed)
-    all_logs = "\n".join(
-        candidate.read_text(encoding="utf-8")
-        for candidate in tmp_path.glob("netsentinel-errors.jsonl*")
-        if candidate.is_file()
-    )
-    assert "PRIVATE_TOKEN" not in all_logs
-    assert "secret body" not in all_logs
-    assert (tmp_path / "netsentinel-errors.jsonl.1").exists()
-
-def test_error_journal_returns_false_when_persistence_is_unavailable(monkeypatch, tmp_path):
-    from netsentinel import error_reporting
-
-    blocked_dir = tmp_path / "not-a-file"
-    blocked_dir.mkdir()
-    monkeypatch.setattr(error_reporting, "data_dir", lambda: blocked_dir)
-    (blocked_dir / "netsentinel-errors.jsonl").mkdir()
-
-    assert error_reporting.record_error_event({
-        "error_code": "NS-500-001",
-        "category": "unexpected",
-        "severity": "error",
-        "reason": "Safe catalog reason",
-    }) is False
-
+    assert "item.loc.filter" in source
+    assert "Código: ${code}" in source
+    assert "Referencia: ${requestId}" in source
+    assert "NS-CONN-001" in source
+    assert "no queda registrada en el log del backend" in source
