@@ -172,6 +172,10 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
     "[100:0:0:1::1]",              // dummy IPv6 prefix (RFC 9780)
     "[2001:10::1]",                // deprecated ORCHID
     "[2001:10:f::1]",              // upper address range still inside /28
+    "[2001:10:10::1]",             // /28 prefix applies to the second hextet, not the third
+    "[2001:1f:ffff::1]",           // upper boundary of deprecated ORCHID /28
+    "[2001:20::1]",                // first address range of ORCHIDv2 /28 (RFC 7343)
+    "[2001:2f:ffff::1]",           // upper boundary of ORCHIDv2 /28
     "[5f00::1]",                   // SRv6 Segment Routing SIDs
     "[2001::1]",                    // Teredo
     "[2002:c000:0204::1]",          // 6to4
@@ -184,7 +188,7 @@ test("excludes special-use IPv6 ranges but preserves ordinary global unicast", (
   for (const host of [
     "[2001:4860:4860::8888]",       // ordinary global unicast
     "[2001:2:1::1]",                // just outside 2001:2::/48
-    "[2001:10:10::1]",             // just outside deprecated ORCHID /28
+    "[2001:30::1]",                // just outside both ORCHID /28 ranges
     "[5eff:ffff::1]",              // just outside SRv6 prefix
     "[3fff:1000::1]",               // just outside 3fff::/20
     "[100:0:0:2::1]",               // just outside dummy and discard-only prefixes

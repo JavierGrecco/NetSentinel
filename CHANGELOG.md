@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Alinea el filtro IPv6 de la extensión con el backend para ORCHID/ORCHIDv2 (`2001:10::/28` y `2001:20::/28`) y corrige la máscara de prefijo: las reglas `/28` se aplican al segundo hexteto, no al tercero. Añade pruebas de límites.
+
 - Excluye las direcciones IPv6 ORCHIDv2 (`2001:20::/28`) de los metadatos de navegación porque son identificadores no destinados al enrutamiento IP convencional; agrega una prueba de regresión para importación CSV.
 
 - Mejora la clasificación de errores SQLite: prioriza códigos nativos (incluidos códigos extendidos) cuando están disponibles y conserva la alternativa compatible basada en mensajes para Python 3.10. Agrega regresiones para bloqueo, espacio, E/S, acceso e integridad/esquema sin exponer detalles internos.

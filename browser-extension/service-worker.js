@@ -141,7 +141,8 @@ function privateOrLocalHost(hostname) {
   const sixToFour = words[0] === 0x2002;                 // 2002::/16
   const localUseNat64 = words[0] === 0x0064 && words[1] === 0xff9b && words[2] === 1; // 64:ff9b:1::/48
   const dummyPrefix = words[0] === 0x0100 && words[1] === 0 && words[2] === 0 && words[3] === 1; // 100:0:0:1::/64
-  const deprecatedOrchid = words[0] === 0x2001 && words[1] === 0x0010 && (words[2] & 0xfff0) === 0; // 2001:10::/28
+  const deprecatedOrchid = words[0] === 0x2001 && (words[1] & 0xfff0) === 0x0010; // 2001:10::/28
+  const orchidV2 = words[0] === 0x2001 && (words[1] & 0xfff0) === 0x0020; // 2001:20::/28 (RFC 7343)
   const segmentRouting = words[0] === 0x5f00; // 5f00::/16
   const deprecatedIPv4Compatible = words.slice(0, 6).every(word => word === 0);
 
@@ -149,7 +150,7 @@ function privateOrLocalHost(hostname) {
   // special-use, multicast, documentation, transition, and local-use prefixes.
   return allZero || loopback || uniqueLocal || linkLocal || multicast ||
     documentation || benchmarking || discardOnly || dummyPrefix || teredo || sixToFour ||
-    localUseNat64 || deprecatedOrchid || segmentRouting || deprecatedIPv4Compatible;
+    localUseNat64 || deprecatedOrchid || orchidV2 || segmentRouting || deprecatedIPv4Compatible;
 }
 function isExcluded(hostname, excludeDomains) {
   const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
