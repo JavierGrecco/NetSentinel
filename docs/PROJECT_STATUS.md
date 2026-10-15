@@ -15,7 +15,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 
 ## Qué se mejoró en esta ronda
 
-- La base SQLite se separó en conexión, esquema y repositorios por responsabilidad. Se añadió una transacción explícita al actualizar el esquema, junto con una prueba que verifica que un fallo no deje tablas nuevas a medio crear.
+- La base SQLite se separó en conexión, esquema y repositorios por responsabilidad. Se añadió una transacción explícita para que un error deshaga los cambios parciales, una prueba que comprueba ese rollback y otra que verifica que los registros de actividad antiguos se conserven al ampliar el esquema.
 - El cálculo de hashes de la política CSP ahora reconoce cierres de etiquetas `script` con espacios o atributos inesperados; se añadieron pruebas para esos casos.
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
