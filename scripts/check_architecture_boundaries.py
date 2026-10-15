@@ -185,6 +185,21 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.monitoring_repository",
     },
 }
+# Compatibility facades may coordinate domain services, but must not grow
+# direct dependencies on persistence or unrelated application domains.
+FACADE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.activity_tracking": {
+        "netsentinel.activity_catalog",
+        "netsentinel.activity_deletion_service",
+        "netsentinel.activity_event_service",
+        "netsentinel.activity_filters",
+        "netsentinel.activity_import_service",
+        "netsentinel.activity_privacy",
+        "netsentinel.activity_read_service",
+        "netsentinel.activity_retention_service",
+        "netsentinel.activity_session_service",
+    },
+}
 REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.activity_repository": {
         "netsentinel.database",
@@ -424,6 +439,17 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
             if dependency not in (allowed or set()):
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed service dependency."
+                )
+
+    # Keep compatibility facades thin and prevent them from importing storage directly.
+    for source, allowed in sorted(FACADE_ALLOWED_INTERNAL_IMPORTS.items()):
+        if source not in graph:
+            violations.append(f"{source} is missing but still has an explicit facade allow-list.")
+            continue
+        for dependency in sorted(graph[source]):
+            if dependency not in allowed:
+                violations.append(
+                    f"{source} imports {dependency}, which is not an allowed facade dependency."
                 )
 
     # Apply the same rule to persistence adapters.
