@@ -44,6 +44,33 @@ def test_error_journal_writes_allowlisted_fields_and_rotates(monkeypatch, tmp_pa
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
 
+
+@pytest.mark.skipif(os.name != "posix", reason="Los modos de archivo POSIX no se aplican en Windows.")
+def test_error_journal_hardens_existing_log_before_archiving(monkeypatch, tmp_path):
+    """Un log antiguo con permisos abiertos no debe seguir así tras la rotación."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(error_journal, "_ERROR_LOG_MAX_BYTES", 1)
+    path = tmp_path / "netsentinel-errors.jsonl"
+    path.write_text(
+        '{"error_code":"NS-500-001","reason":"safe legacy diagnostic"}\n',
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o644)
+
+    assert error_reporting.record_error_event({
+        "error_code": "NS-DB-001",
+        "category": "database",
+        "severity": "error",
+        "reason": "Safe new diagnostic",
+    })
+
+    archived = tmp_path / "netsentinel-errors.jsonl.1"
+    assert archived.is_file()
+    assert stat.S_IMODE(archived.stat().st_mode) == 0o600
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+
 def test_error_journal_returns_false_when_persistence_is_unavailable(monkeypatch, tmp_path):
     blocked_dir = tmp_path / "not-a-file"
     blocked_dir.mkdir()

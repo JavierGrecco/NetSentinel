@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Refuerza la rotación del diario de errores: los archivos archivados también reciben permisos privados en sistemas POSIX y la operación no sigue enlaces simbólicos. Añade una prueba para diarios preexistentes con permisos abiertos.
+
 - Evita clasificar un error SQLite por un texto ambiguo cuando la excepción ya proporciona un código nativo no reconocido. El mensaje solo se usa como alternativa en runtimes que no exponen ese código; se agrega una prueba para mensajes contradictorios.
 
 

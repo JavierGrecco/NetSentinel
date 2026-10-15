@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import stat
 import threading
 
 from .config import data_dir
@@ -35,6 +36,30 @@ _ERROR_LOG_FIELDS = {
     "platform": 40,
 }
 
+def _restrict_error_log_file(path: Path) -> None:
+    """Restrict a regular log file without following symbolic links."""
+    if os.name != "posix":
+        return
+
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None and path.is_symlink():
+        return
+    flags = os.O_RDONLY | (nofollow or 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return
+
+    try:
+        if stat.S_ISREG(os.fstat(descriptor).st_mode):
+            os.fchmod(descriptor, 0o600)
+    except OSError:
+        # Logging must never interrupt the application because of a chmod failure.
+        pass
+    finally:
+        os.close(descriptor)
+
+
 def _rotate_error_log(path: Path) -> None:
     """Rotate the private, bounded error journal without reading prior records."""
     for index in range(_ERROR_LOG_BACKUPS, 0, -1):
@@ -42,6 +67,7 @@ def _rotate_error_log(path: Path) -> None:
         destination = Path(f"{path}.{index}")
         if source.exists() or source.is_symlink():
             os.replace(source, destination)
+            _restrict_error_log_file(destination)
 
 
 def record_error_event(event: Mapping[str, object]) -> bool:
