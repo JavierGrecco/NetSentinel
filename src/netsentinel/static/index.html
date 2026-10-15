@@ -13,24 +13,17 @@
 <body>
   <main class="wrap">
     <header class="top app-header">
-  <div class="app-brand">
-    <div class="logo" aria-hidden="true">⌁</div>
-    <div class="app-brand-copy">
-      <div class="eyebrow">Observabilidad local</div>
-      <h1 class="title">NetSentinel</h1>
-      <div class="sub">Inventario · Confianza · Eventos · Diagnóstico</div>
-    </div>
-  </div>
   <div class="app-header-content">
-    <nav class="primary-nav" aria-label="Navegación principal">
-        <a class="nav-link" aria-current="page" href="/">Inventario</a>
-        <a class="nav-link" href="/findings">Hallazgos</a>
-        <a class="nav-link" href="/monitors">Monitorización</a>
-        <a class="nav-link" href="/tools">Herramientas</a>
-        <a class="nav-link" href="/activity">Actividad</a>
-    </nav>
-    <div class="app-header-utilities">
-      <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+    <div class="app-header-brand-row">
+      <div class="app-brand">
+        <div class="logo" aria-hidden="true">⌁</div>
+        <div class="app-brand-copy">
+          <div class="eyebrow">Observabilidad local</div>
+          <div class="app-brand-name">NetSentinel</div>
+        </div>
+      </div>
+      <div class="app-header-utilities">
+        <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
       <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
       <div class="theme-options" role="radiogroup" aria-label="Tema visual">
         <label class="theme-option">
@@ -56,8 +49,22 @@
         </label>
       </div>
     </div>
+      </div>
+    </div>
+    <div class="app-section-heading-row">
+      <div class="app-section-heading">
+        <h1 class="app-section-title">Inventario de red</h1>
+        <p class="app-section-description">Dispositivos visibles, confianza y actividad reciente en tu red local.</p>
+      </div>
       <div class="actions app-page-actions"><button id="refreshBtn" class="quiet">↻ Actualizar</button><button id="diagBtn" class="quiet">◉ Diagnóstico</button><button id="scanBtn" class="primary">⌕ Descubrir dispositivos</button></div>
     </div>
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a class="nav-link" aria-current="page" href="/">Inventario</a>
+      <a class="nav-link" href="/findings">Hallazgos</a>
+      <a class="nav-link" href="/monitors">Monitorización</a>
+      <a class="nav-link" href="/tools">Herramientas</a>
+      <a class="nav-link" href="/activity">Actividad</a>
+    </nav>
   </div>
 </header>
     <div class="notice"><strong>Descubrimiento local bajo demanda.</strong> Al pulsar «Descubrir dispositivos», NetSentinel detecta automáticamente hasta dos subredes IPv4 privadas y envía un ping por dirección para ayudar a poblar la tabla local. No escanea Internet ni modifica dispositivos. Que un equipo no aparezca no significa que esté desconectado.</div>
