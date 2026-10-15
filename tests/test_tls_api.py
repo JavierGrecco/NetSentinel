@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-import netsentinel.api.tools as tools_api
+import netsentinel.api.tools_tls as tools_api
 from netsentinel import database
 from netsentinel.main import app
 

@@ -64,6 +64,8 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 - [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
 - [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
 
+**Siguiente paso en curso:** mantener DNS y TLS como capacidades separadas también en la capa HTTP. La composición conservará la API existente; la prueba de arquitectura protegerá las dependencias de cada router.
+
 **Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115 y #116 separaron persistencia/actividad y las rutas HTTP de Monitorización e Inventario. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
 
 - [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.

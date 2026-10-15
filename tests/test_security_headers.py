@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from netsentinel import database
 import netsentinel.main as main_module
 import netsentinel.api.inventory_assets as inventory_api
-import netsentinel.api.tools as tools_api
+import netsentinel.api.tools_dns as tools_api
 from netsentinel.main import app
 
 
