@@ -107,13 +107,65 @@
 
     if (finding.source && finding.source.system === "inventory" && finding.status === "active" && Number.isInteger(finding.source.record_id)) {
       const actions = node("div", "finding-actions");
-      const button = node("button", "primary", "Marcar como revisado");
-      button.type = "button";
-      button.addEventListener("click", () => acknowledgeFinding(finding, button));
-      actions.append(button);
+      const asset = finding.asset || {};
+      if (Number.isInteger(asset.device_id)) {
+        const trustButton = node("button", "primary", "Marcar dispositivo como conocido");
+        trustButton.type = "button";
+        trustButton.addEventListener("click", () => trustDeviceFromFinding(finding, trustButton));
+        actions.append(trustButton);
+      }
+      const reviewButton = node("button", "", "Solo marcar como revisado");
+      reviewButton.type = "button";
+      reviewButton.addEventListener("click", () => acknowledgeFinding(finding, reviewButton));
+      actions.append(reviewButton);
+      card.append(actions);
+      const actionHint = node("p", "finding-action-hint",
+        "“Conocido” cambia la confianza del dispositivo en el inventario. “Revisado” solo quita este evento de la bandeja pendiente; no borra datos ni demuestra que el equipo sea seguro.");
+      card.append(actionHint);
+    } else if (finding.category === "availability" && finding.status === "active") {
+      const actions = node("div", "finding-actions");
+      const link = node("a", "monitor-link", "Revisar monitor e incidente");
+      link.href = "/monitors#incidentes";
+      actions.append(link);
       card.append(actions);
     }
     return card;
+  }
+
+  async function trustDeviceFromFinding(finding, button) {
+    if (button.disabled) return;
+    const asset = finding.asset || {};
+    const deviceLabel = asset.display_name || asset.label || asset.ip_address || "este dispositivo";
+    if (!window.confirm("¿Confirmás que reconocés " + deviceLabel + " y querés marcarlo como conocido? Esto registra tu decisión, pero no demuestra por sí solo que el equipo sea seguro.")) return;
+    button.disabled = true;
+    try {
+      const deviceResponse = await fetch("/api/devices/" + asset.device_id, {
+        method: "PATCH",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify({trusted:true}),
+        cache: "no-store"
+      });
+      const devicePayload = await deviceResponse.json().catch(() => ({}));
+      if (!deviceResponse.ok) throw new Error(devicePayload.detail || ("No se pudo actualizar el dispositivo (HTTP " + deviceResponse.status + ")."));
+
+      const eventResponse = await fetch("/api/events/" + finding.source.record_id, {
+        method: "PATCH",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify({acknowledged:true}),
+        cache: "no-store"
+      });
+      const eventPayload = await eventResponse.json().catch(() => ({}));
+      if (!eventResponse.ok) {
+        status.textContent = "El dispositivo quedó marcado como conocido, pero el evento no se pudo marcar como revisado: " + (eventPayload.detail || ("HTTP " + eventResponse.status)) + ". Actualizá la bandeja para comprobar el estado.";
+        await loadFindings();
+        return;
+      }
+      status.textContent = "Dispositivo marcado como conocido y evento revisado. Esto no equivale a una certificación de seguridad.";
+      await loadFindings();
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : "No se pudo actualizar la confianza del dispositivo.";
+      button.disabled = false;
+    }
   }
 
   async function acknowledgeFinding(finding, button) {
