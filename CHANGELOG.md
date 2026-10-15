@@ -3,6 +3,7 @@
 ## Próxima versión — 0.10.0 (en desarrollo)
 
 - Unifica la apariencia en Inventario, Hallazgos, Monitorización, Herramientas y Actividad: permite elegir tema oscuro, medio o claro y conserva la preferencia entre páginas. Reorganiza Monitorización y Actividad en sectores navegables, aclara cuándo se ejecutan los monitores y qué necesita una fuente de telemetría, y agrega acciones de triaje para distinguir entre reconocer un dispositivo y marcar un evento como revisado.
+- Aclara los requisitos reales de las fuentes de Actividad: las ventanas generan una recepción temporal con token, pero no conectan el router ni instalan agentes. Añade orientación contextual por tipo de fuente y documenta una futura integración central vía registros DNS o flujos del router/firewall para redes autorizadas, con límites explícitos frente a HTTPS, VPN y DNS cifrado.
 
 - Refuerza la rotación del diario de errores: los archivos archivados también reciben permisos privados en sistemas POSIX y la operación no sigue enlaces simbólicos. Añade una prueba para diarios preexistentes con permisos abiertos.
 
