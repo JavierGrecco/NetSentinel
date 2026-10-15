@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, diagnostics as diagnostics_api, findings, inventory, monitoring, monitoring_monitors, monitoring_reports, pages, tools
+from netsentinel.api import activity, diagnostics as diagnostics_api, findings, inventory, inventory_assets, inventory_discovery, inventory_exports, monitoring, monitoring_monitors, monitoring_reports, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from netsentinel import database
@@ -335,8 +335,13 @@ def test_new_repository_must_declare_its_internal_dependencies(tmp_path: Path) -
 
 
 def test_inventory_endpoints_belong_to_inventory_router() -> None:
-    """Las rutas de inventario se registran desde el módulo funcional propio."""
-    paths = {route.path for route in inventory.router.routes}
+    """Las rutas del inventario se distribuyen por consulta, descubrimiento y exportación."""
+    route_groups = (
+        inventory_assets.router.routes,
+        inventory_discovery.router.routes,
+        inventory_exports.router.routes,
+    )
+    paths = {route.path for routes in route_groups for route in routes}
     assert {
         "/api/health",
         "/api/summary",
@@ -353,19 +358,27 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
+    assert sum(len(routes) for routes in route_groups) == 14
     assert len(paths) == 14
-
-
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
     violations, graph = check_architecture(root)
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.inventory"] == {
+        "netsentinel.api.inventory_assets",
+        "netsentinel.api.inventory_discovery",
+        "netsentinel.api.inventory_exports",
+    }
+    assert graph["netsentinel.api.inventory_assets"] == {
         "netsentinel.database",
-        "netsentinel.local_discovery",
         "netsentinel.dns_tools",
     }
+    assert graph["netsentinel.api.inventory_discovery"] == {
+        "netsentinel.database",
+        "netsentinel.local_discovery",
+    }
+    assert graph["netsentinel.api.inventory_exports"] == {"netsentinel.database"}
 
 
 
