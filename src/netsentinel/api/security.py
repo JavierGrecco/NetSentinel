@@ -96,7 +96,7 @@ _APP_HTML_PATHS = {
     "/tools": _STATIC_DIR / "tools.html",
     "/findings": _STATIC_DIR / "findings.html",
 }
-_INLINE_SCRIPT_PATTERN = re.compile(r"<script(?:\s[^>]*)?>(.*?)</script>", re.IGNORECASE | re.DOTALL)
+_INLINE_SCRIPT_PATTERN = re.compile(r"<script(?:\s[^>]*)?>(.*?)</script\b[^>]*>", re.IGNORECASE | re.DOTALL)
 
 
 def _inline_script_hashes_in_html(content: str) -> tuple[str, ...]:

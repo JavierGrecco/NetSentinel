@@ -293,7 +293,7 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
         "src/netsentinel/static", html_asset
     ).read_text(encoding="utf-8")
     scripts = list(re.finditer(
-        r"<script\b([^>]*)>(.*?)</script\s*>",
+        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
         response.text,
         flags=re.IGNORECASE | re.DOTALL,
     ))
@@ -395,7 +395,7 @@ def test_api_docs_content_security_policy_hashes_initializer_and_scopes_cdn(monk
 
     scripts = [
         match.group(1).replace("\r\n", "\n").replace("\r", "\n")
-        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.IGNORECASE | re.DOTALL)
+        for match in re.finditer(r"<script(?:\s[^>]*)?>(.*?)</script\b[^>]*>", html, re.IGNORECASE | re.DOTALL)
         if match.group(1).strip()
     ]
     assert scripts, "Swagger UI must include an inline initializer that is authorized by hash"

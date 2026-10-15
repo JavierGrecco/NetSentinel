@@ -29,6 +29,28 @@ def assert_defensive_headers(response):
 
 
 @pytest.mark.parametrize(
+    "closing_tag",
+    [
+        "</script >",
+        "</script\t\n bar>",
+    ],
+)
+def test_inline_script_hashing_handles_unusual_closing_tag_whitespace(closing_tag):
+    """CSP debe calcular el hash del bloque que el navegador reconoce como script."""
+    import base64
+    import hashlib
+
+    from netsentinel.api.security import _inline_script_hashes_in_html
+
+    script = "window.netsentinelReady = true;"
+    html = f"<script>{script}{closing_tag}"
+    digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
+
+    assert _inline_script_hashes_in_html(html) == (f"'sha256-{digest}'",)
+
+
+
+@pytest.mark.parametrize(
     "path",
     [
         "/",
@@ -143,7 +165,7 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, ex
     assert "'unsafe-inline'" not in policy
 
     scripts = re.findall(
-        r"<script\b([^>]*)>(.*?)</script\s*>",
+        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
         response.text,
         flags=re.IGNORECASE | re.DOTALL,
     )
