@@ -46,3 +46,6 @@ def test_all_main_pages_load_shared_layout_after_module_styles():
         )
         assert 'id="themeSelect"' in html
         assert 'aria-label="Navegación principal"' in html
+        assert 'class="top app-header"' in html, f"{page_name} must use the shared page header"
+        assert 'class="app-brand"' in html and 'class="app-header-content"' in html
+        assert 'class="app-header-utilities"' in html
