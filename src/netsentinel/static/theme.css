@@ -122,7 +122,7 @@ html[data-theme] .diagnosis-summary { background: var(--theme-info-bg) !importan
 html[data-theme] .scope-note strong { color: var(--theme-text) !important; }
 html[data-theme] .search { background: var(--theme-input) !important; }
 html[data-theme] th, html[data-theme] td { border-color: var(--theme-line) !important; }
-html[data-theme] tbody tr:hover { background: color-mix(in srgb, var(--theme-panel-alt) 65%, transparent) !important; }
+html[data-theme] tbody tr:hover { background: var(--theme-panel-alt) !important; }
 html[data-theme] .empty { color: var(--theme-muted) !important; }
 html[data-theme] .empty-state { color: var(--theme-muted) !important; border-color: var(--theme-line) !important; background: var(--theme-panel-alt) !important; }
 html[data-theme] .finding-summary,
