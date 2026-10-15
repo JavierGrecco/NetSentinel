@@ -713,19 +713,12 @@ html[data-theme] .theme-option-label {
 
 html[data-theme] .theme-option:hover .theme-option-card {
   border-color: var(--theme-accent);
-  background: var(--theme-info-bg);
 }
 
 html[data-theme] .theme-option > input[type="radio"]:checked + .theme-option-card {
   border: 2px solid var(--theme-accent);
   padding: 13px 9px;
-  background: var(--theme-info-bg);
-  color: var(--theme-text);
   box-shadow: 0 0 0 2px var(--theme-shadow), 0 7px 18px var(--theme-shadow);
-}
-
-html[data-theme] .theme-option > input[type="radio"]:checked + .theme-option-card .theme-option-icon {
-  color: var(--theme-accent);
 }
 
 html[data-theme] .theme-option > input[type="radio"]:focus-visible + .theme-option-card {
@@ -762,4 +755,40 @@ html[data-theme] .app-header-utilities .app-page-actions {
   html[data-theme] .theme-option-label {
     font-size: 13px;
   }
+}
+/* Cada tarjeta siempre muestra el aspecto del tema que representa. */
+html[data-theme] .theme-option:nth-child(1) .theme-option-card {
+  background: #101827;
+  border-color: #29374d;
+  color: #e7edf7;
+}
+
+html[data-theme] .theme-option:nth-child(1) .theme-option-icon {
+  color: #e7edf7;
+}
+
+html[data-theme] .theme-option:nth-child(2) .theme-option-card {
+  background: #dfe5ec;
+  border-color: #c1cbd7;
+  color: #293646;
+}
+
+html[data-theme] .theme-option:nth-child(2) .theme-option-icon {
+  color: #293646;
+}
+
+html[data-theme] .theme-option:nth-child(3) .theme-option-card {
+  background: #ffffff;
+  border-color: #d7e0ea;
+  color: #172033;
+}
+
+html[data-theme] .theme-option:nth-child(3) .theme-option-icon {
+  color: #172033;
+}
+
+html[data-theme] .theme-option:nth-child(1):hover .theme-option-card,
+html[data-theme] .theme-option:nth-child(2):hover .theme-option-card,
+html[data-theme] .theme-option:nth-child(3):hover .theme-option-card {
+  border-color: var(--theme-accent);
 }
