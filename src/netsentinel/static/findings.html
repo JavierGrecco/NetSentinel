@@ -13,27 +13,29 @@
 </head>
 <body>
 <main class="wrap">
-  <header class="top">
-    <div class="brand">
-      <div class="logo" aria-hidden="true">⌁</div>
-      <div>
-        <div class="eyebrow">Observabilidad local</div>
-        <h1 class="title">Hallazgos con evidencia</h1>
-        <div class="sub">Inventario · Disponibilidad · Revisión</div>
-        <nav class="primary-nav" aria-label="Navegación principal">
-          <a class="nav-link" href="/">Inventario</a>
-          <a class="nav-link" aria-current="page" href="/findings">Hallazgos</a>
-          <a class="nav-link" href="/monitors">Monitorización</a>
-          <a class="nav-link" href="/tools">Herramientas</a>
-          <a class="nav-link" href="/activity">Actividad</a>
-        </nav>
+  <header class="top app-header">
+  <div class="app-brand">
+    <div class="logo" aria-hidden="true">⌁</div>
+    <div class="app-brand-copy">
+      <div class="eyebrow">Observabilidad local</div>
+      <h1 class="title">Hallazgos con evidencia</h1>
+      <div class="sub">Inventario · Disponibilidad · Revisión</div>
+    </div>
+  </div>
+  <div class="app-header-content">
+    <nav class="primary-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="/">Inventario</a>
+        <a class="nav-link" aria-current="page" href="/findings">Hallazgos</a>
+        <a class="nav-link" href="/monitors">Monitorización</a>
+        <a class="nav-link" href="/tools">Herramientas</a>
+        <a class="nav-link" href="/activity">Actividad</a>
+    </nav>
+    <div class="app-header-utilities">
       <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div>
-      </div>
+      <div class="actions app-page-actions"><button type="button" id="refreshBtn" class="quiet">↻ Actualizar</button></div>
     </div>
-    <div class="actions">
-      <button type="button" id="refreshBtn" class="quiet">↻ Actualizar</button>
-    </div>
-  </header>
+  </div>
+</header>
 
   <div class="scope-note"><strong>Qué muestra esta vista:</strong> eventos ya registrados en el inventario e incidentes de monitorización. La severidad orienta el triaje y no equivale a impacto confirmado; una observación no demuestra identidad, ataque ni causa raíz. Las inspecciones DNS/TLS puntuales todavía no se incluyen porque sus resultados no se guardan.</div>
 
