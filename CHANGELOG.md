@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Integra la base modular de persistencia, actividad y límites de arquitectura (PR #111), y separa la API de Monitorización (PR #115) e Inventario (PR #116) en routers cohesivos. Se conservan rutas y contratos HTTP; las pruebas declaran las dependencias permitidas y la matriz CI de los SHA revisados pasó en Python 3.10–3.14 sobre Ubuntu, macOS y Windows. Esto no reemplaza las validaciones manuales de instalación y uso real.
+
 - Sustituye el desplegable de apariencia por tarjetas visuales con iconos y una vista previa de la paleta propia de cada tema (Oscuro, Medio y Claro) en las cinco pantallas. La preferencia sigue persistiendo y sincronizándose entre páginas y pestañas, con controles accesibles por teclado y diseño adaptable.
 
 - Unifica el marco visual de las cinco pantallas: ancho máximo, márgenes adaptables, jerarquía tipográfica, paneles, controles y espaciado. Evita saltos laterales al navegar y añade pruebas que vigilan la carga de la capa de diseño compartida.
