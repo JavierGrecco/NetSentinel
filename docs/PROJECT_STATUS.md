@@ -14,6 +14,12 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - **Pull request de trabajo:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y en borrador. Todavía no está integrada en `main`.
 - **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para descargar esta rama, instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
+## Revisión manual local
+
+El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales fueron satisfactorios. Los comentarios pendientes eran de presentación, organización visual y facilidad de uso, no de un bloqueo funcional. Con esta confirmación, el trabajo de interfaz del PR #111 puede pasar a revisión formal.
+
+La confirmación no identifica el sistema operativo, el navegador ni el commit exacto probado, así que no se marcan como aprobados los recorridos específicos de Windows, macOS, Linux o la extensión. Esos resultados siguen registrándose por separado en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+
 ## Qué se mejoró en esta ronda
 
 - La base SQLite se separó en conexión, esquema y repositorios por responsabilidad. Se añadió una transacción explícita para que un error deshaga los cambios parciales, una prueba que comprueba ese rollback y otra que verifica que los registros de actividad antiguos se conserven al ampliar el esquema.
