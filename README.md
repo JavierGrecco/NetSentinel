@@ -23,6 +23,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Copias de seguridad y datos](#copias-de-seguridad-y-datos)
 - [Actividad y privacidad](#historial-y-telemetría-autorizada)
 - [Preguntas frecuentes](docs/FAQ.md)
+- [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
 
 ## Qué podés hacer
