@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, findings, inventory, monitoring, pages, tools
+from netsentinel.api import activity, findings, forensics, inventory, monitoring, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from netsentinel import database
@@ -39,6 +39,9 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     }
     assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
+    assert graph["netsentinel.api.forensics"] == {"netsentinel.forensics_service"}
+    assert graph["netsentinel.forensics_service"] == {"netsentinel.forensics_integrity", "netsentinel.forensics_repository"}
+    assert graph["netsentinel.forensics_repository"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
     assert graph["netsentinel.activity_repository"] == {
         "netsentinel.database",
@@ -228,6 +231,9 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "network_models.py",
         "error_reporting.py",
         "error_journal.py",
+        "forensics_integrity.py",
+        "forensics_service.py",
+        "forensics_repository.py",
     }
     for name in expected:
         source = (package_root / name).read_text(encoding="utf-8")
@@ -405,10 +411,32 @@ def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
 
 
 
+def test_forensics_endpoints_belong_to_forensics_router() -> None:
+    """Los endpoints de casos y evidencia se registran en su router funcional."""
+    paths = {route.path for route in forensics.router.routes}
+    assert {
+        "/api/forensics/cases",
+        "/api/forensics/cases/{case_id}",
+        "/api/forensics/cases/{case_id}/close",
+        "/api/forensics/cases/{case_id}/evidence",
+        "/api/forensics/cases/{case_id}/audit",
+        "/api/forensics/cases/{case_id}/evidence/{evidence_id}/verify-hash",
+        "/api/forensics/cases/{case_id}/evidence/{evidence_id}/integrity-checks",
+    } <= paths
+
+
+def test_forensics_router_has_only_declared_internal_dependencies() -> None:
+    """HTTP depende del servicio forense, no de la persistencia directamente."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.api.forensics"] == {"netsentinel.forensics_service"}
+
+
 def test_html_pages_belong_to_pages_router() -> None:
-    """Las cinco páginas HTML se sirven desde su router dedicado."""
+    """Las seis páginas HTML se sirven desde su router dedicado."""
     paths = {route.path for route in pages.router.routes}
-    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools"}
+    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools", "/forensics"}
     assert all(not route.include_in_schema for route in pages.router.routes)
 
 

@@ -18,6 +18,20 @@
 
 Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
 
+## Línea de trabajo paralela — NetSentinel Forense
+
+**Estado:** en preparación. La base visual, la identidad del módulo y el acceso desde Red se trabajan sobre la rama de modularización. Esto no levanta las tareas que bloquean la estabilización 0.10.0 ni habilita el uso forense real.
+
+- [ ] **FORENSIC-01 — Entrada y navegación compartida.** Logo e identidad diferenciados, acceso entre Red y Forense desde todas las vistas, CSP, recursos empaquetados y pruebas.
+- [ ] **FORENSIC-02 — Casos y alcance.** Registro persistente de autorización, responsable, examinador, objetivo y categorías de datos permitidas.
+- [ ] **FORENSIC-03 — Evidencia e integridad.** Registro de recepción y origen, manifiesto SHA-256 y verificación reproducible sobre adquisiciones existentes.
+- [ ] **FORENSIC-04 — Auditoría de operaciones.** Historial de acciones, errores seguros y conservación de la procedencia sin alterar los registros originales.
+- [ ] **FORENSIC-05 — Importación validada.** Adaptadores acotados, con versión, resultados conocidos, límites documentados y datos sintéticos de prueba.
+- [ ] **FORENSIC-06 — Línea de tiempo e informes.** Conservar tiempos originales, explicar normalizaciones y producir informes reproducibles.
+- [ ] **FORENSIC-07 — Validación previa al uso real.** Revisión de seguridad, privacidad, instalación y pruebas con conjuntos conocidos. No declarar capacidad forense hasta superar esta puerta.
+
+La interfaz ya registra casos y metadatos de evidencia, y puede comparar una copia de trabajo con el hash declarado por la fuente. Sigue pendiente el manifiesto consolidado, el conjunto completo de comprobaciones y la validación de cualquier procedimiento de custodia. El primer tramo funcional se sigue en el [issue #114](https://github.com/JavierGrecco/NetSentinel/issues/114). El detalle de alcance y las reglas de preservación están en [FORENSIC_MODE.md](FORENSIC_MODE.md). Las funciones de adquisición viva, memoria, dispositivos móviles, descifrado y recuperación compleja quedan fuera de la primera entrega.
+
 ## Cómo se mantiene el seguimiento
 
 1. Cada tarea lleva un ID estable (por ejemplo, REL-01 o FIND-02) para poder referenciarla desde PR, issue y evidencia de pruebas.

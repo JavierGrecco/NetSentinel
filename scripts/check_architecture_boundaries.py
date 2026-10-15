@@ -39,6 +39,9 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.findings": {
         "netsentinel.findings_service",
     },
+    "netsentinel.api.forensics": {
+        "netsentinel.forensics_service",
+    },
     "netsentinel.api.inventory": {
         "netsentinel.database",
         "netsentinel.local_discovery",
@@ -115,6 +118,10 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.database",
         "netsentinel.findings",
     },
+    "netsentinel.forensics_service": {
+        "netsentinel.forensics_integrity",
+        "netsentinel.forensics_repository",
+    },
     "netsentinel.data_export_service": {
         "netsentinel.config",
         "netsentinel.csv_safety",
@@ -161,6 +168,9 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.vendor",
     },
     "netsentinel.events_repository": {
+        "netsentinel.database_storage",
+    },
+    "netsentinel.forensics_repository": {
         "netsentinel.database_storage",
     },
     "netsentinel.dashboard_repository": {

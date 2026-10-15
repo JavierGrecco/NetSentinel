@@ -16,9 +16,23 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 
 ## Revisión manual local
 
-El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales fueron satisfactorios. Los comentarios pendientes eran de presentación, organización visual y facilidad de uso, no de un bloqueo funcional. Con esta confirmación, el trabajo de interfaz del PR #111 puede pasar a revisión formal.
+El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales de **NetSentinel Red** fueron satisfactorios. Los comentarios pendientes eran de presentación, organización visual y facilidad de uso, no de un bloqueo funcional. Con esta confirmación, la PR #111 puede pasar a revisión formal. Esta aprobación manual no incluye la nueva pantalla ni el flujo de casos de NetSentinel Forense.
 
 La confirmación no identifica el sistema operativo, el navegador ni el commit exacto probado, así que no se marcan como aprobados los recorridos específicos de Windows, macOS, Linux o la extensión. Esos resultados siguen registrándose por separado en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+
+## Nueva línea de trabajo: NetSentinel Forense
+
+Se está preparando una segunda área del producto, separada de las herramientas de Red. La rama `feat/forensics-workspace-foundation` parte de `refactor/activity-persistence-modules` para reutilizar la cabecera, los temas y la política de seguridad que se están revisando en la PR #111.
+
+- La base está en revisión en la [PR #113](https://github.com/JavierGrecco/NetSentinel/pull/113): entrada `/forensics`, logos propios, cambio entre Red y Forense y guía [FORENSIC_MODE.md](FORENSIC_MODE.md).
+- La PR #113 ya incluye un primer flujo persistente: apertura/cierre de casos, registro de metadatos de evidencia e historial de operaciones de solo anexado, con pruebas de API.
+- La pantalla ya puede comparar una copia local elegida expresamente con el hash declarado por la fuente, guardar coincidencias/diferencias/fallos y mostrar el historial. La ruta completa se usa solo durante la operación y no se persiste.
+- El resultado sigue siendo acotado: la coincidencia no prueba autenticidad, y un desacuerdo no demuestra por sí solo manipulación. El operador todavía es autodeclarado y la lectura puede modificar metadatos de acceso; la interfaz advierte que se debe usar una copia, no el soporte original.
+- La revisión manual de la interfaz y la comparación SHA-256 de Forense sigue pendiente. La guía [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md) describe el recorrido con archivos sintéticos. Los casos que se deben probar están listados en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+- La primera entrega completa se sigue en el [issue #114](https://github.com/JavierGrecco/NetSentinel/issues/114). Aún faltan un manifiesto consolidado, importadores y los informes; el flujo nuevo requiere una revisión manual propia.
+- La interfaz sigue siendo una base visual. Se agregó `netsentinel.forensics_integrity` para calcular SHA-256 en lectura y con detección básica de cambios, cubierto por pruebas sintéticas; aún no está conectado a casos ni deja un manifiesto persistente.
+- Todavía no hay registro persistente de casos, cadena de custodia, importadores/parser ni informes forenses.
+- La revisión de la interfaz y los checks deben completarse sobre el commit exacto de esta rama. La validación visual en macOS y las pruebas manuales multiplataforma siguen pendientes.
 
 ## Qué se mejoró en esta ronda
 

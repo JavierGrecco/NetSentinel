@@ -249,3 +249,100 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                       COALESCE(MIN(source), 'migration-v0.1')
                FROM observations GROUP BY device_id, ip_address"""
         )
+
+        # Tablas forenses aditivas: no modifican las tablas ni los datos de Red.
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_cases (
+                id TEXT PRIMARY KEY,
+                case_number TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                authority_reference TEXT NOT NULL,
+                objective TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                examiner TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_evidence (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_number TEXT NOT NULL,
+                label TEXT NOT NULL,
+                source_type TEXT NOT NULL CHECK (
+                    source_type IN ('disk_image', 'file_copy', 'browser_export', 'email_export', 'network_log', 'other')
+                ),
+                original_name TEXT,
+                source_description TEXT NOT NULL,
+                received_from TEXT NOT NULL,
+                received_at_original TEXT NOT NULL,
+                received_timezone TEXT NOT NULL,
+                size_bytes INTEGER CHECK (size_bytes >= 0 OR size_bytes IS NULL),
+                reported_sha256 TEXT,
+                hash_source TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE (case_id, evidence_number),
+                CHECK (reported_sha256 IS NULL OR length(reported_sha256) = 64)
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_integrity_checks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_id TEXT NOT NULL REFERENCES forensic_evidence(id) ON DELETE RESTRICT,
+                checked_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                copy_confirmed INTEGER NOT NULL DEFAULT 1 CHECK (copy_confirmed = 1),
+                algorithm TEXT NOT NULL CHECK (algorithm = 'SHA-256'),
+                source_name TEXT NOT NULL,
+                expected_sha256 TEXT,
+                calculated_sha256 TEXT,
+                size_bytes INTEGER CHECK (size_bytes >= 0 OR size_bytes IS NULL),
+                status TEXT NOT NULL CHECK (status IN ('match', 'mismatch', 'failed')),
+                tool_version TEXT NOT NULL,
+                error_code TEXT,
+                error_message TEXT,
+                CHECK (expected_sha256 IS NULL OR length(expected_sha256) = 64),
+                CHECK (calculated_sha256 IS NULL OR length(calculated_sha256) = 64)
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_id TEXT REFERENCES forensic_evidence(id) ON DELETE RESTRICT,
+                occurred_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL,
+                result TEXT NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}'
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_cases_updated ON forensic_cases(updated_at DESC)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_evidence_case ON forensic_evidence(case_id, created_at)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_integrity_evidence_time ON forensic_integrity_checks(evidence_id, checked_at DESC)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_audit_case_time ON forensic_audit(case_id, occurred_at DESC)")
+        # Las verificaciones de integridad también conservan su historial original.
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_integrity_no_update
+            BEFORE UPDATE ON forensic_integrity_checks
+            BEGIN SELECT RAISE(ABORT, 'forensic integrity history is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_integrity_no_delete
+            BEFORE DELETE ON forensic_integrity_checks
+            BEGIN SELECT RAISE(ABORT, 'forensic integrity history is append-only'); END
+        """)
+        # El historial de auditoría es de solo anexado desde la app y la propia base.
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_no_update
+            BEFORE UPDATE ON forensic_audit
+            BEGIN SELECT RAISE(ABORT, 'forensic audit is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_no_delete
+            BEFORE DELETE ON forensic_audit
+            BEGIN SELECT RAISE(ABORT, 'forensic audit is append-only'); END
+        """)
