@@ -162,22 +162,30 @@ function isExcluded(hostname, excludeDomains) {
 }
 function normalizedQueryKey(value) {
   let normalized = String(value || "").toLowerCase();
-  for (let i = 0; i < 3; i++) {
-    let decoded;
-    try { decoded = decodeURIComponent(normalized.replace(/\+/g, "%20")); } catch { break; }
-    if (decoded === normalized) break;
-    normalized = decoded;
+  // Decode nested percent-encoding, but never keep a key that remains encoded
+  // after the bounded pass: otherwise a sensitive name could evade the filter.
+  for (let i = 0; i < 8 && normalized.includes("%"); i++) {
+    try {
+      normalized = decodeURIComponent(normalized.replace(/\+/g, "%20"));
+    } catch {
+      return null;
+    }
   }
+  if (normalized.includes("%")) return null;
   return normalized.replace(/[^a-z0-9_]/g, "");
 }
 function isSensitivePathSegment(value) {
   let decoded = String(value || "");
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 8; i++) {
     let expanded;
-    try { expanded = decodeURIComponent(decoded); } catch { break; }
+    try { expanded = decodeURIComponent(decoded); } catch {
+      return decoded.includes("%");
+    }
     if (expanded === decoded) break;
     decoded = expanded;
   }
+  // Redact a segment if nested/malformed percent encoding prevents reliable inspection.
+  if (decoded.includes("%")) return true;
   if (/^[^/\s@]+@[^/\s@]+\.[^/\s@]+$/.test(decoded)) return true;
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(decoded)) return true;
   if (/^[+()0-9.\-\s]+$/.test(decoded) && (decoded.match(/\d/g) || []).length >= 10) return true;
@@ -221,7 +229,7 @@ function cleanUrl(rawUrl) {
   ).join("/") || "/";
   for (const key of [...url.searchParams.keys()]) {
     const normalized = normalizedQueryKey(key);
-    if (SENSITIVE_KEY.test(normalized) || normalized.startsWith("utm_") ||
+    if (normalized === null || SENSITIVE_KEY.test(normalized) || normalized.startsWith("utm_") ||
         TRACKING_QUERY_KEYS.has(normalized) || SEARCH_QUERY_KEYS.has(normalized)) url.searchParams.delete(key);
   }
   const result = url.toString();

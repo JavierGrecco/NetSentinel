@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Refuerza el saneamiento de URLs en navegador e importador: inspecciona hasta ocho capas de codificación, elimina parámetros cuyo nombre siga ambiguamente codificado y redacta segmentos de ruta que no puedan examinarse con seguridad. Añade pruebas para tokens/correos codificados en profundidad y mantiene el comportamiento alineado entre JavaScript y Python.
+
 - Hace atómica la inicialización y migración del esquema SQLite. Si una actualización falla, revierte los cambios parciales; se agrega una prueba de regresión.
 
 - Mejora el reconocimiento de cierres de bloques `script` al calcular hashes CSP y agrega pruebas para espacios y atributos inesperados.
