@@ -4,6 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark">
 <title>NetSentinel · Actividad y telemetría</title><link rel="stylesheet" href="/static/monitors.css">
 <link rel="stylesheet" href="/static/activity.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body><main class="wrap">
 <header class="top"><div><h1>Actividad y telemetría</h1><div class="sub">Fuentes autorizadas · sesiones limitadas · almacenamiento local</div><nav class="primary-nav" aria-label="Navegación principal">
@@ -12,7 +14,8 @@
         <a class="nav-link" href="/monitors">Monitorización</a>
         <a class="nav-link" href="/tools">Herramientas</a>
         <a class="nav-link" aria-current="page" href="/activity">Actividad</a>
-      </nav></div><button id="refresh" type="button">Actualizar</button></header>
+      </nav>
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div><button id="refresh" type="button">Actualizar</button></header>
 <div class="notice"><strong>Alcance importante.</strong> NetSentinel no captura tráfico por sí mismo. La extensión Chromium, si la instalás y activás en un navegador, sí registra navegación futura: URLs HTTP(S) de páginas de nivel superior y búsquedas reconocidas. La URL guardada se normaliza, no es una copia exacta de la original: se quitan fragmentos y parámetros conocidos sensibles, y se redactan algunos identificadores reconocibles (por ejemplo, correos, teléfonos, UUID y tokens largos) en la ruta. Se conserva el host y parte de la ruta; otros segmentos o parámetros desconocidos pueden seguir conteniendo datos personales. Los filtros no pueden detectarlos todos. Las sesiones de red requieren una fuente compatible; también podés importar registros CSV de navegación, red o auditoría de correo autorizada. No se recopilan contraseñas, cookies, formularios, cuerpos de páginas, mensajes completos ni adjuntos. La captura de red normal no revela rutas/cuerpos HTTPS; las URLs de páginas provienen del navegador supervisado.</div>
 <section class="panel">
 <h2>Resumen</h2><div id="summary" class="statrow"><div class="empty">Cargando…</div></div>
