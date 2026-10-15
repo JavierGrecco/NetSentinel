@@ -66,6 +66,19 @@ def test_native_sqlite_codes_override_messages_and_cover_extended_codes():
         assert raw_message not in description.log_reason
         assert "PRIVATE_TOKEN" not in description.message
 
+def test_unknown_native_sqlite_code_does_not_fall_back_to_ambiguous_message():
+    """Un código nativo disponible prevalece aunque el texto parezca otro fallo."""
+    error = sqlite3.OperationalError("database is locked: PRIVATE_TOKEN")
+    error.sqlite_errorcode = getattr(sqlite3, "SQLITE_ERROR", 1)
+
+    description = describe_unhandled_exception(error)
+
+    assert description.code == "NS-DB-001"
+    assert description.log_reason == "SQLite operation failure"
+    assert "PRIVATE_TOKEN" not in description.message
+    assert "PRIVATE_TOKEN" not in description.log_reason
+
+
 def test_generic_exception_is_safe_and_requests_followup_reference():
     error = describe_unhandled_exception(RuntimeError("email=person@example.com token=secret"))
 

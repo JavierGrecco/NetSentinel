@@ -2,6 +2,9 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Evita clasificar un error SQLite por un texto ambiguo cuando la excepción ya proporciona un código nativo no reconocido. El mensaje solo se usa como alternativa en runtimes que no exponen ese código; se agrega una prueba para mensajes contradictorios.
+
+
 - Refuerza el saneamiento de URLs en navegador e importador: inspecciona hasta ocho capas de codificación, elimina parámetros cuyo nombre siga ambiguamente codificado y redacta segmentos de ruta que no puedan examinarse con seguridad. Añade pruebas para tokens/correos codificados en profundidad y mantiene el comportamiento alineado entre JavaScript y Python.
 
 - Hace atómica la inicialización y migración del esquema SQLite. Si una actualización falla, revierte los cambios parciales; se agrega una prueba de regresión.

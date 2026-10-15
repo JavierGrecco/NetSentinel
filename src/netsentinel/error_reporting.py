@@ -56,8 +56,13 @@ def _sqlite_failure_reason(exc: sqlite3.Error) -> str:
         ):
             return "database disk image is malformed"
 
+    if type(raw_code) is int:
+        # If SQLite did provide a native code, an unrecognized code must not be
+        # reclassified from its message. Message matching is only a fallback on
+        # runtimes where the native code is unavailable.
+        return ""
+
     if isinstance(exc, sqlite3.OperationalError):
-        # Compatibility for SQLite/Python combinations that do not expose codes.
         return str(exc).casefold()
     return ""
 
