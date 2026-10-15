@@ -38,6 +38,7 @@ const {
   enqueueNavigation,
   clearStoredEvents,
   privateOrLocalHost,
+  sanitizeStoredEvent,
   searchInfo
 } = require("./service-worker.js");
 
