@@ -3,14 +3,28 @@
   <script src="/static/theme.js"></script>
 </head>
 <body><main class="wrap">
-<header class="top"><div><h1>Monitorización</h1><div class="sub">Disponibilidad, historial e incidentes de red</div></div><nav class="primary-nav" aria-label="Navegación principal">
+<header class="top app-header">
+  <div class="app-brand">
+    <div class="logo" aria-hidden="true">⌁</div>
+    <div class="app-brand-copy">
+      <div class="eyebrow">Observabilidad local</div>
+      <h1 class="title">Monitorización</h1>
+      <div class="sub">Disponibilidad, historial e incidentes de red</div>
+    </div>
+  </div>
+  <div class="app-header-content">
+    <nav class="primary-nav" aria-label="Navegación principal">
         <a class="nav-link" href="/">Inventario</a>
         <a class="nav-link" href="/findings">Hallazgos</a>
         <a class="nav-link" aria-current="page" href="/monitors">Monitorización</a>
         <a class="nav-link" href="/tools">Herramientas</a>
         <a class="nav-link" href="/activity">Actividad</a>
-      </nav>
-      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></header>
+    </nav>
+    <div class="app-header-utilities">
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div>
+    </div>
+  </div>
+</header>
 <nav class="section-tabs" role="tablist" aria-label="Secciones de monitorización">
   <button type="button" class="section-tab" role="tab" data-tab-target="monitor-overview" data-tab-hash="resumen" aria-selected="true">Resumen</button>
   <button type="button" class="section-tab" role="tab" data-tab-target="monitor-config" data-tab-hash="monitores" aria-selected="false" tabindex="-1">Monitores</button>
