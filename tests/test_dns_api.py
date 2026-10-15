@@ -3,7 +3,7 @@ import socket
 import pytest
 from fastapi.testclient import TestClient
 
-import netsentinel.api.tools as tools_api
+import netsentinel.api.tools_dns as tools_api
 from netsentinel.main import app
 
 
