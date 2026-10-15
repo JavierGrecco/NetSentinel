@@ -10,15 +10,28 @@
 </head>
 <body>
 <main>
-<div class="top"><div><div class="muted">Observabilidad local</div><h1>Herramientas de red</h1></div><nav class="primary-nav" aria-label="Navegación principal">
+<header class="top app-header">
+  <div class="app-brand">
+    <div class="logo" aria-hidden="true">⌁</div>
+    <div class="app-brand-copy">
+      <div class="eyebrow">Observabilidad local</div>
+      <h1 class="title">Herramientas de red</h1>
+      <div class="sub">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</div>
+    </div>
+  </div>
+  <div class="app-header-content">
+    <nav class="primary-nav" aria-label="Navegación principal">
         <a class="nav-link" href="/">Inventario</a>
         <a class="nav-link" href="/findings">Hallazgos</a>
         <a class="nav-link" href="/monitors">Monitorización</a>
         <a class="nav-link" aria-current="page" href="/tools">Herramientas</a>
         <a class="nav-link" href="/activity">Actividad</a>
-      </nav>
-      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div>
-<p class="muted">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</p>
+    </nav>
+    <div class="app-header-utilities">
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div>
+    </div>
+  </div>
+</header>
 <section class="panel" aria-labelledby="dns-title">
 <h2 id="dns-title">Consulta DNS</h2>
 <p>Consulta las direcciones IPv4 e IPv6 que devuelve el resolvedor configurado en esta computadora.</p>
