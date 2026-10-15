@@ -24,11 +24,56 @@ class ErrorDescription:
     log_reason: str
 
 
+def _sqlite_failure_reason(exc: sqlite3.Error) -> str:
+    """Return a safe internal hint using native SQLite codes when available.
+
+    Python 3.11+ exposes sqlite_errorcode on errors raised by SQLite. Mask
+    extended result codes to their primary code; on older runtimes, retain the
+    previous message-based fallback for OperationalError. Raw text is never
+    returned to a response or persisted in the error catalog.
+    """
+    raw_code = getattr(exc, "sqlite_errorcode", None)
+    if type(raw_code) is int:
+        primary_code = raw_code & 0xFF
+        if primary_code in (
+            getattr(sqlite3, "SQLITE_BUSY", 5),
+            getattr(sqlite3, "SQLITE_LOCKED", 6),
+        ):
+            return "database is locked"
+        if primary_code == getattr(sqlite3, "SQLITE_FULL", 13):
+            return "database or disk is full"
+        if primary_code == getattr(sqlite3, "SQLITE_IOERR", 10):
+            return "disk i/o error"
+        if primary_code in (
+            getattr(sqlite3, "SQLITE_READONLY", 8),
+            getattr(sqlite3, "SQLITE_CANTOPEN", 14),
+        ):
+            return "readonly database"
+        if primary_code in (
+            getattr(sqlite3, "SQLITE_CORRUPT", 11),
+            getattr(sqlite3, "SQLITE_NOTADB", 26),
+            getattr(sqlite3, "SQLITE_SCHEMA", 17),
+        ):
+            return "database disk image is malformed"
+
+    if isinstance(exc, sqlite3.OperationalError):
+        # Compatibility for SQLite/Python combinations that do not expose codes.
+        return str(exc).casefold()
+    return ""
+
+
 def describe_unhandled_exception(exc: Exception) -> ErrorDescription:
     """Mapea fallos inesperados a códigos, mensajes y acciones sin exponer detalles."""
-    if isinstance(exc, sqlite3.OperationalError):
-        # Inspect internally for classification only; do not return/log the raw text.
-        reason = str(exc).casefold()
+    if isinstance(exc, sqlite3.IntegrityError):
+        return ErrorDescription(
+            "NS-DB-006", "database_integrity",
+            "La operación no pudo guardarse porque los datos no cumplen una regla de integridad.",
+            "No des por guardado el cambio. Actualizá la vista y, si vuelve a ocurrir, informá el código de seguimiento.",
+            "error", "SQLite integrity constraint failure",
+        )
+
+    if isinstance(exc, sqlite3.Error):
+        reason = _sqlite_failure_reason(exc)
         if "locked" in reason or "busy" in reason:
             return ErrorDescription(
                 "NS-DB-002", "database_busy",
@@ -64,21 +109,13 @@ def describe_unhandled_exception(exc: Exception) -> ErrorDescription:
                 "No borres ni reemplaces el archivo de datos. Conservá una copia de seguridad y consultá el diagnóstico con el código indicado.",
                 "error", "SQLite database integrity or schema issue",
             )
-
-    if isinstance(exc, sqlite3.IntegrityError):
-        return ErrorDescription(
-            "NS-DB-006", "database_integrity",
-            "La operación no pudo guardarse porque los datos no cumplen una regla de integridad.",
-            "No des por guardado el cambio. Actualizá la vista y, si vuelve a ocurrir, informá el código de seguimiento.",
-            "error", "SQLite integrity constraint failure",
-        )
-    if isinstance(exc, sqlite3.Error):
         return ErrorDescription(
             "NS-DB-001", "database",
             "NetSentinel no pudo completar una operación de lectura o escritura en la base local.",
             "Reintentá una vez. Si el problema persiste, revisá los permisos y conservá una copia de seguridad antes de reparar datos.",
             "error", "SQLite operation failure",
         )
+
     if isinstance(exc, subprocess.TimeoutExpired) or isinstance(exc, TimeoutError):
         return ErrorDescription(
             "NS-SYS-002", "operation_timeout",
@@ -106,7 +143,6 @@ def describe_unhandled_exception(exc: Exception) -> ErrorDescription:
         "No des por guardado un cambio que haya fallado. Reintentá una vez y comunicá el código de error y la referencia de seguimiento.",
         "error", "Unhandled application exception",
     )
-
 
 def describe_http_error(status_code: int) -> tuple[str, str]:
     """Devuelve un código estable y una acción prudente para errores HTTP esperados."""

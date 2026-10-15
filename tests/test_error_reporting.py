@@ -30,6 +30,42 @@ def test_sqlite_storage_and_access_failures_have_distinct_codes():
     assert full.code != readonly.code != malformed.code
 
 
+def test_native_sqlite_codes_override_messages_and_cover_extended_codes():
+    def code(name: str, fallback: int) -> int:
+        return getattr(sqlite3, name, fallback)
+
+    cases = [
+        (
+            sqlite3.OperationalError,
+            "opaque busy detail",
+            code("SQLITE_BUSY", 5) | (1 << 8),
+            "NS-DB-002",
+        ),
+        (sqlite3.OperationalError, "opaque lock detail", code("SQLITE_LOCKED", 6), "NS-DB-002"),
+        (sqlite3.OperationalError, "opaque storage detail", code("SQLITE_FULL", 13), "NS-DB-003"),
+        (sqlite3.OperationalError, "opaque I/O detail", code("SQLITE_IOERR", 10), "NS-DB-007"),
+        # Deliberately conflicting message: the native code must take precedence.
+        (
+            sqlite3.OperationalError,
+            "database is locked: PRIVATE_TOKEN",
+            code("SQLITE_READONLY", 8),
+            "NS-DB-004",
+        ),
+        (sqlite3.OperationalError, "opaque open detail", code("SQLITE_CANTOPEN", 14), "NS-DB-004"),
+        (sqlite3.DatabaseError, "opaque corruption detail", code("SQLITE_CORRUPT", 11), "NS-DB-005"),
+        (sqlite3.DatabaseError, "opaque database detail", code("SQLITE_NOTADB", 26), "NS-DB-005"),
+        (sqlite3.DatabaseError, "opaque schema detail", code("SQLITE_SCHEMA", 17), "NS-DB-005"),
+    ]
+
+    for error_type, raw_message, native_code, expected_code in cases:
+        exception = error_type(raw_message)
+        exception.sqlite_errorcode = native_code
+        description = describe_unhandled_exception(exception)
+        assert description.code == expected_code
+        assert raw_message not in description.message
+        assert raw_message not in description.log_reason
+        assert "PRIVATE_TOKEN" not in description.message
+
 def test_generic_exception_is_safe_and_requests_followup_reference():
     error = describe_unhandled_exception(RuntimeError("email=person@example.com token=secret"))
 
