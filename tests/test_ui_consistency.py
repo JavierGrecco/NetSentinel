@@ -21,20 +21,20 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
     assert "min-height: 112px" in css
     assert ".theme-option-icon" in css
-    assert "input[type=\\"radio\\"]:checked + .theme-option-card" in css
-    assert "input[type=\\"radio\\"]:focus-visible + .theme-option-card" in css
+    assert 'input[type="radio"]:checked + .theme-option-card' in css
+    assert 'input[type="radio"]:focus-visible + .theme-option-card' in css
     assert "prefers-reduced-motion: reduce" in css
 
 
 def test_theme_options_are_unique_and_have_one_default_selection():
     for page_name in PAGE_NAMES:
         html = (STATIC / page_name).read_text(encoding="utf-8")
-        options = re.findall(r'<input\\b([^>]*name="themeSelect"[^>]*)>', html)
+        options = re.findall(r'<input\b([^>]*name="themeSelect"[^>]*)>', html)
         assert len(options) == 3, f"{page_name} must offer exactly three theme cards"
 
-        ids = [re.search(r'\\bid="([^"]+)"', option).group(1) for option in options]
-        values = [re.search(r'\\bvalue="([^"]+)"', option).group(1) for option in options]
-        checked = [option for option in options if re.search(r"\\schecked(?:\\s|$)", option)]
+        ids = [re.search(r'\bid="([^"]+)"', option).group(1) for option in options]
+        values = [re.search(r'\bvalue="([^"]+)"', option).group(1) for option in options]
+        checked = [option for option in options if re.search(r"\schecked(?:\s|$)", option)]
         assert len(ids) == len(set(ids)), f"{page_name} has duplicate theme control IDs"
         assert set(values) == {"dark", "medium", "light"}
         assert len(checked) == 1 and 'value="dark"' in checked[0]
