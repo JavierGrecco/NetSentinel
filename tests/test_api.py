@@ -393,7 +393,7 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "verify-hash" in forensics_js
     assert "confirm_working_copy" in forensics_js
     assert "usa la ruta durante esta operación, pero no la guarda en el registro" in forensics_js
-    assert 'id="forensic-copy-path-' in forensics_js
+    assert 'pathInput.id = "forensic-copy-path-" + item.id' in forensics_js
 
     findings_js = (static / "findings.js").read_text(encoding="utf-8")
     assert "Marcar dispositivo como conocido" in findings_js
