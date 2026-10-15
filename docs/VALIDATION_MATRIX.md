@@ -46,6 +46,16 @@ Marcar cada tarea solo después de completar el recorrido en ese sistema y regis
 - [ ] REL-06 — Importación CSV, previsualización, deduplicación, filtros, fórmulas y borrado selectivo.
 - [ ] REL-07 — Importación de metadatos de auditoría de correo autorizados, rechazo de cuerpos/adjuntos y retención.
 
+### Interfaz y facilidad de uso (todas las plataformas, empezar por macOS)
+
+- [ ] UI-01 — Elegir Oscuro, Medio y Claro desde cada página; comprobar que la preferencia se mantiene al navegar entre Inventario, Hallazgos, Monitorización, Herramientas y Actividad, y después de recargar.
+- [ ] UI-02 — En Monitorización, cambiar entre Resumen, Monitores, Incidentes y Avisos; verificar que se distingue un monitor pausado y que la guía aclara que las comprobaciones se detienen al cerrar la app o suspender el equipo.
+- [ ] UI-03 — En Hallazgos, comprobar la diferencia entre marcar un dispositivo como conocido y marcar solo el evento como revisado; confirmar que la acción no borra el registro y no se presenta como verificación automática de seguridad.
+- [ ] UI-04 — En Actividad, navegar por Resumen, Seguimiento, Importar, Eventos y Privacidad y borrado; verificar que queda claro que una ventana temporal no crea una fuente de datos ni instala un agente.
+- [ ] UI-05 — Comprobar que las pestañas funcionan con teclado y que el contenido sigue siendo legible en los tres temas y en una ventana estrecha.
+
+**Evidencia interfaz:** fecha/versión/commit, temas probados, páginas visitadas, resultado y fallos observados.
+
 **Evidencia macOS:**
 - Fecha/versión/commit:
 - Resultado y observaciones:
