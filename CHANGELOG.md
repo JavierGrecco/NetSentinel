@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Unifica la apariencia en Inventario, Hallazgos, Monitorización, Herramientas y Actividad: permite elegir tema oscuro, medio o claro y conserva la preferencia entre páginas. Reorganiza Monitorización y Actividad en sectores navegables, aclara cuándo se ejecutan los monitores y qué necesita una fuente de telemetría, y agrega acciones de triaje para distinguir entre reconocer un dispositivo y marcar un evento como revisado.
+
 - Refuerza la rotación del diario de errores: los archivos archivados también reciben permisos privados en sistemas POSIX y la operación no sigue enlaces simbólicos. Añade una prueba para diarios preexistentes con permisos abiertos.
 
 - Evita clasificar un error SQLite por un texto ambiguo cuando la excepción ya proporciona un código nativo no reconocido. El mensaje solo se usa como alternativa en runtimes que no exponen ese código; se agrega una prueba para mensajes contradictorios.
