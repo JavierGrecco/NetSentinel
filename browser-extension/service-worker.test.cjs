@@ -2,7 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 function listenerSlot() {
-  return { addListener() {} };
+  return {
+    listener: null,
+    addListener(listener) { this.listener = listener; }
+  };
 }
 
 let mockStore = {};
@@ -276,6 +279,47 @@ test("normalizes legacy search metadata and IP-literal page domains safely", () 
     observed_at: timestamp, event_type: "page_visit", page_url: "https://8.8.8.8/help", domain: "8.8.8.8"
   });
   assert.equal(ipPage.domain, "", "IP literals belong in page_url, not the DNS domain field");
+});
+
+test("safe-event message persists sanitized legacy events without losing concurrent navigation", async () => {
+  const observedAt = new Date().toISOString();
+  const legacy = {
+    observed_at: observedAt,
+    event_type: "page_visit",
+    domain: "stale.example",
+    page_url: "https://example.com/account?access_token=legacy-secret#private",
+    email_body: "must-not-persist"
+  };
+  setState(enabledSettings(), [legacy]);
+
+  let response;
+  const handler = global.chrome.runtime.onMessage.listener;
+  assert.equal(typeof handler, "function", "service worker must register its message handler");
+  assert.equal(
+    handler({ type: "NETSENTINEL_GET_SAFE_EVENTS" }, {}, value => { response = value; }),
+    true,
+    "asynchronous response must keep the message channel open"
+  );
+
+  const navigation = enqueueNavigation({
+    frameId: 0,
+    tabId: 778,
+    url: "https://example.net/new-navigation",
+    timeStamp: Date.now()
+  });
+  await navigation;
+
+  assert.ok(response && response.ok, "background should respond successfully after migration");
+  assert.equal(response.events.length, 1, "the migration response should contain the prior safe event only");
+  assert.equal(response.events[0].page_url, "https://example.com/account");
+  assert.equal(response.events[0].domain, "example.com");
+  assert.doesNotMatch(JSON.stringify(response.events), /legacy-secret|private|must-not-persist|stale\.example/i);
+
+  const persisted = mockStore[EVENTS_KEY];
+  assert.equal(persisted.length, 2, "the sanitized old event and new navigation must both be persisted");
+  assert.equal(persisted[0].page_url, "https://example.com/account");
+  assert.equal(persisted[1].page_url, "https://example.net/new-navigation");
+  assert.doesNotMatch(JSON.stringify(persisted), /legacy-secret|private|must-not-persist|stale\.example/i);
 });
 
 test("capture is disabled by default and performs no storage write", async () => {
