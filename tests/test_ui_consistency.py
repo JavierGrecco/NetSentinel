@@ -30,6 +30,18 @@ def test_shared_theme_defines_one_page_and_control_scale():
     assert "@media (max-width: 560px)" in css
 
 
+def test_theme_script_syncs_selection_and_persists_across_tabs():
+    script = (STATIC / "theme.js").read_text(encoding="utf-8")
+
+    assert 'const STORAGE_KEY = "netsentinel-theme"' in script
+    assert 'const CONTROL_NAME = "themeSelect"' in script
+    assert 'querySelectorAll(`input[name="${CONTROL_NAME}"]`)' in script
+    assert "control.checked = control.value === theme" in script
+    assert 'control.addEventListener("change"' in script
+    assert "localStorage.setItem(STORAGE_KEY, selected)" in script
+    assert 'window.addEventListener("storage"' in script
+
+
 def test_all_main_pages_load_shared_layout_after_module_styles():
     for page_name in PAGE_NAMES:
         html = (STATIC / page_name).read_text(encoding="utf-8")
@@ -45,6 +57,14 @@ def test_all_main_pages_load_shared_layout_after_module_styles():
             f"{page_name} must load the shared design layer after local styles."
         )
         assert 'id="themeSelect"' in html
+        assert 'class="theme-control"' in html
+        assert 'class="theme-options"' in html
+        assert 'role="radiogroup" aria-label="Tema visual"' in html
+        assert 'class="theme-option-card"' in html
+        assert 'id="themeSelectMedium"' in html and 'id="themeSelectLight"' in html
+        assert '<select id="themeSelect"' not in html, f"{page_name} must not use the old theme dropdown"
+        assert html.count('name="themeSelect" type="radio"') == 3
+        assert 'aria-hidden="true" focusable="false"' in html
         assert 'aria-label="Navegación principal"' in html
         assert 'class="top app-header"' in html, f"{page_name} must use the shared page header"
         assert 'class="app-brand"' in html and 'class="app-header-content"' in html
