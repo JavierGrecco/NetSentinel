@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Se separan las cabeceras defensivas, CSP y respuestas de error correlacionadas del middleware de host/origen. La API conserva las reexportaciones históricas; se elimina una definición duplicada de `_error_response` y la comprobación de arquitectura ahora detecta funciones/clases de nivel superior duplicadas.
+
 - Separa también las rutas HTTP de herramientas DNS y TLS por capacidad, manteniendo un router de composición y las mismas URL/métodos. Se actualizan las pruebas que interceptan consultas DNS y el control de dependencias entre módulos.
 
 - Integra la base modular de persistencia, actividad y límites de arquitectura (PR #111), y separa la API de Monitorización (PR #115) e Inventario (PR #116) en routers cohesivos. Se conservan rutas y contratos HTTP; las pruebas declaran las dependencias permitidas y la matriz CI de los SHA revisados pasó en Python 3.10–3.14 sobre Ubuntu, macOS y Windows. Esto no reemplaza las validaciones manuales de instalación y uso real.

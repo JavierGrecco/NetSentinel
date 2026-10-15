@@ -33,7 +33,10 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.tools_tls": {
         "netsentinel.tls_tools",
     },
-    "netsentinel.api.security": set(),
+    "netsentinel.api.security": {
+        "netsentinel.api.security_headers",
+    },
+    "netsentinel.api.security_headers": set(),
     "netsentinel.api.error_handling": {
         "netsentinel.api.security",
         "netsentinel.error_reporting",
@@ -315,6 +318,21 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
     modules = discover_source_modules(root)
     graph = collect_dependencies(modules)
     violations: list[str] = []
+
+    # Dos definiciones de nivel superior con el mismo nombre se pisan en Python.
+    # Detectarlas evita que quede código muerto oculto detrás de otra función/clase.
+    for source, module in sorted(modules.items()):
+        syntax = ast.parse(module.path.read_text(encoding="utf-8"), filename=str(module.path))
+        names: set[str] = set()
+        for node in syntax.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            if node.name in names:
+                violations.append(
+                    f"{source} defines top-level {node.name} more than once; "
+                    "a later definition shadows the earlier one."
+                )
+            names.add(node.name)
 
     # The FastAPI composition root can import other modules; they must not
     # import the composition root back.
