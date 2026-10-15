@@ -12,6 +12,8 @@ from netsentinel.api import (
     activity_retention as activity_retention_api,
     activity_sessions as activity_sessions_api,
     diagnostics as diagnostics_api,
+    error_handling as error_handling_api,
+    validation_errors,
     findings,
     inventory,
     inventory_assets,
@@ -63,7 +65,11 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.api.security_headers"] == set()
     assert graph["netsentinel.api.error_handling"] == {
         "netsentinel.api.security",
+        "netsentinel.api.validation_errors",
         "netsentinel.error_reporting",
+    }
+    assert graph["netsentinel.api.validation_errors"] == {
+        "netsentinel.api.security_headers",
     }
     assert graph["netsentinel.api.activity"] == {
         "netsentinel.activity_tracking",
@@ -342,6 +348,18 @@ def _write_minimal_package(root: Path) -> Path:
         '"""Punto de composición de prueba."""\n', encoding="utf-8"
     )
     return package
+
+
+def test_validation_handler_keeps_the_historical_import_path() -> None:
+    """El punto de composición sigue exponiendo el manejador y el catálogo antiguos."""
+    assert (
+        error_handling_api.handle_request_validation_error
+        is validation_errors.handle_request_validation_error
+    )
+    assert error_handling_api._safe_validation_message is validation_errors._safe_validation_message
+    assert validation_errors._safe_validation_message("unrecognized_type") == (
+        "El valor no cumple el formato esperado."
+    )
 
 
 def test_security_response_helpers_have_a_single_module_owner() -> None:

@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Separa el tratamiento de errores de validación HTTP en `api/validation_errors.py`. `api/error_handling.py` conserva la interfaz histórica mediante reexportaciones; las respuestas 422 siguen usando mensajes fijos y no reflejan valores ingresados.
+
 - Divide la API de Actividad en routers de consulta/exportación, sesiones/ingreso, importación, borrado y retención. Los modelos quedan en un módulo compartido y el router histórico se mantiene como punto de composición; se conservan rutas, validaciones y respuestas.
 
 - Se separan las cabeceras defensivas, CSP y respuestas de error correlacionadas del middleware de host/origen. La API conserva las reexportaciones históricas; se elimina una definición duplicada de `_error_response` y la comprobación de arquitectura ahora detecta funciones/clases de nivel superior duplicadas.
