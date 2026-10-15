@@ -11,7 +11,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 
 - **Main:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff). Ya incorpora el saneamiento reforzado de URLs de la extensión y de la importación CSV.
 - **Rama de modularización:** `refactor/activity-persistence-modules`.
-- **Pull request de trabajo:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y en borrador. Todavía no está integrada en `main`.
+- **Pull request de modularización base:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y lista para revisión formal, sin integrar todavía en `main`.
 - **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para descargar esta rama, instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
 ## Revisión manual local
@@ -30,8 +30,8 @@ Se está preparando una segunda área del producto, separada de las herramientas
 - El resultado sigue siendo acotado: la coincidencia no prueba autenticidad, y un desacuerdo no demuestra por sí solo manipulación. El operador todavía es autodeclarado y la lectura puede modificar metadatos de acceso; la interfaz advierte que se debe usar una copia, no el soporte original.
 - La revisión manual de la interfaz y la comparación SHA-256 de Forense sigue pendiente. La guía [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md) describe el recorrido con archivos sintéticos. Los casos que se deben probar están listados en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - La primera entrega completa se sigue en el [issue #114](https://github.com/JavierGrecco/NetSentinel/issues/114). Aún faltan un manifiesto consolidado, importadores y los informes; el flujo nuevo requiere una revisión manual propia.
-- La interfaz sigue siendo una base visual. Se agregó `netsentinel.forensics_integrity` para calcular SHA-256 en lectura y con detección básica de cambios, cubierto por pruebas sintéticas; aún no está conectado a casos ni deja un manifiesto persistente.
-- Todavía no hay registro persistente de casos, cadena de custodia, importadores/parser ni informes forenses.
+- La primera entrega ya registra casos, elementos de evidencia y eventos de auditoría en SQLite; verifica SHA-256 calculado sobre una copia local, guarda resultado (coincide, difiere o falla) e historial. Es una verificación acotada de integridad, no un manifiesto de adquisición ni una cadena de custodia certificada.
+- Siguen pendientes el manifiesto consolidado de adquisición, importadores/parser, informes forenses reproducibles, autenticación del operador y revisión manual con archivos sintéticos sobre el commit exacto. No hay adquisición de discos, memoria o móviles ni una prueba de autenticidad del origen a partir del hash.
 - La revisión de la interfaz y los checks deben completarse sobre el commit exacto de esta rama. La validación visual en macOS y las pruebas manuales multiplataforma siguen pendientes.
 
 ## Qué se mejoró en esta ronda
