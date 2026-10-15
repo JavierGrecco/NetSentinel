@@ -66,6 +66,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.error_reporting",
     }
     assert graph["netsentinel.api.activity"] == {
+        "netsentinel.activity_tracking",
         "netsentinel.api.activity_deletion",
         "netsentinel.api.activity_import",
         "netsentinel.api.activity_models",
@@ -320,6 +321,10 @@ def test_activity_models_remain_available_from_the_historical_module() -> None:
     """Los imports de modelos usados por consumidores existentes siguen funcionando."""
     assert activity.ActivityEventIngest is activity_models.ActivityEventIngest
     assert activity.ActivityRetentionUpdate is activity_models.ActivityRetentionUpdate
+    assert callable(activity.get_family_activity)
+    assert callable(activity.ingest_family_activity)
+    assert callable(activity.import_family_activity)
+    assert callable(activity.delete_family_activity)
 
 
 def test_findings_endpoints_belong_to_findings_router() -> None:
