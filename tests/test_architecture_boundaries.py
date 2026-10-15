@@ -3,22 +3,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, diagnostics as diagnostics_api, findings, inventory, inventory_assets, inventory_discovery, inventory_exports, monitoring, monitoring_monitors, monitoring_reports, pages, tools
+from netsentinel.api import activity, diagnostics as diagnostics_api, findings, inventory, inventory_assets, inventory_discovery, inventory_exports, monitoring, monitoring_monitors, monitoring_reports, pages, tools, tools_dns, tools_tls
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from netsentinel import database
 from scripts.check_architecture_boundaries import check_architecture
 
 
-def test_dns_tls_endpoints_belong_to_tools_router() -> None:
-    """La composición debe registrar estos endpoints desde su módulo funcional."""
-    paths = {route.path for route in tools.router.routes}
-    assert {
-        "/api/tools/tls/inspect",
+def test_dns_tls_endpoints_belong_to_their_capability_routers() -> None:
+    """Cada grupo de rutas tiene un módulo dueño y conserva sus rutas públicas."""
+    dns_paths = {route.path for route in tools_dns.router.routes}
+    assert dns_paths == {
         "/api/tools/dns/configuration",
         "/api/tools/dns/lookup",
         "/api/tools/dns/reverse",
-    } <= paths
+    }
+    tls_paths = {route.path for route in tools_tls.router.routes}
+    assert tls_paths == {"/api/tools/tls/inspect"}
 
 
 def test_architecture_policy_passes_without_coupling_violations() -> None:
@@ -27,11 +28,14 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     violations, graph = check_architecture(root)
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.tools"] == {
-        "netsentinel.api.security",
+        "netsentinel.api.tools_dns",
+        "netsentinel.api.tools_tls",
+    }
+    assert graph["netsentinel.api.tools_dns"] == {
         "netsentinel.dns_config",
         "netsentinel.dns_tools",
-        "netsentinel.tls_tools",
     }
+    assert graph["netsentinel.api.tools_tls"] == {"netsentinel.tls_tools"}
     assert graph["netsentinel.api.security"] == set()
     assert graph["netsentinel.api.error_handling"] == {
         "netsentinel.api.security",
