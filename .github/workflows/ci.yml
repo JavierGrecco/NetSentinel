@@ -225,30 +225,55 @@ jobs:
 
           static_dir = Path("src/netsentinel/static")
           pages = {
-              "index.html": "index.js",
-              "monitors.html": "monitors.js",
-              "activity.html": "activity.js",
-              "findings.html": "findings.js",
-              "tools.html": "tools.js",
+              "index.html": ("/static/theme.js", "/static/index.js"),
+              "monitors.html": ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js"),
+              "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
+              "findings.html": ("/static/theme.js", "/static/findings.js"),
+              "tools.html": ("/static/theme.js", "/static/tools.js"),
           }
 
-          for page_name, script_name in pages.items():
+          for page_name, expected_scripts in pages.items():
               html = (static_dir / page_name).read_text(encoding="utf-8")
               scripts = list(re.finditer(
                   r"<script\b([^>]*)>(.*?)</script\s*>",
                   html,
                   flags=re.IGNORECASE | re.DOTALL,
               ))
-              assert len(scripts) == 1, f"{page_name} must load exactly one script."
-              script = scripts[0]
-              expected = f'src="/static/{script_name}" defer'
-              assert script.group(1).strip() == expected, (
-                  f"{page_name} must load {script_name} from the local static directory."
-              )
-              assert not script.group(2).strip(), f"{page_name} must not contain inline JavaScript."
-              assert (static_dir / script_name).is_file(), f"Missing {script_name}."
+              observed_scripts = []
+              for script in scripts:
+                  match = re.fullmatch(
+                      r'src="(/static/[^"]+)"( defer)?',
+                      script.group(1).strip(),
+                  )
+                  assert match, (
+                      f"{page_name} contains a script with unexpected attributes: "
+                      f"{script.group(1)}"
+                  )
+                  source = match.group(1)
+                  observed_scripts.append(source)
+                  assert not script.group(2).strip(), (
+                      f"{page_name} must not contain inline JavaScript."
+                  )
+                  if source == "/static/theme.js":
+                      assert match.group(2) is None, (
+                          "The shared theme must apply before first paint."
+                      )
+                  else:
+                      assert match.group(2) == " defer", (
+                          f"{source} must load with defer."
+                      )
 
-          print("All five pages use their local JavaScript files.")
+              assert tuple(observed_scripts) == expected_scripts, (
+                  f"{page_name} must load exactly {expected_scripts}, "
+                  f"but loaded {tuple(observed_scripts)}."
+              )
+              for source in expected_scripts:
+                  script_name = source.removeprefix("/static/")
+                  assert (static_dir / script_name).is_file(), (
+                      f"Missing frontend asset {script_name}."
+                  )
+
+          print("All five pages load the expected local scripts without inline JavaScript.")
           PY
           for script in src/netsentinel/static/*.js; do
             node --check "$script"
