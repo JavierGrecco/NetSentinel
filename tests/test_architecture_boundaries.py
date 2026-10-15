@@ -15,6 +15,8 @@ from netsentinel.api import (
     monitoring_monitors,
     monitoring_reports,
     pages,
+    security as security_api,
+    security_headers,
     tools,
     tools_dns,
     tools_tls,
@@ -51,7 +53,8 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.dns_tools",
     }
     assert graph["netsentinel.api.tools_tls"] == {"netsentinel.tls_tools"}
-    assert graph["netsentinel.api.security"] == set()
+    assert graph["netsentinel.api.security"] == {"netsentinel.api.security_headers"}
+    assert graph["netsentinel.api.security_headers"] == set()
     assert graph["netsentinel.api.error_handling"] == {
         "netsentinel.api.security",
         "netsentinel.error_reporting",
@@ -288,6 +291,29 @@ def _write_minimal_package(root: Path) -> Path:
         '"""Punto de composición de prueba."""\n', encoding="utf-8"
     )
     return package
+
+
+def test_security_response_helpers_have_a_single_module_owner() -> None:
+    """El middleware reexporta la interfaz histórica sin duplicar la lógica de respuestas."""
+    assert security_api._apply_security_headers is security_headers._apply_security_headers
+    assert security_api._error_response is security_headers._error_response
+    assert security_api._base_content_security_policy is security_headers._base_content_security_policy
+
+
+def test_duplicate_top_level_definitions_are_rejected(tmp_path: Path) -> None:
+    """Una segunda función con el mismo nombre no debe ocultar código silenciosamente."""
+    package = _write_minimal_package(tmp_path)
+    (package / "future.py").write_text(
+        "def handler():\n    return None\n\ndef handler():\n    return True\n",
+        encoding="utf-8",
+    )
+
+    violations, _ = check_architecture(tmp_path)
+
+    assert any(
+        "netsentinel.future defines top-level handler more than once" in violation
+        for violation in violations
+    )
 
 
 def test_new_domain_module_is_checked_for_http_framework_imports(tmp_path: Path) -> None:
