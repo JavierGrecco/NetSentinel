@@ -157,6 +157,7 @@ _NON_PUBLIC_IPV6_NETWORKS = tuple(
         "64:ff9b:1::/48",  # Local-use NAT64.
         "100:0:0:1::/64",  # Dummy prefix.
         "2001:10::/28",    # Deprecated ORCHID.
+        "2001:20::/28",    # ORCHIDv2 identifiers are not IP-layer destinations (RFC 7343).
         "5f00::/16",       # Segment-routing special use.
     )
 )

@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Excluye las direcciones IPv6 ORCHIDv2 (`2001:20::/28`) de los metadatos de navegación porque son identificadores no destinados al enrutamiento IP convencional; agrega una prueba de regresión para importación CSV.
+
 - Mejora la clasificación de errores SQLite: prioriza códigos nativos (incluidos códigos extendidos) cuando están disponibles y conserva la alternativa compatible basada en mensajes para Python 3.10. Agrega regresiones para bloqueo, espacio, E/S, acceso e integridad/esquema sin exponer detalles internos.
 
 - Unifica la validación de nombres DNS usados en metadatos de actividad, hosts de URL y dominios de correo: comprueba la longitud después de IDNA, los límites por etiqueta y los puntos raíz repetidos. Revalida también la longitud de la dirección de correo ya canonicalizada para cubrir la expansión IDNA. Agrega regresiones para estos límites.
