@@ -32,7 +32,7 @@ Se está preparando una segunda área del producto, separada de las herramientas
 - La primera entrega completa se sigue en el [issue #114](https://github.com/JavierGrecco/NetSentinel/issues/114). Aún faltan un manifiesto consolidado, importadores y los informes; el flujo nuevo requiere una revisión manual propia.
 - La primera entrega ya registra casos, elementos de evidencia y eventos de auditoría en SQLite; verifica SHA-256 calculado sobre una copia local, guarda resultado (coincide, difiere o falla) e historial. Es una verificación acotada de integridad, no un manifiesto de adquisición ni una cadena de custodia certificada.
 - Siguen pendientes el manifiesto consolidado de adquisición, importadores/parser, informes forenses reproducibles, autenticación del operador y revisión manual con archivos sintéticos sobre el commit exacto. No hay adquisición de discos, memoria o móviles ni una prueba de autenticidad del origen a partir del hash.
-- La revisión de la interfaz y los checks deben completarse sobre el commit exacto de esta rama. La validación visual en macOS y las pruebas manuales multiplataforma siguen pendientes.
+- La CI pasó para el SHA `f3f467d64840949f2b32135f78fa2df0d52cc55f` ([ejecución #38806753361](https://github.com/JavierGrecco/NetSentinel/actions/runs/38806753361)), con la matriz Python 3.10–3.14 en Ubuntu/macOS/Windows, dependencias mínimas y empaquetado. Esto no valida la interfaz en un navegador real: la prueba manual de Forense con archivo sintético y el recorrido visual siguen pendientes.
 
 ## Qué se mejoró en esta ronda
 
