@@ -8,10 +8,10 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de código de main revisado para este plan:** [merge de la PR #116](https://github.com/JavierGrecco/NetSentinel/commit/7247e478213158821b61ca51aa87ecb3698fc21b), que integra la base modular y las extracciones de API de Monitorización e Inventario.
-- **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489725).
-- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489774).
-- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489865).
+- **Último commit de código de main revisado para este plan:** [merge de la PR #118](https://github.com/JavierGrecco/NetSentinel/commit/4f727799ca540a5eda4248898ae5d8cf7b908840), que separa la API de herramientas DNS/TLS después de las extracciones de persistencia/actividad, Monitorización e Inventario.
+- **CI multiplataforma del último cambio:** [ejecución #38809647404](https://github.com/JavierGrecco/NetSentinel/actions/runs/38809647404).
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38809647401](https://github.com/JavierGrecco/NetSentinel/actions/runs/38809647401).
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38809647441](https://github.com/JavierGrecco/NetSentinel/actions/runs/38809647441).
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
@@ -64,9 +64,9 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 - [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
 - [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
 
-**Siguiente paso en curso:** mantener DNS y TLS como capacidades separadas también en la capa HTTP. La composición conservará la API existente; la prueba de arquitectura protegerá las dependencias de cada router.
+**Última extracción integrada:** la [PR #118](https://github.com/JavierGrecco/NetSentinel/pull/118) separó las rutas HTTP DNS y TLS con CI y controles de seguridad en verde. El siguiente candidato es revisar los controles transversales de `api/security.py`: hoy agrupa validación de Host/Origin, protección de solicitudes que inician consultas de red, cabeceras y CSP. Antes de moverlos hay que mapear sus consumidores y pruebas, preservando el middleware, las respuestas de error y los contratos HTTP.
 
-**Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115 y #116 separaron persistencia/actividad y las rutas HTTP de Monitorización e Inventario. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
+**Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115, #116 y #118 separaron persistencia/actividad y las rutas HTTP de Monitorización, Inventario y herramientas DNS/TLS. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
 
 - [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.
 - [ ] **FIND-02 — Resultados DNS/TLS opcionales.** Incorporar resultados puntuales solo con política explícita de persistencia y retención; registrar fuente, hora, activo consultado, resultado bruto mínimo necesario y limitaciones. No almacenar secretos ni contenido HTTP.
