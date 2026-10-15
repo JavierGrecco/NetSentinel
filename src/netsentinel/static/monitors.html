@@ -11,6 +11,13 @@
         <a class="nav-link" href="/activity">Actividad</a>
       </nav>
       <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></header>
+<nav class="section-tabs" role="tablist" aria-label="Secciones de monitorización">
+  <button type="button" class="section-tab" role="tab" data-tab-target="monitor-overview" data-tab-hash="resumen" aria-selected="true">Resumen</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="monitor-config" data-tab-hash="monitores" aria-selected="false" tabindex="-1">Monitores</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="monitor-incidents" data-tab-hash="incidentes" aria-selected="false" tabindex="-1">Incidentes</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="monitor-notifications" data-tab-hash="avisos" aria-selected="false" tabindex="-1">Avisos</button>
+</nav>
+<div id="monitor-overview" class="monitor-tab-panel" data-tab-panel role="tabpanel">
 <div id="status" class="statusline" role="status">Cargando monitores…</div>
 <section class="panel analytics-panel">
 <div class="analytics-head"><div><h2>Resumen del período</h2><div class="small">Estadísticas basadas en comprobaciones registradas; no equivalen a una garantía de disponibilidad continua.</div></div>
@@ -18,7 +25,9 @@
 <select id="windowHours"><option value="24">Últimas 24 horas</option><option value="168">Últimos 7 días</option></select></label><a id="exportReport" class="export-link" href="/api/export/monitoring.csv?hours=24">Descargar informe CSV</a></div></div>
 <div id="analytics" class="analytics-grid"><div class="metric"><span>Comprobaciones</span><strong>—</strong></div></div>
 </section>
-<div class="notice">Las comprobaciones contactan con los objetivos configurados. Usá hosts y servicios que administrás o tenés autorización para supervisar. El webhook es opcional y debe ser HTTPS.</div>
+<div class="notice"><strong>¿Para qué sirve?</strong> NetSentinel comprueba cada cierto tiempo si el host, puerto o endpoint configurado responde, registra la latencia y abre un incidente cuando detecta fallos. <strong>Solo comprueba los objetivos que agregás:</strong> no captura todo el tráfico de la red. Las comprobaciones se ejecutan mientras NetSentinel está abierto; si cerrás la aplicación, se pausan, pero la configuración y el historial quedan guardados. Usá únicamente sistemas que administrás o tenés autorización para supervisar.</div>
+</div>
+<div id="monitor-config" class="monitor-tab-panel" data-tab-panel role="tabpanel" hidden>
 <div class="grid"><section class="panel"><h2>Agregar monitor</h2>
 <form id="monitorForm"><label for="monitorName">Nombre descriptivo</label><input id="monitorName" maxlength="120" required placeholder="Router principal">
 <label for="kind">Tipo de comprobación</label><select id="kind"><option value="ping">Ping — host</option><option value="tcp">TCP — puerto</option><option value="http">HTTP/HTTPS — endpoint</option></select>
@@ -26,9 +35,10 @@
 <label for="interval">Intervalo (segundos)</label><input id="interval" type="number" min="15" max="86400" value="60" required>
 <label for="timeout">Tiempo límite (segundos)</label><input id="timeout" type="number" min="1" max="10" value="3" required>
 <div class="actions"><button class="primary" type="submit">Guardar monitor</button><button type="button" id="refresh">Actualizar datos</button></div></form>
-<div class="hint">La monitorización funciona mientras NetSentinel está abierto. Intervalo mínimo: 15 segundos.</div></section>
-<section class="panel"><h2>Monitores configurados</h2><div id="monitors" class="cards"><div class="empty">Cargando…</div></div></section></div>
-<div class="lower"><section class="panel"><div class="section-heading"><h2>Incidentes</h2><div class="incident-controls"><label for="incidentStatus">Mostrar <select id="incidentStatus"><option value="">Todos</option><option value="open">Abiertos</option><option value="resolved">Resueltos</option></select></label><a id="incidentExport" class="export-link" href="/api/export/incidents.csv">Exportar CSV</a></div></div><div id="incidents"><div class="empty">Sin incidentes.</div></div></section>
-<section class="panel"><h2>Notificaciones webhook</h2><div id="webhookStatus" class="small">Consultando configuración…</div><div id="notifications"></div><p class="hint">Configurá NETSENTINEL_WEBHOOK_URL antes de iniciar la aplicación. El secreto no se guarda en SQLite.</p></section></div>
+<div class="hint">La app debe permanecer abierta para ejecutar las comprobaciones programadas. La configuración no se pierde al cerrar, pero durante el cierre no se generan nuevas mediciones ni incidentes.</div></section>
+<section class="panel"><h2>Monitores configurados</h2><div id="monitors" class="cards"><div class="empty">Cargando…</div></div></section></div></div>
+<div id="monitor-incidents" class="monitor-tab-panel" data-tab-panel role="tabpanel" hidden><section class="panel"><div class="section-heading"><h2>Incidentes</h2><div class="incident-controls"><label for="incidentStatus">Mostrar <select id="incidentStatus"><option value="">Todos</option><option value="open">Abiertos</option><option value="resolved">Resueltos</option></select></label><a id="incidentExport" class="export-link" href="/api/export/incidents.csv">Exportar CSV</a></div></div><div id="incidents"><div class="empty">Sin incidentes.</div></div></section></div>
+<div id="monitor-notifications" class="monitor-tab-panel" data-tab-panel role="tabpanel" hidden><section class="panel"><h2>Notificaciones webhook</h2><div id="webhookStatus" class="small">Consultando configuración…</div><div id="notifications"></div><p class="hint">Configurá NETSENTINEL_WEBHOOK_URL antes de iniciar la aplicación. El secreto no se guarda en SQLite.</p></section></div>
 </main><div id="toast" class="toast" role="status"></div>
+<script src="/static/section-tabs.js" defer></script>
 <script src="/static/monitors.js" defer></script></body></html>
