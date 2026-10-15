@@ -8,10 +8,10 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de código de main revisado para este plan:** [merge de la PR #127](https://github.com/JavierGrecco/NetSentinel/commit/001a46a544def2df75319479cc154393b9a97785), que separó las consultas de lectura del inventario y conservó las escrituras en la fachada histórica.
-- **CI multiplataforma del último cambio:** [ejecución #38818715523](https://github.com/JavierGrecco/NetSentinel/actions/runs/38818715523).
-- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38818715471](https://github.com/JavierGrecco/NetSentinel/actions/runs/38818715471).
-- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38818715394](https://github.com/JavierGrecco/NetSentinel/actions/runs/38818715394).
+- **Último commit de código de main revisado para este plan:** [merge de la PR #129](https://github.com/JavierGrecco/NetSentinel/commit/d15fe9e0218b441c27e1272096d2368a2bb32b27), que formalizó y probó las dependencias permitidas de la fachada Activity.
+- **CI multiplataforma del último cambio:** [ejecución #38819415713](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415713).
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38819415721](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415721).
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38819415693](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415693).
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
@@ -64,7 +64,7 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 - [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
 - [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
 
-**Extracción integrada:** la [PR #127](https://github.com/JavierGrecco/NetSentinel/pull/127) separó las consultas de lectura de inventario y dejó las escrituras en una fachada compatible, conservando la transacción completa de `record_scan`. La revisión de `activity_tracking.py` confirma que ya delega la mayor parte de su trabajo y conserva los nombres históricos; no conviene dividirlo más solo para reducir líneas. El siguiente refuerzo será declarar en el control de arquitectura las dependencias permitidas de esa fachada para que futuras funciones no vuelvan a mezclar responsabilidades. Paralelamente, la estabilización de la versión sigue dependiendo de las pruebas manuales documentadas en la Fase 0.
+**Refuerzo integrado:** la [PR #129](https://github.com/JavierGrecco/NetSentinel/pull/129) declara y prueba las dependencias permitidas de `activity_tracking.py`. La revisión confirmó que esa pieza ya funciona como fachada de servicios, por lo que no se la vuelve a dividir sin una necesidad demostrada. En esta etapa, la prioridad deja de ser mover archivos y vuelve a la puerta de salida de la Fase 0: pruebas manuales reproducibles de instalación, inventario, monitorización, DNS/TLS, persistencia, extensión y privacidad, registradas en la matriz de validación. Las tareas ARCH-01 a ARCH-06 permanecen abiertas hasta cumplir sus criterios completos.
 
 **Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115, #116, #118, #120, #121, #123, #125 y #127 separaron persistencia, las rutas HTTP de Monitorización/Inventario/DNS/TLS y las políticas transversales de seguridad y errores. La Fase 1 de arquitectura sigue abierta hasta cumplir los criterios completos de separación de casos de uso, persistencia, contratos y adaptadores; ninguna extracción aislada da por completa esa fase.
 
