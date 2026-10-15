@@ -156,12 +156,12 @@
       });
       const eventPayload = await eventResponse.json().catch(() => ({}));
       if (!eventResponse.ok) {
-        status.textContent = "El dispositivo quedó marcado como conocido, pero el evento no se pudo marcar como revisado: " + (eventPayload.detail || ("HTTP " + eventResponse.status)) + ". Actualizá la bandeja para comprobar el estado.";
         await loadFindings();
+        status.textContent = "El dispositivo quedó marcado como conocido, pero el evento no se pudo marcar como revisado: " + (eventPayload.detail || ("HTTP " + eventResponse.status)) + ". Actualizá la bandeja para comprobar el estado.";
         return;
       }
-      status.textContent = "Dispositivo marcado como conocido y evento revisado. Esto no equivale a una certificación de seguridad.";
       await loadFindings();
+      status.textContent = "Dispositivo marcado como conocido y evento revisado. Esto no equivale a una certificación de seguridad.";
     } catch (error) {
       status.textContent = error instanceof Error ? error.message : "No se pudo actualizar la confianza del dispositivo.";
       button.disabled = false;
@@ -180,8 +180,8 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || ("Error HTTP " + response.status));
-      status.textContent = "Evento marcado como revisado. Actualizando la bandeja…";
       await loadFindings();
+      status.textContent = "Evento marcado como revisado. No se borró el registro ni se cambió la confianza del dispositivo.";
     } catch (error) {
       status.textContent = error instanceof Error ? error.message : "No se pudo actualizar el evento.";
       button.disabled = false;
