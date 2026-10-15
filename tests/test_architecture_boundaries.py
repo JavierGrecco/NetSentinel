@@ -5,6 +5,12 @@ from pathlib import Path
 
 from netsentinel.api import (
     activity,
+    activity_deletion as activity_deletion_api,
+    activity_import as activity_import_api,
+    activity_models,
+    activity_read as activity_read_api,
+    activity_retention as activity_retention_api,
+    activity_sessions as activity_sessions_api,
     diagnostics as diagnostics_api,
     findings,
     inventory,
@@ -59,7 +65,33 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.api.security",
         "netsentinel.error_reporting",
     }
-    assert graph["netsentinel.api.activity"] == {"netsentinel.activity_tracking"}
+    assert graph["netsentinel.api.activity"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_deletion",
+        "netsentinel.api.activity_import",
+        "netsentinel.api.activity_models",
+        "netsentinel.api.activity_read",
+        "netsentinel.api.activity_retention",
+        "netsentinel.api.activity_sessions",
+    }
+    assert graph["netsentinel.api.activity_models"] == set()
+    assert graph["netsentinel.api.activity_read"] == {"netsentinel.activity_tracking"}
+    assert graph["netsentinel.api.activity_sessions"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
+    assert graph["netsentinel.api.activity_import"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
+    assert graph["netsentinel.api.activity_deletion"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
+    assert graph["netsentinel.api.activity_retention"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
     assert graph["netsentinel.activity_repository"] == {
@@ -259,9 +291,16 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         assert "import starlette" not in source
 
 
-def test_activity_endpoints_belong_to_activity_router() -> None:
-    """La capacidad de actividad expone su API desde el módulo correspondiente."""
-    paths = {route.path for route in activity.router.routes}
+def test_activity_endpoints_belong_to_their_responsibility_routers() -> None:
+    """Cada flujo de actividad tiene un router dueño y conserva las rutas públicas."""
+    route_groups = (
+        activity_read_api.router.routes,
+        activity_sessions_api.router.routes,
+        activity_import_api.router.routes,
+        activity_deletion_api.router.routes,
+        activity_retention_api.router.routes,
+    )
+    paths = {route.path for routes in route_groups for route in routes}
     assert {
         "/api/activity",
         "/api/activity/export.csv",
@@ -274,6 +313,18 @@ def test_activity_endpoints_belong_to_activity_router() -> None:
         "/api/activity/delete",
         "/api/activity/retention",
     } <= paths
+    assert sum(len(routes) for routes in route_groups) == 10
+    assert len(paths) == 10
+
+
+def test_activity_models_remain_available_from_the_historical_module() -> None:
+    """Los imports de modelos usados por consumidores existentes siguen funcionando."""
+    assert activity.ActivityEventIngest is activity_models.ActivityEventIngest
+    assert activity.ActivityRetentionUpdate is activity_models.ActivityRetentionUpdate
+    assert callable(activity.get_family_activity)
+    assert callable(activity.ingest_family_activity)
+    assert callable(activity.import_family_activity)
+    assert callable(activity.delete_family_activity)
 
 
 def test_findings_endpoints_belong_to_findings_router() -> None:
