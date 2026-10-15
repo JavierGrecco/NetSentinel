@@ -42,7 +42,32 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.error_reporting",
     },
     "netsentinel.api.activity": {
+        "netsentinel.api.activity_deletion",
+        "netsentinel.api.activity_import",
+        "netsentinel.api.activity_models",
+        "netsentinel.api.activity_read",
+        "netsentinel.api.activity_retention",
+        "netsentinel.api.activity_sessions",
+    },
+    "netsentinel.api.activity_models": set(),
+    "netsentinel.api.activity_read": {
         "netsentinel.activity_tracking",
+    },
+    "netsentinel.api.activity_sessions": {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    },
+    "netsentinel.api.activity_import": {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    },
+    "netsentinel.api.activity_deletion": {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    },
+    "netsentinel.api.activity_retention": {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
     },
     "netsentinel.api.findings": {
         "netsentinel.findings_service",
