@@ -23,6 +23,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
 - Se unificó el selector de apariencia en todas las páginas, con temas Oscuro, Medio y Claro persistentes entre secciones. Monitorización y Actividad se dividieron en sectores navegables; se aclaró cuándo corren las comprobaciones y qué requiere una fuente de telemetría real.
+- Se documentó el camino para observar actividad sin instalar un agente en cada dispositivo: utilizar registros DNS o flujos del router/firewall, si el equipo los ofrece. La integración central requiere un adaptador específico y todavía no está implementada; la guía aclara los límites de visibilidad de HTTPS, VPN y DNS cifrado.
 - Hallazgos ahora ofrece la acción de marcar un dispositivo como conocido, separada de marcar el evento como revisado, con una confirmación que aclara los límites de esa decisión.
 - Se agregaron pruebas automatizadas para comprobar los recursos frontend compartidos y los controles de navegación por sectores. La validación visual real en macOS todavía está pendiente.
 
