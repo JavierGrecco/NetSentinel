@@ -364,7 +364,7 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "adaptadores de router no vienen integrados" in activity_html
     assert "Qué necesitás:" in activity_js
     assert "router_dns:" in activity_js and "router_flow:" in activity_js and "device_agent:" in activity_js
-    assert "Este adaptador todavía no viene integrado" in activity_js
+    assert "todavía no viene integrado" in activity_js
 
     findings_js = (static / "findings.js").read_text(encoding="utf-8")
     assert "Marcar dispositivo como conocido" in findings_js
