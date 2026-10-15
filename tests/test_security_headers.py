@@ -141,17 +141,19 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
     assert response.json()["hostname"] == "example.test"
 
 @pytest.mark.parametrize(
-    ("path", "expected_title"),
+    ("path", "expected_title", "expected_scripts"),
     [
-        ("/", "NetSentinel · Red local"),
-        ("/monitors", "NetSentinel · Monitorización"),
-        ("/activity", "NetSentinel · Actividad y telemetría"),
-        ("/findings", "NetSentinel · Hallazgos"),
-        ("/tools", "Herramientas · NetSentinel"),
+        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/index.js")),
+        ("/monitors", "NetSentinel · Monitorización", ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js")),
+        ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
+        ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
+        ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
     ],
 )
-def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, expected_title):
-    """Every page loads its own external script and keeps the same-origin CSP."""
+def test_all_local_html_pages_preserve_csp_and_cache_protection(
+    client, path, expected_title, expected_scripts
+):
+    """Pages allow only their expected external scripts under same-origin CSP."""
     response = client.get(path)
 
     assert response.status_code == 200
@@ -169,17 +171,21 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(client, path, ex
         response.text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    assert len(scripts) == 1, "Each page should load one external JavaScript file."
-    attributes, inline_body = scripts[0]
-    script_name = {
-        "/": "index.js",
-        "/monitors": "monitors.js",
-        "/activity": "activity.js",
-        "/findings": "findings.js",
-        "/tools": "tools.js",
-    }[path]
-    assert attributes.strip() == f'src="/static/{script_name}" defer'
-    assert not inline_body.strip(), "Page scripts must stay in separate files."
+    observed_scripts = []
+    for attributes, inline_body in scripts:
+        match = re.fullmatch(r'src="(/static/[^"]+)"( defer)?', attributes.strip())
+        assert match, f"{path} contains a script with unexpected attributes: {attributes}"
+        source = match.group(1)
+        observed_scripts.append(source)
+        assert not inline_body.strip(), "Page scripts must stay in separate files."
+        if source == "/static/theme.js":
+            assert match.group(2) is None, "The shared theme must apply before first paint."
+        else:
+            assert match.group(2) == " defer", "Page behavior scripts must be deferred."
+
+    assert tuple(observed_scripts) == expected_scripts
+    for source in expected_scripts:
+        assert client.get(source).status_code == 200, f"Missing frontend asset: {source}"
     assert main_module._inline_script_hashes(path) == ()
 
 
