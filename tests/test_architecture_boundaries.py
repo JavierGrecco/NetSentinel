@@ -370,9 +370,15 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
 
 
 def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
-    """Las rutas de monitores, incidentes y diagnóstico viven en su router."""
-    routes = monitoring.router.routes
-    paths = {route.path for route in routes}
+    """Las rutas públicas se reparten entre los subrouters de monitorización."""
+    # Las versiones recientes de FastAPI mantienen routers incluidos como objetos
+    # internos; comprobar las rutas en cada router dueño evita depender de ese detalle.
+    route_groups = (
+        monitoring_monitors.router.routes,
+        monitoring_reports.router.routes,
+        diagnostics_api.router.routes,
+    )
+    paths = {route.path for routes in route_groups for route in routes}
     assert {
         "/api/monitors",
         "/api/monitoring/summary",
@@ -387,12 +393,8 @@ def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
         "/api/notifications",
         "/api/diagnostics",
     } <= paths
-    assert len(routes) == 14
-    # Two paths intentionally serve more than one HTTP method.
+    assert sum(len(routes) for routes in route_groups) == 14
     assert len(paths) == 12
-
-
-
 def test_monitoring_routes_are_grouped_by_responsibility() -> None:
     """Los endpoints mantienen su contrato y pertenecen al router de su capacidad."""
     monitor_paths = {route.path for route in monitoring_monitors.router.routes}
