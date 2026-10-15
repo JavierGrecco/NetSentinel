@@ -344,8 +344,9 @@ def test_shared_theme_and_task_focused_sections_are_present():
         assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
 
     theme_js = (static / "theme.js").read_text(encoding="utf-8")
-    assert 'localStorage.getItem("netsentinel-theme")' in theme_js
-    assert 'localStorage.setItem("netsentinel-theme", selected)' in theme_js
+    assert 'const STORAGE_KEY = "netsentinel-theme"' in theme_js
+    assert "localStorage.getItem(STORAGE_KEY)" in theme_js
+    assert "localStorage.setItem(STORAGE_KEY, selected)" in theme_js
 
     for page_name, expected_panels in (
         ("monitors.html", ("monitor-overview", "monitor-config", "monitor-incidents", "monitor-notifications")),
