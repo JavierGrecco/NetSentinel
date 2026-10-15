@@ -358,6 +358,14 @@ def test_shared_theme_and_task_focused_sections_are_present():
             assert f'id="{panel_id}"' in html
             assert f'data-tab-target="{panel_id}"' in html
 
+    activity_html = (static / "activity.html").read_text(encoding="utf-8")
+    activity_js = (static / "activity.js").read_text(encoding="utf-8")
+    assert 'id="sourceHelp"' in activity_html
+    assert "adaptadores de router no vienen integrados" in activity_html
+    assert "Qué necesitás:" in activity_js
+    assert "router_dns:" in activity_js and "router_flow:" in activity_js and "device_agent:" in activity_js
+    assert "Este adaptador todavía no viene integrado" in activity_js
+
     findings_js = (static / "findings.js").read_text(encoding="utf-8")
     assert "Marcar dispositivo como conocido" in findings_js
     assert "Solo marcar como revisado" in findings_js
