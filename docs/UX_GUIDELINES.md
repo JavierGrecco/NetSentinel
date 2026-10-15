@@ -11,7 +11,7 @@ Esta guía mantiene una misma lógica de presentación en todas las secciones de
 - **Controles:** objetivo visual de 40 px de alto, con etiquetas legibles y foco visible al usar teclado.
 - **Separación:** 16 px entre bloques relacionados y una separación estable entre encabezado y contenido.
 - **Navegación:** los mismos enlaces principales, el mismo aspecto para la sección activa y la misma preferencia de tema.
-- **Selector de apariencia:** tres tarjetas visibles (Oscuro, Medio y Claro) con iconos, estado seleccionado y navegación por teclado. La elección se mantiene entre secciones, recargas y pestañas del navegador.
+- **Selector de apariencia:** tres tarjetas visibles (Oscuro, Medio y Claro), cada una con su propia paleta de muestra e icono, estado seleccionado y navegación por teclado. La elección se mantiene entre secciones, recargas y pestañas del navegador.
 
 Los valores centrales viven en `static/theme.css`. Cada página carga esa hoja después de su CSS específico para que el marco compartido tenga la última palabra.
 
