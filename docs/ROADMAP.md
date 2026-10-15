@@ -8,7 +8,7 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de main revisado para este plan:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff), que integra la corrección de privacidad de la PR #110.
+- **Último commit de código de main revisado para este plan:** [merge de la PR #116](https://github.com/JavierGrecco/NetSentinel/commit/7247e478213158821b61ca51aa87ecb3698fc21b), que integra la base modular y las extracciones de API de Monitorización e Inventario.
 - **CI multiplataforma:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489725).
 - **Seguridad — CodeQL y auditoría de dependencias:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489774).
 - **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/38755489865).
@@ -63,6 +63,8 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 - [ ] **ARCH-04 — Servicios y repositorios por dominio.** Hacer que cada módulo publique una interfaz tipada pequeña y que ningún dominio escriba directamente en las tablas internas de otro.
 - [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
 - [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
+
+**Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115 y #116 separaron persistencia/actividad y las rutas HTTP de Monitorización e Inventario. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
 
 - [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.
 - [ ] **FIND-02 — Resultados DNS/TLS opcionales.** Incorporar resultados puntuales solo con política explícita de persistencia y retención; registrar fuente, hora, activo consultado, resultado bruto mínimo necesario y limitaciones. No almacenar secretos ni contenido HTTP.
