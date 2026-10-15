@@ -128,6 +128,15 @@ Usar páginas y cuentas de prueba; no capturar credenciales ni datos privados. E
 - [ ] Se revisaron individualmente los PRs de Dependabot abiertos y todos los cambios incorporados tienen checks actuales.
 - [ ] La lista de limitaciones conocidas y los cambios de la release están actualizados.
 
+## Revisión manual de interfaz — 15 de octubre de 2026
+
+El responsable del proyecto confirmó que las pruebas manuales locales del recorrido de la aplicación fueron satisfactorias. Las observaciones restantes corresponden a la jerarquía visual, la estructura de navegación y la usabilidad; no se informó una falla funcional bloqueante.
+
+- **Alcance aprobado:** revisión local de interfaz y uso general.
+- **Resultado:** aprobado por el responsable del proyecto para continuar la revisión del PR #111.
+- **Entorno y commit exactos:** no registrados en el mensaje de confirmación.
+- **Pendiente:** esta confirmación no reemplaza los recorridos de instalación, persistencia, seguridad, extensión ni la matriz completa de Windows/macOS/Linux y Chrome/Edge.
+
 ## Registro de sesiones
 
 Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular un issue.
