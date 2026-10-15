@@ -330,6 +330,40 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
     assert "https://cdn.jsdelivr.net" not in script_policy
 
 
+
+def test_shared_theme_and_task_focused_sections_are_present():
+    from pathlib import Path
+
+    static = Path("src/netsentinel/static")
+    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html")
+    for page_name in page_names:
+        html = (static / page_name).read_text(encoding="utf-8")
+        assert 'id="themeSelect"' in html, f"{page_name} must expose the shared theme selector"
+        assert 'href="/static/theme.css"' in html, f"{page_name} must load the shared theme"
+        assert 'src="/static/theme.js"' in html, f"{page_name} must persist the theme selection"
+        assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
+
+    theme_js = (static / "theme.js").read_text(encoding="utf-8")
+    assert 'localStorage.getItem("netsentinel-theme")' in theme_js
+    assert 'localStorage.setItem("netsentinel-theme", selected)' in theme_js
+
+    for page_name, expected_panels in (
+        ("monitors.html", ("monitor-overview", "monitor-config", "monitor-incidents", "monitor-notifications")),
+        ("activity.html", ("activity-overview", "activity-tracking", "activity-import", "activity-events", "activity-privacy")),
+    ):
+        html = (static / page_name).read_text(encoding="utf-8")
+        assert 'src="/static/section-tabs.js" defer' in html
+        for panel_id in expected_panels:
+            assert f'id="{panel_id}"' in html
+            assert f'data-tab-target="{panel_id}"' in html
+
+    findings_js = (static / "findings.js").read_text(encoding="utf-8")
+    assert "Marcar dispositivo como conocido" in findings_js
+    assert "Solo marcar como revisado" in findings_js
+    assert "PATCH" in findings_js and "/api/devices/" in findings_js
+    assert "Esto no equivale a una certificación de seguridad" in findings_js
+
+
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
     import re
     from pathlib import Path
