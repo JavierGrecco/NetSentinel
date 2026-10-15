@@ -12,6 +12,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - **Main:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff). Ya incorpora el saneamiento reforzado de URLs de la extensión y de la importación CSV.
 - **Rama de modularización:** `refactor/activity-persistence-modules`.
 - **Pull request de trabajo:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y en borrador. Todavía no está integrada en `main`.
+- **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para descargar esta rama, instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
 ## Qué se mejoró en esta ronda
 
@@ -22,13 +23,13 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
 
-Estos cambios están en revisión automática. Hay que mirar los controles del commit más reciente de la PR #111; no tomar como validación vigente los resultados de commits anteriores.
+Los controles de código del commit de trabajo más reciente terminaron en verde en la última comprobación registrada. Los resultados deben volver a verificarse si se agrega otro commit; no se consideran vigentes automáticamente.
 
 ## Qué falta cerrar primero
 
-1. **Comprobar la rama integrada.** Revisar que el saneamiento reforzado de URLs siga presente y que pasen CI, análisis de seguridad y cadena de suministro sobre el último commit.
-2. **Probar la persistencia.** Verificar actualización de bases existentes, copia, restauración e integridad SQLite con escenarios representativos.
-3. **Hacer las pruebas manuales.** Completar los recorridos en Windows, macOS y Linux, y en Chrome/Edge, dejando fecha, versión, commit y resultados en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). El seguimiento está en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
+1. **Probar en macOS.** Seguir [la guía de prueba manual](MACOS_MANUAL_TEST.md), guardar el SHA probado y registrar resultado y evidencia en la [matriz](VALIDATION_MATRIX.md). El seguimiento está en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
+2. **Comprobar la persistencia.** Verificar actualización de bases existentes, copia, restauración e integridad SQLite con escenarios representativos.
+3. **Completar pruebas manuales multiplataforma.** Registrar recorridos reales de Windows y Linux, y de Chrome/Edge. No inferir resultados manuales a partir de CI.
 4. **Verificar la protección de main.** Confirmar desde los ajustes de GitHub que los cambios requieren PR y que los controles necesarios son obligatorios. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 5. **Revisar dependencias y preparar la versión.** No declarar estable la 0.10.0 hasta cerrar la puerta de salida de la Fase 0 del roadmap.
 
