@@ -717,7 +717,7 @@ html[data-theme] .theme-option:hover .theme-option-card {
 }
 
 html[data-theme] .theme-option > input[type="radio"]:checked + .theme-option-card {
-  border: 2px solid var(--theme-accent-strong);
+  border: 2px solid var(--theme-accent);
   padding: 13px 9px;
   background: var(--theme-info-bg);
   color: var(--theme-text);
@@ -725,7 +725,7 @@ html[data-theme] .theme-option > input[type="radio"]:checked + .theme-option-car
 }
 
 html[data-theme] .theme-option > input[type="radio"]:checked + .theme-option-card .theme-option-icon {
-  color: var(--theme-accent-strong);
+  color: var(--theme-accent);
 }
 
 html[data-theme] .theme-option > input[type="radio"]:focus-visible + .theme-option-card {
