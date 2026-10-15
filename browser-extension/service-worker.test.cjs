@@ -33,6 +33,8 @@ const {
   normalizeStoredBoolean,
   captureNavigation,
   cleanUrl,
+  normalizedQueryKey,
+  isSensitivePathSegment,
   isExcluded,
   loadState,
   enqueueNavigation,
@@ -458,4 +460,42 @@ test("missing stored switches keep documented defaults and the boolean helper is
   assert.equal(normalizeStoredBoolean({}, "enabled", false), false);
   assert.equal(normalizeStoredBoolean({ enabled: "true" }, "enabled", false), false);
   assert.equal(normalizeStoredBoolean({ enabled: "false" }, "enabled", true), false);
+});
+
+
+test("removes deeply encoded sensitive query keys and does not preserve unresolved encodings", () => {
+  let hiddenTokenKey = "access_token";
+  for (let i = 0; i < 6; i++) hiddenTokenKey = encodeURIComponent(hiddenTokenKey);
+  const raw = "https://example.com/profile?lang=es&" + hiddenTokenKey + "=must-not-persist";
+  assert.equal(cleanUrl(raw), "https://example.com/profile?lang=es");
+
+  assert.equal(
+    cleanUrl("https://example.com/profile?%25FF=must-not-persist&lang=es"),
+    "https://example.com/profile?lang=es"
+  );
+  let unresolvedEscape = "%5F";
+  for (let i = 0; i < 10; i++) unresolvedEscape = encodeURIComponent(unresolvedEscape);
+  assert.equal(normalizedQueryKey(unresolvedEscape), null, "unresolved nested encoding must be treated as suspicious");
+});
+
+test("redacts identifiers that remain hidden by deep encoding in URL path segments", () => {
+  let hiddenEmail = "jane@example.com";
+  for (let i = 0; i < 6; i++) hiddenEmail = encodeURIComponent(hiddenEmail);
+  assert.equal(
+    cleanUrl("https://example.com/users/" + hiddenEmail + "/profile"),
+    "https://example.com/users/%5Bredacted%5D/profile"
+  );
+  assert.equal(isSensitivePathSegment("%252525252525FF"), true, "unreadable nested path escapes must be redacted");
+});
+
+
+test("drops query keys with mixed malformed and valid percent escapes", () => {
+  assert.equal(
+    cleanUrl("https://example.com/profile?access%25ZZ%255Ftoken=must-not-persist&lang=es"),
+    "https://example.com/profile?lang=es"
+  );
+  assert.equal(
+    cleanUrl("https://example.com/profile/%ZZsecret"),
+    "https://example.com/profile/%5Bredacted%5D"
+  );
 });
