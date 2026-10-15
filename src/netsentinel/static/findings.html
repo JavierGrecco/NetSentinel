@@ -37,6 +37,15 @@
 
   <div class="scope-note"><strong>Qué muestra esta vista:</strong> eventos ya registrados en el inventario e incidentes de monitorización. La severidad orienta el triaje y no equivale a impacto confirmado; una observación no demuestra identidad, ataque ni causa raíz. Las inspecciones DNS/TLS puntuales todavía no se incluyen porque sus resultados no se guardan.</div>
 
+  <section class="triage-guide" aria-labelledby="triage-title">
+    <h2 id="triage-title">¿Qué hago con un hallazgo?</h2>
+    <div class="triage-steps">
+      <div><strong>1. Verificá</strong><p>Compará la IP y la MAC con el router, la lista de tus equipos o con quien administra la red. Un primer avistamiento no confirma una intrusión.</p></div>
+      <div><strong>2. Elegí una acción</strong><p>Si reconocés el equipo, marcá “Marcar dispositivo como conocido”. Si todavía no podés identificarlo, dejalo sin confianza y seguí investigando.</p></div>
+      <div><strong>3. Cerrá la revisión</strong><p>“Solo marcar como revisado” lo retira de pendientes, pero no lo borra ni cambia la confianza. Si es un fallo de servicio, abrí su monitor y revisá el historial del incidente.</p></div>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="filters-title">
     <div class="panel-head">
       <div>
