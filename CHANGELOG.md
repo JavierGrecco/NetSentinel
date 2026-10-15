@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Refuerza el control de arquitectura sobre `activity_tracking.py`: su lista de dependencias queda explícita y CI falla si la fachada vuelve a importar directamente la persistencia. Añade una prueba negativa que demuestra que esa regresión se detecta.
+
 - Separa las consultas de lectura del inventario de las escrituras de descubrimiento. `inventory_repository.py` conserva sus nombres históricos; `record_scan` sigue registrando la exploración, los dispositivos, las direcciones, observaciones y eventos dentro de una única transacción.
 
 - Divide la persistencia de monitorización en configuración, consultas analíticas, estado/transiciones y notificaciones. `monitoring_repository.py` conserva la fachada histórica y los cambios que coordinan checks, incidentes y eventos siguen en una única transacción.
