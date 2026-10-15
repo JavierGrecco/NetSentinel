@@ -293,10 +293,10 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
         script_responses = {source: client.get(source) for source in expected_scripts}
 
     assert response.status_code == 200
-    html = response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+    html = response.text.replace("\r\n", "\n").replace("\r", "\n")
     assert html == Path("src/netsentinel/static", html_asset).read_text(encoding="utf-8")
     scripts = list(re.finditer(
-        r"<script\\b([^>]*)>(.*?)</script\\b[^>]*>",
+        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
         html,
         flags=re.IGNORECASE | re.DOTALL,
     ))
@@ -319,7 +319,7 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
         script_asset_path = source.removeprefix("/static/")
         script_source = Path("src/netsentinel/static", script_asset_path).read_text(encoding="utf-8")
         assert script_response.status_code == 200
-        assert script_response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n") == script_source
+        assert script_response.text.replace("\r\n", "\n").replace("\r", "\n") == script_source
         assert script_response.text.strip()
 
     policy = response.headers["content-security-policy"]
