@@ -77,7 +77,7 @@ Cada hallazgo debe ser reproducible, tener procedencia/fecha/evidencia y explica
 
 ## Fase 2 — Fuentes reales de infraestructura, de solo lectura
 
-**Objetivo:** sumar contexto fiable sin inventar adaptadores genéricos ni abrir accesos innecesarios.
+**Objetivo:** sumar contexto fiable sin inventar adaptadores genéricos ni abrir accesos innecesarios. La alternativa de observación sin agentes por dispositivo y sus límites están descritos en [NETWORK_VISIBILITY.md](NETWORK_VISIBILITY.md). Las opciones DNS/flujo que aparecen en la interfaz de Actividad todavía no equivalen a un adaptador implementado.
 
 - [ ] **SRC-01 — Selección de la primera integración.** Elegir un modelo/proveedor concreto de router, AP, DHCP o resolvedor a partir de documentación/API disponible y necesidad real. Documentar campos que realmente expone, requisitos de acceso y limitaciones.
 - [ ] **SRC-02 — Contrato del adaptador.** Definir interfaz común para origen, marca de tiempo, alcance, estado de frescura, errores parciales, paginación/límites y saneamiento de datos.
