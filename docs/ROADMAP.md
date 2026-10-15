@@ -8,10 +8,10 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de código de main revisado para este plan:** [merge de la PR #120](https://github.com/JavierGrecco/NetSentinel/commit/d24c373370adfbdae9813cc81ceade1a3cf037df), que separó las cabeceras HTTP/CSP del middleware después de las extracciones de actividad, Monitorización, Inventario y DNS/TLS.
-- **CI multiplataforma del último cambio:** [ejecución #38815568342](https://github.com/JavierGrecco/NetSentinel/actions/runs/38815568342).
-- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38815567805](https://github.com/JavierGrecco/NetSentinel/actions/runs/38815567805).
-- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38815567857](https://github.com/JavierGrecco/NetSentinel/actions/runs/38815567857).
+- **Último commit de código de main revisado para este plan:** [merge de la PR #121](https://github.com/JavierGrecco/NetSentinel/commit/03bff81f07d688091b58a237bea463ea72639bcf), que separó la API de Actividad por flujo después de las extracciones de persistencia, Monitorización, Inventario, DNS/TLS y seguridad HTTP.
+- **CI multiplataforma del último cambio:** [ejecución #38816341194](https://github.com/JavierGrecco/NetSentinel/actions/runs/38816341194).
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38816340968](https://github.com/JavierGrecco/NetSentinel/actions/runs/38816340968).
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38816341121](https://github.com/JavierGrecco/NetSentinel/actions/runs/38816341121).
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
@@ -64,9 +64,9 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 - [ ] **ARCH-05 — Límites comprobados por pruebas.** Añadir verificaciones de dependencias para evitar SQL en routers, ciclos de importación y dependencias de las reglas de dominio respecto de FastAPI.
 - [ ] **ARCH-06 — Adaptadores solo cuando aporten valor.** Incorporar interfaces para fuentes variables una a una, con fixtures, timeouts, procedencia, desconexión y errores documentados. No crear un sistema genérico de plugins sin necesidad demostrada.
 
-**Extracción integrada:** la [PR #120](https://github.com/JavierGrecco/NetSentinel/pull/120) separó las cabeceras defensivas, CSP y respuestas de error del middleware de host/origen. La siguiente mejora divide la API de Actividad por flujo, preservando rutas y contratos HTTP. La tarea de arquitectura sigue abierta: las extracciones puntuales no cierran por sí solas los criterios de ARCH-01 a ARCH-06.
+**Extracción integrada:** la [PR #121](https://github.com/JavierGrecco/NetSentinel/pull/121) separó la API de Actividad por flujo y mantuvo las rutas y contratos existentes. La siguiente revisión analizará los manejadores globales de errores y sus dependencias para decidir si existe otra frontera cohesionada que merezca extraerse. La tarea de arquitectura sigue abierta: las extracciones puntuales no cierran por sí solas los criterios de ARCH-01 a ARCH-06.
 
-**Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115, #116, #118 y #120 separaron persistencia/actividad, las rutas HTTP de Monitorización/Inventario/DNS/TLS y las políticas transversales de seguridad. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
+**Entrega parcial integrada en `main` (15 de octubre de 2026):** las PR #111, #115, #116, #118, #120 y #121 separaron persistencia/actividad, las rutas HTTP de Monitorización/Inventario/DNS/TLS y las políticas transversales de seguridad. La Fase 1 de arquitectura sigue abierta hasta cumplir los criterios completos de separación de casos de uso, persistencia, contratos y adaptadores. La fase de arquitectura permanece abierta: las tareas anteriores incluyen criterios más amplios que una extracción de archivos y no se marcan como completas por el solo hecho de integrar estas PR.
 
 - [ ] **FIND-01 — Contrato de evidencia y retención.** Definir, antes de persistir nuevas fuentes, esquema, campos mínimos, migración SQLite, plazo de retención, borrado/exportación y configuración de desactivación.
 - [ ] **FIND-02 — Resultados DNS/TLS opcionales.** Incorporar resultados puntuales solo con política explícita de persistencia y retención; registrar fuente, hora, activo consultado, resultado bruto mínimo necesario y limitaciones. No almacenar secretos ni contenido HTTP.
