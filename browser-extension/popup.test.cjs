@@ -93,6 +93,51 @@ test("popup state reads do not write an old events snapshot back to storage", as
 });
 
 
+test("popup consumes sanitized historical events from the service worker, not raw storage", async () => {
+  const previousChrome = global.chrome;
+  const raw = {
+    observed_at: new Date().toISOString(),
+    event_type: "page_visit",
+    page_url: "https://example.com/account?access_token=old-secret#private",
+    domain: "wrong.example",
+    email_body: "must-not-be-visible"
+  };
+  const safe = {
+    observed_at: raw.observed_at, event_type: "page_visit",
+    page_url: "https://example.com/account", domain: "example.com",
+    app_name: "NetSentinel Browser Extension (Chromium)", blocked: false
+  };
+  global.chrome = {
+    storage: { local: { async get() { return { netsentinelSettings: { enabled: true, retentionDays: 7 }, netsentinelEvents: [raw] }; } } },
+    runtime: { async sendMessage(message) {
+      assert.deepEqual(message, { type: "NETSENTINEL_GET_SAFE_EVENTS" });
+      return { ok: true, events: [safe] };
+    } }
+  };
+  try {
+    const state = await getState();
+    assert.deepEqual(state.events, [safe]);
+    assert.doesNotMatch(JSON.stringify(state.events), /old-secret|private|must-not-be-visible|wrong\.example/i);
+  } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
+test("popup fails closed instead of exporting raw stored events when background sanitization fails", async () => {
+  const previousChrome = global.chrome;
+  global.chrome = {
+    storage: { local: { async get() { return { netsentinelSettings: {}, netsentinelEvents: [{ page_url: "https://example.com/?access_token=raw-secret" }] }; } } },
+    runtime: { async sendMessage() { return { ok: false, events: [] }; } }
+  };
+  try {
+    await assert.rejects(getState(), /safe events unavailable/);
+  } finally {
+    if (previousChrome === undefined) delete global.chrome;
+    else global.chrome = previousChrome;
+  }
+});
+
 test("popup retention normalization handles invalid persisted values", () => {
   assert.equal(normalizeRetentionDays(1), 1);
   assert.equal(normalizeRetentionDays("7"), 7);

@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Añade saneamiento/migración de eventos históricos de Chromium antes de la vista y exportación: canoniza de nuevo URLs, deriva el dominio desde el host validado, descarta direcciones privadas/locales y tipos/campos inesperados y conserva solo metadatos aprobados. La operación comparte la cola de escritura para no perder eventos nuevos.
+
 - Alinea la validación de hostnames de la extensión Chromium con los límites DNS del backend: normaliza un único punto raíz final y descarta etiquetas vacías/malformadas, etiquetas mayores de 63 caracteres y nombres que superan 253 caracteres ASCII. Añade pruebas de saneamiento y captura.
 
 - Alinea el filtro IPv6 de la extensión con el backend para ORCHID/ORCHIDv2 (`2001:10::/28` y `2001:20::/28`) y corrige la máscara de prefijo: las reglas `/28` se aplican al segundo hexteto, no al tercero. Añade pruebas de límites.

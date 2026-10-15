@@ -227,6 +227,56 @@ function cleanUrl(rawUrl) {
   const result = url.toString();
   return result.length <= MAX_SAFE_URL_LENGTH ? result : null;
 }
+const SAFE_SEARCH_ENGINES = new Set(["Google", "Bing", "DuckDuckGo", "Yahoo", "Ecosia", "Brave Search", "Yandex", "Baidu", "YouTube", "Wikipedia", "Amazon", "Reddit", "TikTok"]);
+
+function sanitizeStoredEvent(event, cutoff = Date.now() - DEFAULTS.retentionDays * 86400000) {
+  if (!isRetainedEvent(event, cutoff)) return null;
+  if (event.event_type !== "page_visit" && event.event_type !== "search_query") return null;
+  if (typeof event.page_url !== "string") return null;
+
+  let originalUrl;
+  try { originalUrl = new URL(event.page_url); } catch { return null; }
+  if (!["http:", "https:"].includes(originalUrl.protocol) || !originalUrl.hostname ||
+      originalUrl.username || originalUrl.password || privateOrLocalHost(originalUrl.hostname)) return null;
+
+  const pageUrl = cleanUrl(event.page_url);
+  if (!pageUrl) return null;
+  let safeUrl;
+  try { safeUrl = new URL(pageUrl); } catch { return null; }
+  // Re-check after URL canonicalization, which can rewrite unusual numeric hosts.
+  if (privateOrLocalHost(safeUrl.hostname)) return null;
+
+  const hostname = safeUrl.hostname.toLowerCase().replace(/\.$/, "");
+  const isIpLiteral = hostname.includes(":") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+  const safeEvent = {
+    observed_at: new Date(Date.parse(event.observed_at)).toISOString(),
+    event_type: event.event_type,
+    domain: isIpLiteral ? "" : hostname,
+    app_name: "NetSentinel Browser Extension (Chromium)",
+    blocked: false,
+    page_url: pageUrl
+  };
+
+  if (event.event_type === "search_query") {
+    if (!SAFE_SEARCH_ENGINES.has(event.search_engine) || typeof event.search_terms !== "string") return null;
+    const terms = event.search_terms.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
+    if (!terms) return null;
+    safeEvent.search_engine = event.search_engine;
+    safeEvent.search_terms = terms;
+  }
+
+  // Keep deduplication working without retaining a legacy raw URL in its key.
+  const oldKey = typeof event._dedupeKey === "string" ? event._dedupeKey : "";
+  const keyMatch = oldKey.match(/^(page_visit|search_query):(-?\d+):/);
+  if (keyMatch && keyMatch[1] === event.event_type) {
+    const prefix = event.event_type + ":" + keyMatch[2] + ":";
+    safeEvent._dedupeKey = event.event_type === "page_visit"
+      ? prefix + pageUrl
+      : prefix + safeEvent.search_engine + ":" + safeEvent.search_terms;
+  }
+  return safeEvent;
+}
+
 function googleHost(host) {
   return host === "google.com" || host.endsWith(".google.com") ||
     /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host);
@@ -267,7 +317,9 @@ async function loadState() {
   };
   const cutoff = Date.now() - settings.retentionDays * 86400000;
   const events = (Array.isArray(stored[EVENTS_KEY]) ? stored[EVENTS_KEY] : [])
-    .filter(event => isRetainedEvent(event, cutoff)).slice(-MAX_EVENTS);
+    .map(event => sanitizeStoredEvent(event, cutoff))
+    .filter(Boolean)
+    .slice(-MAX_EVENTS);
   return { settings, events };
 }
 async function captureNavigation(details) {
@@ -345,7 +397,18 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(details => { void enqueue
 chrome.runtime.onStartup.addListener(() => { void normalizeStoredState().catch(() => undefined); });
 chrome.runtime.onInstalled.addListener(() => { void normalizeStoredState().catch(() => undefined); });
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
+  if (!message) return;
+  if (message.type === "NETSENTINEL_GET_SAFE_EVENTS") {
+    // Sanitize and persist legacy rows in the same queue as navigation writes so
+    // opening the popup cannot race a new event and replace it with an old snapshot.
+    void enqueueStorageTask(async () => {
+      const state = await loadState();
+      await chrome.storage.local.set({ [EVENTS_KEY]: state.events });
+      sendResponse({ ok: true, events: state.events });
+    }).catch(() => sendResponse({ ok: false, events: [] }));
+    return true;
+  }
+  if (message.type !== "NETSENTINEL_CLEAR_EVENTS") return;
   void clearStoredEvents().then(
     () => sendResponse({ ok: true }),
     () => sendResponse({ ok: false })
@@ -366,6 +429,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizedQueryKey,
     isSensitivePathSegment,
     cleanUrl,
+    sanitizeStoredEvent,
     searchInfo,
     loadState,
     captureNavigation,

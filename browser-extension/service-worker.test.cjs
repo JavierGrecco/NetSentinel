@@ -223,6 +223,60 @@ test("sanitizer preserves unknown non-sensitive path and query values", () => {
 });
 
 
+test("sanitizes historical stored events before exposing them", async () => {
+  const timestamp = new Date().toISOString();
+  const oldEvent = {
+    observed_at: timestamp,
+    event_type: "page_visit",
+    domain: "wrong.example",
+    page_url: "https://Example.com./users/alice%40private.org?access_token=legacy-secret&lang=es#private-fragment",
+    app_name: "old raw value with personal data",
+    blocked: true,
+    email_body: "must-not-survive-migration",
+    _dedupeKey: "page_visit:27:https://Example.com/users/alice%40private.org?access_token=legacy-secret"
+  };
+  setState(enabledSettings(), [oldEvent]);
+
+  const state = await loadState();
+  assert.equal(state.events.length, 1);
+  const safe = state.events[0];
+  assert.equal(safe.page_url, "https://example.com/users/%5Bredacted%5D?lang=es");
+  assert.equal(safe.domain, "example.com", "domain must come from the canonical URL, not stale stored metadata");
+  assert.equal(safe.app_name, "NetSentinel Browser Extension (Chromium)");
+  assert.equal(safe.blocked, false);
+  assert.equal(safe._dedupeKey, "page_visit:27:" + safe.page_url);
+  assert.doesNotMatch(JSON.stringify(safe), /legacy-secret|private-fragment|private\.org|must-not-survive|wrong\.example/i);
+  assert.equal(mockStore[EVENTS_KEY][0], oldEvent, "loadState must remain read-only until migration is committed under the queue");
+});
+
+test("drops legacy records with private URLs, malformed hostnames, unsupported types or invalid search metadata", async () => {
+  const timestamp = new Date().toISOString();
+  const base = { observed_at: timestamp, event_type: "page_visit", page_url: "https://example.com/path" };
+  for (const bad of [
+    { ...base, page_url: "http://192.168.1.1/admin" },
+    { ...base, page_url: "https://example.com../path" },
+    { ...base, event_type: "raw_payload" },
+    { ...base, event_type: "search_query", search_engine: "Unknown", search_terms: "query" },
+    { ...base, event_type: "search_query", search_engine: "Google", search_terms: "   " }
+  ]) {
+    assert.equal(sanitizeStoredEvent(bad, Date.now() - 86400000), null);
+  }
+});
+
+test("normalizes legacy search metadata and IP-literal page domains safely", () => {
+  const timestamp = new Date().toISOString();
+  const search = sanitizeStoredEvent({
+    observed_at: timestamp, event_type: "search_query", page_url: "https://www.google.com/search",
+    search_engine: "Google", search_terms: "  hello\tworld\u0000  "
+  });
+  assert.equal(search.search_terms, "hello world");
+  assert.equal(search.domain, "www.google.com");
+  const ipPage = sanitizeStoredEvent({
+    observed_at: timestamp, event_type: "page_visit", page_url: "https://8.8.8.8/help", domain: "8.8.8.8"
+  });
+  assert.equal(ipPage.domain, "", "IP literals belong in page_url, not the DNS domain field");
+});
+
 test("capture is disabled by default and performs no storage write", async () => {
   mockStore = {};
   await captureNavigation({
@@ -313,6 +367,7 @@ test("stored event retention and event limit are enforced when loading state", a
   const freshEvents = Array.from({ length: MAX_EVENTS + 1 }, (_, i) => ({
     event_type: "page_visit",
     observed_at: new Date(now - i).toISOString(),
+    page_url: "https://example.com/item/" + i,
     marker: i
   }));
   setState(enabledSettings({ retentionDays: 1 }), [old, ...freshEvents]);
@@ -432,7 +487,10 @@ test("loadState and navigation safely discard malformed stored event records", a
   setState(enabledSettings(), [...malformed, retained]);
 
   const state = await loadState();
-  assert.deepEqual(state.events, [retained], "only valid, in-retention event objects should be returned");
+  assert.equal(state.events.length, 1, "only valid, in-retention event objects should be returned");
+  assert.equal(state.events[0].page_url, retained.page_url);
+  assert.equal(state.events[0].domain, "example.com");
+  assert.equal(state.events[0].app_name, "NetSentinel Browser Extension (Chromium)");
 
   await captureNavigation({
     frameId: 0,
