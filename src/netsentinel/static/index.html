@@ -7,6 +7,8 @@
   <title>NetSentinel · Red local</title>
     <link rel="stylesheet" href="/static/styles.css">
 
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body>
   <main class="wrap">
@@ -17,7 +19,8 @@
         <a class="nav-link" href="/monitors">Monitorización</a>
         <a class="nav-link" href="/tools">Herramientas</a>
         <a class="nav-link" href="/activity">Actividad</a>
-      </nav></div></div>
+      </nav>
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div></div>
       <div class="actions"><button id="refreshBtn" class="quiet">↻ Actualizar</button><button id="diagBtn" class="quiet">◉ Diagnóstico</button><button id="scanBtn" class="primary">⌕ Descubrir dispositivos</button></div>
     </header>
     <div class="notice"><strong>Descubrimiento local bajo demanda.</strong> Al pulsar «Descubrir dispositivos», NetSentinel detecta automáticamente hasta dos subredes IPv4 privadas y envía un ping por dirección para ayudar a poblar la tabla local. No escanea Internet ni modifica dispositivos. Que un equipo no aparezca no significa que esté desconectado.</div>
