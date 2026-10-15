@@ -42,6 +42,7 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.error_reporting",
     },
     "netsentinel.api.activity": {
+        "netsentinel.activity_tracking",
         "netsentinel.api.activity_deletion",
         "netsentinel.api.activity_import",
         "netsentinel.api.activity_models",
