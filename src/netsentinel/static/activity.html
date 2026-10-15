@@ -16,31 +16,44 @@
         <a class="nav-link" aria-current="page" href="/activity">Actividad</a>
       </nav>
       <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div><button id="refresh" type="button">Actualizar</button></header>
-<div class="notice"><strong>Alcance importante.</strong> NetSentinel no captura tráfico por sí mismo. La extensión Chromium, si la instalás y activás en un navegador, sí registra navegación futura: URLs HTTP(S) de páginas de nivel superior y búsquedas reconocidas. La URL guardada se normaliza, no es una copia exacta de la original: se quitan fragmentos y parámetros conocidos sensibles, y se redactan algunos identificadores reconocibles (por ejemplo, correos, teléfonos, UUID y tokens largos) en la ruta. Se conserva el host y parte de la ruta; otros segmentos o parámetros desconocidos pueden seguir conteniendo datos personales. Los filtros no pueden detectarlos todos. Las sesiones de red requieren una fuente compatible; también podés importar registros CSV de navegación, red o auditoría de correo autorizada. No se recopilan contraseñas, cookies, formularios, cuerpos de páginas, mensajes completos ni adjuntos. La captura de red normal no revela rutas/cuerpos HTTPS; las URLs de páginas provienen del navegador supervisado.</div>
+<details class="notice scope-details"><summary>Qué registra esta sección y cuáles son sus límites</summary><p>NetSentinel no captura tráfico por sí mismo. La extensión Chromium, si la instalás y activás en un navegador, sí registra navegación futura: URLs HTTP(S) de páginas de nivel superior y búsquedas reconocidas. La URL guardada se normaliza, no es una copia exacta de la original: se quitan fragmentos y parámetros conocidos sensibles, y se redactan algunos identificadores reconocibles (por ejemplo, correos, teléfonos, UUID y tokens largos) en la ruta. Se conserva el host y parte de la ruta; otros segmentos o parámetros desconocidos pueden seguir conteniendo datos personales. Los filtros no pueden detectarlos todos. Las sesiones de red requieren una fuente compatible; también podés importar registros CSV de navegación, red o auditoría de correo autorizada. No se recopilan contraseñas, cookies, formularios, cuerpos de páginas, mensajes completos ni adjuntos. La captura de red normal no revela rutas/cuerpos HTTPS; las URLs de páginas provienen del navegador supervisado.</p></details>
+<nav class="section-tabs" role="tablist" aria-label="Secciones de actividad y telemetría">
+  <button type="button" class="section-tab" role="tab" data-tab-target="activity-overview" data-tab-hash="resumen" aria-selected="true">Resumen</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="activity-tracking" data-tab-hash="seguimiento" aria-selected="false" tabindex="-1">Seguimiento</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="activity-import" data-tab-hash="importar" aria-selected="false" tabindex="-1">Importar</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="activity-events" data-tab-hash="eventos" aria-selected="false" tabindex="-1">Eventos</button>
+  <button type="button" class="section-tab" role="tab" data-tab-target="activity-privacy" data-tab-hash="privacidad" aria-selected="false" tabindex="-1">Privacidad y borrado</button>
+</nav>
+<div id="activity-overview" class="activity-tab-panel" data-tab-panel role="tabpanel">
 <section class="panel">
 <h2>Resumen</h2><div id="summary" class="statrow"><div class="empty">Cargando…</div></div>
 </section>
 <section class="panel section-gap"><h2>Dominios más observados</h2><p class="small">Los registros DNS/SNI disponibles son indicios técnicos; no confirman que alguien haya abierto una página o iniciado sesión.</p><div id="domains" class="cards"><div class="empty">Todavía no hay dominios registrados.</div></div></section>
+<section class="panel section-gap"><h2>¿Qué conviene hacer?</h2><ol class="activity-steps"><li><strong>Si querés registrar navegación:</strong> instalá y activá expresamente la extensión Chromium en el navegador de prueba, exportá su CSV y cargalo en “Importar”.</li><li><strong>Si querés eventos del router o de otro equipo:</strong> necesitás una fuente o agente compatible ya configurado. Abrir una ventana aquí no crea esa integración.</li><li><strong>Para revisar lo guardado:</strong> entrá en “Eventos”, filtrá por dispositivo o tipo y exportá únicamente lo necesario.</li></ol></section>
+</div>
+<div id="activity-tracking" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
 <div id="tokenPanel" class="notice" hidden><strong>Token de recopilación de esta sesión</strong><p id="tokenSessionInfo" class="small">Copialo ahora: no volverá a mostrarse y solo se guarda su hash.</p><div class="field"><label for="collectorToken">Token (tratar como secreto)</label><input id="collectorToken" type="password" readonly autocomplete="off"></div><button id="toggleToken" type="button">Mostrar token</button> <button id="copyToken" type="button">Copiar token</button><p class="small">No lo publiques ni lo compartas. La API espera este token junto con session_id para aceptar eventos de la fuente elegida.</p></div>
-<div class="grid section-gap">
-<section class="panel"><h2>Iniciar seguimiento acotado</h2>
+<section class="panel section-gap"><h2>Iniciar seguimiento acotado</h2>
 <div class="field"><label for="device">Dispositivo</label><select id="device" required><option value="">Cargando dispositivos…</option></select></div>
 <div class="two"><div class="field"><label for="source">Fuente disponible</label><select id="source"><option value="router_dns">Registros DNS del router/AP</option><option value="router_flow">Flujos/conexiones del router</option><option value="device_agent">Agente local explícito</option></select></div>
 <div class="field"><label for="duration">Duración máxima</label><select id="duration"><option value="15">15 minutos</option><option value="60" selected>1 hora</option><option value="240">4 horas</option><option value="720">12 horas</option></select></div></div>
-<p class="small">Activar la sesión no instala nada ni empieza a espiar automáticamente: solo registra la ventana y acepta eventos compatibles, únicamente mientras siga activa. Una fuente debe enviar sus propios metadatos a la API local.</p>
+<div class="notice"><strong>Antes de iniciar:</strong> elegir un dispositivo abre una ventana temporal; no activa una captura por sí sola. Para que aparezcan eventos, una fuente real compatible debe enviar metadatos a la API local y NetSentinel debe permanecer abierto para recibirlos. Esta pantalla no instala un agente ni configura el router automáticamente. Si no tenés una fuente conectada, podés usar la extensión Chromium para navegación y luego importar su CSV.</div>
+<p class="small">Las ventanas vencen al terminar el plazo elegido. Al cerrar NetSentinel, la API local deja de recibir eventos. La extensión Chromium es diferente: conserva localmente las visitas futuras mientras el navegador funciona y permite importarlas después mediante CSV.</p>
 <div class="actions"><button id="start" type="button" class="primary">Abrir ventana de seguimiento</button></div>
 <div id="sessions" class="cards section-gap"><div class="empty">Todavía no hay sesiones.</div></div>
 </section>
-<section class="panel"><h2>Importar registros CSV</h2>
+</div>
+<div id="activity-import" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
+<section class="panel section-gap"><h2>Importar registros CSV</h2>
 <p class="small">Importá el CSV de la extensión Chromium, registros de red normalizados o un CSV de auditoría de correo que hayas exportado con autorización. Se admiten hasta 1.000 eventos y 1 MB por importación. No se importan cuerpos de correo, mensajes completos ni adjuntos.</p>
 <div class="field"><label for="csvDevice">Asociar al dispositivo</label><select id="csvDevice"><option value="">Seleccioná dispositivo</option></select></div>
 <div class="field"><label for="csvFile">Archivo CSV</label><input id="csvFile" type="file" accept=".csv,text/csv"></div>
 <div class="small">Esquema normalizado: <code>observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked,page_url,search_engine,search_terms,email_provider,email_from,email_to,email_subject</code>. También se reconocen algunas cabeceras de Google Workspace (Date, Sender, Recipient, Subject or Message ID) y Microsoft 365 (receivedDateTime, senderAddress, recipientAddress, subject). El campo de Google puede contener un ID en vez del asunto. Correo solo desde exportaciones de auditoría autorizadas; se rechazan columnas de cuerpo y adjuntos.</div>
 <div class="actions import-actions"><button id="previewImport" type="button">Previsualizar CSV</button><button id="import" type="button">Importar metadatos</button></div><p id="importStatus" class="small" role="status"></p>
 <div id="previewPanel" class="section-gap" hidden><strong>Vista previa validada</strong><p id="previewSummary" class="small" role="status"></p><div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Evento</th><th>Dominio</th><th>Detalle normalizado</th><th>Resultado</th></tr></thead><tbody id="previewRows"></tbody></table></div><p class="small">La vista previa no guarda eventos. Se validan todas las filas y se muestran hasta las primeras 10. Revisá los metadatos antes de confirmar la importación.</p></div>
-<hr>
-<h2>Retención local</h2><div class="two"><div class="field"><label for="retention">Conservar eventos por</label><select id="retention"><option value="1">1 día</option><option value="3">3 días</option><option value="7" selected>7 días</option><option value="14">14 días</option><option value="30">30 días</option><option value="90">90 días</option></select></div><div class="field"><label>&nbsp;</label><button id="saveRetention" type="button">Guardar retención</button></div></div><p class="small">Los eventos antiguos se eliminan cuando se consulta o modifica el seguimiento. Las sesiones cerradas se depuran después de 90 días.</p>
+
 </section></div>
+<div id="activity-events" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
 <section class="panel section-gap"><div class="section-heading"><h2>Eventos</h2><div class="small">Ordenados por hora observada, más recientes primero</div></div>
 <div class="two">
 <div class="field"><label for="filterDevice">Dispositivo</label><select id="filterDevice"><option value="">Todos los dispositivos</option></select></div>
@@ -54,6 +67,9 @@
 <div class="actions"><button id="applyActivityFilters" type="button">Aplicar filtros</button><button id="clearActivityFilters" type="button">Limpiar</button><button id="exportActivityCsv" type="button">Exportar CSV filtrado</button></div>
 <p class="small">La tabla muestra hasta 500 eventos por consulta. La exportación incluye hasta 10.000 coincidencias y aplica neutralización de fórmulas para hojas de cálculo. Las fechas se interpretan en UTC.</p>
 <div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Dispositivo</th><th>Evento</th><th>Dominio</th><th>Página / búsqueda / correo</th><th>Destino</th><th>Fuente</th><th>Estado</th></tr></thead><tbody id="events"><tr><td colspan="8" class="empty">Cargando eventos…</td></tr></tbody></table></div><p class="small" id="scopeNote"></p></section>
+</div>
+<div id="activity-privacy" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
+<section class="panel section-gap"><h2>Retención local</h2><div class="two"><div class="field"><label for="retention">Conservar eventos por</label><select id="retention"><option value="1">1 día</option><option value="3">3 días</option><option value="7" selected>7 días</option><option value="14">14 días</option><option value="30">30 días</option><option value="90">90 días</option></select></div><div class="field"><label>&nbsp;</label><button id="saveRetention" type="button">Guardar retención</button></div></div><p class="small">Los eventos antiguos se eliminan cuando se consulta o modifica el seguimiento. Las sesiones cerradas se depuran después de 90 días.</p></section>
 <section class="panel section-gap">
 <h2>Borrar eventos selectivamente</h2>
 <p class="small">La eliminación es irreversible. La vista previa solo cuenta coincidencias y no borra nada. Para evitar una limpieza accidental, se requiere elegir al menos un alcance y luego escribir exactamente la frase de confirmación que indique NetSentinel. Esto no elimina sesiones ni otros datos del inventario.</p>
@@ -74,6 +90,8 @@
 <div class="actions"><button id="confirmDeleteActivity" type="button" disabled>Borrar eventos seleccionados…</button></div>
 </div>
 </section>
+</div>
 <footer class="footer">NetSentinel · Historial guardado en la base SQLite de esta computadora. Los metadatos describen eventos observados, no prueban quién usó una cuenta ni qué acción realizó dentro de un servicio.</footer>
 </main><div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/static/section-tabs.js" defer></script>
 <script src="/static/activity.js" defer></script></body></html>
