@@ -48,7 +48,7 @@ Marcar cada tarea solo después de completar el recorrido en ese sistema y regis
 
 ### Interfaz y facilidad de uso (todas las plataformas, empezar por macOS)
 
-- [ ] UI-01 — Elegir Oscuro, Medio y Claro desde cada página; comprobar que la preferencia se mantiene al navegar entre Inventario, Hallazgos, Monitorización, Herramientas y Actividad, y después de recargar.
+- [ ] UI-01 — Elegir Oscuro, Medio y Claro desde las tarjetas con iconos en cada página; comprobar el estado seleccionado, el uso con teclado y que la preferencia se mantiene al navegar entre Inventario, Hallazgos, Monitorización, Herramientas y Actividad, después de recargar y al cambiarla desde otra pestaña.
 - [ ] UI-02 — En Monitorización, cambiar entre Resumen, Monitores, Incidentes y Avisos; verificar que se distingue un monitor pausado y que la guía aclara que las comprobaciones se detienen al cerrar la app o suspender el equipo.
 - [ ] UI-03 — En Hallazgos, comprobar la diferencia entre marcar un dispositivo como conocido y marcar solo el evento como revisado; confirmar que la acción no borra el registro y no se presenta como verificación automática de seguridad.
 - [ ] UI-04 — En Actividad, navegar por Resumen, Seguimiento, Importar, Eventos y Privacidad y borrado; verificar que queda claro que una ventana temporal no crea una fuente de datos ni instala un agente.
