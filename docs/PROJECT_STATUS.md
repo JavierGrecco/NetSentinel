@@ -11,7 +11,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 
 - **Main:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff). Ya incorpora el saneamiento reforzado de URLs de la extensión y de la importación CSV.
 - **Rama de modularización:** `refactor/activity-persistence-modules`.
-- **Pull request de trabajo:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y en borrador. Todavía no está integrada en `main`.
+- **Pull request de modularización base:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y lista para revisión formal; todavía no está integrada en `main`. CI, Security y Supply Chain finalizaron correctamente para el SHA `53bac5784d8ba4daf3fb6e7c3a83775a51d9d558`.
 - **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para descargar esta rama, instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
 ## Revisión manual local
@@ -28,6 +28,8 @@ La confirmación no identifica el sistema operativo, el navegador ni el commit e
 - La rotación del diario de errores también restringe los permisos de los archivos archivados, para no conservar permisos abiertos heredados de versiones anteriores.
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
+- La siguiente extracción separa las rutas de monitorización por responsabilidad. Las URL y los métodos públicos permanecen iguales; el router existente solo compone los subrouters. La arquitectura y sus pruebas declaran las dependencias permitidas para evitar que vuelvan a mezclarse capacidades.
+- Seguimiento de esta extracción: rama `refactor/monitoring-api-boundaries`, basada en PR #111. Es un cambio aparte y sus checks deben validarse sobre el commit final antes de pasar a revisión formal.
 - Se unificó el selector de apariencia en todas las páginas, con temas Oscuro, Medio y Claro persistentes entre secciones. Monitorización y Actividad se dividieron en sectores navegables; se aclaró cuándo corren las comprobaciones y qué requiere una fuente de telemetría real.
 - Se reajustó la jerarquía tras la primera prueba visual en macOS: la marca NetSentinel queda fija, el título y la descripción identifican la sección actual, la navegación ocupa todo el ancho y las tarjetas de tema pasan a un formato compacto. Se agregaron pruebas para mantener esta distribución en las cinco páginas.
 - Se reemplazó el desplegable de apariencia por tres tarjetas visuales con iconos (Oscuro, Medio y Claro) en las cinco secciones. La selección sigue guardándose, se comparte entre páginas y se sincroniza si se cambia desde otra pestaña. El control usa radios accesibles y contempla el foco de teclado y pantallas pequeñas.
