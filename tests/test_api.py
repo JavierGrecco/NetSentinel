@@ -343,6 +343,9 @@ def test_shared_theme_and_task_focused_sections_are_present():
         assert 'src="/static/theme.js"' in html, f"{page_name} must persist the theme selection"
         assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
         assert 'role="radiogroup" aria-label="Tema visual"' in html
+        assert 'class="app-brand-name">NetSentinel</div>' in html
+        assert 'class="app-section-title"' in html
+        assert 'class="app-section-description"' in html
         assert 'class="theme-option-card"' in html
         assert 'name="themeSelect" type="radio"' in html
         assert '<select id="themeSelect"' not in html
