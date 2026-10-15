@@ -1,14 +1,23 @@
 """Composición de los routers HTTP de actividad autorizada.
 
-Cada grupo de rutas tiene un dueño claro. Se reexportan los modelos históricos
-para conservar los imports internos que usan los tests y consumidores del paquete.
+Cada grupo de rutas tiene un dueño claro. Se reexportan los modelos, funciones
+de ruta y módulo de servicio históricos para conservar imports internos existentes.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-from .activity_deletion import router as deletion_router
-from .activity_import import router as import_router
+from .. import activity_tracking
+from .activity_deletion import (
+    delete_family_activity,
+    preview_family_activity_delete,
+    router as deletion_router,
+)
+from .activity_import import (
+    import_family_activity,
+    preview_family_activity,
+    router as import_router,
+)
 from .activity_models import (
     ActivityCSVImport,
     ActivityDeleteRequest,
@@ -17,9 +26,21 @@ from .activity_models import (
     ActivityRetentionUpdate,
     ActivitySessionCreate,
 )
-from .activity_read import router as read_router
-from .activity_retention import router as retention_router
-from .activity_sessions import router as sessions_router
+from .activity_read import (
+    export_family_activity_csv,
+    get_family_activity,
+    router as read_router,
+)
+from .activity_retention import (
+    router as retention_router,
+    set_family_activity_retention,
+)
+from .activity_sessions import (
+    ingest_family_activity,
+    router as sessions_router,
+    start_family_activity,
+    stop_family_activity,
+)
 
 router = APIRouter()
 router.include_router(read_router)
