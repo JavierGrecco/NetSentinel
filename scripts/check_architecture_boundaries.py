@@ -39,7 +39,11 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.security_headers": set(),
     "netsentinel.api.error_handling": {
         "netsentinel.api.security",
+        "netsentinel.api.validation_errors",
         "netsentinel.error_reporting",
+    },
+    "netsentinel.api.validation_errors": {
+        "netsentinel.api.security_headers",
     },
     "netsentinel.api.activity": {
         "netsentinel.activity_tracking",
