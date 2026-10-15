@@ -394,9 +394,9 @@ def _write_minimal_package(root: Path) -> Path:
 def test_activity_tracking_facade_cannot_import_storage_directly(tmp_path: Path) -> None:
     """Una fachada no puede saltarse sus servicios e importar la persistencia."""
     package = _write_minimal_package(tmp_path)
-    (package / "database.py").write_text("VALUE = 1\\n", encoding="utf-8")
+    (package / "database.py").write_text("VALUE = 1\n", encoding="utf-8")
     (package / "activity_tracking.py").write_text(
-        "from . import database\\n",
+        "from . import database\n",
         encoding="utf-8",
     )
 
