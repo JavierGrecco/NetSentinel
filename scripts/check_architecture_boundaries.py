@@ -45,9 +45,19 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.dns_tools",
     },
     "netsentinel.api.monitoring": {
+        "netsentinel.api.diagnostics",
+        "netsentinel.api.monitoring_monitors",
+        "netsentinel.api.monitoring_reports",
+    },
+    "netsentinel.api.monitoring_monitors": {
         "netsentinel.database",
-        "netsentinel.diagnostics",
         "netsentinel.monitoring",
+    },
+    "netsentinel.api.monitoring_reports": {
+        "netsentinel.database",
+    },
+    "netsentinel.api.diagnostics": {
+        "netsentinel.diagnostics",
     },
 }
 
