@@ -197,6 +197,8 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(
         "/static/activity.js",
         "/static/findings.js",
         "/static/tools.js",
+        "/static/theme.js",
+        "/static/section-tabs.js",
     ],
 )
 def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
