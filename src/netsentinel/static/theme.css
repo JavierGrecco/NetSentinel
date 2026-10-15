@@ -181,3 +181,35 @@ html[data-theme] [hidden] { display: none !important; }
   html[data-theme] .section-tabs { gap: 5px; padding: 6px; }
   html[data-theme] .section-tab { flex: 1 1 120px; }
 }
+
+/* Guidance blocks and section navigation. */
+html[data-theme] .scope-details { margin: 12px 0 16px; }
+html[data-theme] .scope-details summary { cursor: pointer; font-size: 12px; font-weight: 800; }
+html[data-theme] .scope-details p { margin: 10px 0 0; line-height: 1.65; }
+html[data-theme] .triage-guide {
+  margin: 14px 0 18px; padding: 16px; border: 1px solid var(--theme-line);
+  border-radius: 14px; background: var(--theme-panel-alt); color: var(--theme-text);
+}
+html[data-theme] .triage-guide h2 { margin: 0 0 12px; font-size: 16px; }
+html[data-theme] .triage-steps { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+html[data-theme] .triage-steps > div {
+  padding: 12px; border: 1px solid var(--theme-line); border-radius: 10px;
+  background: var(--theme-panel); color: var(--theme-text);
+}
+html[data-theme] .triage-steps strong { font-size: 12px; }
+html[data-theme] .triage-steps p { margin: 6px 0 0; color: var(--theme-muted); font-size: 12px; line-height: 1.6; }
+html[data-theme] .finding-action-hint { margin: 9px 0 0; color: var(--theme-muted); font-size: 11px; line-height: 1.55; }
+html[data-theme] .activity-steps { margin: 8px 0 0; padding-left: 21px; color: var(--theme-muted); }
+html[data-theme] .activity-steps li { margin: 8px 0; font-size: 12px; line-height: 1.6; }
+html[data-theme] .activity-steps strong { color: var(--theme-text); }
+html[data-theme] .activity-tab-panel, html[data-theme] .monitor-tab-panel { min-width: 0; }
+html[data-theme] .latency-chart,
+html[data-theme] .latency-history-chart {
+  background: linear-gradient(to bottom, transparent 32%, var(--theme-line) 33%, transparent 34%, transparent 65%, var(--theme-line) 66%, transparent 67%) !important;
+}
+html[data-theme] .latency-bar.down,
+html[data-theme] .latency-history-bar.empty-bucket { background: var(--theme-bad-bg) !important; color: var(--theme-bad-text) !important; border-color: var(--theme-line) !important; }
+@media(max-width:700px) {
+  html[data-theme] .triage-steps { grid-template-columns: 1fr; }
+  html[data-theme] .triage-guide { padding: 12px; }
+}
