@@ -19,8 +19,13 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
 
     assert ".theme-options" in css
     assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
-    assert "min-height: 112px" in css
     assert ".theme-option-icon" in css
+    assert ".app-header-utilities .theme-option-card" in css
+    assert "min-height: 48px" in css
+    assert ".app-header-content > .primary-nav" in css
+    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "min-height: 42px" in css
+    assert ".app-section-title" in css
     assert "background: #101827" in css
     assert "background: #dfe5ec" in css
     assert "background: #ffffff" in css
@@ -69,6 +74,33 @@ def test_theme_script_syncs_selection_and_persists_across_tabs():
     assert 'control.addEventListener("change"' in script
     assert "localStorage.setItem(STORAGE_KEY, selected)" in script
     assert 'window.addEventListener("storage"' in script
+
+
+def test_every_page_keeps_a_fixed_brand_and_a_distinct_section_heading():
+    expected_titles = {
+        "index.html": "Inventario de red",
+        "findings.html": "Hallazgos con evidencia",
+        "monitors.html": "Monitorización",
+        "tools.html": "Herramientas de red",
+        "activity.html": "Actividad y telemetría",
+    }
+
+    for page_name, section_title in expected_titles.items():
+        html = (STATIC / page_name).read_text(encoding="utf-8")
+        assert 'class="app-brand-name">NetSentinel</div>' in html, page_name
+        assert 'class="eyebrow">Observabilidad local</div>' in html, page_name
+        assert f'<h1 class="app-section-title">{section_title}</h1>' in html, page_name
+        assert 'class="app-section-description"' in html, page_name
+
+        brand_start = html.index('class="app-brand"')
+        section_start = html.index('class="app-section-heading"')
+        navigation_start = html.index('class="primary-nav"')
+        assert brand_start < section_start < navigation_start, (
+            f"{page_name} must present brand, current section, then full-width navigation"
+        )
+        assert html.count('aria-current="page"') == 1, (
+            f"{page_name} must mark exactly one current navigation item"
+        )
 
 
 def test_all_main_pages_load_shared_layout_after_module_styles():
