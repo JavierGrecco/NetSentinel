@@ -23,7 +23,7 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
 
-Los controles de código del commit de trabajo más reciente terminaron en verde en la última comprobación registrada. Los resultados deben volver a verificarse si se agrega otro commit; no se consideran vigentes automáticamente.
+Antes de integrar la PR, hay que revisar CI, Security y Supply Chain sobre el SHA exacto que se va a integrar. Los resultados de un commit anterior no validan automáticamente uno nuevo.
 
 ## Qué falta cerrar primero
 
