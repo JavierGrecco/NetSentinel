@@ -105,6 +105,10 @@ def test_tls_inspection_rejects_hostname_that_exceeds_dns_limit_after_idna():
 
 def test_tls_inspection_validates_certificate_and_reports_handshake(monkeypatch):
     calls, context, raw = _mock_success(monkeypatch)
+    # Freeze the clock here so this test checks the full initial timeout.
+    # The companion deadline test below covers elapsed time between connect and TLS.
+    ticks = iter([100.0, 100.0])
+    monkeypatch.setattr(tls_tools.time, "monotonic", lambda: next(ticks))
 
     result = tls_tools._inspect_tls_endpoint_direct("Example.COM.", port=8443, timeout=2.5)
 
