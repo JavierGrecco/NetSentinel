@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netsentinel.api import activity, findings, inventory, monitoring, pages, tools
+from netsentinel.api import activity, diagnostics as diagnostics_api, findings, inventory, monitoring, monitoring_monitors, monitoring_reports, pages, tools
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
 from netsentinel import database
@@ -392,16 +392,47 @@ def test_monitoring_endpoints_belong_to_monitoring_router() -> None:
     assert len(paths) == 12
 
 
+
+def test_monitoring_routes_are_grouped_by_responsibility() -> None:
+    """Los endpoints mantienen su contrato y pertenecen al router de su capacidad."""
+    monitor_paths = {route.path for route in monitoring_monitors.router.routes}
+    assert monitor_paths == {
+        "/api/monitors",
+        "/api/monitors/{monitor_id}",
+        "/api/monitors/{monitor_id}/check",
+        "/api/monitors/{monitor_id}/checks",
+        "/api/incidents",
+        "/api/notifications",
+    }
+    assert len(monitoring_monitors.router.routes) == 8
+
+    report_paths = {route.path for route in monitoring_reports.router.routes}
+    assert report_paths == {
+        "/api/monitoring/summary",
+        "/api/export/monitoring.csv",
+        "/api/export/incidents.csv",
+        "/api/monitors/{monitor_id}/latency",
+        "/api/export/monitor-latency.csv",
+    }
+    assert len(monitoring_reports.router.routes) == 5
+    assert {route.path for route in diagnostics_api.router.routes} == {"/api/diagnostics"}
+
 def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
     """El router de monitorización se limita a persistencia y servicios de dominio."""
     root = Path(__file__).resolve().parents[1]
     violations, graph = check_architecture(root)
     assert not violations, "\n".join(violations)
     assert graph["netsentinel.api.monitoring"] == {
+        "netsentinel.api.diagnostics",
+        "netsentinel.api.monitoring_monitors",
+        "netsentinel.api.monitoring_reports",
+    }
+    assert graph["netsentinel.api.monitoring_monitors"] == {
         "netsentinel.database",
-        "netsentinel.diagnostics",
         "netsentinel.monitoring",
     }
+    assert graph["netsentinel.api.monitoring_reports"] == {"netsentinel.database"}
+    assert graph["netsentinel.api.diagnostics"] == {"netsentinel.diagnostics"}
 
 
 
