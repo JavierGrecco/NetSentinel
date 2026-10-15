@@ -6,6 +6,16 @@ function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&l
 function when(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString();}
 async function api(url,options={}){const r=await fetch(url,{...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.detail||("HTTP "+r.status));return data;}
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),4500);}
+function updateSourceHelp(){
+const help=$("sourceHelp");
+if(!help)return;
+const guidance={
+router_dns:"Qué necesitás: activar los registros DNS en un router o punto de acceso compatible y disponer de un adaptador que los envíe a NetSentinel. Ese adaptador todavía no viene integrado en esta versión; sin él no llegarán eventos aunque abras la ventana. Qué puede mostrar: dominios consultados y sus horarios, no páginas completas, mensajes ni la persona que usó el equipo. DNS cifrado, VPN y caché pueden ocultar parte de las consultas.",
+router_flow:"Qué necesitás: un router, firewall o equipo de red que exporte registros de conexiones o flujos (por ejemplo, NetFlow/IPFIX) y un adaptador que los entregue a NetSentinel. Ese adaptador todavía no viene integrado. Qué puede mostrar: metadatos como IP de origen/destino, puerto, protocolo y hora, según la fuente. No permite leer el contenido HTTPS ni garantiza ver conexiones internas que el router no registra.",
+device_agent:"Qué necesitás: instalar y configurar en el dispositivo un agente autorizado o un servicio que ya exista y envíe metadatos compatibles. Esta pantalla no instala ese agente. Es la opción menos adecuada si querés evitar instalaciones en cada equipo."
+};
+help.textContent=guidance[$("source").value]||"Elegí una fuente para consultar los requisitos y límites.";
+}
 function deviceName(d){return d.display_name||d.ip_address||("Dispositivo "+d.id);}
 function fillSelect(id,devices,placeholder,selected){const s=$(id),old=selected??s.value;s.innerHTML="";const first=document.createElement("option");first.value="";first.textContent=placeholder;s.appendChild(first);for(const d of devices){const o=document.createElement("option");o.value=String(d.id);o.textContent=deviceName(d)+" · "+d.ip_address;s.appendChild(o);}if([...s.options].some(o=>o.value===old))s.value=old;}
 function render(){ $("summary").innerHTML='<div class="stat"><b>'+state.active_sessions+'</b><span>Ventanas temporales abiertas</span></div><div class="stat"><b>'+state.total_events+'</b><span>Eventos conservados</span></div><div class="stat"><b>'+state.blocked_events+'</b><span>Eventos marcados como bloqueados</span></div><div class="stat"><b>'+state.retention_days+' días</b><span>Retención</span></div>';
@@ -40,4 +50,6 @@ $("clearActivityFilters").addEventListener("click",()=>{$("filterDevice").value=
 $("filterDevice").addEventListener("change",()=>refresh().catch(e=>toast(e.message)));
 $("exportActivityCsv").addEventListener("click",()=>{const params=activityQuery();params.set("limit","10000");window.location.href="/api/activity/export.csv?"+params.toString();});
 $("refresh").addEventListener("click",()=>refresh().catch(e=>toast(e.message)));
+$("source").addEventListener("change",updateSourceHelp);
+updateSourceHelp();
 refresh().catch(e=>toast("No se pudo cargar: "+e.message));
