@@ -11,6 +11,9 @@ Esta guía mantiene una misma lógica de presentación en todas las secciones de
 - **Controles:** objetivo visual de 40 px de alto, con etiquetas legibles y foco visible al usar teclado.
 - **Separación:** 16 px entre bloques relacionados y una separación estable entre encabezado y contenido.
 - **Navegación:** los mismos enlaces principales, el mismo aspecto para la sección activa y la misma preferencia de tema.
+- **Identidad:** el logo y el nombre NetSentinel permanecen iguales en todas las secciones. El título y la descripción de la pantalla van en un bloque separado; nunca se sustituye la marca por el nombre del módulo.
+- **Navegación principal:** usa el ancho disponible, tiene un tamaño legible y destaca la sección activa. No debe quedar arrinconada encima del selector de apariencia.
+- **Selector de apariencia:** las tres tarjetas mantienen su paleta e icono, pero el control es compacto y secundario: como referencia, unos 48 px de alto frente a los enlaces de navegación de al menos 42 px.
 - **Selector de apariencia:** tres tarjetas visibles (Oscuro, Medio y Claro), cada una con su propia paleta de muestra e icono, estado seleccionado y navegación por teclado. La elección se mantiene entre secciones, recargas y pestañas del navegador.
 
 Los valores centrales viven en `static/theme.css`. Cada página carga esa hoja después de su CSS específico para que el marco compartido tenga la última palabra.
