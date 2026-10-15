@@ -40,9 +40,20 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.findings_service",
     },
     "netsentinel.api.inventory": {
+        "netsentinel.api.inventory_assets",
+        "netsentinel.api.inventory_discovery",
+        "netsentinel.api.inventory_exports",
+    },
+    "netsentinel.api.inventory_assets": {
+        "netsentinel.database",
+        "netsentinel.dns_tools",
+    },
+    "netsentinel.api.inventory_discovery": {
         "netsentinel.database",
         "netsentinel.local_discovery",
-        "netsentinel.dns_tools",
+    },
+    "netsentinel.api.inventory_exports": {
+        "netsentinel.database",
     },
     "netsentinel.api.monitoring": {
         "netsentinel.api.diagnostics",
