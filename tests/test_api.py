@@ -284,27 +284,44 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
     from pathlib import Path
 
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
+    if route in {"/monitors", "/activity"}:
+        expected_scripts.add("/static/section-tabs.js")
+
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get(route)
-        script_response = client.get(f"/static/{script_asset}")
+        script_responses = {source: client.get(source) for source in expected_scripts}
 
     assert response.status_code == 200
-    assert response.text.replace("\r\n", "\n").replace("\r", "\n") == Path(
-        "src/netsentinel/static", html_asset
-    ).read_text(encoding="utf-8")
+    html = response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+    assert html == Path("src/netsentinel/static", html_asset).read_text(encoding="utf-8")
     scripts = list(re.finditer(
-        r"<script\b([^>]*)>(.*?)</script\b[^>]*>",
-        response.text,
+        r"<script\\b([^>]*)>(.*?)</script\\b[^>]*>",
+        html,
         flags=re.IGNORECASE | re.DOTALL,
     ))
-    assert len(scripts) == 1, f"{route} should load exactly one external script."
-    assert scripts[0].group(1).strip() == f'src="/static/{script_asset}" defer'
-    assert not scripts[0].group(2).strip(), "Inline JavaScript must not be reintroduced."
+    observed_scripts = set()
+    for script in scripts:
+        attributes = script.group(1).strip()
+        match = re.fullmatch(r'src="(/static/[^"]+)"( defer)?', attributes)
+        assert match, f"{route} contains a script with unexpected attributes: {attributes}"
+        source = match.group(1)
+        assert source not in observed_scripts, f"{route} loads {source} more than once"
+        observed_scripts.add(source)
+        assert not script.group(2).strip(), "Inline JavaScript must not be reintroduced."
+        if source.endswith("/theme.js"):
+            assert match.group(2) is None, "The shared theme must apply before first paint."
+        else:
+            assert match.group(2) == " defer", "Application behavior scripts must be deferred."
 
-    script_source = Path("src/netsentinel/static", script_asset).read_text(encoding="utf-8")
-    assert script_response.status_code == 200
-    assert script_response.text.replace("\r\n", "\n").replace("\r", "\n") == script_source
-    assert script_response.text.strip()
+    assert observed_scripts == expected_scripts, f"{route} has an unexpected script set."
+    for source, script_response in script_responses.items():
+        script_asset_path = source.removeprefix("/static/")
+        script_source = Path("src/netsentinel/static", script_asset_path).read_text(encoding="utf-8")
+        assert script_response.status_code == 200
+        assert script_response.text.replace("\\r\\n", "\\n").replace("\\r", "\\n") == script_source
+        assert script_response.text.strip()
+
     policy = response.headers["content-security-policy"]
     script_policy = next(item for item in policy.split("; ") if item.startswith("script-src "))
     assert "'self'" in script_policy
