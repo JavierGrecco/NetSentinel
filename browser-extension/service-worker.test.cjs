@@ -95,6 +95,18 @@ test("canonicalizes IPv6, removes default port and drops fragment", () => {
   );
 });
 
+test("normalizes one DNS root dot and rejects malformed or overlong hostnames", () => {
+  assert.equal(cleanUrl("https://Example.com./docs"), "https://example.com/docs");
+  assert.equal(cleanUrl("https://example.com../docs"), null);
+  assert.equal(cleanUrl("https://.example.com/docs"), null);
+  assert.equal(cleanUrl("https://" + "a".repeat(64) + ".example/docs"), null);
+
+  // Every label is within 63 characters, but the ASCII hostname exceeds 253.
+  const overlongHostname = Array(4).fill("a".repeat(63)).join(".");
+  assert.equal(overlongHostname.length, 255);
+  assert.equal(cleanUrl("https://" + overlongHostname + "/docs"), null);
+});
+
 test("rejects non-HTTP schemes and URLs with embedded credentials", () => {
   assert.equal(cleanUrl("javascript:alert(1)"), null);
   assert.equal(cleanUrl("file:///Users/example/private.txt"), null);
@@ -237,6 +249,19 @@ test("opt-in capture stores sanitized page and separate search metadata", async 
   await captureNavigation({ frameId: 0, tabId: 42, url, timeStamp: Date.now() });
   events = mockStore[EVENTS_KEY];
   assert.equal(events.length, 2, "rapid duplicate navigation should not be added twice");
+});
+
+test("capture drops malformed DNS hostnames before persisting browser metadata", async () => {
+  setState(enabledSettings(), []);
+  for (const url of [
+    "https://example.com../profile",
+    "https://.example.com/profile",
+    "https://" + "a".repeat(64) + ".example/profile",
+    "https://" + Array(4).fill("b".repeat(63)).join(".") + "/profile"
+  ]) {
+    await captureNavigation({ frameId: 0, tabId: 405, url, timeStamp: Date.now() });
+  }
+  assert.equal(mockStore[EVENTS_KEY].length, 0);
 });
 
 test("capture ignores subframes, private browsing and non-HTTP(S) URLs", async () => {

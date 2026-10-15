@@ -183,10 +183,29 @@ function isSensitivePathSegment(value) {
   if (/^[+()0-9.\-\s]+$/.test(decoded) && (decoded.match(/\d/g) || []).length >= 10) return true;
   return decoded.length >= 32 && /^[A-Za-z0-9._~-]+$/.test(decoded) && /[A-Za-z]/.test(decoded) && /\d/.test(decoded);
 }
+function normalizeDnsHostname(url) {
+  // WHATWG URL canonicalizes IDNs to ASCII, but it does not enforce every DNS
+  // wire-format hostname limit. Mirror the backend's IDNA label/length checks.
+  let hostname = String(url.hostname || "").toLowerCase();
+  if (!hostname) return false;
+  // URL has already parsed IPv6 literals; retain the canonical bracketed form.
+  if (hostname.includes(":")) return hostname.startsWith("[") && hostname.endsWith("]");
+  // A single terminal root dot is valid and insignificant. Repeated dots are not.
+  if (hostname.endsWith(".")) hostname = hostname.slice(0, -1);
+  if (!hostname || hostname.endsWith(".") || hostname.length > 253) return false;
+  const labels = hostname.split(".");
+  if (labels.some(label =>
+    !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
+  )) return false;
+  url.hostname = hostname;
+  return true;
+}
+
 function cleanUrl(rawUrl) {
   let url;
   try { url = new URL(rawUrl); } catch { return null; }
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) return null;
+  if (!normalizeDnsHostname(url)) return null;
 
   // The backend uses parse_qsl(max_num_fields=200) before removing sensitive
   // query keys. Match that limit here so an exported CSV cannot fail import just
