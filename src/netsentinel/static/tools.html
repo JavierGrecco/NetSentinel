@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Herramientas · NetSentinel</title>
 <link rel="stylesheet" href="/static/tools.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body>
 <main>
@@ -14,7 +16,8 @@
         <a class="nav-link" href="/monitors">Monitorización</a>
         <a class="nav-link" aria-current="page" href="/tools">Herramientas</a>
         <a class="nav-link" href="/activity">Actividad</a>
-      </nav></div>
+      </nav>
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div>
 <p class="muted">Módulos independientes de consulta y diagnóstico. Las herramientas se ejecutan solo cuando las solicitás.</p>
 <section class="panel" aria-labelledby="dns-title">
 <h2 id="dns-title">Consulta DNS</h2>
