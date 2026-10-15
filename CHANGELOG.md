@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Divide la persistencia de monitorización en configuración, consultas analíticas, estado/transiciones y notificaciones. `monitoring_repository.py` conserva la fachada histórica y los cambios que coordinan checks, incidentes y eventos siguen en una única transacción.
+
 - Separa el tratamiento de errores de validación HTTP en `api/validation_errors.py`. `api/error_handling.py` conserva la interfaz histórica mediante reexportaciones; las respuestas 422 siguen usando mensajes fijos y no reflejan valores ingresados.
 
 - Divide la API de Actividad en routers de consulta/exportación, sesiones/ingreso, importación, borrado y retención. Los modelos quedan en un módulo compartido y el router histórico se mantiene como punto de composición; se conservan rutas, validaciones y respuestas.

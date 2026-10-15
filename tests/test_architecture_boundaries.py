@@ -31,7 +31,14 @@ from netsentinel.api import (
 )
 from netsentinel.discovery import Neighbor as DiscoveryNeighbor
 from netsentinel.network_models import Neighbor
-from netsentinel import database
+from netsentinel import (
+    database,
+    monitoring_analytics_repository,
+    monitoring_config_repository,
+    monitoring_notifications_repository,
+    monitoring_repository as monitoring_repository_compat,
+    monitoring_state_repository,
+)
 from scripts.check_architecture_boundaries import check_architecture
 
 
@@ -186,8 +193,23 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
     assert graph["netsentinel.events_repository"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.dashboard_repository"] == {"netsentinel.database_storage"}
     assert graph["netsentinel.monitoring_repository"] == {
+        "netsentinel.monitoring_analytics_repository",
+        "netsentinel.monitoring_config_repository",
+        "netsentinel.monitoring_notifications_repository",
+        "netsentinel.monitoring_state_repository",
+    }
+    assert graph["netsentinel.monitoring_config_repository"] == {
+        "netsentinel.database_storage",
+    }
+    assert graph["netsentinel.monitoring_analytics_repository"] == {
+        "netsentinel.database_storage",
+    }
+    assert graph["netsentinel.monitoring_state_repository"] == {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
+    }
+    assert graph["netsentinel.monitoring_notifications_repository"] == {
+        "netsentinel.database_storage",
     }
     assert graph["netsentinel.data_export_service"] == {
         "netsentinel.config",
@@ -563,6 +585,24 @@ def test_monitoring_router_has_only_declared_internal_dependencies() -> None:
     assert graph["netsentinel.api.monitoring_reports"] == {"netsentinel.database"}
     assert graph["netsentinel.api.diagnostics"] == {"netsentinel.diagnostics"}
 
+
+
+def test_monitoring_repository_facade_reexports_historical_functions() -> None:
+    """La fachada y database.py siguen exponiendo las operaciones originales."""
+    assert monitoring_repository_compat.create_monitor is monitoring_config_repository.create_monitor
+    assert monitoring_repository_compat.list_monitors is monitoring_config_repository.list_monitors
+    assert monitoring_repository_compat.update_monitor is monitoring_config_repository.update_monitor
+    assert monitoring_repository_compat.delete_monitor is monitoring_config_repository.delete_monitor
+    assert monitoring_repository_compat.get_monitor_checks is monitoring_analytics_repository.get_monitor_checks
+    assert monitoring_repository_compat.get_monitor_analytics is monitoring_analytics_repository.get_monitor_analytics
+    assert monitoring_repository_compat.get_monitor_latency_trend is monitoring_analytics_repository.get_monitor_latency_trend
+    assert monitoring_repository_compat.get_incidents is monitoring_analytics_repository.get_incidents
+    assert monitoring_repository_compat.cleanup_monitor_history is monitoring_state_repository.cleanup_monitor_history
+    assert monitoring_repository_compat.record_monitor_check is monitoring_state_repository.record_monitor_check
+    assert monitoring_repository_compat.record_notification is monitoring_notifications_repository.record_notification
+    assert monitoring_repository_compat.get_notification_log is monitoring_notifications_repository.get_notification_log
+    assert database.create_monitor is monitoring_repository_compat.create_monitor
+    assert database.record_monitor_check is monitoring_repository_compat.record_monitor_check
 
 
 def test_html_pages_belong_to_pages_router() -> None:
