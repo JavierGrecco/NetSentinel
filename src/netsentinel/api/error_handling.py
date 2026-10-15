@@ -16,12 +16,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from ..error_reporting import describe_http_error, describe_unhandled_exception, record_error_event
 from .security import _error_response, _request_id
 
+# Se mantienen los nombres históricos para el arranque y posibles consumidores internos.
+from .validation_errors import _safe_validation_message, handle_request_validation_error
+
 
 logger = logging.getLogger(__name__)
 
-
-# Se mantienen los nombres históricos para el arranque y posibles consumidores internos.
-from .validation_errors import _safe_validation_message, handle_request_validation_error
 
 
 # Mensajes propios y revisados que pueden conservarse para errores DNS conocidos.
