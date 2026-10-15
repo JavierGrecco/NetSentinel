@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Sustituye el desplegable de apariencia por tarjetas visuales con iconos para Oscuro, Medio y Claro en las cinco pantallas. La preferencia sigue persistiendo y sincronizándose entre páginas y pestañas, con controles accesibles por teclado y diseño adaptable.
+
 - Unifica el marco visual de las cinco pantallas: ancho máximo, márgenes adaptables, jerarquía tipográfica, paneles, controles y espaciado. Evita saltos laterales al navegar y añade pruebas que vigilan la carga de la capa de diseño compartida.
 
 - Unifica la apariencia en Inventario, Hallazgos, Monitorización, Herramientas y Actividad: permite elegir tema oscuro, medio o claro y conserva la preferencia entre páginas. Reorganiza Monitorización y Actividad en sectores navegables, aclara cuándo se ejecutan los monitores y qué necesita una fuente de telemetría, y agrega acciones de triaje para distinguir entre reconocer un dispositivo y marcar un evento como revisado.
