@@ -226,8 +226,23 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.database_storage",
     },
     "netsentinel.monitoring_repository": {
+        "netsentinel.monitoring_analytics_repository",
+        "netsentinel.monitoring_config_repository",
+        "netsentinel.monitoring_notifications_repository",
+        "netsentinel.monitoring_state_repository",
+    },
+    "netsentinel.monitoring_config_repository": {
+        "netsentinel.database_storage",
+    },
+    "netsentinel.monitoring_analytics_repository": {
+        "netsentinel.database_storage",
+    },
+    "netsentinel.monitoring_state_repository": {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
+    },
+    "netsentinel.monitoring_notifications_repository": {
+        "netsentinel.database_storage",
     },
 }
 # Only the composition root and API routers may import the HTTP framework.
