@@ -113,7 +113,7 @@ def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
         with TestClient(app, base_url='http://127.0.0.1') as client:
             response = client.post("/api/scan")
     finally:
-        inventory_module._scan_lock.release()
+        inventory_discovery_module._scan_lock.release()
     assert response.status_code == 409
     assert "Ya hay un descubrimiento de red en curso" in response.json()["detail"]
 
