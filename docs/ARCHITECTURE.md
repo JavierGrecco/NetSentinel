@@ -47,7 +47,7 @@ Estos límites son una dirección de diseño, no una afirmación de que todas la
 
 ## Reglas verificadas automáticamente
 
-El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, que cada router declare sus dependencias permitidas y que los servicios/repositorios con dependencias internas tengan una lista explícita. La persistencia solo puede importar un conjunto pequeño y declarado de apoyos compartidos: `config.py` para la ubicación del archivo de datos, `csv_safety.py` para exportaciones seguras, `network_models.py` para el contrato de vecinos y `vendor.py` para consultar la base OUI local sin red. Cualquier otro módulo interno requiere una decisión explícita. Además, todo módulo nuevo fuera de la API y del punto de composición se revisa automáticamente para evitar dependencias de FastAPI o Starlette. Estas reglas refuerzan las fronteras implementadas, pero no significan que todo el backend ya esté desacoplado.
+El script `scripts/check_architecture_boundaries.py` se ejecuta en CI y comprueba que no haya ciclos de importación, definiciones de nivel superior duplicadas que se oculten entre sí, que cada router declare sus dependencias permitidas y que los servicios/repositorios con dependencias internas tengan una lista explícita. La persistencia solo puede importar un conjunto pequeño y declarado de apoyos compartidos: `config.py` para la ubicación del archivo de datos, `csv_safety.py` para exportaciones seguras, `network_models.py` para el contrato de vecinos y `vendor.py` para consultar la base OUI local sin red. Cualquier otro módulo interno requiere una decisión explícita. Además, todo módulo nuevo fuera de la API y del punto de composición se revisa automáticamente para evitar dependencias de FastAPI o Starlette. Estas reglas refuerzan las fronteras implementadas, pero no significan que todo el backend ya esté desacoplado.
 
 ## Cómo se comunican los módulos
 
@@ -84,7 +84,7 @@ No se considera terminada una extracción solo porque el código haya cambiado d
 Las pruebas automatizadas usan datos sintéticos y no requieren una red real. GitHub Actions valida la instalación y la suite de pruebas en Windows, macOS y Ubuntu con distintas versiones de Python. Las comprobaciones automatizadas no sustituyen la validación manual de sistemas y navegadores reales descrita en la matriz de validación.
 
 
-La composición de FastAPI se mantiene en `main.py`. Los controles de host/origen, cabeceras y CSP viven en `api/security.py`; los manejadores HTTP y sus mensajes seguros viven en `api/error_handling.py`. Esta separación conserva los contratos, facilita probar la protección por separado y evita que el arranque acumule lógica transversal.
+La composición de FastAPI se mantiene en `main.py`. El middleware y las reglas de host/origen viven en `api/security.py`; las cabeceras defensivas, la CSP y las respuestas de error correlacionadas están en `api/security_headers.py`. Los manejadores globales de excepciones y sus mensajes seguros viven en `api/error_handling.py`. La API de seguridad conserva los nombres históricos como reexportaciones para no cambiar el arranque ni los puntos de prueba existentes.
 
 
 ### Persistencia por responsabilidad
