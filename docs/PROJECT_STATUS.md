@@ -9,14 +9,14 @@
 
 NetSentinel continúa siendo una aplicación local. Estamos ordenando el código por responsabilidades sin cambiar la forma en que la usa la persona que la instala.
 
-- **Main:** [a4d96dd](https://github.com/JavierGrecco/NetSentinel/commit/a4d96ddfd7fb40cd88425a875cd7bfe147bf34ff). Ya incorpora el saneamiento reforzado de URLs de la extensión y de la importación CSV.
-- **Rama de modularización:** `refactor/activity-persistence-modules`.
-- **Pull request de modularización base:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), abierta y lista para revisión formal; todavía no está integrada en `main`. CI, Security y Supply Chain finalizaron correctamente para el SHA `53bac5784d8ba4daf3fb6e7c3a83775a51d9d558`.
-- **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para descargar esta rama, instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
+- **Main:** la última integración de código es el [merge de la PR #116](https://github.com/JavierGrecco/NetSentinel/commit/7247e478213158821b61ca51aa87ecb3698fc21b), que dejó en `main` la base modular y las separaciones de API de Monitorización e Inventario.
+- **Modularización integrada:** [PR #111](https://github.com/JavierGrecco/NetSentinel/pull/111), [PR #115](https://github.com/JavierGrecco/NetSentinel/pull/115) y [PR #116](https://github.com/JavierGrecco/NetSentinel/pull/116) están fusionadas. Sus checks de CI pasaron en los SHA revisados; la PR #111 también pasó Security y Supply Chain.
+- **NetSentinel Forense:** [PR #113](https://github.com/JavierGrecco/NetSentinel/pull/113) sigue abierta y en borrador, separada de Red. La CI pasó para el SHA `24060d592322bc01c45754cba51c60427a85ec97` ([ejecución #38807621209](https://github.com/JavierGrecco/NetSentinel/actions/runs/38807621209)); falta ejecutar y registrar su revisión manual con un archivo sintético antes de integrarla.
+- **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
 ## Revisión manual local
 
-El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales fueron satisfactorios. Los comentarios pendientes eran de presentación, organización visual y facilidad de uso, no de un bloqueo funcional. Con esta confirmación, el trabajo de interfaz del PR #111 puede pasar a revisión formal.
+El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales de NetSentinel Red fueron satisfactorios. Los comentarios pendientes se centraban en presentación, organización visual y facilidad de uso, no en un bloqueo funcional. Esa confirmación queda registrada, pero no identifica sistema operativo, navegador ni SHA probado.
 
 La confirmación no identifica el sistema operativo, el navegador ni el commit exacto probado, así que no se marcan como aprobados los recorridos específicos de Windows, macOS, Linux o la extensión. Esos resultados siguen registrándose por separado en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
@@ -28,10 +28,9 @@ La confirmación no identifica el sistema operativo, el navegador ni el commit e
 - La rotación del diario de errores también restringe los permisos de los archivos archivados, para no conservar permisos abiertos heredados de versiones anteriores.
 - Se preparó la rama de modularización para conservar la mejora de privacidad de la PR #110, evitando que el refactor restaure el saneamiento anterior.
 - Se corrigió un pequeño error de formato en la lista de funciones del README.
-- La siguiente extracción separa las rutas de monitorización por responsabilidad. Las URL y los métodos públicos permanecen iguales; el router existente solo compone los subrouters. La arquitectura y sus pruebas declaran las dependencias permitidas para evitar que vuelvan a mezclarse capacidades.
-- La extracción siguiente separa Inventario en consultas/cambios de activos, descubrimiento local y exportaciones. Conserva `api/inventory.py` como punto de composición; actualiza las pruebas que estaban acopladas al archivo antiguo y declara cada dependencia en el control de arquitectura.
-- Seguimiento de esta extracción: [PR #116](https://github.com/JavierGrecco/NetSentinel/pull/116), apilada sobre la PR #115. Los checks de CI del SHA final deben terminar antes de pasar a revisión formal.
-- Seguimiento de esta extracción: [PR #115](https://github.com/JavierGrecco/NetSentinel/pull/115), basada en PR #111. Es un cambio aparte y sus checks deben validarse sobre el commit final antes de pasar a revisión formal.
+- La API de Monitorización quedó separada en gestión de monitores/incidentes/avisos, informes/exportaciones y diagnóstico, conservando las rutas y respuestas públicas.
+- La API de Inventario quedó separada en consulta y cambios de activos/eventos, descubrimiento local y exportaciones. El router histórico permanece como punto de composición y las pruebas siguen los módulos responsables.
+- Ambas extracciones están integradas en `main` mediante las PR #115 y #116. El control de arquitectura comprueba las dependencias permitidas para evitar que vuelvan a mezclarse capacidades.
 - Se unificó el selector de apariencia en todas las páginas, con temas Oscuro, Medio y Claro persistentes entre secciones. Monitorización y Actividad se dividieron en sectores navegables; se aclaró cuándo corren las comprobaciones y qué requiere una fuente de telemetría real.
 - Se reajustó la jerarquía tras la primera prueba visual en macOS: la marca NetSentinel queda fija, el título y la descripción identifican la sección actual, la navegación ocupa todo el ancho y las tarjetas de tema pasan a un formato compacto. Se agregaron pruebas para mantener esta distribución en las cinco páginas.
 - Se reemplazó el desplegable de apariencia por tres tarjetas visuales con iconos (Oscuro, Medio y Claro) en las cinco secciones. La selección sigue guardándose, se comparte entre páginas y se sincroniza si se cambia desde otra pestaña. El control usa radios accesibles y contempla el foco de teclado y pantallas pequeñas.
@@ -40,7 +39,7 @@ La confirmación no identifica el sistema operativo, el navegador ni el commit e
 - Hallazgos ahora ofrece la acción de marcar un dispositivo como conocido, separada de marcar el evento como revisado, con una confirmación que aclara los límites de esa decisión.
 - Se agregaron pruebas automatizadas para comprobar los recursos frontend compartidos y los controles de navegación por sectores. La validación visual real en macOS todavía está pendiente.
 
-Antes de integrar la PR, hay que revisar CI, Security y Supply Chain sobre el SHA exacto que se va a integrar. Los resultados de un commit anterior no validan automáticamente uno nuevo.
+Para las próximas integraciones, revisar CI, Security y Supply Chain sobre el SHA exacto que se vaya a integrar. Los resultados de un commit anterior no validan automáticamente uno nuevo.
 
 ## Qué falta cerrar primero
 
@@ -53,3 +52,7 @@ Antes de integrar la PR, hay que revisar CI, Security y Supply Chain sobre el SH
 ## Regla para dar una tarea por terminada
 
 Que el código exista o que CI pase no demuestra por sí solo que funcione en un equipo real. Si el roadmap exige una prueba manual, el resultado y su evidencia tienen que quedar registrados. Si algo falla, anotá cómo reproducirlo y vinculá un issue; no marques la tarea como completa.
+
+## Trabajo separado: NetSentinel Forense
+
+Forense se desarrolla con marca, navegación y flujos propios, sin incorporarse todavía al `main`. La primera entrega incluye registro de casos, metadatos de evidencia, auditoría y comparación de SHA-256 sobre una copia autorizada. No equivale a una cadena de custodia certificada. La [PR #113](https://github.com/JavierGrecco/NetSentinel/pull/113) debe seguir en borrador hasta terminar la guía [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md) y registrar el resultado; la validación manual de Red no sustituye esa revisión.
