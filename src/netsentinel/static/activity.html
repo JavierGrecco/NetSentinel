@@ -8,14 +8,29 @@
   <script src="/static/theme.js"></script>
 </head>
 <body><main class="wrap">
-<header class="top"><div><h1>Actividad y telemetría</h1><div class="sub">Fuentes autorizadas · sesiones limitadas · almacenamiento local</div><nav class="primary-nav" aria-label="Navegación principal">
+<header class="top app-header">
+  <div class="app-brand">
+    <div class="logo" aria-hidden="true">⌁</div>
+    <div class="app-brand-copy">
+      <div class="eyebrow">Observabilidad local</div>
+      <h1 class="title">Actividad y telemetría</h1>
+      <div class="sub">Fuentes autorizadas · sesiones limitadas · almacenamiento local</div>
+    </div>
+  </div>
+  <div class="app-header-content">
+    <nav class="primary-nav" aria-label="Navegación principal">
         <a class="nav-link" href="/">Inventario</a>
         <a class="nav-link" href="/findings">Hallazgos</a>
         <a class="nav-link" href="/monitors">Monitorización</a>
         <a class="nav-link" href="/tools">Herramientas</a>
         <a class="nav-link" aria-current="page" href="/activity">Actividad</a>
-      </nav>
-      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div></div><button id="refresh" type="button">Actualizar</button></header>
+    </nav>
+    <div class="app-header-utilities">
+      <div class="theme-control"><label for="themeSelect">Apariencia</label><select id="themeSelect" name="theme" aria-label="Tema visual"><option value="dark">Oscuro</option><option value="medium">Medio</option><option value="light">Claro</option></select></div>
+      <div class="actions app-page-actions"><button id="refresh" type="button" class="quiet">↻ Actualizar</button></div>
+    </div>
+  </div>
+</header>
 <details class="notice scope-details"><summary>Qué registra esta sección y cuáles son sus límites</summary><p>NetSentinel no captura tráfico por sí mismo. La extensión Chromium, si la instalás y activás en un navegador, sí registra navegación futura: URLs HTTP(S) de páginas de nivel superior y búsquedas reconocidas. La URL guardada se normaliza, no es una copia exacta de la original: se quitan fragmentos y parámetros conocidos sensibles, y se redactan algunos identificadores reconocibles (por ejemplo, correos, teléfonos, UUID y tokens largos) en la ruta. Se conserva el host y parte de la ruta; otros segmentos o parámetros desconocidos pueden seguir conteniendo datos personales. Los filtros no pueden detectarlos todos. Las sesiones de red requieren una fuente compatible; también podés importar registros CSV de navegación, red o auditoría de correo autorizada. No se recopilan contraseñas, cookies, formularios, cuerpos de páginas, mensajes completos ni adjuntos. La captura de red normal no revela rutas/cuerpos HTTPS; las URLs de páginas provienen del navegador supervisado.</p></details>
 <nav class="section-tabs" role="tablist" aria-label="Secciones de actividad y telemetría">
   <button type="button" class="section-tab" role="tab" data-tab-target="activity-overview" data-tab-hash="resumen" aria-selected="true">Resumen</button>
