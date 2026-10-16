@@ -28,3 +28,29 @@
 /* Presentational classes used instead of inline style attributes. */
 .export-link{color:#7dd3fc}
 .history-actions{display:flex;gap:5px}
+
+
+/* Inventario: la información de apoyo aprovecha el ancho de la segunda fila. */
+.layout.inventory-layout {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  grid-template-areas:
+    "inventory activity"
+    "diagnostics scans";
+}
+
+.inventory-layout > .inventory-panel { grid-area: inventory; }
+.inventory-layout > .activity-panel { grid-area: activity; }
+.inventory-layout > .diagnostics-panel { grid-area: diagnostics; }
+.inventory-layout > .scans-panel { grid-area: scans; }
+
+/* En ventanas más estrechas, cada sección conserva un ancho cómodo y legible. */
+@media (max-width: 1080px) {
+  .layout.inventory-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "inventory"
+      "activity"
+      "diagnostics"
+      "scans";
+  }
+}
