@@ -391,7 +391,9 @@
         document.body.append(link);
         link.click();
         link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        // Capturá la URL antes de limpiar la variable que usa el bloque finally.
+        const downloadUrl = objectUrl;
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
         objectUrl = null;
         setStatus(
           "Manifiesto descargado. Guardá su SHA-256 por separado si necesitás comprobar sustituciones; el digest no es una firma digital.",
