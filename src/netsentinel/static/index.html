@@ -137,6 +137,24 @@
       </section>
       <section class="panel scans-panel">
         <div class="panel-head"><div><h2 class="panel-title">Historial de lecturas</h2><div class="panel-sub">Fuentes consultadas, resultados y avisos</div></div></div>
+        <section class="scan-comparison" aria-labelledby="scanComparisonTitle">
+          <h3 id="scanComparisonTitle" class="scan-comparison-title">Comparar capturas</h3>
+          <p class="panel-sub">Contrastá dos lecturas que incluyan al menos una misma subred privada. Los resultados se basan en observaciones guardadas, no en pruebas de conectividad actuales.</p>
+          <div class="scan-comparison-controls">
+            <div class="field">
+              <label for="scanCompareFirst">Primera lectura</label>
+              <select id="scanCompareFirst" aria-label="Primera lectura para comparar"><option value="">Cargando lecturas…</option></select>
+            </div>
+            <div class="field">
+              <label for="scanCompareSecond">Segunda lectura</label>
+              <select id="scanCompareSecond" aria-label="Segunda lectura para comparar"><option value="">Cargando lecturas…</option></select>
+            </div>
+            <button type="button" id="scanCompareButton" class="primary" disabled>Comparar lecturas</button>
+          </div>
+          <div id="scanComparisonResult" class="scan-comparison-result" role="status" aria-live="polite">
+            <p class="scan-comparison-empty">Elegí dos lecturas y pulsá «Comparar lecturas».</p>
+          </div>
+        </section>
         <div id="scansList" class="events"><div class="empty">Todavía no hay lecturas registradas.</div></div>
       </section>
     </div>
@@ -162,6 +180,7 @@
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <script src="/static/topology.js" defer></script>
+<script src="/static/scan-comparison.js" defer></script>
 <script src="/static/index.js" defer></script>
 </body>
 </html>
