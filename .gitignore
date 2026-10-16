@@ -26,3 +26,6 @@ oui.csv
 .env
 .env.*
 !.env.example
+
+# Informes y capturas locales de comprobación visual
+.netsentinel-test-artifacts/
