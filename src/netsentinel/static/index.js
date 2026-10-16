@@ -1,5 +1,5 @@
   const $ = (id) => document.getElementById(id);
-  const state = { devices: [], topologyDevices: [], topologySelectionId: null, events: [], scans: [] };
+  const state = { devices: [], topologyDevices: [], topologySelectionId: null, topologyObservations: null, topologyObservationScanId: null, events: [], scans: [] };
   function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
@@ -41,6 +41,23 @@
     try {
       const [summary,devices,topologyDevices,events,scans]=await Promise.all([api('/api/summary'),api('/api/devices?q='+encodeURIComponent($('searchInput').value)),api('/api/devices'),api('/api/events?limit=30'),api('/api/scans?limit=12')]);
       state.devices=devices;state.topologyDevices=topologyDevices;state.events=events;state.scans=scans;
+      const graph = window.NetSentinelTopology;
+      const topologyScan = graph ? graph.latestNetworkScan(scans) : null;
+      const targetScanId = topologyScan ? String(topologyScan.id) : null;
+      if (!targetScanId) {
+        state.topologyObservations = null;
+        state.topologyObservationScanId = null;
+      } else if (targetScanId !== state.topologyObservationScanId || state.topologyObservations === null) {
+        state.topologyObservationScanId = targetScanId;
+        state.topologyObservations = null;
+        try {
+          const observations = await api('/api/scans/' + encodeURIComponent(targetScanId) + '/observations');
+          if (state.topologyObservationScanId === targetScanId) state.topologyObservations = observations;
+        } catch (_error) {
+          // El mapa no debe inventar relaciones ni convertir un error de lectura en ausencia de dispositivos.
+          state.topologyObservations = null;
+        }
+      }
       $('totalMetric').textContent=summary.devices_total;$('trustedMetric').textContent=summary.devices_trusted;$('unknownMetric').textContent=summary.devices_untrusted;$('eventsMetric').textContent=summary.events_pending;
       $('lastScanMetric').textContent=summary.last_scan?`Última lectura: ${dateTime(summary.last_scan)}`:'Última lectura: todavía ninguna';
       $('gettingStarted').hidden=Number(summary.devices_total)>0;
@@ -60,6 +77,8 @@
       accessible: $('topologyAccessibleList'),
       devices: state.topologyDevices,
       scans: state.scans,
+      observations: state.topologyObservations,
+      observationsScanId: state.topologyObservationScanId,
       search: $('topologySearch').value,
       selectedId: state.topologySelectionId,
       onSelect: device => { state.topologySelectionId = String(device.id); }
