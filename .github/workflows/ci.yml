@@ -198,7 +198,7 @@ jobs:
           fi
           echo "Modified artifact correctly rejected."
       - name: Validate Chromium extension JavaScript
-        run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
+        run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js && node --check src/netsentinel/static/scan-comparison.js
       - name: Test Chromium extension URL sanitizer, capture lifecycle and popup CSV
         run: node --test browser-extension/service-worker.test.cjs browser-extension/popup.test.cjs tests/topology_model.test.cjs
       - name: Validate extension manifest and opt-in defaults
@@ -225,7 +225,7 @@ jobs:
 
           static_dir = Path("src/netsentinel/static")
           pages = {
-              "index.html": ("/static/theme.js", "/static/topology.js", "/static/index.js"),
+              "index.html": ("/static/theme.js", "/static/topology.js", "/static/scan-comparison.js", "/static/index.js"),
               "monitors.html": ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js"),
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),
