@@ -435,7 +435,20 @@ def _scan_comparison_failures(page) -> list[str]:
 def _monitor_history_accessibility_failures(page) -> list[str]:
     """Prueba el detalle textual de monitorización mediante teclado en Chromium."""
     failures: list[str] = []
-    cards = page.locator(".monitor")
+    # Los monitores están en una pestaña propia; abrirla reproduce el recorrido real.
+    monitor_tab = page.get_by_role("tab", name="Monitores")
+    if monitor_tab.count() != 1:
+        return ["no se encontró la pestaña Monitores"]
+    monitor_tab.click()
+    try:
+        page.wait_for_function(
+            "() => { const p = document.querySelector('#monitor-config'); return !!p && !p.hidden; }",
+            timeout=5000,
+        )
+    except Exception as exc:
+        return [f"no se pudo abrir la pestaña Monitores: {exc}"]
+
+    cards = page.locator("#monitor-config .monitor")
     if cards.count() != 1:
         return [f"se esperaba un monitor sintético en la prueba, se encontraron {cards.count()}"]
 
