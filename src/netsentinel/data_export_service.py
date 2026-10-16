@@ -88,12 +88,16 @@ def export_sqlite_backup(path: Path | None = None, *, default_path_provider: Cal
     with tempfile.TemporaryDirectory(prefix="netsentinel-backup-") as temporary_directory:
         backup_path = Path(temporary_directory) / "netsentinel-backup.sqlite3"
         source = sqlite3.connect(source_path, timeout=10)
-        destination = sqlite3.connect(backup_path, timeout=10)
         try:
-            source.backup(destination)
-            destination.commit()
+            # Si no se puede abrir el destino temporal, cerrar igualmente el origen.
+            # El try exterior protege también los errores al crear el destino.
+            destination = sqlite3.connect(backup_path, timeout=10)
+            try:
+                source.backup(destination)
+                destination.commit()
+            finally:
+                destination.close()
         finally:
-            destination.close()
             source.close()
         return backup_path.read_bytes()
 
