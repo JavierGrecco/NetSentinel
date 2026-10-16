@@ -102,8 +102,12 @@ def get_monitor_latency_trend(monitor_id: int, window_hours: int = 24,
                               path: Path | None = None) -> dict[str, Any] | None:
     """Agrega la latencia histórica en buckets horarios (24 h) o de seis horas (7 días)."""
     hours = max(1, min(int(window_hours), 168))
-    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds")
+    # Use one UTC reference for both the query boundary and the completed bucket grid.
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    since_at = now - timedelta(hours=hours)
+    since = since_at.isoformat(timespec="seconds")
     bucket_minutes = 60 if hours <= 24 else 360
+    bucket_seconds = bucket_minutes * 60
     if bucket_minutes == 60:
         bucket_expr = "strftime('%Y-%m-%dT%H:00:00+00:00', checked_at)"
     else:
@@ -130,12 +134,35 @@ def get_monitor_latency_trend(monitor_id: int, window_hours: int = 24,
                 GROUP BY bucket_start ORDER BY bucket_start ASC""",
             (monitor_id, since),
         ).fetchall()
+    observed_by_bucket = {str(row["bucket_start"]): dict(row) for row in rows}
+    first_bucket_epoch = (int(since_at.timestamp()) // bucket_seconds) * bucket_seconds
+    last_bucket_epoch = (int(now.timestamp()) // bucket_seconds) * bucket_seconds
+    cursor = datetime.fromtimestamp(first_bucket_epoch, tz=timezone.utc)
+    last_bucket = datetime.fromtimestamp(last_bucket_epoch, tz=timezone.utc)
     points = []
-    for row in rows:
-        point = dict(row)
-        for key in ("average_latency_ms", "min_latency_ms", "max_latency_ms"):
-            point[key] = round(float(point[key]), 2) if point[key] is not None else None
+    while cursor <= last_bucket:
+        bucket_start = cursor.strftime("%Y-%m-%dT%H:00:00+00:00")
+        point = observed_by_bucket.get(bucket_start)
+        if point is None:
+            # Keep the time axis continuous: a missing check is not a failed check.
+            point = {
+                "bucket_start": bucket_start,
+                "checks_total": 0,
+                "checks_up": 0,
+                "checks_down": 0,
+                "average_latency_ms": None,
+                "min_latency_ms": None,
+                "max_latency_ms": None,
+            }
+        else:
+            point["checks_total"] = int(point["checks_total"] or 0)
+            point["checks_up"] = int(point["checks_up"] or 0)
+            point["checks_down"] = int(point["checks_down"] or 0)
+            for key in ("average_latency_ms", "min_latency_ms", "max_latency_ms"):
+                point[key] = round(float(point[key]), 2) if point[key] is not None else None
         points.append(point)
+        cursor += timedelta(seconds=bucket_seconds)
+
     return {
         "monitor": dict(monitor), "window_hours": hours, "since": since,
         "bucket_minutes": bucket_minutes, "points": points,

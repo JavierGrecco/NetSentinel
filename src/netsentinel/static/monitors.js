@@ -5,7 +5,104 @@ async function api(path,options){options=options||{};options.headers=Object.assi
 function message(text){$("toast").textContent=text;$("toast").classList.add("show");window.setTimeout(()=> $("toast").classList.remove("show"),4000);}
 function dateText(value){if(!value)return "Sin comprobar";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString();}
 function durationText(value){if(value==null||!Number.isFinite(Number(value)))return "Sin datos";let seconds=Math.max(0,Math.round(Number(value)));const days=Math.floor(seconds/86400);seconds%=86400;const hours=Math.floor(seconds/3600);seconds%=3600;const minutes=Math.floor(seconds/60);seconds%=60;if(days)return days+" d "+hours+" h";if(hours)return hours+" h "+minutes+" min";if(minutes)return minutes+" min "+seconds+" s";return seconds+" s";}
-function appendHistoricalLatencyTrend(box,data){const points=data.points||[],measured=points.filter(p=>p.average_latency_ms!=null&&Number.isFinite(Number(p.average_latency_ms)));box.appendChild(el("strong","trend-title","Tendencia histórica · "+(data.window_hours<=24?"últimas 24 horas":"últimos 7 días")));box.appendChild(el("div","small","Cada barra resume "+data.bucket_minutes+" min · "+points.length+" período(s) con comprobaciones."));const link=el("a","export-link","Exportar tendencia CSV");link.href="/api/export/monitor-latency.csv?monitor_id="+data.monitor.id+"&hours="+data.window_hours;box.appendChild(link);if(!measured.length){box.appendChild(el("div","small","No hay latencias registradas en este período."));return;}const max=Math.max(...measured.map(p=>Number(p.average_latency_ms)),0.1),chart=el("div","latency-history-chart");chart.setAttribute("role","img");chart.setAttribute("aria-label","Latencia media agrupada por período durante "+data.window_hours+" horas.");points.forEach(p=>{if(p.average_latency_ms==null){const gap=el("span","latency-history-bar empty-bucket","—");gap.title=dateText(p.bucket_start)+" · sin medición de latencia";chart.appendChild(gap);return;}const bar=el("span","latency-history-bar");bar.dataset.height=String(Math.max(1,Math.min(13,Math.ceil(Number(p.average_latency_ms)/max*13))));bar.title=dateText(p.bucket_start)+" · media "+Number(p.average_latency_ms).toFixed(1)+" ms · "+p.checks_up+" respuesta(s) correcta(s) · "+p.checks_down+" fallo(s)";bar.setAttribute("aria-label",bar.title);chart.appendChild(bar);});box.appendChild(chart);if(measured.length>1){const values=measured.map(p=>Number(p.average_latency_ms));box.appendChild(el("div","small","Promedio de períodos medidos: "+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1)+" ms · mínimo: "+Math.min(...values).toFixed(1)+" ms · máximo: "+Math.max(...values).toFixed(1)+" ms."));}}
+function appendHistoricalLatencyTrend(box, data) {
+    const points = Array.isArray(data.points) ? data.points : [];
+    const measured = points.filter(point =>
+        point.average_latency_ms != null && Number.isFinite(Number(point.average_latency_ms))
+    );
+    const recorded = points.filter(point => Number(point.checks_total || 0) > 0);
+    const windowLabel = data.window_hours <= 24 ? "últimas 24 horas" : "últimos 7 días";
+    box.appendChild(el("strong", "trend-title", "Tendencia histórica · " + windowLabel));
+    box.appendChild(el(
+        "div",
+        "small",
+        "Cada barra resume " + data.bucket_minutes +
+            " min. Un intervalo sin registros no demuestra que el objetivo estuviera caído."
+    ));
+    const link = el("a", "export-link", "Exportar tendencia CSV");
+    link.href = "/api/export/monitor-latency.csv?monitor_id=" +
+        data.monitor.id + "&hours=" + data.window_hours;
+    box.appendChild(link);
+
+    if (!recorded.length) {
+        box.appendChild(el(
+            "div",
+            "small",
+            "No hay comprobaciones registradas en este período; no es posible inferir la disponibilidad del objetivo."
+        ));
+        return;
+    }
+
+    const maximum = Math.max(...measured.map(point => Number(point.average_latency_ms)), 0.1);
+    const chart = el("div", "latency-history-chart");
+    const emptyCount = points.filter(point => Number(point.checks_total || 0) === 0).length;
+    const failureCount = points.filter(point => Number(point.checks_down || 0) > 0).length;
+    chart.setAttribute("role", "img");
+    chart.setAttribute(
+        "aria-label",
+        "Historial de latencia de " + data.window_hours + " horas. " +
+            measured.length + " intervalos con latencia válida, " +
+            emptyCount + " sin comprobaciones y " +
+            failureCount + " intervalos con fallos registrados."
+    );
+
+    points.forEach(point => {
+        const total = Number(point.checks_total || 0);
+        const checksUp = Number(point.checks_up || 0);
+        const checksDown = Number(point.checks_down || 0);
+        const when = dateText(point.bucket_start);
+        if (!total) {
+            const gap = el("span", "latency-history-bar empty-bucket", "—");
+            gap.title = when +
+                " · sin comprobaciones registradas; no indica si el objetivo estaba disponible";
+            gap.setAttribute("aria-label", gap.title);
+            chart.appendChild(gap);
+            return;
+        }
+
+        if (point.average_latency_ms == null ||
+            !Number.isFinite(Number(point.average_latency_ms))) {
+            const failed = checksDown > 0;
+            const marker = el(
+                "span",
+                "latency-history-bar " + (failed ? "failure-bucket" : "unmeasured-bucket"),
+                failed ? "×" : "—"
+            );
+            marker.title = when + " · " + total + " comprobación(es); " +
+                checksUp + " correcta(s), " + checksDown +
+                " fallida(s) · sin latencia válida";
+            marker.setAttribute("aria-label", marker.title);
+            chart.appendChild(marker);
+            return;
+        }
+
+        const value = Number(point.average_latency_ms);
+        const bar = el("span", "latency-history-bar");
+        bar.dataset.height = String(Math.max(1, Math.min(13, Math.ceil(value / maximum * 13))));
+        bar.title = when + " · media " + value.toFixed(1) + " ms · " +
+            checksUp + " respuesta(s) correcta(s) · " + checksDown + " fallo(s)";
+        bar.setAttribute("aria-label", bar.title);
+        chart.appendChild(bar);
+    });
+    box.appendChild(chart);
+    box.appendChild(el(
+        "div",
+        "small",
+        measured.length + " de " + points.length +
+            " intervalos tienen latencia válida. Los vacíos representan falta de registros; los marcadores × indican fallos sin latencia."
+    ));
+    if (measured.length > 1) {
+        const values = measured.map(point => Number(point.average_latency_ms));
+        box.appendChild(el(
+            "div",
+            "small",
+            "Promedio de períodos medidos: " +
+                (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) +
+                " ms · mínimo: " + Math.min(...values).toFixed(1) +
+                " ms · máximo: " + Math.max(...values).toFixed(1) + " ms."
+        ));
+    }
+}
 function appendLatencyTrend(box,checks){const valid=checks.filter(c=>c.status==="up"&&c.latency_ms!=null&&Number.isFinite(Number(c.latency_ms)));if(!valid.length){box.appendChild(el("div","small","No hay latencias medidas en estas comprobaciones."));return;}const values=valid.map(c=>Number(c.latency_ms)),max=Math.max(...values,0.1),avg=values.reduce((a,b)=>a+b,0)/values.length;box.appendChild(el("strong","trend-title","Evolución de latencia · últimas "+checks.length+" comprobaciones"));box.appendChild(el("div","small","Respuestas correctas: media "+avg.toFixed(1)+" ms · mínima "+Math.min(...values).toFixed(1)+" ms · máxima "+Math.max(...values).toFixed(1)+" ms"));const chart=el("div","latency-chart");chart.setAttribute("role","img");chart.setAttribute("aria-label","Evolución de latencia de las comprobaciones más recientes; solo las correctas tienen una medición.");checks.slice().reverse().forEach(c=>{if(c.status==="up"&&c.latency_ms!=null&&Number.isFinite(Number(c.latency_ms))){const value=Number(c.latency_ms),bar=el("span","latency-bar up");bar.dataset.height=String(Math.max(1,Math.min(13,Math.ceil(value/max*13))));bar.title=dateText(c.checked_at)+" · "+value.toFixed(1)+" ms";bar.setAttribute("aria-label",bar.title);chart.appendChild(bar);}else{const marker=el("span","latency-bar "+(c.status==="down"?"down":"unknown"),c.status==="down"?"×":"—");marker.title=dateText(c.checked_at)+(c.status==="down"?" · fallo; sin latencia":" · sin latencia registrada");marker.setAttribute("aria-label",marker.title);chart.appendChild(marker);}});box.appendChild(chart);}
 function renderMonitors(items,analyticsById){const root=$("monitors");root.replaceChildren();if(!items.length){root.appendChild(el("div","empty","Todavía no hay monitores. Agregá uno desde el formulario."));return;}
 items.forEach(m=>{const card=el("article","monitor"),header=el("div","monitor-head"),left=el("div","");left.appendChild(el("h3","",m.name));left.appendChild(el("div","target",m.kind.toUpperCase()+" · "+m.target));header.appendChild(left);const state=m.enabled?(m.last_status||"unknown"):"paused",label=state==="paused"?"Pausado":state==="up"?"Disponible":state==="down"?"Falla detectada":"Sin comprobar";header.appendChild(el("span","pill "+state,label+(m.enabled&&m.incident_open?" · incidente":"")));card.appendChild(header);
