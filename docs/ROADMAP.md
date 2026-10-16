@@ -4,11 +4,11 @@
 
 ## Estado del proyecto
 
-**Estado:** estabilización de la versión local 0.10.0. La funcionalidad principal existe y las comprobaciones automatizadas han estado verdes en la revisión anterior, pero **la versión todavía no está lista para declararse estable** porque faltan pruebas manuales documentadas en sistemas/navegadores reales y confirmar controles de repositorio.
+**Estado:** estabilización de la versión local 0.10.0. La funcionalidad principal existe y la validación automática posterior al merge terminó bien sobre el commit [`953da4d`](https://github.com/JavierGrecco/NetSentinel/commit/953da4d37d3f479bffcbf58211c06afd8d4e9baf), pero **la versión todavía no está lista para declararse estable** porque faltan pruebas manuales documentadas en sistemas/navegadores reales y confirmar controles de repositorio.
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Última integración de código:** [PR #142](https://github.com/JavierGrecco/NetSentinel/pull/142), alternativa textual accesible por intervalo para el historial de latencia; commit [1e36530](https://github.com/JavierGrecco/NetSentinel/commit/1e36530629ef9e4310bcd5fce9bfb87aeed234c4). La línea temporal continua entró en la [PR #140](https://github.com/JavierGrecco/NetSentinel/pull/140).
+- **Última mejora funcional:** [PR #142](https://github.com/JavierGrecco/NetSentinel/pull/142), alternativa textual accesible por intervalo para el historial de latencia; commit [1e36530](https://github.com/JavierGrecco/NetSentinel/commit/1e36530629ef9e4310bcd5fce9bfb87aeed234c4). La línea temporal continua entró en la [PR #140](https://github.com/JavierGrecco/NetSentinel/pull/140).
 - **Último commit funcional revisado al actualizar esta nota:** [1e36530](https://github.com/JavierGrecco/NetSentinel/commit/1e36530629ef9e4310bcd5fce9bfb87aeed234c4), detalle textual por intervalo para que el historial no dependa del hover ni de interpretar barras gráficas.
 - **CI de la comparación inicial (PR #137):** [ejecución #38858149460](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858149460) — 18/18 trabajos correctos antes de fusionar.
 - **Corrección de alcance (PR #139):** CI [#38858557234](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858557234) — 18/18 trabajos correctos; seguridad [#38858557227](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858557227) — 2/2 correctos; cadena de suministro [#38858557244](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858557244) — build y SBOM/manifiesto correctos, firma de procedencia omitida por no ser una publicación de release.
