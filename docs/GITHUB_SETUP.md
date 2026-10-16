@@ -9,7 +9,7 @@
 
 ## Proteger la rama principal
 
-La política escrita no configura GitHub por sí sola. En la revisión actual no se pudo confirmar que main esté protegida; completar el seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+La política escrita no configura GitHub por sí sola. En la revisión del 16/10/2026, la API de ramas devolvió `protected: false` para `main`; esa respuesta no muestra una protección tradicional aplicada. Revisá también **Settings → Rules → Rulesets** por si el repositorio usa reglasets. El seguimiento sigue pendiente hasta comprobar una regla activa en la configuración real: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 
 1. Abrí Settings → Branches o Rules → Rulesets y creá una regla que aplique exactamente a main.
 2. Exigí pull request antes de merge. Si existe un segundo revisor, exigí aprobación y descartá aprobaciones obsoletas; si solo hay un mantenedor, no configures un requisito de aprobación imposible de cumplir.
