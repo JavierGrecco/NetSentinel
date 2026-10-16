@@ -217,6 +217,55 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
     return failures
 
 
+
+def _topology_panel_failures(page) -> list[str]:
+    """Comprueba que el mapa plegable abra en vacío sin romper la interfaz."""
+    failures: list[str] = []
+    panel = page.locator("#topologyPanel")
+    if panel.count() != 1:
+        return ["no aparece un único panel del mapa de relaciones"]
+
+    summary_button = panel.locator("summary")
+    if summary_button.count() != 1:
+        return ["el mapa no tiene un control claro para abrir o cerrar la vista"]
+
+    try:
+        if panel.get_attribute("open") is None:
+            summary_button.click()
+        page.wait_for_function(
+            """() => {
+              const summary = document.querySelector("#topologySummary");
+              return summary && summary.textContent.trim() &&
+                summary.textContent.trim() !== "Cargando datos del inventario…";
+            }""",
+            timeout=5000,
+        )
+    except Exception as exc:
+        return [f"el mapa no terminó de mostrar su estado inicial: {exc}"]
+
+    for selector, description in (
+        ("#topologySearch", "el filtro de dispositivos"),
+        ("#topologyResetSearch", "el botón para limpiar el filtro"),
+        ("#topologyCanvas", "el área del grafo"),
+        ("#topologySelection", "el panel de detalle"),
+        ("#topologyAccessibleList", "la alternativa textual"),
+    ):
+        element = panel.locator(selector)
+        if element.count() != 1:
+            failures.append(f"falta {description}")
+        elif not element.is_visible():
+            failures.append(f"no está visible {description} al abrir el mapa")
+
+    search = panel.locator("#topologySearch")
+    reset = panel.locator("#topologyResetSearch")
+    if search.count() == 1 and reset.count() == 1:
+        search.fill("filtro-de-prueba")
+        reset.click()
+        if search.input_value() != "":
+            failures.append("el botón Limpiar filtro no restablece la búsqueda")
+    return failures
+
+
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -315,6 +364,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
+                                case_failures.extend(_topology_panel_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
