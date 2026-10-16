@@ -16,6 +16,8 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 
 - Se revisó el código publicado de otro proyecto llamado NetSentinel y se documentó una propuesta de aprendizaje en [REFERENCE_PROJECT_REVIEW.md](REFERENCE_PROJECT_REVIEW.md). La recomendación es terminar la estabilización actual; después, mejorar las tendencias de monitorización existentes, estudiar un grafo LAN basado en relaciones verificables y valorar por separado un mapa de IP públicas. No se copiaron funciones ni dependencias del proyecto de referencia en esta revisión.
 
+- Las dos referencias externas ya están revisadas y documentadas: [análisis de gráficos y topología](REFERENCE_PROJECT_REVIEW.md) y [análisis de visualización en vivo y riesgos](REFERENCE_PROJECT_REVIEW_BLACSECURITY.md). En la rama `feature/evidence-backed-network-graph` se está desarrollando un mapa LAN de solo lectura. El prototipo usa una API que devuelve las observaciones exactas de cada lectura para no reconstruir relaciones históricas con el último `last_seen`; sigue pendiente de CI y revisión visual antes de considerarse integrado.
+
 ## Revisión manual local
 
 El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales de NetSentinel Red fueron satisfactorios. Los comentarios pendientes se centraban en presentación, organización visual y facilidad de uso, no en un bloqueo funcional. Esa confirmación queda registrada, pero no identifica sistema operativo, navegador ni SHA probado.
