@@ -237,7 +237,7 @@ def test_closed_case_keeps_history_and_rejects_new_evidence(monkeypatch, tmp_pat
 
     assert close.status_code == 200
     assert close.json()["status"] == "closed"
-    assert evidence.status_code == 422
+    assert evidence.status_code == 409
     assert "caso está cerrado" in evidence.json()["detail"]
     assert [row["action"] for row in audit.json()["items"]] == ["case_closed", "case_opened"]
 
