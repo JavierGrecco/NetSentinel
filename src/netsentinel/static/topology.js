@@ -101,24 +101,32 @@
     return deviceLabel(left.device).localeCompare(deviceLabel(right.device), "es");
   }
 
-  function buildTopologyModel(devices, scans) {
+  function latestNetworkScan(scans) {
+    for (const scan of orderedScans(scans)) {
+      const rawNetworks = Array.isArray(scan && scan.discovery && scan.discovery.networks)
+        ? scan.discovery.networks : [];
+      if (rawNetworks.some(raw => parsePrivateCidr(raw && raw.network))) return scan;
+    }
+    return null;
+  }
+
+  function buildTopologyModel(devices, scans, observations, observationsScanId) {
     const allDevices = Array.isArray(devices) ? devices : [];
     const sortedScans = orderedScans(scans);
     const latestScan = sortedScans[0] || null;
-    let selectedScan = null;
+    const selectedScan = latestNetworkScan(sortedScans);
     let selectedNetworks = [];
 
-    for (const scan of sortedScans) {
-      const rawNetworks = Array.isArray(scan && scan.discovery && scan.discovery.networks)
-        ? scan.discovery.networks : [];
-      const parsedNetworks = [];
+    if (selectedScan) {
+      const rawNetworks = Array.isArray(selectedScan.discovery && selectedScan.discovery.networks)
+        ? selectedScan.discovery.networks : [];
       const seenCidrs = new Set();
       for (const raw of rawNetworks) {
         const parsed = parsePrivateCidr(raw && raw.network);
         if (!parsed || seenCidrs.has(parsed.cidr)) continue;
         seenCidrs.add(parsed.cidr);
-        parsedNetworks.push({
-          index: parsedNetworks.length,
+        selectedNetworks.push({
+          index: selectedNetworks.length,
           cidr: parsed.cidr,
           parsed: parsed,
           interface: String(raw.interface || "interfaz sin identificar"),
@@ -127,14 +135,9 @@
           members: []
         });
       }
-      if (parsedNetworks.length) {
-        selectedScan = scan;
-        selectedNetworks = parsedNetworks;
-        break;
-      }
     }
 
-    if (!selectedScan) {
+    if (!selectedScan || !selectedNetworks.length) {
       return {
         hasNetworkData: false,
         latestScan: latestScan,
@@ -152,11 +155,64 @@
       };
     }
 
-    const modeledDevices = [];
+    const requestedScanId = observationsScanId == null
+      ? (Array.isArray(observations) && observations.length ? observations[0].scan_id : null)
+      : observationsScanId;
+    if (requestedScanId == null || String(requestedScanId) !== String(selectedScan.id) || !Array.isArray(observations)) {
+      return {
+        hasNetworkData: false,
+        latestScan: latestScan,
+        scan: selectedScan,
+        networks: selectedNetworks,
+        devices: [],
+        unlinkedObserved: [],
+        notObserved: [],
+        stale: Boolean(latestScan && String(latestScan.id) !== String(selectedScan.id)),
+        totalDevices: allDevices.length,
+        observedCount: 0,
+        reason: "No se pudo recuperar la evidencia exacta de la lectura seleccionada. No se dibujan relaciones hasta disponer de sus observaciones históricas."
+      };
+    }
+
+    const deviceById = new Map();
     for (const device of allDevices) {
       if (!device || device.id === undefined || device.id === null) continue;
+      deviceById.set(String(device.id), device);
+    }
+
+    // Las observaciones están vinculadas por scan_id. No se infiere presencia
+    // usando last_seen, porque ese valor puede haber cambiado en lecturas posteriores.
+    const observationsByDevice = new Map();
+    for (const row of observations) {
+      if (!row || String(row.scan_id) !== String(selectedScan.id) ||
+          row.device_id === undefined || row.device_id === null || !row.ip_address) continue;
+      const id = String(row.device_id);
+      const address = {
+        ip_address: String(row.ip_address),
+        last_seen: row.observed_at || "",
+        source: String(row.source || selectedScan.source || "fuente desconocida")
+      };
+      const list = observationsByDevice.get(id) || [];
+      list.push(address);
+      observationsByDevice.set(id, list);
+
+      if (!deviceById.has(id)) {
+        deviceById.set(id, {
+          id: row.device_id,
+          ip_address: row.primary_ip || row.ip_address,
+          mac_address: row.mac_address || "",
+          display_name: row.display_name || "",
+          manufacturer: row.manufacturer || "",
+          trusted: Boolean(row.trusted),
+          last_seen: row.observed_at || ""
+        });
+      }
+    }
+
+    const modeledDevices = [];
+    for (const [id, device] of deviceById) {
       const addresses = deviceAddresses(device);
-      const currentAddresses = addresses.filter(address => wasSeenDuringScan(address, selectedScan));
+      const currentAddresses = observationsByDevice.get(id) || [];
       const relationsByNetwork = new Map();
 
       for (const address of currentAddresses) {
@@ -177,13 +233,14 @@
         }
       }
 
-      const relations = Array.from(relationsByNetwork.values()).sort((a, b) => a.networkIndex - b.networkIndex);
+      const relations = Array.from(relationsByNetwork.values())
+        .sort((a, b) => a.networkIndex - b.networkIndex);
       const entry = {
-        id: String(device.id),
+        id: id,
         device: device,
-        addresses: addresses,
+        addresses: addresses.concat(currentAddresses),
         currentAddresses: currentAddresses,
-        observedInScan: currentAddresses.length > 0,
+        observedInScan: observationsByDevice.has(id),
         relations: relations,
         primaryNetworkIndex: relations.length ? relations[0].networkIndex : null
       };
@@ -347,6 +404,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "quiet tiny";
+      button.dataset.deviceId = entry.id;
       button.setAttribute("aria-pressed", entry.id === selectedId ? "true" : "false");
       button.textContent = deviceLabel(entry.device) + " · " +
         (entry.device.ip_address || entry.device.mac_address || "sin dirección") +
@@ -366,7 +424,7 @@
     const accessible = config.accessible;
     if (!canvas || !summary || !selection || !accessible) return null;
 
-    const model = buildTopologyModel(config.devices, config.scans);
+    const model = buildTopologyModel(config.devices, config.scans, config.observations, config.observationsScanId);
     const query = String(config.search || "").trim().toLocaleLowerCase();
     const matching = model.devices.filter(entry => !query || searchableText(entry).includes(query));
 
@@ -388,13 +446,11 @@
       return model;
     }
 
-    const matchingById = new Map(matching.map(entry => [entry.id, entry]));
     const observed = matching.filter(entry => entry.relations.length > 0).sort(compareNewestFirst);
     const otherObserved = matching.filter(entry => entry.observedInScan && entry.relations.length === 0).sort(compareNewestFirst);
     const oldInventory = matching.filter(entry => !entry.observedInScan).sort(compareNewestFirst);
     const chosen = observed.slice(0, MAX_OBSERVED_DEVICES);
     const selectedIds = new Set(chosen.map(entry => entry.id));
-    const remainingSlots = Math.max(0, MAX_VISIBLE_DEVICES - selectedIds.size);
     for (const entry of otherObserved.concat(oldInventory)) {
       if (selectedIds.size >= MAX_VISIBLE_DEVICES || selectedIds.has(entry.id)) continue;
       if (selectedIds.size < MAX_OBSERVED_DEVICES && entry.relations.length) continue;
@@ -439,7 +495,7 @@
     const svgHeight = Math.max(160, top + 8);
     const svg = makeSvgElement("svg", "topology-svg", {
       viewBox: "0 0 " + CANVAS_WIDTH + " " + svgHeight,
-      role: "img",
+      role: "group",
       "aria-label": "Mapa de relaciones de inventario. Las líneas conectan direcciones observadas con el rango de una subred registrada; no indican enlaces físicos."
     });
     const positionsById = new Map();
@@ -546,6 +602,7 @@
   const api = {
     buildTopologyModel: buildTopologyModel,
     renderTopology: renderTopology,
+    latestNetworkScan: latestNetworkScan,
     parsePrivateCidr: parsePrivateCidr
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
