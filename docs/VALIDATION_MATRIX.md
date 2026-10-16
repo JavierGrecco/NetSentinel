@@ -172,3 +172,18 @@ Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular 
 | Fecha | Versión/commit | OS / navegador | IDs ejecutados | Resultado | Issue / evidencia |
 |---|---|---|---|---|---|
 | — | — | — | — | Pendiente de primera ejecución | — |
+
+## NetSentinel Forense — revisión manual pendiente (PR #157)
+
+Usar un directorio de datos aislado y **archivos sintéticos**. No probar con evidencia real ni reutilizar datos de otra instalación. Seguir también la [guía manual de Forense](FORENSIC_MANUAL_TEST.md). Estas casillas solo se marcan con el resultado de una prueba real y la información del entorno arriba indicada.
+
+- [ ] **FOR-01 — Alta y trazabilidad:** crear un caso de prueba con referencia de autoridad, objetivo y alcance; comprobar que la operación y el nombre declarado del operador queden en la auditoría.
+- [ ] **FOR-02 — Metadatos sin copiar evidencia:** registrar una pieza sintética y comprobar que se guarden los metadatos declarados sin subir ni copiar el contenido original ni persistir rutas completas.
+- [ ] **FOR-03 — Hash correcto e incorrecto:** comparar una copia de trabajo con su SHA-256 de referencia correcto y con otro valor; confirmar que el resultado y el tamaño correspondan al archivo leído.
+- [ ] **FOR-04 — Entradas inseguras y errores:** probar una ruta absoluta, traversal, nombre no portable, archivo ausente y enlace simbólico cuando el sistema lo permita. Confirmar mensajes entendibles y que la auditoría no exponga la ruta completa ni el nombre rechazado.
+- [ ] **FOR-05 — Caso cerrado:** cerrar un caso y confirmar que no admita nuevas evidencias ni comparaciones, sin borrar el historial existente.
+- [ ] **FOR-06 — Auditoría alterada:** exportar el manifiesto, comprobarlo con el verificador local y modificar una copia de prueba del JSON para confirmar que el verificador detecta el cambio. No presentar el digest como firma digital.
+- [ ] **FOR-07 — Interfaz y accesibilidad:** navegar con teclado, probar foco y mensajes de estado, tema claro/oscuro, ventana estrecha y lector de pantalla disponible. Anotar navegador y versión.
+- [ ] **FOR-08 — Revisión visual real:** revisar la pantalla en escritorio y ventana estrecha y adjuntar capturas sanitizadas; la ejecución automática de Chromium no reemplaza esta revisión humana.
+
+**Registro de Forense:** commit exacto, sistema operativo y versión, versión de Python, navegador y versión, comandos utilizados, resultado de cada caso, problemas observados y enlaces a logs/capturas sanitizados. Todos los casos comienzan pendientes; no inferir aprobación manual a partir de CI.
