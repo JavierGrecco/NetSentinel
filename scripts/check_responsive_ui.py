@@ -1,0 +1,479 @@
+#!/usr/bin/env python3
+"""Comprueba la interfaz web de NetSentinel en varios tamaños de ventana.
+
+Por defecto inicia una instancia local temporal con una base SQLite nueva.
+No inicia descubrimientos ni ejecuta diagnósticos de red.
+"""
+
+from __future__ import annotations
+
+import argparse
+from contextlib import ExitStack
+from dataclasses import asdict, dataclass
+import json
+import os
+from pathlib import Path
+import re
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+from urllib.error import URLError
+from urllib.request import urlopen
+from urllib.parse import urlsplit
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_VIEWPORTS_TEXT = (
+    "320x640,360x800,390x844,430x932,560x800,620x900,760x900,"
+    "768x1024,900x900,1024x768,1080x800,1081x900,1280x720,"
+    "1440x900,1920x1080"
+)
+PAGE_CASES = (
+    ("/", "Inventario de red", "inventario"),
+    ("/findings", "Hallazgos con evidencia", "hallazgos"),
+    ("/monitors", "Monitorización", "monitorizacion"),
+    ("/tools", "Herramientas de red", "herramientas"),
+    ("/activity", "Actividad y telemetría", "actividad"),
+)
+
+
+@dataclass(frozen=True)
+class Viewport:
+    """Ancho y alto CSS de una ventana de prueba."""
+
+    width: int
+    height: int
+
+    @property
+    def label(self) -> str:
+        return f"{self.width}x{self.height}"
+
+
+def parse_viewports(value: str) -> tuple[Viewport, ...]:
+    """Convierte 'ancho x alto' en una lista validada de tamaños de ventana."""
+    viewports: list[Viewport] = []
+    seen: set[tuple[int, int]] = set()
+
+    for raw_item in value.split(","):
+        item = raw_item.strip().lower().replace(" ", "")
+        match = re.fullmatch(r"(\d{2,4})x(\d{2,4})", item)
+        if not match:
+            raise ValueError(
+                f"Tamaño inválido: {raw_item!r}. Usá el formato 390x844 y separá tamaños con comas."
+            )
+
+        width, height = (int(match.group(1)), int(match.group(2)))
+        if not 280 <= width <= 3840:
+            raise ValueError(f"El ancho {width} está fuera del rango permitido (280 a 3840).")
+        if not 320 <= height <= 2160:
+            raise ValueError(f"El alto {height} está fuera del rango permitido (320 a 2160).")
+        pair = (width, height)
+        if pair in seen:
+            raise ValueError(f"El tamaño {width}x{height} está repetido.")
+        seen.add(pair)
+        viewports.append(Viewport(width, height))
+
+    if not viewports:
+        raise ValueError("Indicá al menos un tamaño de ventana.")
+    return tuple(viewports)
+
+
+DEFAULT_VIEWPORTS = parse_viewports(DEFAULT_VIEWPORTS_TEXT)
+
+
+def _free_local_port() -> int:
+    """Busca un puerto local libre para la instancia temporal."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        return int(listener.getsockname()[1])
+
+
+def _read_recent_log(log_stream) -> str:
+    log_stream.flush()
+    log_stream.seek(0)
+    return log_stream.read()[-4000:]
+
+
+def _wait_for_server(base_url: str, process: subprocess.Popen, log_stream) -> None:
+    """Espera a que la app temporal responda o informa por qué no arrancó."""
+    deadline = time.monotonic() + 25
+    last_error = "todavía no responde"
+
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            details = _read_recent_log(log_stream)
+            raise RuntimeError(
+                "NetSentinel terminó antes de estar disponible.\n"
+                f"Salida reciente del servidor:\n{details or '(sin mensajes)'}"
+            )
+        try:
+            with urlopen(f"{base_url}/", timeout=1) as response:
+                if response.status == 200:
+                    return
+                last_error = f"respondió con HTTP {response.status}"
+        except (URLError, TimeoutError, OSError) as exc:
+            last_error = str(exc)
+        time.sleep(0.25)
+
+    details = _read_recent_log(log_stream)
+    raise RuntimeError(
+        f"NetSentinel no estuvo listo en 25 segundos ({last_error}).\n"
+        f"Salida reciente del servidor:\n{details or '(sin mensajes)'}"
+    )
+
+
+def _stop_server(process: subprocess.Popen) -> None:
+    """Cierra solo el proceso que abrió esta comprobación."""
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=8)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
+def _validate_local_url(value: str) -> str:
+    """Permite probar una instancia existente, siempre en loopback."""
+    parsed = urlsplit(value)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "http" or host not in {"127.0.0.1", "localhost", "::1"}:
+        raise ValueError("--base-url debe ser una URL HTTP local, como http://127.0.0.1:8765.")
+    if parsed.username or parsed.password:
+        raise ValueError("--base-url no debe incluir usuario ni contraseña.")
+    return value.rstrip("/")
+
+
+def _page_metrics(page) -> dict:
+    return page.evaluate(
+        """() => ({
+          viewportWidth: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+          documentHeight: document.documentElement.scrollHeight
+        })"""
+    )
+
+
+def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
+    """Comprueba que el inventario cambie de cuadrícula sin solapar paneles."""
+    boxes = page.evaluate(
+        """() => Object.fromEntries(
+          [
+            "inventory-panel",
+            "activity-panel",
+            "diagnostics-panel",
+            "scans-panel"
+          ].map((name) => {
+            const element = document.querySelector("." + name);
+            if (!element) return [name, null];
+            const rect = element.getBoundingClientRect();
+            return [name, {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height
+            }];
+          })
+        )"""
+    )
+    failures: list[str] = []
+    if any(boxes.get(name) is None for name in (
+        "inventory-panel", "activity-panel", "diagnostics-panel", "scans-panel"
+    )):
+        return ["falta uno o más paneles de la cuadrícula del Inventario"]
+
+    inventory = boxes["inventory-panel"]
+    activity = boxes["activity-panel"]
+    diagnostics = boxes["diagnostics-panel"]
+    scans = boxes["scans-panel"]
+    tolerance = 3
+
+    if min(box["width"] for box in boxes.values()) < 1:
+        failures.append("uno o más paneles del Inventario no tienen ancho visible")
+
+    if viewport.width > 1080:
+        if abs(inventory["left"] - diagnostics["left"]) > tolerance:
+            failures.append("Diagnóstico no queda debajo del Inventario")
+        if abs(activity["left"] - scans["left"]) > tolerance:
+            failures.append("Historial no queda debajo de Actividad reciente")
+        if diagnostics["top"] < inventory["bottom"] - tolerance:
+            failures.append("la segunda fila invade verticalmente la primera")
+    else:
+        ordered = [inventory, activity, diagnostics, scans]
+        if any(
+            ordered[index + 1]["top"] < ordered[index]["bottom"] - tolerance
+            for index in range(len(ordered) - 1)
+        ):
+            failures.append("los paneles no se apilan en orden en una ventana estrecha")
+        if any(abs(box["left"] - inventory["left"]) > tolerance for box in ordered):
+            failures.append("los paneles estrechos no comparten el mismo margen izquierdo")
+
+    return failures
+
+
+def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise RuntimeError(
+            "Falta Playwright. Instalá la opción de prueba con "
+            'python -m pip install -e ".[test,ui-test]" y ejecutá '
+            "python -m playwright install chromium."
+        ) from exc
+
+    report = {
+        "base_url": base_url,
+        "viewport_count": len(viewports),
+        "page_count": len(PAGE_CASES),
+        "cases": [],
+        "failures": [],
+        "screenshots": [],
+    }
+    active_case = {"path": "", "viewport": ""}
+    page_errors: list[dict[str, str]] = []
+
+    if screenshots:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                page = browser.new_page(device_scale_factor=1)
+                page.on(
+                    "pageerror",
+                    lambda error: page_errors.append({
+                        "path": active_case["path"],
+                        "viewport": active_case["viewport"],
+                        "message": str(error),
+                    }),
+                )
+
+                for viewport in viewports:
+                    for path, expected_title, page_name in PAGE_CASES:
+                        active_case["path"] = path
+                        active_case["viewport"] = viewport.label
+                        error_start = len(page_errors)
+                        case_failures: list[str] = []
+
+                        try:
+                            page.set_viewport_size({
+                                "width": viewport.width,
+                                "height": viewport.height,
+                            })
+                            response = page.goto(
+                                f"{base_url}{path}",
+                                wait_until="load",
+                                timeout=20000,
+                            )
+                            if response is None:
+                                case_failures.append("el navegador no recibió una respuesta HTTP")
+                            elif response.status != 200:
+                                case_failures.append(f"la página respondió HTTP {response.status}")
+
+                            page.wait_for_selector("main.wrap", timeout=5000)
+                            page.evaluate(
+                                "() => document.fonts ? document.fonts.ready.then(() => true) : true"
+                            )
+
+                            headings = page.locator("h1.app-section-title")
+                            if headings.count() != 1:
+                                case_failures.append("no se encontró un único título de sección")
+                            elif not headings.first.is_visible():
+                                case_failures.append("el título de la sección no está visible")
+                            elif headings.first.inner_text().strip() != expected_title:
+                                actual = headings.first.inner_text().strip()
+                                case_failures.append(
+                                    f"título inesperado: {actual!r}; se esperaba {expected_title!r}"
+                                )
+
+                            current_links = page.locator(
+                                '.primary-nav a.nav-link[aria-current="page"]'
+                            )
+                            if current_links.count() != 1:
+                                case_failures.append(
+                                    "la navegación no identifica exactamente una sección activa"
+                                )
+
+                            theme_options = page.locator('input[name="themeSelect"]')
+                            if theme_options.count() != 3:
+                                case_failures.append("no aparecen los tres temas visuales")
+
+                            metrics = _page_metrics(page)
+                            if metrics["documentWidth"] > metrics["viewportWidth"] + 1:
+                                case_failures.append(
+                                    "hay desplazamiento horizontal en toda la página "
+                                    f"(documento {metrics['documentWidth']} px, "
+                                    f"ventana {metrics['viewportWidth']} px)"
+                                )
+
+                            if path == "/":
+                                case_failures.extend(_inventory_layout_failures(page, viewport))
+
+                            for script_error in page_errors[error_start:]:
+                                case_failures.append(
+                                    f"error JavaScript: {script_error['message']}"
+                                )
+
+                            should_capture = screenshots and (
+                                path == "/" or viewport == Viewport(1440, 900)
+                            )
+                            if should_capture:
+                                capture_path = output_dir / (
+                                    f"{page_name}-{viewport.label}.png"
+                                )
+                                page.screenshot(path=str(capture_path), full_page=True)
+                                report["screenshots"].append(str(capture_path))
+
+                            case = {
+                                "path": path,
+                                "page": page_name,
+                                "viewport": asdict(viewport),
+                                "metrics": metrics,
+                                "passed": not case_failures,
+                                "failures": case_failures,
+                            }
+                        except Exception as exc:
+                            case = {
+                                "path": path,
+                                "page": page_name,
+                                "viewport": asdict(viewport),
+                                "passed": False,
+                                "failures": [f"no se pudo completar la comprobación: {exc}"],
+                            }
+
+                        report["cases"].append(case)
+                        for problem in case["failures"]:
+                            report["failures"].append({
+                                "path": path,
+                                "viewport": viewport.label,
+                                "message": problem,
+                            })
+                        state = "OK" if case["passed"] else "FALLO"
+                        print(f"[{state}] {viewport.label:>9}  {path}")
+                        for problem in case["failures"]:
+                            print(f"         - {problem}")
+            finally:
+                browser.close()
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(
+            "No pude iniciar Chromium. Instalá el navegador con "
+            "python -m playwright install chromium. "
+            f"Detalle: {exc}"
+        ) from exc
+
+    report["passed_cases"] = sum(1 for case in report["cases"] if case["passed"])
+    report["failed_cases"] = sum(1 for case in report["cases"] if not case["passed"])
+    report["passed"] = not report["failures"]
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Revisa las cinco pantallas de NetSentinel en múltiples tamaños. "
+            "Por defecto usa un servidor y una base de datos temporales."
+        )
+    )
+    parser.add_argument(
+        "--viewports",
+        type=parse_viewports,
+        default=DEFAULT_VIEWPORTS,
+        metavar="LISTA",
+        help=f"Tamaños separados por comas (por defecto: {DEFAULT_VIEWPORTS_TEXT}).",
+    )
+    parser.add_argument(
+        "--base-url",
+        help="Prueba un servidor local que ya esté iniciado, por ejemplo http://127.0.0.1:8765.",
+    )
+    parser.add_argument(
+        "--screenshots",
+        action="store_true",
+        help="Guarda capturas del Inventario en todos los tamaños y de las otras secciones a 1440x900.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=REPO_ROOT / ".netsentinel-test-artifacts" / "responsive-ui",
+        help="Carpeta para el informe JSON y las capturas opcionales.",
+    )
+    args = parser.parse_args()
+
+    if args.base_url:
+        try:
+            base_url = _validate_local_url(args.base_url)
+        except ValueError as exc:
+            parser.error(str(exc))
+        temp_manager = None
+    else:
+        temp_manager = tempfile.TemporaryDirectory(prefix="netsentinel-responsive-")
+        temp_root = Path(temp_manager.name)
+        data_dir = temp_root / "data"
+        data_dir.mkdir(parents=True)
+        port = _free_local_port()
+        base_url = f"http://127.0.0.1:{port}"
+
+    try:
+        if temp_manager is None:
+            report = _run_browser_checks(
+                base_url, args.viewports, args.output_dir, args.screenshots
+            )
+        else:
+            with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as server_log:
+                environment = os.environ.copy()
+                environment["NETSENTINEL_DATA_DIR"] = str(data_dir)
+                environment["NETSENTINEL_DISABLE_SCHEDULER"] = "1"
+                process = subprocess.Popen(
+                    [
+                        sys.executable, "-m", "netsentinel",
+                        "--host", "127.0.0.1",
+                        "--port", str(port),
+                        "--no-browser",
+                    ],
+                    cwd=REPO_ROOT,
+                    env=environment,
+                    stdout=server_log,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+                try:
+                    _wait_for_server(base_url, process, server_log)
+                    report = _run_browser_checks(
+                        base_url, args.viewports, args.output_dir, args.screenshots
+                    )
+                finally:
+                    _stop_server(process)
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    finally:
+        if temp_manager is not None:
+            temp_manager.cleanup()
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = args.output_dir / "report.json"
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print()
+    print(
+        f"Resultado: {report['passed_cases']}/{len(report['cases'])} "
+        f"comprobaciones correctas; {report['failed_cases']} con fallos."
+    )
+    print(f"Informe: {report_path}")
+    if args.screenshots:
+        print(f"Capturas: {args.output_dir}")
+    return 0 if report["passed"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
