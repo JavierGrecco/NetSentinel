@@ -4,7 +4,7 @@
 
 ## Estado del proyecto
 
-**Estado:** estabilización de la versión local 0.10.0. El `main` actual [`8a7756b`](https://github.com/JavierGrecco/NetSentinel/commit/8a7756b1ab2a471401fc7e557ca236f8edc8920e) pasó CI ([#38970565141](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565141)), seguridad ([#38970565046](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565046)) y cadena de suministro ([#38970565067](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565067). **La versión todavía no está lista para declararse estable** porque faltan pruebas manuales documentadas en sistemas/navegadores reales y confirmar controles de repositorio.
+**Estado:** estabilización de la versión local 0.10.0. El `main` actual [`8a7756b`](https://github.com/JavierGrecco/NetSentinel/commit/8a7756b1ab2a471401fc7e557ca236f8edc8920e) pasó CI ([#38970565141](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565141)), seguridad ([#38970565046](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565046)) y cadena de suministro ([#38970565067](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565067)). **La versión todavía no está lista para declararse estable** porque faltan pruebas manuales documentadas en sistemas/navegadores reales y confirmar controles de repositorio.
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
