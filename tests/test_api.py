@@ -287,6 +287,7 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
     expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
     if route == "/":
         expected_scripts.add("/static/topology.js")
+        expected_scripts.add("/static/scan-comparison.js")
     if route in {"/monitors", "/activity"}:
         expected_scripts.add("/static/section-tabs.js")
 
@@ -617,3 +618,44 @@ def test_scan_observations_endpoint_returns_exact_evidence_and_safe_not_found(mo
     assert missing.json()["registered_in_log"] is False
     assert missing.json()["should_log"] is False
 
+
+
+def test_scan_comparison_endpoint_is_read_only_and_handles_invalid_pairs(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    scope = {"networks": [{"network": "192.168.5.0/24", "interface": "en0"}]}
+    first = database.record_scan(
+        [Neighbor("192.168.5.4", "AA:BB:CC:DD:EE:41", "en0", "automatic-local-network")],
+        discovery=scope,
+    )
+    second = database.record_scan(
+        [Neighbor("192.168.5.5", "AA:BB:CC:DD:EE:41", "en0", "automatic-local-network")],
+        discovery=scope,
+    )
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(
+            "/api/scans/compare",
+            params={"first_scan_id": second["scan_id"], "second_scan_id": first["scan_id"]},
+        )
+        same = client.get(
+            "/api/scans/compare",
+            params={"first_scan_id": first["scan_id"], "second_scan_id": first["scan_id"]},
+        )
+        missing = client.get(
+            "/api/scans/compare",
+            params={"first_scan_id": first["scan_id"], "second_scan_id": 9999},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["comparable"] is True
+    assert body["baseline_scan"]["id"] == first["scan_id"]
+    assert body["comparison_scan"]["id"] == second["scan_id"]
+    assert body["summary"]["address_changed"] == 1
+    assert body["changes"][0]["baseline_addresses"] == ["192.168.5.4"]
+    assert body["changes"][0]["comparison_addresses"] == ["192.168.5.5"]
+    assert body["absence_note"]
+    assert response.headers["cache-control"] == "no-store"
+    assert same.status_code == 422
+    assert missing.status_code == 404

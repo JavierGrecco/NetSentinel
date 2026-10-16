@@ -16,6 +16,7 @@ from .events_repository import _insert_event
 from .inventory_read_repository import (
     get_device_addresses,
     get_device_history,
+    compare_scans,
     get_scan_observations,
     get_scans,
     list_devices,

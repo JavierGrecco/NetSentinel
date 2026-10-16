@@ -28,6 +28,7 @@ from .inventory_repository import (
     _ip_sort_key,
     get_device_addresses,
     get_device_history,
+    compare_scans,
     get_scan_observations,
     get_scans,
     list_devices,

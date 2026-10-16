@@ -1,6 +1,7 @@
 """Consultas de solo lectura para el inventario y el historial local."""
 from __future__ import annotations
 
+import ipaddress
 import json
 from pathlib import Path
 from typing import Any
@@ -130,6 +131,248 @@ def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]
             item.pop("discovery_json", None)
         items.append(item)
     return items
+
+
+_PRIVATE_IPV4_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+)
+_COMPARISON_ABSENCE_NOTE = (
+    "«No observado» solo significa que el descubrimiento no registró el dispositivo "
+    "en esa captura. No demuestra que esté desconectado, apagado ni fuera de la red."
+)
+
+
+def _decode_scan_json(value: Any, expected_type: type) -> Any:
+    try:
+        decoded = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return expected_type()
+    return decoded if isinstance(decoded, expected_type) else expected_type()
+
+
+def _private_scan_networks(discovery: Any) -> set[str]:
+    """Devuelve subredes RFC1918 IPv4 normalizadas, sin confiar en texto inválido."""
+    if not isinstance(discovery, dict):
+        return set()
+    networks = discovery.get("networks")
+    if not isinstance(networks, list):
+        return set()
+
+    result: set[str] = set()
+    for item in networks:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("network")
+        if not isinstance(value, str):
+            continue
+        try:
+            network = ipaddress.ip_network(value.strip(), strict=False)
+        except ValueError:
+            continue
+        if network.version != 4:
+            continue
+        if any(network.subnet_of(private) for private in _PRIVATE_IPV4_NETWORKS):
+            result.add(network.with_prefixlen)
+    return result
+
+
+def _comparison_scan_info(row: Any) -> tuple[dict[str, Any], set[str]]:
+    values = dict(row)
+    errors = _decode_scan_json(values.get("errors_json"), list)
+    discovery = _decode_scan_json(values.get("discovery_json"), dict)
+    networks = _private_scan_networks(discovery)
+    discovery_networks = discovery.get("networks", [])
+    range_limited = any(
+        isinstance(item, dict) and bool(item.get("range_limited"))
+        for item in discovery_networks
+    ) if isinstance(discovery_networks, list) else False
+    info = {
+        "id": int(values["id"]),
+        "started_at": values.get("started_at"),
+        "finished_at": values.get("finished_at"),
+        "source": values.get("source") or "",
+        "devices_found": int(values.get("devices_found") or 0),
+        "errors_count": len(errors),
+        "range_limited": range_limited,
+        "networks": sorted(networks),
+    }
+    return info, networks
+
+
+def compare_scans(
+    first_scan_id: int,
+    second_scan_id: int,
+    path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Compara dos capturas compatibles usando exclusivamente sus observaciones históricas.
+
+    La comparación solo se presenta como válida si ambas capturas registraron al
+    menos una misma subred IPv4 privada. La ausencia de observaciones nunca se
+    interpreta como prueba de desconexión.
+    """
+    if int(first_scan_id) == int(second_scan_id):
+        raise ValueError("Elegí dos lecturas diferentes para compararlas.")
+
+    with connect(path) as db:
+        scan_rows = db.execute(
+            "SELECT * FROM scans WHERE id IN (?, ?)",
+            (int(first_scan_id), int(second_scan_id)),
+        ).fetchall()
+        if len(scan_rows) != 2:
+            return None
+
+        scan_info_by_id: dict[int, dict[str, Any]] = {}
+        networks_by_id: dict[int, set[str]] = {}
+        for row in scan_rows:
+            info, networks = _comparison_scan_info(row)
+            scan_info_by_id[info["id"]] = info
+            networks_by_id[info["id"]] = networks
+
+        # Use the actual capture order, even when the caller selected them backwards.
+        ordered = sorted(
+            scan_info_by_id.values(),
+            key=lambda item: (str(item.get("started_at") or ""), int(item["id"])),
+        )
+        baseline, comparison = ordered
+        common_networks = sorted(
+            networks_by_id[baseline["id"]] & networks_by_id[comparison["id"]]
+        )
+
+        warnings: list[str] = []
+        for label, info in (("primera", baseline), ("segunda", comparison)):
+            if info["errors_count"]:
+                warnings.append(
+                    f"La {label} lectura registró errores; sus resultados pueden ser incompletos."
+                )
+            if info["range_limited"]:
+                warnings.append(
+                    f"La {label} lectura informó un alcance limitado; puede haber equipos no detectados."
+                )
+
+        base_result: dict[str, Any] = {
+            "comparable": bool(common_networks),
+            "baseline_scan": baseline,
+            "comparison_scan": comparison,
+            "common_networks": common_networks,
+            "warnings": warnings,
+            "partial": bool(warnings),
+            "absence_note": _COMPARISON_ABSENCE_NOTE,
+        }
+        if not common_networks:
+            base_result.update({
+                "reason": (
+                    "Las capturas no comparten una subred IPv4 privada registrada. "
+                    "Elegí dos lecturas que incluyan al menos una misma red para evitar "
+                    "comparar alcances distintos."
+                ),
+                "summary": None,
+                "changes": [],
+            })
+            return base_result
+
+        observation_rows = db.execute(
+            """SELECT o.scan_id, o.device_id, o.ip_address, o.source,
+                      d.mac_address, d.display_name
+               FROM observations o
+               LEFT JOIN devices d ON d.id = o.device_id
+               WHERE o.scan_id IN (?, ?)
+               ORDER BY o.scan_id, o.device_id, o.ip_address, o.id""",
+            (baseline["id"], comparison["id"]),
+        ).fetchall()
+
+    # Collapse repeated rows for one address while preserving its observed sources.
+    snapshots: dict[int, dict[int, dict[str, Any]]] = {
+        baseline["id"]: {},
+        comparison["id"]: {},
+    }
+    for row in observation_rows:
+        scan_id = int(row["scan_id"])
+        device_id = int(row["device_id"])
+        snapshot = snapshots.get(scan_id)
+        if snapshot is None:
+            continue
+        device = snapshot.setdefault(device_id, {
+            "device_id": device_id,
+            "mac_address": str(row["mac_address"] or ""),
+            "display_name": str(row["display_name"] or ""),
+            "address_sources": {},
+        })
+        address = str(row["ip_address"] or "").strip()
+        if not address:
+            continue
+        sources = device["address_sources"].setdefault(address, set())
+        source = str(row["source"] or "").strip()
+        if source:
+            sources.add(source)
+
+    baseline_devices = snapshots[baseline["id"]]
+    comparison_devices = snapshots[comparison["id"]]
+    all_device_ids = set(baseline_devices) | set(comparison_devices)
+    counts = {
+        "baseline_devices": len(baseline_devices),
+        "comparison_devices": len(comparison_devices),
+        "only_in_baseline": 0,
+        "only_in_comparison": 0,
+        "address_changed": 0,
+        "unchanged": 0,
+        "total_devices": len(all_device_ids),
+    }
+    changes: list[dict[str, Any]] = []
+
+    for device_id in all_device_ids:
+        previous = baseline_devices.get(device_id)
+        current = comparison_devices.get(device_id)
+        previous_addresses = sorted(previous["address_sources"]) if previous else []
+        current_addresses = sorted(current["address_sources"]) if current else []
+
+        if previous is None:
+            status = "only_in_comparison"
+            counts[status] += 1
+        elif current is None:
+            status = "only_in_baseline"
+            counts[status] += 1
+        elif previous_addresses != current_addresses:
+            status = "address_changed"
+            counts[status] += 1
+        else:
+            counts["unchanged"] += 1
+            continue
+
+        identity = current or previous or {}
+        changes.append({
+            "device_id": device_id,
+            "display_name": identity.get("display_name") or "",
+            "mac_address": identity.get("mac_address") or "",
+            "status": status,
+            "baseline_addresses": previous_addresses,
+            "comparison_addresses": current_addresses,
+            "baseline_sources": sorted({
+                source
+                for values in (previous or {}).get("address_sources", {}).values()
+                for source in values
+            }),
+            "comparison_sources": sorted({
+                source
+                for values in (current or {}).get("address_sources", {}).values()
+                for source in values
+            }),
+        })
+
+    changes.sort(
+        key=lambda item: (
+            str(item.get("display_name") or item.get("mac_address") or "").casefold(),
+            int(item["device_id"]),
+        )
+    )
+    base_result.update({
+        "reason": "",
+        "summary": counts,
+        "changes": changes,
+    })
+    return base_result
+
 
 def get_scan_observations(
     scan_id: int,

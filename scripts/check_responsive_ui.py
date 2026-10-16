@@ -124,6 +124,28 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "scope": "Fixture sintético para pruebas del navegador; no representa una red real.",
             },
         )
+        # Una segunda captura sintética permite comprobar la comparación sin tocar la red.
+        database.record_scan(
+            [Neighbor(
+                "192.168.56.20",
+                "02:00:00:00:00:20",
+                "fixture0",
+                "responsive-ui-fixture",
+            )],
+            path=database_file,
+            discovery={
+                "networks": [{
+                    "network": "192.168.56.0/24",
+                    "interface": "fixture0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                }],
+                "addresses_checked": 1,
+                "ping_responses": 1,
+                "duration_seconds": 0.01,
+                "scope": "Fixture sintético para pruebas del navegador; no representa una red real.",
+            },
+        )
     finally:
         if previous_data_dir is None:
             os.environ.pop("NETSENTINEL_DATA_DIR", None)
@@ -332,6 +354,48 @@ def _topology_panel_failures(page) -> list[str]:
     return failures
 
 
+
+def _scan_comparison_failures(page) -> list[str]:
+    """Comprueba la comparación con dos capturas sintéticas de la misma subred."""
+    failures: list[str] = []
+    first = page.locator("#scanCompareFirst")
+    second = page.locator("#scanCompareSecond")
+    button = page.locator("#scanCompareButton")
+    result = page.locator("#scanComparisonResult")
+    if first.count() != 1 or second.count() != 1 or button.count() != 1 or result.count() != 1:
+        return ["falta uno de los controles de comparación de lecturas"]
+
+    try:
+        page.wait_for_function(
+            """() => {
+              const first = document.querySelector("#scanCompareFirst");
+              const second = document.querySelector("#scanCompareSecond");
+              const button = document.querySelector("#scanCompareButton");
+              return first && second && button && first.value && second.value &&
+                first.value !== second.value && !button.disabled;
+            }""",
+            timeout=5000,
+        )
+        button.click()
+        page.wait_for_function(
+            """() => {
+              const result = document.querySelector("#scanComparisonResult");
+              return result && result.textContent.includes("No se detectaron diferencias") &&
+                result.textContent.includes("No demuestra");
+            }""",
+            timeout=5000,
+        )
+    except Exception as exc:
+        return [f"la comparación entre capturas sintéticas no terminó correctamente: {exc}"]
+
+    rendered = result.inner_text()
+    if "192.168.56.0/24" not in rendered:
+        failures.append("la comparación no informa la subred compartida")
+    if "No demuestra que esté desconectado" not in rendered:
+        failures.append("la comparación no explica el límite de interpretar ausencias")
+    return failures
+
+
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -431,6 +495,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
                                 case_failures.extend(_topology_panel_failures(page))
+                                if viewport == Viewport(1440, 900):
+                                    case_failures.extend(_scan_comparison_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(

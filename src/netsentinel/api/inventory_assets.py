@@ -56,6 +56,22 @@ def scan_observations(scan_id: int) -> list[dict]:
         raise HTTPException(status_code=404, detail="No se encontró la lectura solicitada.")
     return result
 
+@router.get("/api/scans/compare")
+def compare_scan_readings(
+    first_scan_id: int = Query(..., ge=1),
+    second_scan_id: int = Query(..., ge=1),
+) -> dict:
+    """Compara dos lecturas usando solo observaciones históricas de una red común."""
+    if first_scan_id == second_scan_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Elegí dos lecturas diferentes para compararlas.",
+        )
+    result = database.compare_scans(first_scan_id, second_scan_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontraron las dos lecturas solicitadas.")
+    return result
+
 
 @router.get("/api/devices/{device_id}/history")
 def device_history(device_id: int, limit: int = Query(default=100, ge=1, le=500)) -> dict:

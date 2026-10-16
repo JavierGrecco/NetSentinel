@@ -587,3 +587,75 @@ def test_scan_observations_preserve_exact_historical_source_and_address(tmp_path
     assert historical[0]["device_id"] == latest[0]["device_id"]
     assert database.get_scan_observations(99999, path=db) is None
 
+
+
+def test_scan_comparison_uses_historical_observations_and_does_not_claim_disconnection(tmp_path: Path):
+    db = tmp_path / "comparison.sqlite3"
+    database.initialize(db)
+    network = {
+        "networks": [{
+            "network": "192.168.5.0/24",
+            "interface": "en0",
+            "local_address": "192.168.5.2",
+            "range_limited": False,
+        }]
+    }
+    baseline = database.record_scan([
+        Neighbor("192.168.5.10", "AA:BB:CC:DD:EE:01", "en0", "automatic-local-network"),
+        Neighbor("192.168.5.20", "AA:BB:CC:DD:EE:02", "en0", "automatic-local-network"),
+        Neighbor("192.168.5.30", "AA:BB:CC:DD:EE:03", "en0", "automatic-local-network"),
+    ], path=db, discovery=network)
+    comparison = database.record_scan([
+        Neighbor("192.168.5.11", "AA:BB:CC:DD:EE:01", "en0", "automatic-local-network"),
+        Neighbor("192.168.5.20", "AA:BB:CC:DD:EE:02", "en0", "automatic-local-network"),
+        Neighbor("192.168.5.40", "AA:BB:CC:DD:EE:04", "en0", "automatic-local-network"),
+    ], path=db, discovery=network)
+
+    result = database.compare_scans(baseline["scan_id"], comparison["scan_id"], path=db)
+
+    assert result is not None
+    assert result["comparable"] is True
+    assert result["common_networks"] == ["192.168.5.0/24"]
+    assert result["summary"] == {
+        "baseline_devices": 3,
+        "comparison_devices": 3,
+        "only_in_baseline": 1,
+        "only_in_comparison": 1,
+        "address_changed": 1,
+        "unchanged": 1,
+        "total_devices": 4,
+    }
+    changes = {item["mac_address"]: item for item in result["changes"]}
+    moved = changes["AA:BB:CC:DD:EE:01"]
+    assert moved["status"] == "address_changed"
+    assert moved["baseline_addresses"] == ["192.168.5.10"]
+    assert moved["comparison_addresses"] == ["192.168.5.11"]
+    not_seen_later = changes["AA:BB:CC:DD:EE:03"]
+    assert not_seen_later["status"] == "only_in_baseline"
+    assert not_seen_later["comparison_addresses"] == []
+    assert "No demuestra" in result["absence_note"]
+    assert "desconectado" not in not_seen_later["status"]
+
+
+def test_scan_comparison_rejects_unrelated_private_network_scopes(tmp_path: Path):
+    db = tmp_path / "comparison-scope.sqlite3"
+    database.initialize(db)
+    first = database.record_scan(
+        [Neighbor("192.168.5.10", "AA:BB:CC:DD:EE:10", "en0", "automatic-local-network")],
+        path=db,
+        discovery={"networks": [{"network": "192.168.5.0/24", "interface": "en0"}]},
+    )
+    second = database.record_scan(
+        [Neighbor("10.20.0.10", "AA:BB:CC:DD:EE:20", "en1", "automatic-local-network")],
+        path=db,
+        discovery={"networks": [{"network": "10.20.0.0/24", "interface": "en1"}]},
+    )
+
+    result = database.compare_scans(first["scan_id"], second["scan_id"], path=db)
+
+    assert result is not None
+    assert result["comparable"] is False
+    assert result["common_networks"] == []
+    assert result["changes"] == []
+    assert result["summary"] is None
+    assert "no comparten una subred" in result["reason"]
