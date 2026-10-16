@@ -14,6 +14,8 @@ NetSentinel continúa siendo una aplicación local. Estamos ordenando el código
 - **NetSentinel Forense:** [PR #113](https://github.com/JavierGrecco/NetSentinel/pull/113) sigue abierta y en borrador, separada de Red. La CI pasó para el SHA `24060d592322bc01c45754cba51c60427a85ec97` ([ejecución #38807621209](https://github.com/JavierGrecco/NetSentinel/actions/runs/38807621209)); falta ejecutar y registrar su revisión manual con un archivo sintético antes de integrarla.
 - **Preparación de pruebas en macOS:** [guía paso a paso](MACOS_MANUAL_TEST.md) para instalar las dependencias de forma aislada, ejecutar las pruebas y recorrer la aplicación sin reutilizar datos de otra instalación.
 
+- Se revisó el código publicado de otro proyecto llamado NetSentinel y se documentó una propuesta de aprendizaje en [REFERENCE_PROJECT_REVIEW.md](REFERENCE_PROJECT_REVIEW.md). La recomendación es terminar la estabilización actual; después, mejorar las tendencias de monitorización existentes, estudiar un grafo LAN basado en relaciones verificables y valorar por separado un mapa de IP públicas. No se copiaron funciones ni dependencias del proyecto de referencia en esta revisión.
+
 ## Revisión manual local
 
 El responsable del proyecto confirmó el 15 de octubre de 2026 que los recorridos manuales locales de NetSentinel Red fueron satisfactorios. Los comentarios pendientes se centraban en presentación, organización visual y facilidad de uso, no en un bloqueo funcional. Esa confirmación queda registrada, pero no identifica sistema operativo, navegador ni SHA probado.
