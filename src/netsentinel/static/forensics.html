@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Espacio de trabajo de NetSentinel Forense: preparación del flujo de análisis digital con trazabilidad e integridad.">
+  <title>NetSentinel Forense · Análisis digital</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/forensics.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="top app-header">
+    <div class="app-header-content">
+      <div class="app-header-brand-row">
+        <div class="app-brand">
+          <img class="forensics-brand-mark" src="/static/netsentinel-forense.svg" alt="">
+          <div class="app-brand-copy">
+            <div class="eyebrow">Análisis forense digital</div>
+            <div class="app-brand-name">NetSentinel</div>
+            <div class="app-brand-module">Forense</div>
+          </div>
+        </div>
+        <div class="app-header-utilities">
+          <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+            <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+            <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+              <label class="theme-option">
+                <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="theme-option-label">Oscuro</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Medio</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l-1.55 1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Claro</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-section-heading-row">
+        <div class="app-section-heading">
+          <h1 class="app-section-title">Área de análisis forense</h1>
+          <p class="app-section-description">Casos y evidencia digital, con integridad, procedencia y trazabilidad.</p>
+        </div>
+      </div>
+      <nav class="product-switcher" aria-label="Cambiar entre módulos NetSentinel">
+        <a class="product-link" href="/"><img src="/static/netsentinel-red.svg" alt="" width="24" height="24">NetSentinel Red</a>
+        <a class="product-link is-current" href="/forensics" aria-current="true"><img src="/static/netsentinel-forense.svg" alt="" width="24" height="24">NetSentinel Forense</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="forensic-hero" aria-labelledby="forensicHeroTitle">
+    <div class="forensic-hero-copy">
+      <p class="forensic-kicker">ESPACIO DE TRABAJO · PRIMERA ENTREGA</p>
+      <h2 id="forensicHeroTitle">Evidencia digital, con trazabilidad desde el inicio.</h2>
+      <p>El objetivo es que cada resultado pueda explicarse: de qué fuente salió, cómo se verificó, qué herramienta lo interpretó y qué límites tiene.</p>
+    </div>
+    <aside class="forensic-status" aria-label="Estado del módulo">
+      <span class="forensic-status-label">Estado actual</span>
+      <strong>Registro inicial de casos</strong>
+      <p>Permite registrar casos, documentar recepción y comparar SHA-256 de una copia de trabajo. No autentica operadores ni acredita por sí sola una cadena de custodia completa.</p>
+    </aside>
+  </section>
+
+  <section class="forensic-notice" aria-label="Advertencia sobre el estado actual">
+    <strong>Importante:</strong> esta primera versión sigue en validación. No la uses como único registro oficial ni como prueba de autenticidad. La comparación SHA-256 solo contrasta los bytes leídos con el valor de referencia; no certifica el origen ni una cadena de custodia completa. La lectura puede actualizar metadatos de acceso.
+  </section>
+
+  <section class="forensic-case-workspace" aria-labelledby="forensicCasesTitle">
+    <div class="forensic-section-heading">
+      <div>
+        <p class="forensic-kicker">TRABAJO CON CASOS</p>
+        <h2 id="forensicCasesTitle">Casos y evidencia registrada</h2>
+        <p class="forensic-section-intro">Guardá la autorización, el alcance y los datos de recepción. Esta primera versión registra metadatos; no copia ni examina archivos.</p>
+      </div>
+      <button type="button" id="refreshForensicCases" class="quiet">↻ Actualizar casos</button>
+    </div>
+
+    <div class="forensic-operator-bar">
+      <div class="forensic-field">
+        <label for="forensicOperator">Nombre de quien realiza la operación</label>
+        <input id="forensicOperator" name="actor" maxlength="120" autocomplete="name" required placeholder="Ej.: Nombre del examinador">
+      </div>
+      <p>El nombre se declara en cada operación. En esta etapa no hay inicio de sesión ni verificación automática de identidad.</p>
+    </div>
+
+    <details class="forensic-form-disclosure" id="newForensicCaseDetails">
+      <summary>+ Abrir un caso</summary>
+      <form id="forensicCaseForm" class="forensic-form-grid">
+        <div class="forensic-field">
+          <label for="forensicCaseNumber">Identificador del caso</label>
+          <input id="forensicCaseNumber" name="case_number" required maxlength="64" placeholder="Ej.: LAB-2026-001" autocomplete="off">
+          <span>Debe ser único; utilizá el identificador aprobado por tu organización.</span>
+        </div>
+        <div class="forensic-field">
+          <label for="forensicCaseTitle">Nombre breve</label>
+          <input id="forensicCaseTitle" name="title" required maxlength="160" placeholder="Ej.: Análisis de una imagen de disco">
+        </div>
+        <div class="forensic-field forensic-field-wide">
+          <label for="forensicAuthority">Referencia de autorización</label>
+          <input id="forensicAuthority" name="authority_reference" required maxlength="240" placeholder="Expediente, autorización u orden aplicable">
+        </div>
+        <div class="forensic-field">
+          <label for="forensicObjective">Objetivo del análisis</label>
+          <textarea id="forensicObjective" name="objective" rows="3" required maxlength="1000" placeholder="Qué se busca aclarar"></textarea>
+        </div>
+        <div class="forensic-field">
+          <label for="forensicScope">Alcance autorizado</label>
+          <textarea id="forensicScope" name="scope" rows="3" required maxlength="2000" placeholder="Fuentes y categorías que se permite examinar"></textarea>
+        </div>
+        <div class="forensic-field">
+          <label for="forensicExaminer">Examinador responsable</label>
+          <input id="forensicExaminer" name="examiner" required maxlength="120" placeholder="Persona responsable del caso">
+        </div>
+        <div class="forensic-form-actions">
+          <button type="submit" class="primary">Guardar caso</button>
+          <button type="button" id="cancelForensicCase" class="quiet">Cancelar</button>
+        </div>
+      </form>
+    </details>
+
+    <div class="forensic-case-layout">
+      <aside class="forensic-case-list-panel" aria-labelledby="forensicCaseListTitle">
+        <div class="forensic-panel-heading">
+          <h3 id="forensicCaseListTitle">Casos locales</h3>
+          <span id="forensicCaseCount" class="forensic-count">0</span>
+        </div>
+        <div id="forensicCaseList" class="forensic-case-list" aria-live="polite">
+          <p class="forensic-empty-inline">Cargando los casos registrados…</p>
+        </div>
+      </aside>
+
+      <div class="forensic-case-detail">
+        <div id="forensicCaseEmpty" class="forensic-empty">
+          <span class="forensic-empty-icon" aria-hidden="true">01</span>
+          <h3>Elegí un caso para continuar</h3>
+          <p>Podés abrir un caso de prueba o seleccionar uno existente. El historial de operaciones y la evidencia registrada aparecerán acá.</p>
+        </div>
+
+        <section id="forensicSelectedCase" hidden aria-labelledby="forensicSelectedCaseTitle">
+          <div class="forensic-selected-case-header">
+            <div>
+              <p class="forensic-kicker">CASO SELECCIONADO</p>
+              <h3 id="forensicSelectedCaseTitle">—</h3>
+              <p id="forensicSelectedCaseNumber" class="forensic-case-number">—</p>
+            </div>
+            <div class="forensic-selected-actions">
+              <span id="forensicSelectedCaseStatus" class="forensic-status-pill">—</span>
+              <button type="button" id="closeForensicCase" class="quiet">Cerrar caso</button>
+            </div>
+          </div>
+          <dl class="forensic-case-summary">
+            <div><dt>Autorización</dt><dd id="forensicSelectedAuthority">—</dd></div>
+            <div><dt>Examinador</dt><dd id="forensicSelectedExaminer">—</dd></div>
+            <div><dt>Objetivo</dt><dd id="forensicSelectedObjective">—</dd></div>
+            <div><dt>Alcance registrado</dt><dd id="forensicSelectedScope">—</dd></div>
+          </dl>
+
+          <div class="forensic-panel-heading forensic-evidence-heading">
+            <div><h3>Evidencia registrada</h3><p>Los hashes incluidos en esta ficha son valores declarados por una fuente, no verificados automáticamente.</p></div>
+          </div>
+          <div id="forensicEvidenceList" class="forensic-evidence-list">
+            <p class="forensic-empty-inline">Cargando evidencia…</p>
+          </div>
+
+          <details id="newForensicEvidenceDetails" class="forensic-form-disclosure">
+            <summary>+ Registrar un elemento de evidencia</summary>
+            <form id="forensicEvidenceForm" class="forensic-form-grid">
+              <div class="forensic-field">
+                <label for="forensicEvidenceLabel">Descripción breve</label>
+                <input id="forensicEvidenceLabel" name="label" required maxlength="160" placeholder="Ej.: Exportación del historial">
+              </div>
+              <div class="forensic-field">
+                <label for="forensicEvidenceType">Tipo de fuente</label>
+                <select id="forensicEvidenceType" name="source_type" required>
+                  <option value="disk_image">Imagen de disco</option>
+                  <option value="file_copy">Copia de archivo</option>
+                  <option value="browser_export">Exportación de navegador</option>
+                  <option value="email_export">Exportación de correo</option>
+                  <option value="network_log">Registro de red</option>
+                  <option value="other">Otro tipo de fuente</option>
+                </select>
+              </div>
+              <div class="forensic-field">
+                <label for="forensicOriginalName">Nombre original del elemento</label>
+                <input id="forensicOriginalName" name="original_name" maxlength="255" placeholder="Nombre del archivo, sin la ruta completa">
+              </div>
+              <div class="forensic-field">
+                <label for="forensicEvidenceSize">Tamaño en bytes (si se conoce)</label>
+                <input id="forensicEvidenceSize" name="size_bytes" type="number" min="0" step="1" inputmode="numeric" placeholder="Opcional">
+              </div>
+              <div class="forensic-field forensic-field-wide">
+                <label for="forensicSourceDescription">Procedencia y descripción de la recepción</label>
+                <textarea id="forensicSourceDescription" name="source_description" rows="3" required maxlength="2000" placeholder="De dónde proviene y cómo se recibió. No incluyas contraseñas ni contenido privado."></textarea>
+              </div>
+              <div class="forensic-field">
+                <label for="forensicReceivedFrom">Persona o fuente que entrega</label>
+                <input id="forensicReceivedFrom" name="received_from" required maxlength="160" placeholder="Responsable, institución o sistema de origen">
+              </div>
+              <div class="forensic-field">
+                <label for="forensicReceivedAt">Fecha y hora original (ISO-8601 con offset)</label>
+                <input id="forensicReceivedAt" name="received_at_original" type="text" inputmode="text" autocomplete="off" spellcheck="false" required maxlength="64" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})" placeholder="2026-10-15T09:30:00-03:00">
+                <span>Conservá la hora y el offset de la fuente. Ejemplo: 09:30 en UTC−03:00.</span>
+              </div>
+              <div class="forensic-field">
+                <label for="forensicTimezone">Zona horaria declarada</label>
+                <input id="forensicTimezone" name="received_timezone" required maxlength="80" value="UTC" placeholder="Ej.: America/Argentina/Cordoba">
+                <span>Se registra aparte del offset; confirmá que ambos datos describan la fuente.</span>
+              </div>
+              <div class="forensic-field">
+                <label for="forensicReportedHash">SHA-256 informado por la fuente (opcional)</label>
+                <input id="forensicReportedHash" name="reported_sha256" maxlength="64" pattern="[a-fA-F0-9]{64}" autocomplete="off" spellcheck="false" placeholder="64 caracteres hexadecimales">
+              </div>
+              <div class="forensic-field forensic-field-wide">
+                <label for="forensicHashSource">Origen del hash informado</label>
+                <input id="forensicHashSource" name="hash_source" maxlength="240" placeholder="Manifiesto o herramienta que lo informó">
+                <span>No se considera verificado por registrarlo acá.</span>
+              </div>
+              <div class="forensic-form-actions">
+                <button type="submit" class="primary">Registrar evidencia</button>
+                <button type="button" id="cancelForensicEvidence" class="quiet">Cancelar</button>
+              </div>
+            </form>
+          </details>
+
+          <div class="forensic-panel-heading forensic-audit-heading">
+            <div>
+              <h3>Historial de operaciones</h3>
+              <p>Las entradas se agregan; la aplicación no permite editarlas ni borrarlas. El digest del manifiesto no es una firma digital.</p>
+            </div>
+            <button type="button" id="exportForensicAuditManifest" class="quiet" disabled>Descargar manifiesto</button>
+          </div>
+          <ol id="forensicAuditList" class="forensic-audit-list">
+            <li class="forensic-empty-inline">Cargando historial…</li>
+          </ol>
+        </section>
+      </div>
+    </div>
+    <p id="forensicWorkspaceStatus" class="forensic-workspace-status" role="status" aria-live="polite">Preparando el espacio de casos…</p>
+  </section>
+
+  <section class="forensic-principles" aria-label="Principios del módulo">
+    <article class="forensic-principle">
+      <span class="forensic-principle-icon" aria-hidden="true">01</span>
+      <div><h3>Preservar primero</h3><p>Separar el original, la adquisición verificada y la copia de trabajo. Evitar escribir en la fuente original.</p></div>
+    </article>
+    <article class="forensic-principle">
+      <span class="forensic-principle-icon" aria-hidden="true">02</span>
+      <div><h3>Registrar cada paso</h3><p>Dejar constancia de quién actuó, cuándo, qué herramienta usó y qué resultado obtuvo.</p></div>
+    </article>
+    <article class="forensic-principle">
+      <span class="forensic-principle-icon" aria-hidden="true">03</span>
+      <div><h3>Proteger los secretos</h3><p>No volcar contraseñas, cookies de sesión, tokens ni claves privadas en búsquedas o informes comunes.</p></div>
+    </article>
+  </section>
+
+  <section class="forensic-roadmap" aria-labelledby="forensicRoadmapTitle">
+    <div class="forensic-section-heading">
+      <div><p class="forensic-kicker">DESARROLLO POR ETAPAS</p><h2 id="forensicRoadmapTitle">Qué vamos a construir</h2></div>
+      <div class="forensic-filters" role="group" aria-label="Filtrar etapas del módulo">
+        <button type="button" class="forensic-filter" data-phase-filter="all" aria-pressed="true">Todo</button>
+        <button type="button" class="forensic-filter" data-phase-filter="first" aria-pressed="false">Primera entrega</button>
+        <button type="button" class="forensic-filter" data-phase-filter="later" aria-pressed="false">Más adelante</button>
+      </div>
+    </div>
+    <div class="forensic-card-grid" id="forensicRoadmapCards">
+      <article class="forensic-card" data-phase="first">
+        <div class="forensic-card-top"><span class="forensic-number">01</span><span class="forensic-phase">Primera entrega</span></div>
+        <h3>Casos y alcance</h3>
+        <p>Identificador, responsable, autoridad, objetivo, examinador y categorías autorizadas.</p>
+        <span class="forensic-card-state">Registro básico implementado; en validación</span>
+      </article>
+      <article class="forensic-card" data-phase="first">
+        <div class="forensic-card-top"><span class="forensic-number">02</span><span class="forensic-phase">Primera entrega</span></div>
+        <h3>Evidencia e integridad</h3>
+        <p>Registra la recepción y compara SHA-256 de una copia con el valor declarado. Falta un manifiesto consolidado y la validación manual.</p>
+        <span class="forensic-card-state">Comparación SHA-256 inicial implementada; en validación</span>
+      </article>
+      <article class="forensic-card" data-phase="first">
+        <div class="forensic-card-top"><span class="forensic-number">03</span><span class="forensic-phase">Primera entrega</span></div>
+        <h3>Importar resultados</h3>
+        <p>Leer salidas de herramientas evaluadas, conservar sus campos originales y señalar errores o limitaciones.</p>
+        <span class="forensic-card-state">Pendiente de implementar</span>
+      </article>
+      <article class="forensic-card" data-phase="later">
+        <div class="forensic-card-top"><span class="forensic-number">04</span><span class="forensic-phase">Etapa posterior</span></div>
+        <h3>Navegadores y sistema</h3>
+        <p>Artefactos disponibles según el sistema, navegador, perfil y versión; sin suponer que todas las fuentes existen.</p>
+        <span class="forensic-card-state">Después de validar la base</span>
+      </article>
+      <article class="forensic-card" data-phase="later">
+        <div class="forensic-card-top"><span class="forensic-number">05</span><span class="forensic-phase">Etapa posterior</span></div>
+        <h3>Línea de tiempo</h3>
+        <p>Correlacionar eventos conservando la hora original, la zona horaria y las conversiones realizadas.</p>
+        <span class="forensic-card-state">Después de validar la base</span>
+      </article>
+      <article class="forensic-card" data-phase="later">
+        <div class="forensic-card-top"><span class="forensic-number">06</span><span class="forensic-phase">Etapa posterior</span></div>
+        <h3>Informes reproducibles</h3>
+        <p>Fuentes, hashes, herramientas y versiones, resultados, advertencias y anexos que permitan repetir el análisis.</p>
+        <span class="forensic-card-state">Después de validar la base</span>
+      </article>
+    </div>
+    <p class="forensic-filter-status" id="forensicFilterStatus" role="status" aria-live="polite">Se muestran las seis etapas previstas.</p>
+  </section>
+
+  <section class="forensic-workflow" aria-labelledby="forensicWorkflowTitle">
+    <div class="forensic-section-heading"><div><p class="forensic-kicker">FLUJO DE TRABAJO PREVISTO</p><h2 id="forensicWorkflowTitle">Del ingreso al informe</h2></div></div>
+    <ol class="forensic-steps">
+      <li><span>01</span><div><strong>Abrir el caso</strong><p>Definir responsable, autorización y alcance.</p></div></li>
+      <li><span>02</span><div><strong>Registrar la evidencia</strong><p>Documentar origen, recepción, soporte, tamaño y fechas.</p></div></li>
+      <li><span>03</span><div><strong>Verificar la integridad</strong><p>Calcular o comprobar hashes sobre la adquisición o copia designada, sin alterar el original.</p></div></li>
+      <li><span>04</span><div><strong>Examinar artefactos</strong><p>Importar resultados de herramientas evaluadas y guardar la procedencia.</p></div></li>
+      <li><span>05</span><div><strong>Correlacionar eventos</strong><p>Construir una cronología sin borrar los tiempos originales ni confundir indicios con conclusiones.</p></div></li>
+      <li><span>06</span><div><strong>Preparar el informe</strong><p>Detallar método, resultados, limitaciones y material que permite reproducir el análisis.</p></div></li>
+    </ol>
+  </section>
+
+  <footer class="forensic-footer">
+    <span>NetSentinel Forense · Área en desarrollo</span>
+    <a href="https://github.com/JavierGrecco/NetSentinel/blob/feat/forensics-workspace-foundation/docs/FORENSIC_MODE.md">Criterios y plan del módulo</a>
+  </footer>
+</main>
+<script src="/static/forensics.js" defer></script>
+</body>
+</html>
