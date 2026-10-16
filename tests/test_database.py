@@ -163,6 +163,38 @@ def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
     assert restored_event_types == {"new_device", "monitor_down"}
 
 
+def test_sqlite_backup_closes_source_if_destination_cannot_open(tmp_path: Path, monkeypatch):
+    import sqlite3
+
+    from netsentinel import data_export_service
+
+    source = tmp_path / "source.sqlite3"
+    database.initialize(source)
+
+    real_connect = sqlite3.connect
+    opened_connections = []
+    calls = 0
+
+    def fail_destination(path, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            connection = real_connect(path, **kwargs)
+            opened_connections.append(connection)
+            return connection
+        raise sqlite3.OperationalError("simulated temporary-destination failure")
+
+    monkeypatch.setattr(data_export_service.sqlite3, "connect", fail_destination)
+
+    with pytest.raises(sqlite3.OperationalError, match="simulated temporary-destination failure"):
+        database.export_sqlite_backup(source)
+
+    assert len(opened_connections) == 1
+    # A leaked connection would still accept this query. A closed one raises.
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        opened_connections[0].execute("SELECT 1")
+
+
 def test_scan_discovery_report_is_persisted(tmp_path: Path):
     db = tmp_path / "test.sqlite3"
     database.initialize(db)
