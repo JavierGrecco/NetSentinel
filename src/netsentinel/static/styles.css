@@ -109,3 +109,10 @@
   .topology-canvas{margin-inline:-2px}
   .topology-accessible-list{grid-template-columns:1fr}
 }
+
+.topology-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 8px;color:var(--muted);font-size:10px;line-height:1.45}
+.topology-legend span{display:inline-flex;align-items:center;gap:6px}
+.topology-legend-symbol{display:inline-block;flex:0 0 auto;width:10px;height:10px;border-radius:3px;border:1.5px solid var(--line)}
+.topology-legend-symbol.subnet{background:var(--panel2);border-color:var(--accent)}
+.topology-legend-symbol.trusted{background:var(--panel);border-color:var(--green)}
+.topology-legend-symbol.unobserved{background:var(--panel2);border-style:dashed}
