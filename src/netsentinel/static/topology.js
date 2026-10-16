@@ -505,28 +505,32 @@
       }
     }
 
-    for (const layout of groups) {
-      if (layout.group.type !== "network") continue;
-      const network = layout.group.network;
-      const networkY = layout.top + (layout.height - 62) / 2;
-      for (const entry of layout.group.devices) {
-        const position = positionsById.get(entry.id);
-        if (!position) continue;
-        for (const relation of entry.relations) {
-          if (relation.networkIndex !== network.index) continue;
-          const path = makeSvgElement("path", "topology-edge", {
-            d: "M 240 " + (networkY + 31) +
-              " C 265 " + (networkY + 31) + ", 270 " + (position.y + 27) +
-              ", " + position.x + " " + (position.y + 27),
-            fill: "none"
-          });
-          const title = makeSvgElement("title", "", {});
-          title.textContent = "Dirección " + relation.address.ip_address +
-            " observada dentro de " + relation.cidr + " en la lectura #" + model.scan.id +
-            ". No demuestra conexión física directa.";
-          path.appendChild(title);
-          svg.appendChild(path);
-        }
+    const networkLayouts = new Map(
+      groups
+        .filter(layout => layout.group.type === "network")
+        .map(layout => [layout.group.network.index, layout])
+    );
+    // Un dispositivo puede tener direcciones observadas en más de una subred.
+    // Dibujamos todas las relaciones con una sola tarjeta por dispositivo.
+    for (const entry of chosen) {
+      const position = positionsById.get(entry.id);
+      if (!position) continue;
+      for (const relation of entry.relations) {
+        const layout = networkLayouts.get(relation.networkIndex);
+        if (!layout) continue;
+        const networkY = layout.top + (layout.height - 62) / 2;
+        const path = makeSvgElement("path", "topology-edge", {
+          d: "M 240 " + (networkY + 31) +
+            " C 265 " + (networkY + 31) + ", 270 " + (position.y + 27) +
+            ", " + position.x + " " + (position.y + 27),
+          fill: "none"
+        });
+        const title = makeSvgElement("title", "", {});
+        title.textContent = "Dirección " + relation.address.ip_address +
+          " observada dentro de " + relation.cidr + " en la lectura #" + model.scan.id +
+          " (fuente: " + relation.source + "). No demuestra conexión física directa.";
+        path.appendChild(title);
+        svg.appendChild(path);
       }
     }
 
