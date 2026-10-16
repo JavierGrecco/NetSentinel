@@ -25,7 +25,7 @@ Las revisiones estáticas están documentadas en [REFERENCE_PROJECT_REVIEW.md](R
 
 La dirección del producto queda así:
 
-1. **Grafo LAN de solo lectura:** prototipo en desarrollo. Debe partir de las observaciones exactas asociadas a un `scan_id`, mostrar de dónde salió cada relación y nunca afirmar conexión física directa por compartir subred. Si no se puede recuperar la evidencia de la lectura, no debe dibujar vínculos.
+1. **Grafo LAN de solo lectura:** primera versión integrada mediante la [PR #135](https://github.com/JavierGrecco/NetSentinel/pull/135). La vista parte de las observaciones exactas asociadas a un `scan_id`, muestra la fuente de cada relación y no afirma una conexión física directa por compartir subred. Si no se puede recuperar la evidencia de la lectura, no dibuja vínculos. CI multiplataforma, Security, Supply Chain y el test responsive de Chromium pasaron para el commit revisado de la PR. Queda pendiente la revisión visual manual en instalaciones reales.
 2. **Métricas existentes:** pulir primero el historial de Monitorización y sus resúmenes con datos reales, intervalos visibles y estados diferenciados para caídas, lecturas sin latencia y falta de mediciones. Reutilizar SQLite y las consultas actuales.
 3. **Cambios entre lecturas:** una vez estable el modelo del grafo, comparar observaciones de dos capturas compatibles para mostrar equipos que aparecieron, dejaron de observarse o cambiaron de dirección, sin confundir ausencia con desconexión.
 4. **Mapa mundial de IP públicas:** estudiar después y solo si existe una fuente real/autorizada de IP públicas con utilidad para investigar. La geolocalización es aproximada y no demuestra la ubicación de una persona ni de un dispositivo.
