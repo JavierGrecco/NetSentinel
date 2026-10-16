@@ -54,3 +54,58 @@
       "scans";
   }
 }
+
+
+/* Mapa de relaciones: una vista secundaria y explícita, sin desplazar el inventario. */
+.topology-panel{padding:0;overflow:hidden}
+.topology-summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;cursor:pointer}
+.topology-summary::-webkit-details-marker{display:none}
+.topology-summary-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.topology-summary-copy .panel-title{font-size:14px}
+.topology-summary-copy .panel-sub{line-height:1.45}
+.topology-panel[open]>.topology-summary{border-bottom:1px solid var(--line)}
+.topology-body{padding:16px 18px 18px}
+.topology-tools{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.topology-search-label{display:grid;gap:5px;min-width:min(280px,100%);font-size:11px;font-weight:700;color:var(--muted)}
+.topology-search-label .search{width:min(420px,100%);min-width:0}
+.topology-explainer{margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.55}
+.topology-summary-text{color:var(--muted);font-size:11px;line-height:1.55;margin:8px 0 10px;overflow-wrap:anywhere}
+.topology-canvas{width:100%;max-width:100%;overflow:auto;border:1px solid var(--line);border-radius:10px;background:rgba(7,15,27,.42);padding:4px 0}
+.topology-svg{display:block;width:100%;min-width:780px;height:auto}
+.topology-edge{stroke:var(--accent);stroke-opacity:.53;stroke-width:1.5;fill:none}
+.topology-network-node rect{fill:var(--panel2);stroke:var(--accent);stroke-opacity:.85;stroke-width:1.4}
+.topology-unlinked-node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.2;stroke-dasharray:4 3}
+.topology-network-label{fill:var(--text);font-size:12px;font-weight:750}
+.topology-node-subtitle{fill:var(--muted);font-size:9px}
+.topology-device-node{cursor:pointer;outline:none}
+.topology-device-card{fill:var(--panel);stroke:var(--line);stroke-width:1.2}
+.topology-device-node:hover .topology-device-card{stroke:var(--accent);stroke-width:1.8}
+.topology-device-node:focus .topology-device-card{stroke:var(--text);stroke-width:2.5}
+.topology-device-node.is-trusted .topology-device-card{stroke:var(--green);stroke-opacity:.72}
+.topology-device-node.is-selected .topology-device-card{stroke:var(--accent);stroke-width:2.5}
+.topology-device-node.is-selected .topology-node-label{fill:var(--accent)}
+.topology-node-label{fill:var(--text);font-size:11px;font-weight:750}
+.topology-selection{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.topology-selection>strong{display:block;font-size:13px;color:var(--text);margin-bottom:4px}
+.topology-selection p{margin:5px 0 0}
+.topology-selection-meta{color:var(--muted);font-size:11px}
+.topology-selection-evidence{color:var(--text);font-size:11px}
+.topology-selection-empty{margin:0;color:var(--muted);font-size:11px}
+.topology-empty{padding:24px 12px}
+.topology-empty p{margin:6px auto 0;max-width:560px}
+.topology-accessible{margin-top:10px;font-size:11px;color:var(--muted)}
+.topology-accessible>summary{cursor:pointer;padding:6px 0;font-weight:700}
+.topology-accessible-list{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.topology-accessible-list li{min-width:0}
+.topology-accessible-list button{width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.topology-accessible-list button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+@media(max-width:620px){
+  .topology-summary{align-items:flex-start;padding:13px}
+  .topology-summary>.pill{flex-shrink:0}
+  .topology-body{padding:12px}
+  .topology-tools{align-items:stretch}
+  .topology-search-label{width:100%;min-width:0}
+  .topology-tools>button{align-self:flex-start}
+  .topology-canvas{margin-inline:-2px}
+  .topology-accessible-list{grid-template-columns:1fr}
+}
