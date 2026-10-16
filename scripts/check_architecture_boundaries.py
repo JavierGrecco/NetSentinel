@@ -77,6 +77,9 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.findings": {
         "netsentinel.findings_service",
     },
+    "netsentinel.api.forensics": {
+        "netsentinel.forensics_service",
+    },
     "netsentinel.api.inventory": {
         "netsentinel.api.inventory_assets",
         "netsentinel.api.inventory_discovery",
@@ -132,6 +135,7 @@ DATABASE_STORAGE_ALLOWED_INTERNAL_IMPORTS = {
 
 DATABASE_SCHEMA_ALLOWED_INTERNAL_IMPORTS = {
     "netsentinel.database_storage",
+    "netsentinel.forensics_audit_integrity",
 }
 
 # La clasificación de errores delega el almacenamiento en el diario local.
@@ -173,6 +177,11 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.findings_service": {
         "netsentinel.database",
         "netsentinel.findings",
+    },
+    "netsentinel.forensics_service": {
+        "netsentinel.config",
+        "netsentinel.forensics_integrity",
+        "netsentinel.forensics_repository",
     },
     "netsentinel.data_export_service": {
         "netsentinel.config",
@@ -266,6 +275,12 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.monitoring_notifications_repository": {
         "netsentinel.database_storage",
     },
+    "netsentinel.forensics_repository": {
+        "netsentinel.database_storage",
+        "netsentinel.forensics_audit_integrity",
+        "netsentinel.forensics_audit_manifest",
+    },
+
 }
 # Only the composition root and API routers may import the HTTP framework.
 # This rule applies automatically to new domain modules as they are added.

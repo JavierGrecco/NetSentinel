@@ -29,7 +29,7 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[test]"
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest -W error::starlette.exceptions.StarletteDeprecationWarning
 
   minimum-dependencies:
     name: Minimum declared dependencies (Python 3.10 / Ubuntu)
@@ -45,7 +45,7 @@ jobs:
       - name: Install declared minimum runtime and test dependencies
         run: python -m pip install --constraint ci/constraints-min.txt -e ".[test]"
       - name: Run full test suite against minimum dependencies
-        run: python -m pytest
+        run: python -m pytest -W error::starlette.exceptions.StarletteDeprecationWarning
 
   package:
     name: Wheel metadata and static assets
@@ -230,6 +230,7 @@ jobs:
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),
               "tools.html": ("/static/theme.js", "/static/tools.js"),
+              "forensics.html": ("/static/theme.js", "/static/forensics.js"),
           }
 
           for page_name, expected_scripts in pages.items():
@@ -273,7 +274,7 @@ jobs:
                       f"Missing frontend asset {script_name}."
                   )
 
-          print("All five pages load the expected local scripts without inline JavaScript.")
+          print("All six pages load the expected local scripts without inline JavaScript.")
           PY
           for script in src/netsentinel/static/*.js; do
             node --check "$script"
@@ -327,6 +328,11 @@ jobs:
                   "netsentinel/static/tools.html",
                   "netsentinel/static/activity.html",
                   "netsentinel/static/findings.html",
+                  "netsentinel/static/forensics.html",
+                  "netsentinel/static/forensics.css",
+                  "netsentinel/static/forensics.js",
+                  "netsentinel/static/netsentinel-red.svg",
+                  "netsentinel/static/netsentinel-forense.svg",
                   "netsentinel/static/theme.css",
                   "netsentinel/static/theme.js",
                   "netsentinel/static/section-tabs.js",

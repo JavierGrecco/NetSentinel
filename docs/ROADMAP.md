@@ -71,6 +71,21 @@ Quedan por cerrar:
 
 La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tengan una excepción documentada, aprobada y de riesgo bajo; la ejecución vigente de CI, Security y Supply Chain esté verde sobre el commit candidato; no haya vulnerabilidades críticas/altas sin tratar en el alcance publicado; los artefactos se instalen desde cero; y no haya fallos bloqueantes conocidos en los recorridos principales. Toda excepción debe indicar responsable, motivo, impacto y plan de resolución.
 
+## Trabajo en paralelo — NetSentinel Forense
+
+**Estado:** en revisión en la [PR #157](https://github.com/JavierGrecco/NetSentinel/pull/157). Sigue en borrador y no forma parte de `main` ni de la versión estable 0.10.0. Esta línea de trabajo no sustituye las pruebas de NetSentinel Red ni desbloquea la release.
+
+La PR propone un espacio separado para registrar casos, documentar evidencia, calcular y verificar SHA-256, mantener un historial de auditoría y exportar un manifiesto JSON con un verificador local. Los módulos de API, servicio, repositorio, interfaz y pruebas se mantienen separados de Red.
+
+**Límites importantes:** comparar hashes ayuda a detectar cambios frente a valores que se conservaron de forma independiente, pero un hash o un digest no es una firma digital ni certifica por sí solo una cadena de custodia. La aplicación no autentica todavía la identidad del operador.
+
+Antes de quitar el borrador:
+
+- Ejecutar [la guía manual de Forense](https://github.com/JavierGrecco/NetSentinel/blob/feat/reconcile-forensics-main-2026-10/docs/FORENSIC_MANUAL_TEST.md) con archivos sintéticos y registrar el commit exacto, sistema operativo, navegador y resultado.
+- Revisar instalación, navegación por teclado y accesibilidad en un navegador real.
+- [x] Validar la rama reconciliada en CI (18/18 trabajos), Security analysis y Supply chain security sobre el SHA [`014ea68`](https://github.com/JavierGrecco/NetSentinel/commit/014ea684d9140d696ea45153419386644733f86f): CI [#38969101549](https://github.com/JavierGrecco/NetSentinel/actions/runs/38969101549), seguridad [#38969101554](https://github.com/JavierGrecco/NetSentinel/actions/runs/38969101554) y cadena de suministro [#38969101565](https://github.com/JavierGrecco/NetSentinel/actions/runs/38969101565).
+- Confirmar la protección efectiva de `main` mediante el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
 **Objetivo:** evolucionar desde una lista de observaciones hacia un flujo de triaje útil, sin exagerar lo que una señal demuestra.

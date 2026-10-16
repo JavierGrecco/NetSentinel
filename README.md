@@ -4,6 +4,8 @@
 
 NetSentinel reúne inventario de dispositivos, historial y monitorización en un panel web. Se ejecuta en tu computadora; no necesita una cuenta ni un servidor externo.
 
+El módulo **NetSentinel Forense** está en desarrollo como área separada. Esta primera entrega incorpora el registro de casos y una comparación de SHA-256 limitada a copias de trabajo locales designadas. Sigue en validación: no autentica la identidad del operador ni constituye, por sí sola, una cadena de custodia validada. El plan detalla los límites y los siguientes pasos.
+
 ## Primeros pasos
 
 1. **Iniciá NetSentinel.** En Windows, ejecutá `run-windows.bat`; en macOS, abrí `run-macos.command`; en Linux, ejecutá `./run.sh`. La [sección de instalación](#instalación-y-primer-inicio) explica cada opción.
@@ -24,6 +26,8 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Actividad y privacidad](#historial-y-telemetría-autorizada)
 - [Preguntas frecuentes](docs/FAQ.md)
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
+- [NetSentinel Forense: alcance y etapas](docs/FORENSIC_MODE.md)
+- [Prueba manual de NetSentinel Forense](docs/FORENSIC_MANUAL_TEST.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
 
 ## Qué podés hacer

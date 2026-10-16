@@ -36,6 +36,7 @@ PAGE_CASES = (
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
     ("/activity", "Actividad y telemetría", "actividad"),
+    ("/forensics", "Área de análisis forense", "forensics"),
 )
 
 
@@ -564,12 +565,17 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     f"título inesperado: {actual!r}; se esperaba {expected_title!r}"
                                 )
 
-                            current_links = page.locator(
-                                '.primary-nav a.nav-link[aria-current="page"]'
-                            )
+                            if path == "/forensics":
+                                current_links = page.locator(
+                                    '.product-switcher a.product-link[aria-current="true"]'
+                                )
+                            else:
+                                current_links = page.locator(
+                                    '.primary-nav a.nav-link[aria-current="page"]'
+                                )
                             if current_links.count() != 1:
                                 case_failures.append(
-                                    "la navegación no identifica exactamente una sección activa"
+                                    "la navegación no identifica exactamente un módulo activo"
                                 )
 
                             theme_options = page.locator('input[name="themeSelect"]')

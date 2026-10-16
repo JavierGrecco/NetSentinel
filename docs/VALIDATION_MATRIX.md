@@ -140,6 +140,31 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - **Entorno y commit exactos:** no registrados en el mensaje de confirmación.
 - **Pendiente:** esta confirmación no reemplaza los recorridos de instalación, persistencia, seguridad, extensión ni la matriz completa de Windows/macOS/Linux y Chrome/Edge.
 
+## NetSentinel Forense — primera entrega
+
+**Estado: pendiente de revisión manual propia.** La confirmación de uso local de NetSentinel Red no aprueba esta pantalla ni sus nuevas operaciones.
+
+- [ ] FOR-MAN-01 — Abrir/cerrar caso, listar datos y rechazar identificadores duplicados.
+- [ ] FOR-MAN-02 — Registrar recepción con timestamp ISO-8601 y offset explícito; rechazar timestamp sin offset.
+- [ ] FOR-MAN-03 — Registrar nombre de archivo sin ruta, procedencia, tamaño opcional y hash declarado con su fuente.
+- [ ] FOR-MAN-04 — Comparar una copia sintética: coincidencia, diferencia y fallo de lectura; el hash declarado no se sobrescribe.
+- [ ] FOR-MAN-05 — Probar rutas y nombres no válidos; confirmar que se rechazan, que el intento queda en el historial con un marcador genérico y que el texto enviado/ruta privada no aparece en respuestas ni registros.
+- [ ] FOR-MAN-06 — Confirmar que la API bloquea nuevas recepciones/comprobaciones tras cerrar el caso y que el historial previo se mantiene.
+- [ ] FOR-MAN-07 — Confirmar la navegación Red/Forense, selección de temas, foco de teclado y lectura en ventana estrecha.
+- [ ] FOR-MAN-08 — En macOS/Linux, probar con permisos de carpeta inicialmente abiertos y confirmar que se restrinjan a `0700`; confirmar que un fallo al restringir permisos bloquea la lectura. En Windows, revisar el comportamiento bajo las ACL locales.
+
+**Registro de la revisión Forense:**
+- Fecha y zona horaria:
+- Persona que prueba:
+- Commit exacto:
+- Sistema operativo y versión:
+- Navegador y versión:
+- Resultado global: pendiente / aprobado / bloqueado:
+- Observaciones visuales y de uso:
+- Enlaces a evidencia sanitizada o issues:
+
+Usar únicamente archivos y casos sintéticos. No adjuntar rutas privadas, datos personales ni evidencia real. Si algo falla, abrir un issue con pasos para reproducirlo; no marcar la casilla afectada como completada.
+
 ## Registro de sesiones
 
 Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular un issue.

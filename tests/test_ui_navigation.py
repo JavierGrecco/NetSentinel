@@ -35,3 +35,56 @@ def test_every_module_has_consistent_primary_navigation():
             f"{relative_path} must mark only {current_route!r} as the current page"
         )
         assert all(link.group("label").strip() for link in links)
+
+
+
+MODULE_PAGES = {
+    "/": "src/netsentinel/static/index.html",
+    "/findings": "src/netsentinel/static/findings.html",
+    "/monitors": "src/netsentinel/static/monitors.html",
+    "/tools": "src/netsentinel/static/tools.html",
+    "/activity": "src/netsentinel/static/activity.html",
+    "/forensics": "src/netsentinel/static/forensics.html",
+}
+MODULE_SWITCHER_RE = re.compile(
+    r'<nav class="product-switcher" aria-label="Cambiar entre módulos NetSentinel">(.*?)</nav>',
+    flags=re.DOTALL,
+)
+PRODUCT_LINK_RE = re.compile(
+    r'<a class="product-link(?P<classes>[^"]*)" href="(?P<href>[^"]+)"'
+    r'(?P<current> aria-current="true")?>(?P<label>.*?)</a>',
+    flags=re.DOTALL,
+)
+
+
+def test_every_page_can_switch_between_red_and_forensics():
+    """El acceso a ambos productos debe estar disponible en todas las vistas."""
+    for current_route, relative_path in MODULE_PAGES.items():
+        html = (ROOT / relative_path).read_text(encoding="utf-8")
+        match = MODULE_SWITCHER_RE.search(html)
+        assert match, f"{relative_path} is missing the product switcher"
+
+        links = list(PRODUCT_LINK_RE.finditer(match.group(1)))
+        assert [link.group("href") for link in links] == ["/", "/forensics"]
+
+        active = [link.group("href") for link in links if link.group("current")]
+        expected = ["/forensics"] if current_route == "/forensics" else ["/"]
+        assert active == expected, f"{relative_path} has the wrong active product"
+
+        labels = [
+            re.sub(r"<[^>]+>", "", link.group("label")).strip()
+            for link in links
+        ]
+        assert labels == ["NetSentinel Red", "NetSentinel Forense"]
+
+
+def test_forensics_audit_manifest_export_is_connected_to_the_screen():
+    """La descarga del manifiesto debe estar disponible desde el caso seleccionado."""
+    html = (ROOT / "src/netsentinel/static/forensics.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/netsentinel/static/forensics.js").read_text(encoding="utf-8")
+
+    assert 'id="exportForensicAuditManifest"' in html
+    assert "installManifestExport();" in script
+    assert "/audit/manifest" in script
+    assert 'link.download = "netsentinel-forensic-audit-manifest.json"' in script
+    assert "digest no es una firma digital" in script

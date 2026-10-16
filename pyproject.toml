@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=9.1.1,<10.0", "httpx>=0.28.1,<1.0"]
+test = ["pytest>=9.1.1,<10.0", "httpx2>=2.0.0,<3.0"]
 ui-test = ["playwright>=1.48,<2.0"]
 
 [project.scripts]
@@ -33,7 +33,7 @@ where = ["src"]
 version = {attr = "netsentinel.__version__"}
 
 [tool.setuptools.package-data]
-netsentinel = ["static/*.html", "static/*.css", "static/*.js"]
+netsentinel = ["static/*.html", "static/*.css", "static/*.js", "static/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
