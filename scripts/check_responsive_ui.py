@@ -528,6 +528,12 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
         return ["no se preparó el formulario forense sintético para la prueba de error"]
 
     try:
+        verify_panel = page.locator("#forensicEvidenceList details.forensic-verify-panel")
+        if verify_panel.count() != 1:
+            return ["no se encontró el panel de comparación de hash sintético"]
+        if verify_panel.get_attribute("open") is None:
+            verify_panel.locator("summary").click()
+
         operator.fill("Operador sintético")
         source_name.fill("missing-synthetic-evidence.bin")
         confirmation.check()
