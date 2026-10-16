@@ -88,3 +88,9 @@ def test_forensics_audit_manifest_export_is_connected_to_the_screen():
     assert "/audit/manifest" in script
     assert 'link.download = "netsentinel-forensic-audit-manifest.json"' in script
     assert "digest no es una firma digital" in script
+
+    # El callback debe capturar la URL antes de limpiar la variable local.
+    # Si usa objectUrl después de asignarle None, la descarga no libera su URL.
+    assert "const downloadUrl = objectUrl;" in script
+    assert "window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);" in script
+    assert "window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);" not in script
