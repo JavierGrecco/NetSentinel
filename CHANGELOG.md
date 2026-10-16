@@ -3,6 +3,7 @@
 ## Próxima versión — 0.10.0 (en desarrollo)
 
 - Agrega un verificador responsive reproducible con Playwright para las cinco pantallas y quince tamaños representativos. Comprueba carga, navegación, desbordamiento horizontal y distribución del Inventario; puede guardar capturas e informe JSON. Usa una base temporal sin ejecutar descubrimientos. CI incorpora una revisión de Chromium en Linux.
+- La primera ejecución de Chromium detectó que Herramientas no usaba la clase compartida del contenedor principal. Se unificó con el resto de las páginas y se agregó una prueba para evitar que esa diferencia vuelva a aparecer.
 
 - Reorganiza el inventario: la actividad reciente acompaña a la tabla y el diagnóstico y el historial aprovechan una segunda fila. En ventanas de hasta 1080 px, las tarjetas se apilan para conservar un ancho cómodo; la tabla mantiene su desplazamiento horizontal. Se añade una prueba para proteger esta estructura responsive. La revisión visual en navegador sigue pendiente.
 

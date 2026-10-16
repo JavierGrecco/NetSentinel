@@ -153,3 +153,13 @@ def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens()
 
     # The table must stay readable by scrolling within its own container.
     assert ".table-wrap{overflow:auto;width:100%}" in css
+
+
+
+def test_every_main_page_uses_the_shared_content_shell():
+    """Las cinco secciones comparten el mismo contenedor principal."""
+    for page_name in PAGE_NAMES:
+        html = (STATIC / page_name).read_text(encoding="utf-8")
+        assert '<main class="wrap">' in html, (
+            f"{page_name} must use the shared content shell"
+        )
