@@ -850,17 +850,39 @@ def test_safe_working_copy_name_rejects_nonportable_names(unsafe_name):
 
 @pytest.mark.skipif(os.name != "posix", reason="Los permisos POSIX no se aplican en Windows.")
 def test_existing_working_copy_directory_is_restricted_to_current_user(monkeypatch, tmp_path):
-    """Una carpeta existente con permisos abiertos se endurece antes de usarse."""
-    from netsentinel.forensics_service import _working_copy_path
+    """Una carpeta con acceso de grupo detectado se endurece antes de usarse."""
+    from netsentinel import forensics_service
 
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     workspace = tmp_path / "forensics-working-copies"
-    workspace.mkdir()
-    os.chmod(workspace, 0o750)
+    workspace.mkdir(mode=0o700)
 
-    resolved = _working_copy_path("evidence.bin")
+    original_fstat = os.fstat
+    original_fchmod = os.fchmod
+    reported_modes = []
+    applied_modes = []
+
+    def report_existing_group_access(descriptor):
+        metadata = original_fstat(descriptor)
+        if not reported_modes:
+            # Simulá metadatos de una carpeta heredada con acceso de grupo, sin
+            # crear realmente un directorio abierto dentro del entorno de pruebas.
+            reported_modes.append(stat.S_IFDIR | 0o750)
+            return os.stat_result((reported_modes[0], *metadata[1:]))
+        return metadata
+
+    def record_permission_change(descriptor, mode):
+        applied_modes.append(mode)
+        return original_fchmod(descriptor, mode)
+
+    monkeypatch.setattr(forensics_service.os, "fstat", report_existing_group_access)
+    monkeypatch.setattr(forensics_service.os, "fchmod", record_permission_change)
+
+    resolved = forensics_service._working_copy_path("evidence.bin")
 
     assert resolved == workspace.resolve() / "evidence.bin"
+    assert reported_modes == [stat.S_IFDIR | 0o750]
+    assert applied_modes == [0o700]
     assert stat.S_IMODE(workspace.stat().st_mode) == 0o700
 
 
