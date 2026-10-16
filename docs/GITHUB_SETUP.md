@@ -9,17 +9,73 @@
 
 ## Proteger la rama principal
 
-La política escrita no configura GitHub por sí sola. En la revisión del 16/10/2026, la API de ramas devolvió `protected: false` para `main`; esa respuesta no muestra una protección tradicional aplicada. Revisá también **Settings → Rules → Rulesets** por si el repositorio usa reglasets. El seguimiento sigue pendiente hasta comprobar una regla activa en la configuración real: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/branches/main` puede devolver `protected: false` cuando no hay una regla de protección clásica; para evaluar el estado real también hay que leer los Rulesets.
 
-1. Abrí Settings → Branches o Rules → Rulesets y creá una regla que aplique exactamente a main.
-2. Exigí pull request antes de merge. Si existe un segundo revisor, exigí aprobación y descartá aprobaciones obsoletas; si solo hay un mantenedor, no configures un requisito de aprobación imposible de cumplir.
-3. Exigí las comprobaciones de estado de la CI vigente. La configuración documentada actualmente contempla la matriz Python 3.10–3.14 en Ubuntu/Windows/macOS, dependencias mínimas y metadata/recursos del wheel.
-4. Exigí además CodeQL, auditoría de dependencias, detección de secretos y build de wheel/SBOM/manifiesto. Seleccioná los contextos por el nombre de job que GitHub muestre en las ejecuciones recientes.
-5. No exijas el job de atestación de release en PR normales: se ejecuta al publicar etiquetas de versión.
-6. Bloqueá force-push y borrado de main. Revisá si conviene impedir bypass administrativo de acuerdo con el modelo de mantenimiento.
-7. Después de guardar, verificá que la regla se vea activa y que no se pueda fusionar un cambio con un check obligatorio fallido.
+**Estado observado el 16/10/2026:** GitHub devolvió un Ruleset activo llamado `rules` (ID `25281660`). En esa consulta solo tenía las reglas `deletion` y `non_fast_forward`; no aparecía una regla para exigir Pull Request ni checks obligatorios. El alcance de nombres de rama tampoco tenía un patrón explícito. Por tanto, esa configuración todavía no satisface la puerta de integración descrita abajo.
 
-Si cambian los nombres de jobs o workflows, actualizá los checks requeridos. No declares la protección como activa hasta verificarlo en la configuración real.
+### Configuración que debe quedar en el Ruleset
+
+1. Abrí **Settings → Rules → Rulesets** y editá el Ruleset existente, o creá uno nuevo si corresponde.
+2. Seleccioná el objetivo **Branches** y configurá el patrón de inclusión `main`. Revisá la vista previa para confirmar que la regla se aplique a `main` y no accidentalmente a todas las ramas.
+3. Mantené activadas **Restrict deletions** y **Block force pushes**.
+4. Activá **Require a pull request before merging**. Si otra persona puede revisar, exigí una aprobación y descartá aprobaciones obsoletas. Si hay una sola persona mantenedora, no exijas una aprobación imposible de obtener.
+5. Activá **Require status checks to pass** y añadí los nombres de check que aparecen a continuación. Seleccioná el proveedor/origen correcto que muestra GitHub; no sustituyas los checks individuales por el nombre general del workflow.
+6. Recomiendo exigir que la rama esté actualizada con `main` antes de fusionar. Esto da una señal más fiable de la integración, pero significa que hay que actualizar una PR cuando cambie `main`.
+7. Revisá los permisos de bypass y dejalos desactivados salvo que exista una excepción operativa deliberada, documentada y restringida.
+8. Guardá y confirmá que el Ruleset esté en modo **Active**, que la vista previa apunte a `main` y que los checks aparezcan en las reglas requeridas.
+
+### Checks obligatorios para Pull Requests
+
+Seleccioná los siguientes **23 contextos**. Se nombran aquí por el nombre exacto de cada check, tal como aparece en las ejecuciones de Actions y en el check de GitHub Advanced Security.
+
+**CI — 18 checks**
+
+Matriz Python (15 combinaciones):
+
+- `Python 3.10 / ubuntu-latest`
+- `Python 3.10 / windows-latest`
+- `Python 3.10 / macos-latest`
+- `Python 3.11 / ubuntu-latest`
+- `Python 3.11 / windows-latest`
+- `Python 3.11 / macos-latest`
+- `Python 3.12 / ubuntu-latest`
+- `Python 3.12 / windows-latest`
+- `Python 3.12 / macos-latest`
+- `Python 3.13 / ubuntu-latest`
+- `Python 3.13 / windows-latest`
+- `Python 3.13 / macos-latest`
+- `Python 3.14 / ubuntu-latest`
+- `Python 3.14 / windows-latest`
+- `Python 3.14 / macos-latest`
+
+Otras verificaciones de CI:
+
+- `Minimum declared dependencies (Python 3.10 / Ubuntu)`
+- `Wheel metadata and static assets`
+- `Responsive UI / Chromium`
+
+**Seguridad — 3 checks**
+
+- `CodeQL` — comprobación de GitHub Advanced Security que señala alertas nuevas en el cambio.
+- `CodeQL static analysis (Python)` — job que ejecuta el análisis estático.
+- `Audit Python dependencies` — revisión de dependencias contra avisos conocidos.
+
+**Cadena de suministro — 2 checks**
+
+- `Detect committed secrets`
+- `Build wheel, SBOM, and integrity manifest`
+
+No añadas `Sign release artifact provenance` como requisito para PR: se ejecuta solo al publicar una etiqueta `v*` y aparece omitido en PR normales. Hacerlo obligatorio bloquearía los merges que no sean publicaciones de release.
+
+### Cómo verificar que realmente protege
+
+- Confirmá que el Ruleset esté **Active**, no en modo Evaluate.
+- Confirmá que el patrón se aplique a `main`.
+- Abrí una PR de prueba: GitHub debe mostrar el merge bloqueado mientras falte un check obligatorio o alguno falle.
+- La PR no debe poder fusionarse directamente si no tiene aprobación cuando esta sea obligatoria, o si no pasó todos los checks requeridos.
+- No marques una prueba manual como aprobada solo porque la CI esté verde. Registrá la prueba manual en `VALIDATION_MATRIX.md`.
+
+Si cambian los nombres de job o workflows, actualizá los contextos requeridos. Antes de completar la tarea, comprobá los nombres disponibles en una PR reciente y volvé a verificar el efecto de la regla desde GitHub.
 
 ## Política de versiones
 
