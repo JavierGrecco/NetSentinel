@@ -344,6 +344,9 @@ def test_latency_history_aggregates_by_hour_and_six_hour_bucket(tmp_path):
 
 
 def test_incident_and_latency_export_endpoints_are_no_store(monkeypatch, tmp_path):
+    import csv
+    import io
+
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     monitor = database.create_monitor("Servicio", "tcp", "127.0.0.1:443", 60, 3)
@@ -365,7 +368,19 @@ def test_incident_and_latency_export_endpoints_are_no_store(monkeypatch, tmp_pat
     assert all(point["average_latency_ms"] is None for point in trend.json()["points"])
     assert export.status_code == 200
     assert export.headers["cache-control"] == "no-store"
-    assert "inicio_bucket_utc" in export.text
+    csv_rows = list(csv.DictReader(io.StringIO(export.content.decode("utf-8-sig"))))
+    assert len(csv_rows) == len(trend.json()["points"]) == 29
+    assert [row["inicio_bucket_utc"] for row in csv_rows] == [
+        point["bucket_start"] for point in trend.json()["points"]
+    ]
+    assert all(row["comprobaciones"] == "0" for row in csv_rows)
+    assert all(row["correctas"] == "0" and row["fallidas"] == "0" for row in csv_rows)
+    assert all(
+        row["latencia_media_ms"] == ""
+        and row["latencia_minima_ms"] == ""
+        and row["latencia_maxima_ms"] == ""
+        for row in csv_rows
+    )
     assert missing.status_code == 404
     assert missing_export.status_code == 404
 
