@@ -8,13 +8,13 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Última integración de código:** [PR #135](https://github.com/JavierGrecco/NetSentinel/pull/135), primera vista del grafo LAN respaldada por observaciones históricas; commit de integración [1203dff](https://github.com/JavierGrecco/NetSentinel/commit/1203dff10291c36cdee95684cd5f39dd3dcd6531).
-- **Main revisado al actualizar esta nota:** [b3a16e8](https://github.com/JavierGrecco/NetSentinel/commit/b3a16e87ca30211e646c3e6ed58e2aecddb89ea5), que incluye el seguimiento documental de la PR #136.
-- **CI para ese main:** [ejecución #38856694037](https://github.com/JavierGrecco/NetSentinel/actions/runs/38856694037) — 18/18 trabajos correctos.
-- **Seguridad para ese main:** [ejecución #38856694001](https://github.com/JavierGrecco/NetSentinel/actions/runs/38856694001) — CodeQL y auditoría de dependencias correctos.
-- **Cadena de suministro para ese main:** [ejecución #38856694010](https://github.com/JavierGrecco/NetSentinel/actions/runs/38856694010) — build, SBOM y manifiesto correctos; la firma de procedencia se omitió porque no era una publicación de release.
-- **Seguimiento documental integrado:** [PR #136](https://github.com/JavierGrecco/NetSentinel/pull/136). Los enlaces de ejecución corresponden al SHA indicado y son una fotografía, no un indicador dinámico.
-- **Siguiente mejora en revisión:** [PR #137](https://github.com/JavierGrecco/NetSentinel/pull/137), comparación de dos capturas compatibles; no se considera integrada hasta que sus comprobaciones terminen y la PR se fusione.
+- **Última integración de código:** [PR #137](https://github.com/JavierGrecco/NetSentinel/pull/137), comparación de capturas históricas; commit de integración [af41a6c](https://github.com/JavierGrecco/NetSentinel/commit/af41a6c3ed1741642cf1ea5249679a1176fd58db). El grafo LAN se incorporó antes mediante la [PR #135](https://github.com/JavierGrecco/NetSentinel/pull/135).
+- **Main revisado al actualizar esta nota:** [af41a6c](https://github.com/JavierGrecco/NetSentinel/commit/af41a6c3ed1741642cf1ea5249679a1176fd58db), merge de la comparación de capturas.
+- **CI de la PR #137 antes de fusionar:** [ejecución #38858149460](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858149460) — 18/18 trabajos correctos sobre el SHA revisado de la PR.
+- **Seguridad de la PR #137 antes de fusionar:** [ejecución #38858149503](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858149503) — CodeQL y auditoría de dependencias correctos.
+- **Cadena de suministro de la PR #137 antes de fusionar:** [ejecución #38858149464](https://github.com/JavierGrecco/NetSentinel/actions/runs/38858149464) — build, SBOM y manifiesto correctos; la firma de procedencia se omitió porque no era una publicación de release.
+- **Seguimiento documental integrado:** [PR #136](https://github.com/JavierGrecco/NetSentinel/pull/136). Las comprobaciones indicadas arriba corresponden al SHA de la PR #137 anterior a la fusión; aún deben verificarse las ejecuciones posteriores sobre el commit de integración.
+- **Revisión visual y pruebas manuales:** pendientes de registrar en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), incluido el flujo de comparación de capturas.
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
@@ -29,11 +29,11 @@ La dirección del producto queda así:
 
 1. **Grafo LAN de solo lectura:** primera versión integrada mediante la [PR #135](https://github.com/JavierGrecco/NetSentinel/pull/135). La vista parte de las observaciones exactas asociadas a un `scan_id`, muestra la fuente de cada relación y no afirma una conexión física directa por compartir subred. Si no se puede recuperar la evidencia de la lectura, no dibuja vínculos. CI multiplataforma, Security, Supply Chain y el test responsive de Chromium pasaron para el commit revisado de la PR. Queda pendiente la revisión visual manual en instalaciones reales.
 2. **Métricas existentes:** pulir primero el historial de Monitorización y sus resúmenes con datos reales, intervalos visibles y estados diferenciados para caídas, lecturas sin latencia y falta de mediciones. Reutilizar SQLite y las consultas actuales.
-3. **Cambios entre lecturas:** la [PR #137](https://github.com/JavierGrecco/NetSentinel/pull/137) propone la primera comparación, usando las observaciones exactas de ambas capturas y exigiendo al menos una subred privada compartida. Distingue cambios de dirección de equipos no observados en la segunda captura y advierte sobre errores o alcance limitado. Que un equipo no aparezca no demuestra que esté desconectado. La tarea solo se da por integrada después de CI, seguridad, empaquetado y revisión visual.
+3. **Cambios entre lecturas:** primera versión integrada mediante la [PR #137](https://github.com/JavierGrecco/NetSentinel/pull/137). Usa observaciones históricas exactas, exige al menos una subred IPv4 privada compartida y distingue cambios de dirección de equipos no observados en la siguiente captura. Advierte cuando hubo errores o alcance limitado y no interpreta ausencia como desconexión. CI, seguridad, empaquetado y Chromium pasaron para el SHA revisado antes de fusionar; queda pendiente revisar visualmente el flujo en una instalación real.
 4. **Mapa mundial de IP públicas:** estudiar después y solo si existe una fuente real/autorizada de IP públicas con utilidad para investigar. La geolocalización es aproximada y no demuestra la ubicación de una persona ni de un dispositivo.
 5. **Fuentes adicionales:** elegir una integración concreta y de solo lectura antes de crear conectores genéricos. No incorporar captura privilegiada, bloqueo de equipos ni acceso remoto como atajo visual.
 
-El trabajo del grafo en una rama no sustituye la Fase 0 ni permite declarar estable la release. La integración requiere CI, pruebas del modelo y de la API, revisión de seguridad, comprobación responsive y validación visual documentada. Las nuevas capacidades no se consideran terminadas por existir código solamente.
+El grafo y la comparación ya están integrados en `main`, pero no sustituyen la Fase 0 ni permiten declarar estable la release. Las pruebas automáticas no reemplazan la validación visual y manual documentada en instalaciones reales. Las nuevas capacidades no se consideran terminadas por existir código solamente.
 
 ## Cómo se mantiene el seguimiento
 
