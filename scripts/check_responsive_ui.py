@@ -284,6 +284,12 @@ def _topology_panel_failures(page) -> list[str]:
     except Exception as exc:
         return [f"el mapa no terminó de dibujar la fixture de prueba: {exc}"]
 
+    accessible_details = panel.locator("details.topology-accessible")
+    if accessible_details.count() != 1:
+        failures.append("falta el acceso a la alternativa textual")
+    elif accessible_details.get_attribute("open") is None:
+        accessible_details.locator("summary").click()
+
     for selector, description in (
         ("#topologySearch", "el filtro de dispositivos"),
         ("#topologyResetSearch", "el botón para limpiar el filtro"),
