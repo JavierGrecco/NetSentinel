@@ -163,6 +163,7 @@ python -m pytest
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
 - [Guía para desarrolladores](docs/DEVELOPMENT.md) — solo si querés modificar el código.
+- [Prueba responsive de la interfaz](docs/RESPONSIVE_UI_TESTING.md) — revisar tamaños de ventana y guardar capturas.
 - [Plan de implementación](docs/IMPLEMENTATION_PLAN.md)
 - [Dirección del producto y criterios de calidad empresarial](docs/PRODUCT_DIRECTION.md)
 - [Base local de fabricantes OUI](docs/OUI_DATABASE.md)
