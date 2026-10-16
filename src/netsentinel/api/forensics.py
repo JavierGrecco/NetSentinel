@@ -157,6 +157,9 @@ def verify_forensic_evidence_hash(
             actor=body.actor,
             confirm_working_copy=body.confirm_working_copy,
         )
+    except forensics_service.ForensicConflictError as exc:
+        # El estado de la operación determina el conflicto; el texto solo explica el motivo.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except forensics_service.ForensicHashCheckError as exc:
         # El servicio registra el intento fallido sin persistir la ruta completa.
         raise HTTPException(
@@ -164,12 +167,7 @@ def verify_forensic_evidence_hash(
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
     except ValueError as exc:
-        message = str(exc)
-        conflict = (
-            message.startswith("No hay un SHA-256 de referencia")
-            or message.startswith("El caso está cerrado")
-        )
-        raise HTTPException(status_code=409 if conflict else 422, detail=message) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if result is None:
         raise HTTPException(status_code=404, detail="No se encontró el elemento de evidencia del caso.")
     return result
