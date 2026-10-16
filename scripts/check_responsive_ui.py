@@ -92,7 +92,7 @@ def _free_local_port() -> int:
 
 
 def _seed_topology_fixture(data_dir: Path) -> None:
-    """Crea datos sintéticos locales para probar el grafo sin sondear una red real."""
+    """Crea datos sintéticos de inventario y monitorización, sin sondear una red real."""
     import os
 
     from netsentinel import database
@@ -146,6 +146,41 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "scope": "Fixture sintético para pruebas del navegador; no representa una red real.",
             },
         )
+
+        # La UI de monitorización también usa solo datos sintéticos.
+        from datetime import datetime, timedelta, timezone
+
+        monitor = database.create_monitor(
+            "Monitor de prueba accesible",
+            "tcp",
+            "127.0.0.1:443",
+            60,
+            3,
+            path=database_file,
+        )
+        database.record_monitor_check(
+            monitor["id"], "up", 12.5, "Respuesta simulada", path=database_file
+        )
+        database.record_monitor_check(
+            monitor["id"], "down", None, "Fallo simulado sin latencia", path=database_file
+        )
+        now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        with database.connect(database_file) as db:
+            check_ids = [
+                int(row["id"])
+                for row in db.execute(
+                    "SELECT id FROM monitor_checks WHERE monitor_id = ? ORDER BY id",
+                    (monitor["id"],),
+                )
+            ]
+            db.execute(
+                "UPDATE monitor_checks SET checked_at = ? WHERE id = ?",
+                (now.isoformat(), check_ids[0]),
+            )
+            db.execute(
+                "UPDATE monitor_checks SET checked_at = ? WHERE id = ?",
+                ((now - timedelta(hours=2)).isoformat(), check_ids[1]),
+            )
     finally:
         if previous_data_dir is None:
             os.environ.pop("NETSENTINEL_DATA_DIR", None)
@@ -396,6 +431,63 @@ def _scan_comparison_failures(page) -> list[str]:
     return failures
 
 
+
+def _monitor_history_accessibility_failures(page) -> list[str]:
+    """Prueba el detalle textual de monitorización mediante teclado en Chromium."""
+    failures: list[str] = []
+    # Los monitores están en una pestaña propia; abrirla reproduce el recorrido real.
+    monitor_tab = page.get_by_role("tab", name="Monitores")
+    if monitor_tab.count() != 1:
+        return ["no se encontró la pestaña Monitores"]
+    monitor_tab.click()
+    try:
+        page.wait_for_function(
+            "() => { const p = document.querySelector('#monitor-config'); return !!p && !p.hidden; }",
+            timeout=5000,
+        )
+    except Exception as exc:
+        return [f"no se pudo abrir la pestaña Monitores: {exc}"]
+
+    cards = page.locator("#monitor-config .monitor")
+    if cards.count() != 1:
+        return [f"se esperaba un monitor sintético en la prueba, se encontraron {cards.count()}"]
+
+    card = cards.first
+    if "Monitor de prueba accesible" not in card.inner_text():
+        return ["no se encontró el monitor sintético esperado"]
+    history_button = card.get_by_role("button", name="Historial")
+    if history_button.count() != 1:
+        return ["no se encontró el botón Historial del monitor sintético"]
+
+    try:
+        history_button.click()
+        summary = page.locator(".latency-history-details summary")
+        summary.wait_for(state="visible", timeout=5000)
+        summary.focus()
+        summary.press("Enter")
+        page.wait_for_function(
+            "() => { const d = document.querySelector('.latency-history-details'); return !!d && d.open; }",
+            timeout=5000,
+        )
+    except Exception as exc:
+        return [f"no se pudo abrir el detalle textual con teclado: {exc}"]
+
+    entries = page.locator(".latency-history-entries li")
+    if entries.count() != 25:
+        failures.append(
+            f"el detalle debe mostrar 25 intervalos horarios, se encontraron {entries.count()}"
+        )
+    text_content = entries.all_inner_texts()
+    all_text = "\n".join(text_content)
+    if not any("Latencia media" in item for item in text_content):
+        failures.append("el detalle textual no describe la latencia medida")
+    if "Sin latencia válida" not in all_text:
+        failures.append("el detalle textual no diferencia el fallo sin latencia")
+    if "Sin comprobaciones registradas; disponibilidad desconocida." not in all_text:
+        failures.append("el detalle textual no explica los intervalos vacíos")
+    return failures
+
+
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -497,6 +589,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 case_failures.extend(_topology_panel_failures(page))
                                 if viewport == Viewport(1440, 900):
                                     case_failures.extend(_scan_comparison_failures(page))
+                            if path == "/monitors" and viewport == Viewport(1440, 900):
+                                case_failures.extend(_monitor_history_accessibility_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
