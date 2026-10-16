@@ -140,6 +140,31 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - **Entorno y commit exactos:** no registrados en el mensaje de confirmación.
 - **Pendiente:** esta confirmación no reemplaza los recorridos de instalación, persistencia, seguridad, extensión ni la matriz completa de Windows/macOS/Linux y Chrome/Edge.
 
+## NetSentinel Forense — primera entrega
+
+**Estado: pendiente de revisión manual propia.** La confirmación de uso local de NetSentinel Red no aprueba esta pantalla ni sus nuevas operaciones.
+
+- [ ] FOR-MAN-01 — Abrir/cerrar caso, listar datos y rechazar identificadores duplicados.
+- [ ] FOR-MAN-02 — Registrar recepción con timestamp ISO-8601 y offset explícito; rechazar timestamp sin offset.
+- [ ] FOR-MAN-03 — Registrar nombre de archivo sin ruta, procedencia, tamaño opcional y hash declarado con su fuente.
+- [ ] FOR-MAN-04 — Comparar una copia sintética: coincidencia, diferencia y fallo de lectura; el hash declarado no se sobrescribe.
+- [ ] FOR-MAN-05 — Probar rutas y nombres no válidos; confirmar que se rechazan, que el intento queda en el historial con un marcador genérico y que el texto enviado/ruta privada no aparece en respuestas ni registros.
+- [ ] FOR-MAN-06 — Confirmar que la API bloquea nuevas recepciones/comprobaciones tras cerrar el caso y que el historial previo se mantiene.
+- [ ] FOR-MAN-07 — Confirmar la navegación Red/Forense, selección de temas, foco de teclado y lectura en ventana estrecha.
+- [ ] FOR-MAN-08 — En macOS/Linux, probar con permisos de carpeta inicialmente abiertos y confirmar que se restrinjan a `0700`; confirmar que un fallo al restringir permisos bloquea la lectura. En Windows, revisar el comportamiento bajo las ACL locales.
+
+**Registro de la revisión Forense:**
+- Fecha y zona horaria:
+- Persona que prueba:
+- Commit exacto:
+- Sistema operativo y versión:
+- Navegador y versión:
+- Resultado global: pendiente / aprobado / bloqueado:
+- Observaciones visuales y de uso:
+- Enlaces a evidencia sanitizada o issues:
+
+Usar únicamente archivos y casos sintéticos. No adjuntar rutas privadas, datos personales ni evidencia real. Si algo falla, abrir un issue con pasos para reproducirlo; no marcar la casilla afectada como completada.
+
 ## Registro de sesiones
 
 Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular un issue.
@@ -147,3 +172,18 @@ Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular 
 | Fecha | Versión/commit | OS / navegador | IDs ejecutados | Resultado | Issue / evidencia |
 |---|---|---|---|---|---|
 | — | — | — | — | Pendiente de primera ejecución | — |
+
+## NetSentinel Forense — revisión manual pendiente (PR #157)
+
+Usar un directorio de datos aislado y **archivos sintéticos**. No probar con evidencia real ni reutilizar datos de otra instalación. Seguir también la [guía manual de Forense](FORENSIC_MANUAL_TEST.md). Estas casillas solo se marcan con el resultado de una prueba real y la información del entorno arriba indicada.
+
+- [ ] **FOR-01 — Alta y trazabilidad:** crear un caso de prueba con referencia de autoridad, objetivo y alcance; comprobar que la operación y el nombre declarado del operador queden en la auditoría.
+- [ ] **FOR-02 — Metadatos sin copiar evidencia:** registrar una pieza sintética y comprobar que se guarden los metadatos declarados sin subir ni copiar el contenido original ni persistir rutas completas.
+- [ ] **FOR-03 — Hash correcto e incorrecto:** comparar una copia de trabajo con su SHA-256 de referencia correcto y con otro valor; confirmar que el resultado y el tamaño correspondan al archivo leído.
+- [ ] **FOR-04 — Entradas inseguras y errores:** probar una ruta absoluta, traversal, nombre no portable, archivo ausente y enlace simbólico cuando el sistema lo permita. Confirmar mensajes entendibles y que la auditoría no exponga la ruta completa ni el nombre rechazado.
+- [ ] **FOR-05 — Caso cerrado:** cerrar un caso y confirmar que no admita nuevas evidencias ni comparaciones, sin borrar el historial existente.
+- [ ] **FOR-06 — Auditoría alterada:** exportar el manifiesto, comprobarlo con el verificador local y modificar una copia de prueba del JSON para confirmar que el verificador detecta el cambio. No presentar el digest como firma digital.
+- [ ] **FOR-07 — Interfaz y accesibilidad:** navegar con teclado, probar foco y mensajes de estado, tema claro/oscuro, ventana estrecha y lector de pantalla disponible. Anotar navegador y versión.
+- [ ] **FOR-08 — Revisión visual real:** revisar la pantalla en escritorio y ventana estrecha y adjuntar capturas sanitizadas; la ejecución automática de Chromium no reemplaza esta revisión humana.
+
+**Registro de Forense:** commit exacto, sistema operativo y versión, versión de Python, navegador y versión, comandos utilizados, resultado de cada caso, problemas observados y enlaces a logs/capturas sanitizados. Todos los casos comienzan pendientes; no inferir aprobación manual a partir de CI.
