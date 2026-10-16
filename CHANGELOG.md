@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Amplía la regresión de respaldo SQLite para restaurar la copia en una ruta independiente, iniciar el esquema existente y comprobar mediante las funciones de NetSentinel que se recuperan inventario, direcciones, observaciones, lecturas y eventos. Esto complementa, pero no reemplaza, la restauración manual de la versión candidata.
+
 - Agrega un verificador responsive reproducible con Playwright para las cinco pantallas y quince tamaños representativos. Comprueba carga, navegación, desbordamiento horizontal y distribución del Inventario; puede guardar capturas e informe JSON. Usa una base temporal sin ejecutar descubrimientos. CI incorpora una revisión de Chromium en Linux.
 - La primera ejecución de Chromium detectó que Herramientas no usaba la clase compartida del contenedor principal. Se unificó con el resto de las páginas y se agregó una prueba para evitar que esa diferencia vuelva a aparecer.
 

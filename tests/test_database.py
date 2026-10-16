@@ -106,6 +106,31 @@ def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
         assert backup.execute("SELECT COUNT(*) FROM scans").fetchone()[0] == 1
         assert backup.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
+    # Simulate restoring the downloaded backup without touching the source database.
+    restored_path = tmp_path / "restored.sqlite3"
+    restored_path.write_bytes(backup_path.read_bytes())
+
+    # Starting NetSentinel initializes an existing database, so verify both
+    # schema compatibility and the application reads after restoration.
+    database.initialize(restored_path)
+    restored_devices = database.list_devices(restored_path)
+    assert len(restored_devices) == 1
+    restored_device = restored_devices[0]
+    assert restored_device["mac_address"] == "AA:BB:CC:DD:EE:11"
+    assert "192.168.22.4" in {
+        address["ip_address"] for address in restored_device["addresses"]
+    }
+
+    restored_history = database.get_device_history(restored_device["id"], path=restored_path)
+    assert restored_history is not None
+    assert restored_history["count"] == 1
+    assert restored_history["observations"][0]["ip_address"] == "192.168.22.4"
+
+    restored_scans = database.get_scans(path=restored_path)
+    assert len(restored_scans) == 1
+    assert restored_scans[0]["devices_found"] == 1
+    assert len(database.get_events(restored_path)) == 1
+
 
 def test_scan_discovery_report_is_persisted(tmp_path: Path):
     db = tmp_path / "test.sqlite3"
