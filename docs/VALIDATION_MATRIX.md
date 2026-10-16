@@ -55,6 +55,7 @@ Marcar cada tarea solo después de completar el recorrido en ese sistema y regis
 - [ ] UI-05 — Comprobar que las pestañas funcionan con teclado y que el contenido sigue siendo legible en los tres temas y en una ventana estrecha.
 - [ ] UI-06 — Navegar por las cinco secciones con la misma anchura de ventana; verificar que el marco no se ensancha ni se contrae bruscamente, que los márgenes/títulos/paneles/controles mantienen la escala y que las tablas no ensanchan toda la página. Repetir en escritorio y móvil.
 - [ ] UI-07 — Confirmar que logo y nombre NetSentinel permanecen fijos en las cinco secciones; que el título y la descripción cambian con la sección, la navegación ocupa el ancho disponible y el selector de temas no domina la cabecera.
+- [ ] UI-08 — Ejecutar `python scripts/check_responsive_ui.py --screenshots`; verificar las cinco páginas en los quince tamaños predeterminados, revisar el informe JSON y abrir las capturas. Registrar SO, navegador, commit y fallos; la prueba automática no sustituye la valoración visual humana.
 
 **Evidencia interfaz:** fecha/versión/commit, temas probados, páginas visitadas, resultado y fallos observados.
 
