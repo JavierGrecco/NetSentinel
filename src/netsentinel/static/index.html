@@ -105,6 +105,11 @@
           <button type="button" id="topologyResetSearch" class="quiet tiny">Limpiar filtro</button>
         </div>
         <p class="topology-explainer">Cada línea indica que una dirección fue observada dentro del rango de una subred registrada en esa lectura. No representa un cable, puerto de switch ni conexión física confirmada.</p>
+        <div class="topology-legend" role="group" aria-label="Leyenda del mapa de relaciones">
+          <span><i class="topology-legend-symbol subnet" aria-hidden="true"></i>Subred observada</span>
+          <span><i class="topology-legend-symbol trusted" aria-hidden="true"></i>Dispositivo marcado de confianza</span>
+          <span><i class="topology-legend-symbol unobserved" aria-hidden="true"></i>Inventario no observado en esta lectura</span>
+        </div>
         <div id="topologySummary" class="topology-summary-text" role="status" aria-live="polite">Cargando datos del inventario…</div>
         <div id="topologyCanvas" class="topology-canvas" aria-label="Grafo de relaciones de red"></div>
         <div id="topologySelection" class="topology-selection" aria-live="polite">
