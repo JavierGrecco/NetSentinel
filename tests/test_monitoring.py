@@ -265,6 +265,10 @@ def test_latency_trend_ui_has_accessible_chart_and_recovery_metrics(monkeypatch,
     assert "latency-chart" in ui_source
     assert "Recuperación media" in ui_source
     assert ".latency-bar.up" in css.text
+    assert "sin comprobaciones registradas" in script.text
+    assert "failure-bucket" in script.text
+    assert ".latency-history-bar.failure-bucket" in css.text
+    assert ".latency-history-bar.unmeasured-bucket" in css.text
     assert summary.status_code == 200
     assert "average_recovery_seconds" in summary.json()["summary"]
 
@@ -303,9 +307,11 @@ def test_latency_history_aggregates_by_hour_and_six_hour_bucket(tmp_path):
     monitor = database.create_monitor("Latency", "tcp", "127.0.0.1:443", 60, 3, path=path)
     database.record_monitor_check(monitor["id"], "up", 12.0, "Correcto", path=path)
     database.record_monitor_check(monitor["id"], "up", 18.0, "Correcto", path=path)
-    database.record_monitor_check(monitor["id"], "down", None, "Falló", path=path)
+    database.record_monitor_check(monitor["id"], "down", None, "Falló fuera de ventana", path=path)
+    database.record_monitor_check(monitor["id"], "down", None, "Falló dentro de ventana", path=path)
     recent = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     earlier = recent - timedelta(hours=30)
+    recent_failure = recent - timedelta(hours=2)
     with database.connect(path) as db:
         ids = [row["id"] for row in db.execute(
             "SELECT id FROM monitor_checks WHERE monitor_id = ? ORDER BY id", (monitor["id"],)
@@ -313,15 +319,23 @@ def test_latency_history_aggregates_by_hour_and_six_hour_bucket(tmp_path):
         db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (recent.isoformat(), ids[0]))
         db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (recent.isoformat(), ids[1]))
         db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (earlier.isoformat(), ids[2]))
+        db.execute("UPDATE monitor_checks SET checked_at = ? WHERE id = ?", (recent_failure.isoformat(), ids[3]))
     day = database.get_monitor_latency_trend(monitor["id"], window_hours=24, path=path)
     week = database.get_monitor_latency_trend(monitor["id"], window_hours=168, path=path)
     assert day["bucket_minutes"] == 60
+    assert len(day["points"]) == 25
     recent_points = [p for p in day["points"] if p["checks_total"]]
-    assert len(recent_points) == 1
-    assert recent_points[0]["checks_up"] == 2
-    assert recent_points[0]["average_latency_ms"] == 15.0
+    assert len(recent_points) == 2
+    measured_point = next(p for p in recent_points if p["checks_up"] == 2)
+    assert measured_point["average_latency_ms"] == 15.0
+    failed_point = next(p for p in recent_points if p["checks_down"] == 1)
+    assert failed_point["average_latency_ms"] is None
+    assert failed_point["checks_total"] == 1
+    assert any(p["checks_total"] == 0 for p in day["points"])
     assert week["bucket_minutes"] == 360
-    assert sum(p["checks_total"] for p in week["points"]) == 3
+    assert len(week["points"]) == 29
+    assert sum(p["checks_total"] for p in week["points"]) == 4
+    assert any(p["checks_total"] == 0 for p in week["points"])
     assert database.get_monitor_latency_trend(9999, path=path) is None
 
 
