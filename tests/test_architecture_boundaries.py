@@ -522,6 +522,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/devices",
         "/api/events",
         "/api/scans",
+        "/api/scans/compare",
         "/api/scans/{scan_id}/observations",
         "/api/devices/{device_id}/history",
         "/api/devices/{device_id}/addresses",
@@ -533,8 +534,8 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert sum(len(routes) for routes in route_groups) == 15
-    assert len(paths) == 15
+    assert sum(len(routes) for routes in route_groups) == 16
+    assert len(paths) == 16
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
