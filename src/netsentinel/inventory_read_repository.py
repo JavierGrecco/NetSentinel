@@ -272,6 +272,9 @@ def compare_scans(
             })
             return base_result
 
+        common_network_objects = tuple(
+            ipaddress.ip_network(network) for network in common_networks
+        )
         observation_rows = db.execute(
             """SELECT o.scan_id, o.device_id, o.ip_address, o.source,
                       d.mac_address, d.display_name
@@ -282,26 +285,36 @@ def compare_scans(
             (baseline["id"], comparison["id"]),
         ).fetchall()
 
-    # Collapse repeated rows for one address while preserving its observed sources.
+    # Only compare evidence observed inside a subnet shared by both captures.
+    # Otherwise a device from an unrelated subnet could look newly absent/present.
     snapshots: dict[int, dict[int, dict[str, Any]]] = {
         baseline["id"]: {},
         comparison["id"]: {},
     }
     for row in observation_rows:
         scan_id = int(row["scan_id"])
-        device_id = int(row["device_id"])
         snapshot = snapshots.get(scan_id)
         if snapshot is None:
             continue
+        address = str(row["ip_address"] or "").strip()
+        if not address:
+            continue
+        try:
+            parsed_address = ipaddress.ip_address(address)
+        except ValueError:
+            continue
+        if parsed_address.version != 4 or not any(
+            parsed_address in network for network in common_network_objects
+        ):
+            continue
+
+        device_id = int(row["device_id"])
         device = snapshot.setdefault(device_id, {
             "device_id": device_id,
             "mac_address": str(row["mac_address"] or ""),
             "display_name": str(row["display_name"] or ""),
             "address_sources": {},
         })
-        address = str(row["ip_address"] or "").strip()
-        if not address:
-            continue
         sources = device["address_sources"].setdefault(address, set())
         source = str(row["source"] or "").strip()
         if source:
