@@ -592,6 +592,46 @@ def test_closed_case_rejects_hash_comparison_without_writing_a_new_check(monkeyp
     assert checks.json()["items"] == []
 
 
+def test_hash_comparison_without_reference_hash_is_a_conflict(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        registered = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence",
+            json={
+                "label": "Copia sintética sin hash",
+                "source_type": "file_copy",
+                "source_description": "Prueba sin hash de referencia.",
+                "received_from": "Responsable de prueba",
+                "received_at_original": "2026-10-15T12:00:00Z",
+                "received_timezone": "UTC",
+                "actor": "Operador de prueba",
+            },
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        evidence_id = registered.json()["id"]
+        result = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence_id}/verify-hash",
+            json={
+                "source_name": "never-read.bin",
+                "actor": "Operador de prueba",
+                "confirm_working_copy": True,
+            },
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        checks = client.get(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence_id}/integrity-checks"
+        )
+
+    assert registered.status_code == 201
+    assert result.status_code == 409
+    assert "SHA-256 de referencia" in result.json()["detail"]
+    assert checks.json()["items"] == []
+
+
 def test_hash_comparison_requires_explicit_working_copy_confirmation(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
