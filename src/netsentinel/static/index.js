@@ -1,5 +1,5 @@
   const $ = (id) => document.getElementById(id);
-  const state = { devices: [], events: [], scans: [] };
+  const state = { devices: [], topologyDevices: [], topologySelectionId: null, events: [], scans: [] };
   function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
@@ -39,13 +39,35 @@
   }
   async function refresh() {
     try {
-      const [summary,devices,events,scans]=await Promise.all([api('/api/summary'),api('/api/devices?q='+encodeURIComponent($('searchInput').value)),api('/api/events?limit=30'),api('/api/scans?limit=12')]);
-      state.devices=devices;state.events=events;state.scans=scans;
+      const [summary,devices,topologyDevices,events,scans]=await Promise.all([api('/api/summary'),api('/api/devices?q='+encodeURIComponent($('searchInput').value)),api('/api/devices'),api('/api/events?limit=30'),api('/api/scans?limit=12')]);
+      state.devices=devices;state.topologyDevices=topologyDevices;state.events=events;state.scans=scans;
       $('totalMetric').textContent=summary.devices_total;$('trustedMetric').textContent=summary.devices_trusted;$('unknownMetric').textContent=summary.devices_untrusted;$('eventsMetric').textContent=summary.events_pending;
       $('lastScanMetric').textContent=summary.last_scan?`Última lectura: ${dateTime(summary.last_scan)}`:'Última lectura: todavía ninguna';
       $('gettingStarted').hidden=Number(summary.devices_total)>0;
-      renderDevices();renderEvents();renderScans();
+      renderDevices();renderEvents();renderScans();renderTopologyView();
     } catch(error) { toast(`No se pudo actualizar: ${error.message}`); }
+  }
+  function renderTopologyView() {
+    const graph = window.NetSentinelTopology;
+    if (!graph) {
+      $('topologySummary').textContent = 'No se pudo cargar el módulo del mapa. Actualizá la página y revisá los recursos locales.';
+      return;
+    }
+    const model = graph.renderTopology({
+      canvas: $('topologyCanvas'),
+      summary: $('topologySummary'),
+      selection: $('topologySelection'),
+      accessible: $('topologyAccessibleList'),
+      devices: state.topologyDevices,
+      scans: state.scans,
+      search: $('topologySearch').value,
+      selectedId: state.topologySelectionId,
+      onSelect: device => { state.topologySelectionId = String(device.id); }
+    });
+    if (model && state.topologySelectionId &&
+        !model.devices.some(entry => entry.id === state.topologySelectionId)) {
+      state.topologySelectionId = null;
+    }
   }
   function renderDevices() {
     const tbody=$('devicesBody');$('deviceCount').textContent=`${state.devices.length} dispositivo${state.devices.length===1?'':'s'}`;
@@ -106,6 +128,8 @@
       return `<div class="event"><div class="dot ${scan.errors&&scan.errors.length?'':'info'}"></div><div><div class="event-title">Lectura #${scan.id} · ${Number(scan.devices_found)} dispositivo(s)</div><div class="event-meta">${escapeHtml(dateTime(scan.started_at))} · Fuente: ${escapeHtml(scan.source||'—')}</div>${networks?`<div class="event-message">Redes detectadas: ${networks}</div>`:''}${summary?`<div class="event-message">${escapeHtml(summary)}</div>`:''}${duration?`<div class="event-message">${escapeHtml(duration)}</div>`:''}<div class="event-message">${scan.errors&&scan.errors.length?escapeHtml(scan.errors.join(' · ')):'Sin errores informados por las fuentes disponibles.'}</div></div></div>`;
     }).join('');
   }
+  $('topologySearch').addEventListener('input',renderTopologyView);
+  $('topologyResetSearch').addEventListener('click',()=>{$('topologySearch').value='';renderTopologyView();$('topologySearch').focus();});
   $('gettingStartedScanBtn').addEventListener('click',()=>$('scanBtn').click());
   $('scanBtn').addEventListener('click',async()=>{if(!window.confirm('NetSentinel detectará automáticamente hasta dos subredes IPv4 privadas y consultará hasta 254 direcciones por subred con un solo ping por dirección. Esto genera tráfico en tu red local, sin modificar equipos ni explorar Internet. ¿Querés continuar?'))return;const button=$('scanBtn');button.disabled=true;button.textContent='Buscando…';try{const result=await api('/api/scan',{method:'POST'});const errors=(result.errors||[]).length?` Avisos: ${result.errors.join(' · ')}`:'';const scope=result.discovery?.networks||[];const networkText=scope.length?' Redes: '+scope.map(n=>n.network+' ('+n.interface+')').join(', ')+'. Direcciones consultadas: '+(result.discovery.addresses_checked||0)+'; respuestas ping: '+(result.discovery.ping_responses||0)+'.':'';toast(`${result.message} Equipos: ${result.devices_found}; direcciones: ${result.addresses_found}; nuevos: ${result.new_devices}.${networkText}${errors}`);await refresh();}catch(error){toast(`Falló el descubrimiento: ${error.message}`);}finally{button.disabled=false;button.textContent='⌕ Descubrir dispositivos';}});
   $('closeHistory').addEventListener('click',()=>$('historyDialog').close());
