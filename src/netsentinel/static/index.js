@@ -61,7 +61,7 @@
       $('totalMetric').textContent=summary.devices_total;$('trustedMetric').textContent=summary.devices_trusted;$('unknownMetric').textContent=summary.devices_untrusted;$('eventsMetric').textContent=summary.events_pending;
       $('lastScanMetric').textContent=summary.last_scan?`Última lectura: ${dateTime(summary.last_scan)}`:'Última lectura: todavía ninguna';
       $('gettingStarted').hidden=Number(summary.devices_total)>0;
-      renderDevices();renderEvents();renderScans();renderTopologyView();
+      renderDevices();renderEvents();renderScans();renderTopologyView();if(window.NetSentinelScanComparison)window.NetSentinelScanComparison.renderSelectors(state.scans);
     } catch(error) { toast(`No se pudo actualizar: ${error.message}`); }
   }
   function renderTopologyView() {
