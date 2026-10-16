@@ -89,17 +89,24 @@
       <div class="metric"><div class="metric-label">Pendientes de revisar</div><div class="metric-value" id="unknownMetric">—</div><div class="metric-help">Aún no marcados como confiables</div></div>
       <div class="metric"><div class="metric-label">Eventos sin revisar</div><div class="metric-value" id="eventsMetric">—</div><div class="metric-help" id="lastScanMetric">Última lectura: todavía ninguna</div></div>
     </section>
-    <div class="layout">
-      <section class="panel">
+    <div class="layout inventory-layout">
+      <section class="panel inventory-panel">
         <div class="panel-head"><div><h2 class="panel-title">Inventario de dispositivos</h2><div class="panel-sub">Buscar IP, MAC, fabricante y marcar equipos de confianza</div></div><input id="searchInput" class="search" type="search" placeholder="Buscar IP, MAC, fabricante o nombre…" autocomplete="off" aria-label="Buscar dispositivos"></div>
         <div class="table-wrap"><table><thead><tr><th>Dispositivo / direcciones</th><th>MAC / fabricante</th><th>Interfaz</th><th>Confianza</th><th>Última detección</th><th>Acción</th></tr></thead><tbody id="devicesBody"><tr><td colspan="6"><div class="empty">Cargando inventario…</div></td></tr></tbody></table></div>
         <div class="footer"><span id="deviceCount">0 dispositivos</span><span><a href="/api/export/devices.csv" class="export-link">Exportar CSV</a> · <a href="/api/export/data.json" class="export-link">Exportar JSON</a> · <a href="/api/export/backup.sqlite3" class="export-link">Copia SQLite</a></span></div>
       </section>
-      <div>
-        <section class="panel"><div class="panel-head"><div><h2 class="panel-title">Actividad reciente</h2><div class="panel-sub">Nuevos dispositivos y cambios de confianza</div></div></div><div id="eventsList" class="events"><div class="empty">Todavía no hay eventos.</div></div></section>
-        <section class="panel section-gap"><div class="panel-head"><div><h2 class="panel-title">Diagnóstico de conectividad</h2><div class="panel-sub">Se ejecuta únicamente cuando lo solicitás</div></div></div><div id="diagnosticsBox"><div class="empty"><strong>Sin comprobaciones recientes</strong>Usá “Diagnóstico” para probar gateway, DNS y conectividad IP.</div></div></section>
-        <section class="panel section-gap"><div class="panel-head"><div><h2 class="panel-title">Historial de lecturas</h2><div class="panel-sub">Fuentes consultadas, resultados y avisos</div></div></div><div id="scansList" class="events"><div class="empty">Todavía no hay lecturas registradas.</div></div></section>
-      </div>
+      <section class="panel activity-panel">
+        <div class="panel-head"><div><h2 class="panel-title">Actividad reciente</h2><div class="panel-sub">Nuevos dispositivos y cambios de confianza</div></div></div>
+        <div id="eventsList" class="events"><div class="empty">Todavía no hay eventos.</div></div>
+      </section>
+      <section class="panel diagnostics-panel">
+        <div class="panel-head"><div><h2 class="panel-title">Diagnóstico de conectividad</h2><div class="panel-sub">Se ejecuta únicamente cuando lo solicitás</div></div></div>
+        <div id="diagnosticsBox"><div class="empty"><strong>Sin comprobaciones recientes</strong>Usá “Diagnóstico” para probar gateway, DNS y conectividad IP.</div></div>
+      </section>
+      <section class="panel scans-panel">
+        <div class="panel-head"><div><h2 class="panel-title">Historial de lecturas</h2><div class="panel-sub">Fuentes consultadas, resultados y avisos</div></div></div>
+        <div id="scansList" class="events"><div class="empty">Todavía no hay lecturas registradas.</div></div>
+      </section>
     </div>
     <footer class="footer"><span id="appVersion">NetSentinel · Datos guardados en tu computadora</span><span>Documentación API: <a href="/api/docs" class="export-link">/api/docs</a></span></footer>
   </main>
