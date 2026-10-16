@@ -116,3 +116,27 @@
 .topology-legend-symbol.subnet{background:var(--panel2);border-color:var(--accent)}
 .topology-legend-symbol.trusted{background:var(--panel);border-color:var(--green)}
 .topology-legend-symbol.unobserved{background:var(--panel2);border-style:dashed}
+
+
+/* Comparación de capturas: evidencia histórica, compacta y legible en ventanas estrechas. */
+.scan-comparison{border-top:1px solid var(--line);margin:3px 0 18px;padding-top:15px;min-width:0}
+.scan-comparison-title{font-size:14px;font-weight:800;margin:0 0 5px}
+.scan-comparison-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:10px;margin:13px 0}
+.scan-comparison .field{margin-top:0;min-width:0}
+.scan-comparison .field label{color:var(--muted);font-size:11px;font-weight:700}
+.scan-comparison .field select{width:100%;min-width:0;max-width:100%;border:1px solid var(--line);background:#0b1423;color:var(--text);border-radius:9px;padding:9px 10px}
+.scan-comparison-result{min-width:0;overflow-wrap:anywhere}
+.scan-comparison-empty,.scan-compare-caption,.scan-compare-disclaimer{font-size:11px;line-height:1.55;color:var(--muted);margin:10px 0}
+.scan-compare-disclaimer{border-top:1px solid var(--line);padding-top:10px}
+.scan-compare-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+.scan-compare-stat{display:grid;gap:5px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(8,17,30,.35);min-width:0}
+.scan-compare-stat-label{font-size:10px;line-height:1.4;color:var(--muted)}
+.scan-compare-stat-value{font-size:21px;line-height:1.2;font-weight:800;color:var(--text)}
+.scan-compare-warning{padding:10px 12px;border:1px solid #705b2a;border-radius:9px;color:#fde68a;background:#362b16;font-size:11px;line-height:1.5}
+.scan-compare-warning-list{padding-left:20px;margin:5px 0 0}
+.scan-compare-list{display:grid;gap:8px;margin-top:12px}
+.scan-compare-item{display:grid;gap:5px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(8,17,30,.3);min-width:0}
+.scan-compare-item-title{font-size:12px;overflow-wrap:anywhere}
+.scan-compare-item-status{font-size:11px;font-weight:750;color:var(--accent)}
+.scan-compare-item-meta{font-size:10px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+@media(max-width:760px){.scan-comparison-controls{grid-template-columns:minmax(0,1fr)}.scan-comparison-controls button{width:100%}.scan-compare-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
