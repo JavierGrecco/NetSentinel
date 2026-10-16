@@ -856,7 +856,7 @@ def test_existing_working_copy_directory_is_restricted_to_current_user(monkeypat
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     workspace = tmp_path / "forensics-working-copies"
     workspace.mkdir()
-    os.chmod(workspace, 0o755)
+    os.chmod(workspace, 0o750)
 
     resolved = _working_copy_path("evidence.bin")
 
