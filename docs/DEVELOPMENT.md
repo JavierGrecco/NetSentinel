@@ -38,3 +38,17 @@ pytest
 - Escribí la documentación en lenguaje sencillo y actualizá el historial de cambios.
 
 GitHub Actions comprueba el proyecto en Windows, macOS y Ubuntu con varias versiones de Python. Además, un job separado instala el conjunto mínimo de dependencias directas declarado en `ci/constraints-min.txt` sobre Python 3.10 para detectar regresiones de compatibilidad con las versiones más antiguas que el proyecto promete soportar. Cuando cambie una cota mínima en `pyproject.toml`, actualizá también el archivo de constraints y verificá esa combinación. Un validador automático compara ambos archivos antes de ejecutar las pruebas; el job de dependencias mínimas también confirma que el conjunto sea instalable y que la suite funcione con él.
+
+
+## Prueba responsive en Chromium
+
+Para revisar las cinco páginas a diferentes anchos de ventana, instalá la opción separada de Playwright y el navegador Chromium. La prueba usa una base temporal aislada y no ejecuta acciones de descubrimiento de red:
+
+```bash
+python -m pip install -e ".[test,ui-test]"
+python -m playwright install chromium
+python -m pytest -q
+python scripts/check_responsive_ui.py --screenshots
+```
+
+La guía completa, los tamaños incluidos, la carpeta de informes y el modo de probar un servidor ya iniciado están en [RESPONSIVE_UI_TESTING.md](RESPONSIVE_UI_TESTING.md). CI también ejecuta esa matriz con Chromium en Linux.
