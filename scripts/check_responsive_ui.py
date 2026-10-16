@@ -8,6 +8,7 @@ No inicia descubrimientos ni ejecuta diagnósticos de red.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 import json
@@ -182,6 +183,34 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "UPDATE monitor_checks SET checked_at = ? WHERE id = ?",
                 ((now - timedelta(hours=2)).isoformat(), check_ids[1]),
             )
+
+        # Caso forense sintético para probar el registro visible de un intento fallido.
+        # El archivo NO se crea: Chromium debe ver el error y el historial actualizado.
+        from netsentinel import forensics_service
+
+        forensic_case = forensics_service.create_case(
+            case_number="UI-FORENSICS-001",
+            title="Caso sintético de navegador",
+            authority_reference="AUTORIZACION-SINTETICA-001",
+            objective="Comprobar el registro visible de errores de lectura.",
+            scope="Solo datos sintéticos de la prueba Chromium.",
+            examiner="Examinador sintético",
+            actor="Prueba automatizada",
+        )
+        forensics_service.add_evidence(
+            case_id=forensic_case["id"],
+            label="Archivo sintético no creado",
+            source_type="file_copy",
+            original_name="missing-synthetic-evidence.bin",
+            source_description="Elemento sintético para probar un error de lectura.",
+            received_from="Fuente sintética",
+            received_at_original=datetime.now(timezone.utc).isoformat(),
+            received_timezone="UTC",
+            size_bytes=None,
+            reported_sha256=hashlib.sha256(b"synthetic evidence reference").hexdigest(),
+            hash_source="Fixture automática de Chromium",
+            actor="Prueba automatizada",
+        )
     finally:
         if previous_data_dir is None:
             os.environ.pop("NETSENTINEL_DATA_DIR", None)
@@ -489,6 +518,39 @@ def _monitor_history_accessibility_failures(page) -> list[str]:
     return failures
 
 
+def _forensics_hash_failure_refresh_failures(page) -> list[str]:
+    """Comprueba que un fallo de lectura aparezca en la ficha y el historial."""
+    operator = page.locator("#forensicOperator")
+    source_name = page.locator("#forensicEvidenceList .forensic-verify-form input[name='source_name']")
+    confirmation = page.locator("#forensicEvidenceList .forensic-verify-form input[name='confirm_working_copy']")
+    submit = page.locator("#forensicEvidenceList .forensic-verify-form button[type='submit']")
+    if any(locator.count() != 1 for locator in (operator, source_name, confirmation, submit)):
+        return ["no se preparó el formulario forense sintético para la prueba de error"]
+
+    try:
+        operator.fill("Operador sintético")
+        source_name.fill("missing-synthetic-evidence.bin")
+        confirmation.check()
+        submit.click()
+        page.wait_for_function(
+            """() => {
+              const status = document.querySelector("#forensicWorkspaceStatus");
+              const evidence = document.querySelector("#forensicEvidenceList");
+              const audit = document.querySelector("#forensicAuditList");
+              return status && status.textContent.includes("NS-FORENSIC-INT-002") &&
+                evidence && evidence.textContent.includes("Última comprobación: no se pudo leer") &&
+                audit && audit.textContent.includes("Falló la comparación del hash");
+            }""",
+            timeout=8000,
+        )
+    except Exception as exc:
+        return [f"el fallo forense no actualizó el estado y el historial en Chromium: {exc}"]
+
+    if "forensics-working-copies" in page.locator("#forensicAuditList").inner_text():
+        return ["el historial forense mostró la ubicación local de las copias de trabajo"]
+    return []
+
+
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -597,6 +659,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     case_failures.extend(_scan_comparison_failures(page))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
+                            if path == "/forensics" and viewport == Viewport(1440, 900):
+                                case_failures.extend(_forensics_hash_failure_refresh_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
@@ -661,7 +725,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Revisa las cinco pantallas de NetSentinel en múltiples tamaños. "
+            "Revisa las secciones de NetSentinel en múltiples tamaños. "
             "Por defecto usa un servidor y una base de datos temporales."
         )
     )
