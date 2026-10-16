@@ -19,16 +19,19 @@
 
 Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
 
-## Análisis de referencia: métricas, grafo y mapa geográfico
+## Análisis comparado: visualizaciones, datos y seguridad
 
-El análisis del [NetSentinel de referencia](REFERENCE_PROJECT_REVIEW.md) identificó tres posibles mejoras visuales. Son propuestas para priorizar después de superar las puertas de la Fase 0; no significan que estas funciones estén implementadas ni que se haya validado su comportamiento manualmente.
+Las revisiones estáticas están documentadas en [REFERENCE_PROJECT_REVIEW.md](REFERENCE_PROJECT_REVIEW.md) (ossianericson) y [REFERENCE_PROJECT_REVIEW_BLACSECURITY.md](REFERENCE_PROJECT_REVIEW_BLACSECURITY.md) (blacsecurity). La segunda aporta ideas de actividad en vivo y selección de nodos, además de riesgos que no debemos copiar: API sin protección visible, servicio en todas las interfaces, CORS abierto, secreto fijo, acciones que cambian el firewall y métricas de tráfico estimadas presentadas como actividad.
 
-1. **Métricas existentes:** mejorar las tendencias, los resúmenes por período y la lectura de datos faltantes reutilizando las consultas de Monitorización que ya existen. No duplicar la persistencia de mediciones.
-2. **Grafo LAN:** crear una vista de solo lectura sobre el inventario y las observaciones reales. Cada relación debe distinguir lo observado de lo inferido, incluir procedencia/fecha y evitar representar un enlace físico que la fuente no demuestra. Guardar las posiciones del mapa como estado de presentación, separado de la evidencia.
-3. **Mapa mundial de IP públicas:** evaluar solo cuando haya una fuente real y autorizada de direcciones públicas para investigar. No ubicar direcciones privadas en el mundo ni confundir la geolocalización aproximada de una IP con la ubicación real de una persona o dispositivo.
-4. **Fuentes de infraestructura:** seleccionar primero un modelo o servicio concreto y una capacidad de solo lectura; no incorporar de golpe captura de paquetes, escaneo privilegiado, conectores genéricos ni acceso remoto.
+La dirección del producto queda así:
 
-La ejecución se debe programar sin desplazar la estabilización actual. Cada visualización tendrá estados vacíos, datos frescos/desactualizados, leyendas accesibles, pruebas de tamaño y procedencia visible. El documento de revisión explica las razones, fuentes y criterios de aceptación.
+1. **Grafo LAN de solo lectura:** prototipo en desarrollo. Debe partir de las observaciones exactas asociadas a un `scan_id`, mostrar de dónde salió cada relación y nunca afirmar conexión física directa por compartir subred. Si no se puede recuperar la evidencia de la lectura, no debe dibujar vínculos.
+2. **Métricas existentes:** pulir primero el historial de Monitorización y sus resúmenes con datos reales, intervalos visibles y estados diferenciados para caídas, lecturas sin latencia y falta de mediciones. Reutilizar SQLite y las consultas actuales.
+3. **Cambios entre lecturas:** una vez estable el modelo del grafo, comparar observaciones de dos capturas compatibles para mostrar equipos que aparecieron, dejaron de observarse o cambiaron de dirección, sin confundir ausencia con desconexión.
+4. **Mapa mundial de IP públicas:** estudiar después y solo si existe una fuente real/autorizada de IP públicas con utilidad para investigar. La geolocalización es aproximada y no demuestra la ubicación de una persona ni de un dispositivo.
+5. **Fuentes adicionales:** elegir una integración concreta y de solo lectura antes de crear conectores genéricos. No incorporar captura privilegiada, bloqueo de equipos ni acceso remoto como atajo visual.
+
+El trabajo del grafo en una rama no sustituye la Fase 0 ni permite declarar estable la release. La integración requiere CI, pruebas del modelo y de la API, revisión de seguridad, comprobación responsive y validación visual documentada. Las nuevas capacidades no se consideran terminadas por existir código solamente.
 
 ## Cómo se mantiene el seguimiento
 
