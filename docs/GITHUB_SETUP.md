@@ -13,6 +13,8 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 **Estado observado el 16/10/2026:** GitHub devolvió un Ruleset activo llamado `rules` (ID `25281660`). En esa consulta solo tenía las reglas `deletion` y `non_fast_forward`; no aparecía una regla para exigir Pull Request ni checks obligatorios. El alcance de nombres de rama tampoco tenía un patrón explícito. Por tanto, esa configuración todavía no satisface la puerta de integración descrita abajo.
 
+**Actualización de la comprobación (16/10/2026, posterior):** el Ruleset ahora incluye `pull_request` y `required_status_checks`, además de bloquear el borrado y el force-push. No obstante, `required_status_checks` sigue siendo una lista vacía (`[]`); el patrón de rama continúa con `include: []` y `exclude: []`; y la regla de PR requiere cero aprobaciones. Todavía no hay checks obligatorios seleccionados ni un alcance delimitado explícitamente a `main`. El seguimiento y los 23 checks que deben agregarse están en el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+
 ### Configuración que debe quedar en el Ruleset
 
 1. Abrí **Settings → Rules → Rulesets** y editá el Ruleset existente, o creá uno nuevo si corresponde.
