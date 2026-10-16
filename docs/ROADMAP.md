@@ -18,7 +18,7 @@
 - **Revisión visual y pruebas manuales:** pendientes de registrar en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), incluidos `UI-09` (comparación de capturas) y `UI-10` (huecos, latencia, detalle por teclado y lector de pantalla en Monitorización). La comprobación automática de Chromium no sustituye la prueba con un lector de pantalla real.
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
-- **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
+- **Dependabot:** la [PR #37](https://github.com/JavierGrecco/NetSentinel/pull/37) ya está fusionada. Las PR #38–#43 siguen abiertas; sus workflows quedaron verdes sobre sus propios commits, pero sus bases registradas son anteriores al `main` actual y no prueban compatibilidad con todo el código añadido desde entonces. Refrescar/revalidar cada rama y revisar cada cambio por separado antes de fusionar. No hacer merge en lote.
 
 Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
 
@@ -61,7 +61,7 @@ Quedan por cerrar:
 - [ ] **REL-06 — Extensión e importación.** Probar manualmente Chrome y Edge: instalación, estado apagado por defecto, activación explícita, pausa, exclusiones, navegación SPA, retención, CSV, previsualización, deduplicación y ausencia de escrituras parciales cuando el lote es inválido. Registrar casos de falsos positivos/negativos del saneamiento.
 - [ ] **REL-07 — Privacidad de actividad y correo.** Usar datos sintéticos o exportaciones de auditoría expresamente autorizadas. Confirmar límites de metadatos, rechazo de columnas de cuerpo/adjuntos, retención, exportación y borrado. No usar mensajes o datos personales reales en fixtures públicos.
 - [ ] **REL-08 — Controles del repositorio.** Resolver el seguimiento de [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73): verificar en Settings que main exige PR y los checks necesarios, y que no permite force-push ni borrado. La documentación por sí sola no activa estas reglas.
-- [ ] **REL-09 — Dependencias y workflows.** Revisar separadamente los PR #37–#43 de Dependabot, verificar que sus checks correspondan a los SHAs actuales y evaluar cambios de compatibilidad/acciones antes de fusionar o cerrar.
+- [ ] **REL-09 — Dependencias y workflows.** Confirmar que cada actualización de Dependabot parte del `main` vigente, revisar cambios de compatibilidad/acciones y comprobar CI, Security y Supply Chain sobre el SHA que se pretende integrar. #37 ya está fusionada; #38–#43 requieren esa revalidación individual.
 - [ ] **REL-10 — Preparación del paquete.** Instalar el wheel generado en un entorno limpio y verificar metadatos, recursos estáticos, CLI, checksum y SBOM. Confirmar la procedencia de los artefactos firmados/atestados cuando exista una etiqueta.
 - [ ] **REL-11 — Documentación de release.** Registrar resultados reales, limitaciones conocidas, pasos de actualización/restauración y procedimiento de reporte de vulnerabilidades. No llamar “probado manualmente” a un test automático.
 
