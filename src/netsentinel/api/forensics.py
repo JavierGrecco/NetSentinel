@@ -91,10 +91,10 @@ def create_forensic_case(body: CaseCreateRequest) -> dict:
     """Abre un caso y deja constancia de la operación en la auditoría."""
     try:
         return forensics_service.create_case(**body.model_dump())
+    except forensics_service.ForensicConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
-        message = str(exc)
-        code = 409 if message.startswith("Ya existe un caso") else 422
-        raise HTTPException(status_code=code, detail=message) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/api/forensics/cases/{case_id}")
@@ -134,6 +134,8 @@ def register_forensic_evidence(case_id: UUID, body: EvidenceCreateRequest) -> di
     _case_or_404(case_id)
     try:
         evidence = forensics_service.add_evidence(case_id=str(case_id), **body.model_dump())
+    except forensics_service.ForensicConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if evidence is None:
