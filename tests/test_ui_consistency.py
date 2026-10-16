@@ -130,3 +130,26 @@ def test_all_main_pages_load_shared_layout_after_module_styles():
         assert 'class="top app-header"' in html, f"{page_name} must use the shared page header"
         assert 'class="app-brand"' in html and 'class="app-header-content"' in html
         assert 'class="app-header-utilities"' in html
+
+
+
+def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    css = (STATIC / "styles.css").read_text(encoding="utf-8")
+
+    assert '<div class="layout inventory-layout">' in html
+    panel_classes = (
+        'class="panel inventory-panel"',
+        'class="panel activity-panel"',
+        'class="panel diagnostics-panel"',
+        'class="panel scans-panel"',
+    )
+    positions = [html.index(panel_class) for panel_class in panel_classes]
+    assert positions == sorted(positions), "Dashboard panels must keep a useful reading order"
+
+    assert 'grid-template-areas:\n    "inventory activity"\n    "diagnostics scans";' in css
+    assert '@media (max-width: 1080px)' in css
+    assert 'grid-template-areas:\n      "inventory"\n      "activity"\n      "diagnostics"\n      "scans";' in css
+
+    # The table must stay readable by scrolling within its own container.
+    assert ".table-wrap{overflow:auto;width:100%}" in css
