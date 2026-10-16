@@ -659,3 +659,46 @@ def test_scan_comparison_rejects_unrelated_private_network_scopes(tmp_path: Path
     assert result["changes"] == []
     assert result["summary"] is None
     assert "no comparten una subred" in result["reason"]
+
+
+def test_scan_comparison_ignores_devices_outside_shared_subnets(tmp_path: Path):
+    db = tmp_path / "comparison-multiple-networks.sqlite3"
+    database.initialize(db)
+    first = database.record_scan(
+        [
+            Neighbor("192.168.5.10", "AA:BB:CC:DD:EE:51", "en0", "automatic-local-network"),
+            Neighbor("10.20.1.10", "AA:BB:CC:DD:EE:52", "en1", "automatic-local-network"),
+        ],
+        path=db,
+        discovery={"networks": [
+            {"network": "192.168.5.0/24", "interface": "en0"},
+            {"network": "10.20.1.0/24", "interface": "en1"},
+        ]},
+    )
+    second = database.record_scan(
+        [
+            Neighbor("192.168.5.10", "AA:BB:CC:DD:EE:51", "en0", "automatic-local-network"),
+            Neighbor("10.20.2.10", "AA:BB:CC:DD:EE:53", "en2", "automatic-local-network"),
+        ],
+        path=db,
+        discovery={"networks": [
+            {"network": "192.168.5.0/24", "interface": "en0"},
+            {"network": "10.20.2.0/24", "interface": "en2"},
+        ]},
+    )
+
+    result = database.compare_scans(first["scan_id"], second["scan_id"], path=db)
+
+    assert result is not None
+    assert result["comparable"] is True
+    assert result["common_networks"] == ["192.168.5.0/24"]
+    assert result["summary"] == {
+        "baseline_devices": 1,
+        "comparison_devices": 1,
+        "only_in_baseline": 0,
+        "only_in_comparison": 0,
+        "address_changed": 0,
+        "unchanged": 1,
+        "total_devices": 1,
+    }
+    assert result["changes"] == []
