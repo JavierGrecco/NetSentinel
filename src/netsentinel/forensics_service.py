@@ -71,6 +71,10 @@ def _safe_working_copy_name(source_name: str) -> str:
     return file_name
 
 
+class ForensicConflictError(ValueError):
+    """La operación no se puede realizar por el estado actual del caso o la evidencia."""
+
+
 class ForensicHashCheckError(ValueError):
     """Error de lectura seguro para la API, con código y mensaje sin rutas."""
 
@@ -325,13 +329,13 @@ def verify_evidence_copy(
     if case is None:
         return None
     if case["status"] != "open":
-        raise ValueError("El caso está cerrado. No se pueden iniciar nuevas comprobaciones.")
+        raise ForensicConflictError("El caso está cerrado. No se pueden iniciar nuevas comprobaciones.")
     evidence = forensics_repository.get_evidence(case_id=case_id, evidence_id=evidence_id)
     if evidence is None:
         return None
     expected_hash = evidence["reported_sha256"]
     if not expected_hash:
-        raise ValueError("No hay un SHA-256 de referencia informado para comparar.")
+        raise ForensicConflictError("No hay un SHA-256 de referencia informado para comparar.")
 
     # Registrar también los nombres vacíos, demasiado largos o malformados como
     # intentos fallidos, sin conservar nunca el texto rechazado.
