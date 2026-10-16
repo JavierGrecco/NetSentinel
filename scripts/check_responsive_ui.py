@@ -90,6 +90,47 @@ def _free_local_port() -> int:
         return int(listener.getsockname()[1])
 
 
+
+def _seed_topology_fixture(data_dir: Path) -> None:
+    """Crea datos sintéticos locales para probar el grafo sin sondear una red real."""
+    import os
+
+    from netsentinel import database
+    from netsentinel.discovery import Neighbor
+
+    database_file = data_dir / "netsentinel.sqlite3"
+    previous_data_dir = os.environ.get("NETSENTINEL_DATA_DIR")
+    os.environ["NETSENTINEL_DATA_DIR"] = str(data_dir)
+    try:
+        database.initialize(database_file)
+        database.record_scan(
+            [Neighbor(
+                "192.168.56.20",
+                "02:00:00:00:00:20",
+                "fixture0",
+                "responsive-ui-fixture",
+            )],
+            path=database_file,
+            discovery={
+                "networks": [{
+                    "network": "192.168.56.0/24",
+                    "interface": "fixture0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                }],
+                "addresses_checked": 1,
+                "ping_responses": 1,
+                "duration_seconds": 0.01,
+                "scope": "Fixture sintético para pruebas del navegador; no representa una red real.",
+            },
+        )
+    finally:
+        if previous_data_dir is None:
+            os.environ.pop("NETSENTINEL_DATA_DIR", None)
+        else:
+            os.environ["NETSENTINEL_DATA_DIR"] = previous_data_dir
+
+
 def _read_recent_log(log_stream) -> str:
     log_stream.flush()
     log_stream.seek(0)
@@ -218,8 +259,9 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
 
 
 
+
 def _topology_panel_failures(page) -> list[str]:
-    """Comprueba que el mapa plegable abra en vacío sin romper la interfaz."""
+    """Comprueba el grafo real con una fixture local, selección y filtro."""
     failures: list[str] = []
     panel = page.locator("#topologyPanel")
     if panel.count() != 1:
@@ -234,14 +276,13 @@ def _topology_panel_failures(page) -> list[str]:
             summary_button.click()
         page.wait_for_function(
             """() => {
-              const summary = document.querySelector("#topologySummary");
-              return summary && summary.textContent.trim() &&
-                summary.textContent.trim() !== "Cargando datos del inventario…";
+              const svg = document.querySelector("#topologyCanvas svg.topology-svg");
+              return svg && svg.querySelectorAll(".topology-device-node").length > 0;
             }""",
             timeout=5000,
         )
     except Exception as exc:
-        return [f"el mapa no terminó de mostrar su estado inicial: {exc}"]
+        return [f"el mapa no terminó de dibujar la fixture de prueba: {exc}"]
 
     for selector, description in (
         ("#topologySearch", "el filtro de dispositivos"),
@@ -256,13 +297,32 @@ def _topology_panel_failures(page) -> list[str]:
         elif not element.is_visible():
             failures.append(f"no está visible {description} al abrir el mapa")
 
-    search = panel.locator("#topologySearch")
-    reset = panel.locator("#topologyResetSearch")
-    if search.count() == 1 and reset.count() == 1:
-        search.fill("filtro-de-prueba")
+    try:
+        node = panel.locator("#topologyCanvas .topology-device-node").first
+        node.click()
+        detail = panel.locator("#topologySelection")
+        if "Evidencia de la lectura #" not in detail.inner_text():
+            failures.append("seleccionar un nodo no muestra la evidencia de la lectura")
+        if "192.168.56.20" not in detail.inner_text():
+            failures.append("el detalle no muestra la dirección observada en la fixture")
+
+        search = panel.locator("#topologySearch")
+        reset = panel.locator("#topologyResetSearch")
+        search.fill("filtro-sin-coincidencias")
+        if panel.locator("#topologyCanvas .topology-device-node").count() != 0:
+            failures.append("el filtro del grafo no oculta nodos que no coinciden")
         reset.click()
-        if search.input_value() != "":
-            failures.append("el botón Limpiar filtro no restablece la búsqueda")
+        if panel.locator("#topologyCanvas .topology-device-node").count() == 0:
+            failures.append("Limpiar filtro no restablece los nodos del mapa")
+    except Exception as exc:
+        failures.append(f"no se pudo seleccionar o filtrar un nodo del mapa: {exc}")
+
+    metrics = _page_metrics(page)
+    if metrics["documentWidth"] > metrics["viewportWidth"] + 1:
+        failures.append(
+            "el mapa abierto produce desplazamiento horizontal global "
+            f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
+        )
     return failures
 
 
@@ -468,6 +528,7 @@ def main() -> int:
         temp_root = Path(temp_manager.name)
         data_dir = temp_root / "data"
         data_dir.mkdir(parents=True)
+        _seed_topology_fixture(data_dir)
         port = _free_local_port()
         base_url = f"http://127.0.0.1:{port}"
 
