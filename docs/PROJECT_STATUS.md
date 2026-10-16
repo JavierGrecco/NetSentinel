@@ -5,6 +5,8 @@
 **Actualizado:** 16 de octubre de 2026  
 **Versión objetivo:** 0.10.0. Sigue en estabilización; no hay fecha prometida.
 
+**Revisión técnica del repositorio:** [diagnóstico y prioridades al 16/10/2026](REVIEW_2026-10-16.md). Resume los riesgos de publicación, la modularización pendiente y la evidencia que falta; no reemplaza la matriz de pruebas manuales.
+
 ## Dónde estamos
 
 NetSentinel continúa siendo una aplicación local. Estamos ordenando el código por responsabilidades sin cambiar la forma en que la usa la persona que la instala.
