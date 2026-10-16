@@ -130,3 +130,36 @@ def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]
             item.pop("discovery_json", None)
         items.append(item)
     return items
+
+def get_scan_observations(
+    scan_id: int,
+    path: Path | None = None,
+) -> list[dict[str, Any]] | None:
+    """Devuelve las direcciones observadas exactamente en una lectura concreta.
+
+    No consulta `device_addresses.last_seen`: esa tabla conserva el último
+    avistamiento por dirección y puede cambiar después de la lectura histórica.
+    La tabla `observations`, en cambio, vincula cada IP y fuente con su scan_id.
+    """
+    with connect(path) as db:
+        scan = db.execute("SELECT id FROM scans WHERE id = ?", (scan_id,)).fetchone()
+        if scan is None:
+            return None
+        rows = db.execute(
+            """SELECT o.scan_id, o.device_id, o.ip_address, o.observed_at, o.source,
+                      d.mac_address, d.display_name, d.manufacturer, d.trusted,
+                      d.ip_address AS primary_ip
+               FROM observations o
+               JOIN devices d ON d.id = o.device_id
+               WHERE o.scan_id = ?
+               ORDER BY o.device_id, o.observed_at, o.ip_address""",
+            (scan_id,),
+        ).fetchall()
+
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        item["trusted"] = bool(item["trusted"])
+        result.append(item)
+    return result
+

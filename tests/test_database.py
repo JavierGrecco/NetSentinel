@@ -557,3 +557,33 @@ def test_connect_does_not_chmod_target_of_default_directory_symlink(tmp_path, mo
     assert link.is_symlink()
     assert stat.S_IMODE(target.stat().st_mode) == 0o755
     assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+
+def test_scan_observations_preserve_exact_historical_source_and_address(tmp_path: Path):
+    """Una lectura anterior debe mantener su evidencia tras una nueva observación."""
+    db = tmp_path / "scan-observations.sqlite3"
+    database.initialize(db)
+    mac = "AA:BB:CC:DD:EE:91"
+
+    first = database.record_scan(
+        [Neighbor("192.168.10.20", mac, "en0", "automatic-local-network")],
+        path=db,
+        discovery={"networks": [{"network": "192.168.10.0/24", "interface": "en0"}]},
+    )
+    second = database.record_scan(
+        [Neighbor("192.168.10.20", mac, "en0", "system-neighbor-table")],
+        path=db,
+        discovery={"networks": [{"network": "192.168.10.0/24", "interface": "en0"}]},
+    )
+
+    historical = database.get_scan_observations(first["scan_id"], path=db)
+    latest = database.get_scan_observations(second["scan_id"], path=db)
+
+    assert historical is not None and latest is not None
+    assert len(historical) == len(latest) == 1
+    assert historical[0]["scan_id"] == first["scan_id"]
+    assert historical[0]["ip_address"] == "192.168.10.20"
+    assert historical[0]["source"] == "automatic-local-network"
+    assert latest[0]["source"] == "system-neighbor-table"
+    assert historical[0]["device_id"] == latest[0]["device_id"]
+    assert database.get_scan_observations(99999, path=db) is None
+

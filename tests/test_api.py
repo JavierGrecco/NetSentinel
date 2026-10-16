@@ -285,6 +285,8 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
 
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
+    if route == "/":
+        expected_scripts.add("/static/topology.js")
     if route in {"/monitors", "/activity"}:
         expected_scripts.add("/static/section-tabs.js")
 
@@ -571,3 +573,47 @@ def test_http_5xx_details_are_sanitized(monkeypatch, tmp_path, status_code, expe
     assert body["registered_in_log"] is True
     journal = (tmp_path / "netsentinel-errors.jsonl").read_text(encoding="utf-8")
     assert secret not in journal
+
+def test_scan_observations_endpoint_returns_exact_evidence_and_safe_not_found(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    mac = "AA:BB:CC:DD:EE:92"
+    first = database.record_scan(
+        [Neighbor("192.168.8.12", mac, "en0", "automatic-local-network")],
+        discovery={
+            "networks": [{
+                "network": "192.168.8.0/24",
+                "interface": "en0",
+                "local_address": "192.168.8.6",
+                "range_limited": False,
+            }]
+        },
+    )
+    database.record_scan(
+        [Neighbor("192.168.8.12", mac, "en0", "system-neighbor-table")],
+        discovery={
+            "networks": [{
+                "network": "192.168.8.0/24",
+                "interface": "en0",
+                "local_address": "192.168.8.6",
+                "range_limited": False,
+            }]
+        },
+    )
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(f"/api/scans/{first['scan_id']}/observations")
+        missing = client.get("/api/scans/99999/observations")
+
+    assert response.status_code == 200
+    observations = response.json()
+    assert len(observations) == 1
+    assert observations[0]["scan_id"] == first["scan_id"]
+    assert observations[0]["ip_address"] == "192.168.8.12"
+    assert observations[0]["source"] == "automatic-local-network"
+    assert observations[0]["trusted"] is False
+    assert missing.status_code == 404
+    assert missing.json()["error_code"] == "NS-HTTP-404"
+    assert missing.json()["registered_in_log"] is False
+    assert missing.json()["should_log"] is False
+
