@@ -200,7 +200,7 @@ jobs:
       - name: Validate Chromium extension JavaScript
         run: node --check browser-extension/service-worker.js && node --check browser-extension/popup.js
       - name: Test Chromium extension URL sanitizer, capture lifecycle and popup CSV
-        run: node --test browser-extension/service-worker.test.cjs browser-extension/popup.test.cjs
+        run: node --test browser-extension/service-worker.test.cjs browser-extension/popup.test.cjs tests/topology_model.test.cjs
       - name: Validate extension manifest and opt-in defaults
         run: |
           python - <<'PY'
@@ -225,7 +225,7 @@ jobs:
 
           static_dir = Path("src/netsentinel/static")
           pages = {
-              "index.html": ("/static/theme.js", "/static/index.js"),
+              "index.html": ("/static/theme.js", "/static/topology.js", "/static/index.js"),
               "monitors.html": ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js"),
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),
@@ -330,6 +330,7 @@ jobs:
                   "netsentinel/static/theme.css",
                   "netsentinel/static/theme.js",
                   "netsentinel/static/section-tabs.js",
+                  "netsentinel/static/topology.js",
                   "netsentinel/static/index.js",
                   "netsentinel/static/monitors.js",
                   "netsentinel/static/activity.js",
