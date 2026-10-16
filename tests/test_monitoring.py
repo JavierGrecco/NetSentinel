@@ -267,6 +267,10 @@ def test_latency_trend_ui_has_accessible_chart_and_recovery_metrics(monkeypatch,
     assert ".latency-bar.up" in css.text
     assert "sin comprobaciones registradas" in script.text
     assert "failure-bucket" in script.text
+    assert "Ver detalle por intervalo" in script.text
+    assert "Sin comprobaciones registradas; disponibilidad desconocida." in script.text
+    assert "latency-history-entries" in script.text
+    assert ".latency-history-details summary:focus-visible" in css.text
     assert ".latency-history-bar.failure-bucket" in css.text
     assert ".latency-history-bar.unmeasured-bucket" in css.text
     assert summary.status_code == 200

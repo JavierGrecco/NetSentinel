@@ -85,6 +85,45 @@ function appendHistoricalLatencyTrend(box, data) {
         chart.appendChild(bar);
     });
     box.appendChild(chart);
+
+    // The chart is exposed as one image to assistive technology. Provide a
+    // separate, expandable text equivalent so each interval remains accessible.
+    const details = el("details", "latency-history-details");
+    details.appendChild(el(
+        "summary",
+        "",
+        "Ver detalle por intervalo (" + points.length + ")"
+    ));
+    const entries = el("ul", "latency-history-entries");
+    points.forEach(point => {
+        const total = Number(point.checks_total || 0);
+        const checksUp = Number(point.checks_up || 0);
+        const checksDown = Number(point.checks_down || 0);
+        const when = dateText(point.bucket_start);
+        let description;
+        if (!total) {
+            description = "Sin comprobaciones registradas; disponibilidad desconocida.";
+        } else if (
+            point.average_latency_ms != null &&
+            Number.isFinite(Number(point.average_latency_ms))
+        ) {
+            const average = Number(point.average_latency_ms).toFixed(1);
+            const minimum = point.min_latency_ms == null
+                ? "sin mínimo" : Number(point.min_latency_ms).toFixed(1) + " ms";
+            const maximumValue = point.max_latency_ms == null
+                ? "sin máximo" : Number(point.max_latency_ms).toFixed(1) + " ms";
+            description = "Latencia media " + average + " ms (mín. " + minimum +
+                ", máx. " + maximumValue + "); " + checksUp + " correcta(s), " +
+                checksDown + " fallida(s).";
+        } else {
+            description = "Sin latencia válida; " + checksUp + " correcta(s), " +
+                checksDown + " fallida(s), " + total + " comprobación(es).";
+        }
+        entries.appendChild(el("li", "", when + " — " + description));
+    });
+    details.appendChild(entries);
+    box.appendChild(details);
+
     box.appendChild(el(
         "div",
         "small",
