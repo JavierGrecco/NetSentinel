@@ -182,6 +182,14 @@ Valorar una primera integración de solo lectura con un router, controlador o fu
 - [ ] Tiene pruebas deterministas con fixtures sintéticos, más una revisión visual documentada.
 - [ ] Actualiza la guía de uso, las limitaciones, la matriz de validación y el historial de cambios.
 
+## Segunda referencia: visualización en vivo y límites de seguridad
+
+También se revisó [blacsecurity/netsentinel](https://github.com/blacsecurity/netsentinel). Su grafo animado y la selección de nodos aportan ideas para la experiencia visual, pero su código presenta decisiones que no debemos reproducir: servidor en `0.0.0.0`, clave de Flask fija, CORS de Socket.IO abierto, rutas HTTP de bloqueo de equipos que pueden manipular reglas de firewall y emitir paquetes ARP, y estimaciones de bytes que en una modalidad se dibujan como actividad. Su tabla de “vulnerabilidades” también puede elevar un puerto abierto a una conclusión que no demuestra autenticación ausente ni una CVE confirmada.
+
+La auditoría específica, con rutas de código y decisiones, está en [REFERENCE_PROJECT_REVIEW_BLACSECURITY.md](REFERENCE_PROJECT_REVIEW_BLACSECURITY.md).
+
+La conclusión conjunta de las dos referencias es que **no alcanza con un grafo bonito o más métricas**. Necesitamos procedencia por observación, relaciones históricas exactas, diferencias explícitas entre datos medidos e inferidos, estados vacíos y errores honestos, límites de rendimiento, pruebas deterministas y recursos locales. Este criterio es la base del nuevo grafo de solo lectura: usa las observaciones vinculadas a un `scan_id`, no el `last_seen` actual de una dirección, para que una lectura vieja no cambie al consultar el inventario más tarde. El grafo explica pertenencia de una IP a una subred observada, no una conexión física.
+
 ## Fuentes revisadas
 
 ### Proyecto de referencia
