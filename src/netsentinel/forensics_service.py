@@ -17,6 +17,7 @@ from typing import Any
 from . import __version__, forensics_repository
 from .config import data_dir
 from .forensics_integrity import ForensicIntegrityError, calculate_sha256
+from .forensics_errors import ForensicConflictError
 
 
 _ALLOWED_SOURCE_TYPES = frozenset({
@@ -69,10 +70,6 @@ def _safe_working_copy_name(source_name: str) -> str:
             "NS-FORENSIC-INT-014", _INVALID_WORKING_COPY_NAME_MESSAGE
         )
     return file_name
-
-
-class ForensicConflictError(ValueError):
-    """La operación no se puede realizar por el estado actual del caso o la evidencia."""
 
 
 class ForensicHashCheckError(ValueError):
