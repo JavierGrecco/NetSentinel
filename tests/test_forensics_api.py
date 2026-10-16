@@ -540,6 +540,78 @@ def test_failed_hash_read_is_recorded_without_revealing_the_path(monkeypatch, tm
     assert str(tmp_path) not in checks.text + audit.text
 
 
+def test_hash_comparison_reports_conflict_if_case_closes_during_read(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    working_copy_dir = tmp_path / "forensics-working-copies"
+    working_copy_dir.mkdir(parents=True, exist_ok=True)
+    content = b"synthetic evidence closed during check"
+    (working_copy_dir / "evidence.bin").write_bytes(content)
+    reported_hash = hashlib.sha256(content).hexdigest()
+
+    from netsentinel import forensics_repository
+
+    original_record_check = forensics_repository.record_integrity_check
+
+    def close_before_recording(**kwargs):
+        closed = forensics_repository.close_case(
+            case_id=kwargs["case_id"],
+            actor="Operador de prueba concurrente",
+        )
+        assert closed is not None
+        assert closed["status"] == "closed"
+        return original_record_check(**kwargs)
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        registered = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence",
+            json={
+                "label": "Copia sintética para carrera",
+                "source_type": "file_copy",
+                "source_description": "Prueba de cierre concurrente.",
+                "received_from": "Responsable de prueba",
+                "received_at_original": "2026-10-15T12:00:00Z",
+                "received_timezone": "UTC",
+                "size_bytes": len(content),
+                "reported_sha256": reported_hash,
+                "hash_source": "Manifiesto sintético",
+                "actor": "Operador de prueba",
+            },
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        assert registered.status_code == 201, registered.text
+        evidence_id = registered.json()["id"]
+        monkeypatch.setattr(
+            forensics_repository,
+            "record_integrity_check",
+            close_before_recording,
+        )
+
+        verify = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence_id}/verify-hash",
+            json={
+                "source_name": "evidence.bin",
+                "actor": "Operador de prueba",
+                "confirm_working_copy": True,
+            },
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        checks = client.get(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence_id}/integrity-checks"
+        )
+        audit = client.get(f"/api/forensics/cases/{case['id']}/audit")
+
+    assert verify.status_code == 409
+    assert "caso está cerrado" in verify.json()["detail"]
+    assert checks.status_code == 200
+    assert checks.json()["items"] == []
+    assert "case_closed" in [event["action"] for event in audit.json()["items"]]
+    assert "evidence_hash_compared" not in [event["action"] for event in audit.json()["items"]]
+
+
 def test_closed_case_rejects_hash_comparison_without_writing_a_new_check(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
