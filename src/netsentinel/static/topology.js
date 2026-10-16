@@ -90,7 +90,7 @@
 
   function deviceLabel(device) {
     return String(
-      device.display_name || device.ip_address || device.mac_address || "Dispositivo sin nombre"
+      device.display_name || device.observed_ip_address || device.ip_address || device.mac_address || "Dispositivo sin nombre"
     );
   }
 
@@ -235,9 +235,14 @@
 
       const relations = Array.from(relationsByNetwork.values())
         .sort((a, b) => a.networkIndex - b.networkIndex);
+      const graphDevice = {
+        ...device,
+        // Preferimos una dirección que pertenezca a esta lectura, sin alterar el inventario actual.
+        observed_ip_address: currentAddresses.length ? currentAddresses[0].ip_address : ""
+      };
       const entry = {
         id: id,
-        device: device,
+        device: graphDevice,
         addresses: addresses.concat(currentAddresses),
         currentAddresses: currentAddresses,
         observedInScan: observationsByDevice.has(id),
@@ -280,7 +285,7 @@
   function searchableText(entry) {
     const device = entry.device;
     const values = [
-      device.display_name, device.ip_address, device.mac_address,
+      device.display_name, device.observed_ip_address, device.ip_address, device.mac_address,
       device.manufacturer, device.notes, device.interface
     ];
     for (const address of entry.addresses) values.push(address.ip_address, address.interface, address.source);
@@ -317,7 +322,7 @@
       role: "button",
       "aria-pressed": entry.id === selectedId ? "true" : "false",
       "aria-label": "Seleccionar " + deviceLabel(device) + ", " +
-        (device.ip_address || device.mac_address || "dirección desconocida")
+        (entry.currentAddresses[0]?.ip_address || device.ip_address || device.mac_address || "dirección desconocida")
     });
     group.dataset.deviceId = entry.id;
     if (entry.id === selectedId) group.classList.add("is-selected");
@@ -328,7 +333,9 @@
     });
     group.appendChild(rect);
     svgText(group, 11, 21, truncate(deviceLabel(device), 25), "topology-node-label");
-    const subtitle = device.ip_address || device.mac_address || "Dirección sin identificar";
+    const subtitle = entry.currentAddresses.length
+      ? entry.currentAddresses.map(address => address.ip_address).join(", ")
+      : (device.ip_address || device.mac_address || "Dirección sin identificar");
     svgText(group, 11, 41, truncate(subtitle, 29), "topology-node-subtitle");
 
     const title = makeSvgElement("title", "", {});
@@ -364,6 +371,7 @@
     const meta = document.createElement("p");
     meta.className = "topology-selection-meta";
     meta.textContent = "IP principal: " + (device.ip_address || "—") +
+      " · IP de la lectura: " + (entry.currentAddresses.map(address => address.ip_address).join(", ") || "sin observación") +
       " · MAC: " + (device.mac_address || "—") +
       " · Fabricante: " + (device.manufacturer || "sin identificar") +
       " · Confianza: " + (device.trusted ? "marcado como de confianza" : "pendiente de revisar");
@@ -380,7 +388,9 @@
         ". Esto no demuestra un enlace físico directo ni que el dispositivo responda a otros protocolos.";
     } else if (entry.observedInScan) {
       evidence.textContent = "El equipo apareció en la lectura #" + model.scan.id +
-        ", pero su dirección observada no se pudo asociar a las subredes registradas. No se dibuja una relación inferida.";
+        ", pero sus direcciones observadas (" +
+        entry.currentAddresses.map(address => address.ip_address + " · fuente " + address.source).join(", ") +
+        ") no se pudieron asociar a las subredes registradas. No se dibuja una relación inferida.";
     } else {
       evidence.textContent = "El equipo permanece en el inventario, pero no apareció en la lectura #" +
         model.scan.id + ". La ausencia en una lectura no demuestra que esté desconectado.";
@@ -407,7 +417,7 @@
       button.dataset.deviceId = entry.id;
       button.setAttribute("aria-pressed", entry.id === selectedId ? "true" : "false");
       button.textContent = deviceLabel(entry.device) + " · " +
-        (entry.device.ip_address || entry.device.mac_address || "sin dirección") +
+        (entry.currentAddresses[0]?.ip_address || entry.device.ip_address || entry.device.mac_address || "sin dirección") +
         (entry.relations.length ? " · relación observada" : entry.observedInScan ? " · sin subred asociable" : " · no observado en la lectura");
       button.addEventListener("click", () => select(entry));
       item.appendChild(button);
