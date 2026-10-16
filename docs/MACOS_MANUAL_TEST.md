@@ -1,19 +1,19 @@
-# Prueba manual en macOS (PR #111)
+# Prueba manual de NetSentinel en macOS
 
-Esta guía prepara una prueba de la rama de modularización sin tocar `main` ni reutilizar la base de datos de una instalación anterior. La aplicación es local y no descubre dispositivos hasta que se lo pedís desde la interfaz.
+Esta guía ayuda a validar la versión vigente de NetSentinel antes de publicarla. La prueba debe usar el `main` actual o el commit candidato indicado expresamente; no reutilices la base de datos de una instalación anterior. La aplicación es local y no descubre dispositivos hasta que se lo pedís desde la interfaz.
 
 La prueba manual sigue pendiente hasta registrar los resultados reales en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) y en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
 
-## 1. Descargar la rama correcta
+## 1. Descargar el código que se va a probar
 
-Abrí Terminal. Estos comandos descargan la rama que contiene los cambios propuestos en la PR #111, no `main`:
+Abrí Terminal. Estos comandos descargan y actualizan `main`, que ya contiene la modularización integrada. Anotá el SHA completo que muestran los comandos: identifica exactamente la versión probada, aunque `main` avance después.
 
 ```bash
 cd "$HOME"
-git clone --single-branch --branch refactor/activity-persistence-modules https://github.com/JavierGrecco/NetSentinel.git NetSentinel-manual-test
+git clone --single-branch --branch main https://github.com/JavierGrecco/NetSentinel.git NetSentinel-manual-test
 cd "$HOME/NetSentinel-manual-test"
-git fetch origin
-git pull --ff-only origin refactor/activity-persistence-modules
+git fetch origin main
+git pull --ff-only origin main
 git status --short --branch
 git log -1 --format='Commit: %H%nFecha: %cI%nAsunto: %s'
 ```
