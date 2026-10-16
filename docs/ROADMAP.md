@@ -8,10 +8,11 @@
 
 - **Versión durante el desarrollo:** 0.10.0.dev0.
 - **Próxima versión objetivo:** 0.10.0. Es una meta de trabajo, no una fecha prometida.
-- **Último commit de código de main revisado para este plan:** [merge de la PR #129](https://github.com/JavierGrecco/NetSentinel/commit/d15fe9e0218b441c27e1272096d2368a2bb32b27), que formalizó y probó las dependencias permitidas de la fachada Activity.
-- **CI multiplataforma del último cambio:** [ejecución #38819415713](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415713).
-- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38819415721](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415721).
-- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38819415693](https://github.com/JavierGrecco/NetSentinel/actions/runs/38819415693).
+- **Último cambio de código integrado y validado:** [PR #131](https://github.com/JavierGrecco/NetSentinel/pull/131), que añadió la matriz responsive con Chromium y unificó el contenedor principal de las cinco páginas. El commit integrado es [c1ebdff](https://github.com/JavierGrecco/NetSentinel/commit/c1ebdff706e44f1e662e059aa4f17733ae3a432c).
+- **CI multiplataforma para ese cambio:** [ejecución #38852863447](https://github.com/JavierGrecco/NetSentinel/actions/runs/38852863447) — correcta.
+- **Seguridad — CodeQL y auditoría de dependencias:** [ejecución #38852863623](https://github.com/JavierGrecco/NetSentinel/actions/runs/38852863623) — correcta.
+- **Cadena de suministro — wheel, SBOM y manifiesto:** [ejecución #38852863544](https://github.com/JavierGrecco/NetSentinel/actions/runs/38852863544) — correcta.
+- **Última actualización documental:** [PR #132](https://github.com/JavierGrecco/NetSentinel/pull/132), revisión comparada de visualizaciones, integrada en el commit [cf21c0a](https://github.com/JavierGrecco/NetSentinel/commit/cf21c0a937e51ff831d8f4490c7101b2a0cc7415). Sus ejecuciones posteriores a la fusión estaban en curso al actualizar esta nota; no se presentan como aprobadas.
 - **Protección efectiva de main:** pendiente de verificación en GitHub; seguimiento en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 - **Pruebas manuales de instalación y uso:** seguimiento operativo en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75); registrar resultados y evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 - **Pull requests de Dependabot:** #37–#43 requieren revisión individual; no fusionarlos en lote solo porque una comprobación antigua aparezca verde.
