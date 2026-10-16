@@ -356,6 +356,9 @@ def test_incident_and_latency_export_endpoints_are_no_store(monkeypatch, tmp_pat
     assert invalid.status_code == 422
     assert trend.status_code == 200
     assert trend.json()["bucket_minutes"] == 360
+    assert len(trend.json()["points"]) == 29
+    assert all(point["checks_total"] == 0 for point in trend.json()["points"])
+    assert all(point["average_latency_ms"] is None for point in trend.json()["points"])
     assert export.status_code == 200
     assert export.headers["cache-control"] == "no-store"
     assert "inicio_bucket_utc" in export.text
