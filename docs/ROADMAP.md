@@ -18,6 +18,17 @@
 
 Los enlaces de ejecución son una fotografía de la revisión, no un indicador dinámico. Antes de una release debe revisarse la ejecución más reciente de cada workflow y su commit.
 
+## Análisis de referencia: métricas, grafo y mapa geográfico
+
+El análisis del [NetSentinel de referencia](REFERENCE_PROJECT_REVIEW.md) identificó tres posibles mejoras visuales. Son propuestas para priorizar después de superar las puertas de la Fase 0; no significan que estas funciones estén implementadas ni que se haya validado su comportamiento manualmente.
+
+1. **Métricas existentes:** mejorar las tendencias, los resúmenes por período y la lectura de datos faltantes reutilizando las consultas de Monitorización que ya existen. No duplicar la persistencia de mediciones.
+2. **Grafo LAN:** crear una vista de solo lectura sobre el inventario y las observaciones reales. Cada relación debe distinguir lo observado de lo inferido, incluir procedencia/fecha y evitar representar un enlace físico que la fuente no demuestra. Guardar las posiciones del mapa como estado de presentación, separado de la evidencia.
+3. **Mapa mundial de IP públicas:** evaluar solo cuando haya una fuente real y autorizada de direcciones públicas para investigar. No ubicar direcciones privadas en el mundo ni confundir la geolocalización aproximada de una IP con la ubicación real de una persona o dispositivo.
+4. **Fuentes de infraestructura:** seleccionar primero un modelo o servicio concreto y una capacidad de solo lectura; no incorporar de golpe captura de paquetes, escaneo privilegiado, conectores genéricos ni acceso remoto.
+
+La ejecución se debe programar sin desplazar la estabilización actual. Cada visualización tendrá estados vacíos, datos frescos/desactualizados, leyendas accesibles, pruebas de tamaño y procedencia visible. El documento de revisión explica las razones, fuentes y criterios de aceptación.
+
 ## Cómo se mantiene el seguimiento
 
 1. Cada tarea lleva un ID estable (por ejemplo, REL-01 o FIND-02) para poder referenciarla desde PR, issue y evidencia de pruebas.
