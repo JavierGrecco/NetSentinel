@@ -2,7 +2,7 @@
 
 > Esta es la nota breve para retomar el trabajo. El [roadmap](ROADMAP.md) contiene las tareas completas y la [matriz de validación](VALIDATION_MATRIX.md) guarda la evidencia de las pruebas reales.
 
-**Actualizado:** 15 de octubre de 2026  
+**Actualizado:** 16 de octubre de 2026  
 **Versión objetivo:** 0.10.0. Sigue en estabilización; no hay fecha prometida.
 
 ## Dónde estamos
@@ -40,6 +40,7 @@ La confirmación no identifica el sistema operativo, el navegador ni el commit e
 - La [PR #127](https://github.com/JavierGrecco/NetSentinel/pull/127) separó las consultas de solo lectura del inventario y dejó las escrituras en `inventory_repository.py`. `record_scan` conserva una única transacción para la exploración, los dispositivos, direcciones, observaciones y eventos.
 - La [PR #129](https://github.com/JavierGrecco/NetSentinel/pull/129) agregó una regla explícita sobre las dependencias de `activity_tracking.py` y una prueba negativa para detectar futuras importaciones directas a `database.py`.
 - Se unificó el selector de apariencia en todas las páginas, con temas Oscuro, Medio y Claro persistentes entre secciones. Monitorización y Actividad se dividieron en sectores navegables; se aclaró cuándo corren las comprobaciones y qué requiere una fuente de telemetría real.
+- Se reorganizó la cuadrícula del inventario: Actividad reciente queda junto a la tabla y Diagnóstico e Historial aprovechan la segunda fila. En pantallas más estrechas, las secciones se apilan y la tabla conserva su desplazamiento horizontal. Hay una prueba automatizada para mantener esta estructura; la revisión visual real de este cambio sigue pendiente.
 - Se reajustó la jerarquía tras la primera prueba visual en macOS: la marca NetSentinel queda fija, el título y la descripción identifican la sección actual, la navegación ocupa todo el ancho y las tarjetas de tema pasan a un formato compacto. Se agregaron pruebas para mantener esta distribución en las cinco páginas.
 - Se reemplazó el desplegable de apariencia por tres tarjetas visuales con iconos (Oscuro, Medio y Claro) en las cinco secciones. La selección sigue guardándose, se comparte entre páginas y se sincroniza si se cambia desde otra pestaña. El control usa radios accesibles y contempla el foco de teclado y pantallas pequeñas.
 - Se detectaron y corrigieron diferencias de estructura visual entre páginas: Inventario/Hallazgos usaban hasta 1400 px de ancho, Monitorización/Actividad 1180 px y Herramientas 850 px. La capa compartida fija un marco de 1320 px, tipografía, paneles, separaciones, controles y márgenes adaptables; se agregaron pruebas para evitar que cada sección vuelva a separarse del patrón común. Falta recorrerlo visualmente en navegador real.
@@ -51,7 +52,7 @@ Para las próximas integraciones, revisar CI, Security y Supply Chain sobre el S
 
 ## Qué falta cerrar primero
 
-1. **Probar en macOS.** Seguir [la guía de prueba manual](MACOS_MANUAL_TEST.md), guardar el SHA probado y registrar resultado y evidencia en la [matriz](VALIDATION_MATRIX.md). El seguimiento está en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
+1. **Probar en macOS.** Seguir [la guía de prueba manual](MACOS_MANUAL_TEST.md), revisar también la nueva distribución del Inventario en pantalla ancha y estrecha, guardar el SHA probado y registrar resultado y evidencia en la [matriz](VALIDATION_MATRIX.md). El seguimiento está en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
 2. **Comprobar la persistencia.** Verificar actualización de bases existentes, copia, restauración e integridad SQLite con escenarios representativos.
 3. **Completar pruebas manuales multiplataforma.** Registrar recorridos reales de Windows y Linux, y de Chrome/Edge. No inferir resultados manuales a partir de CI.
 4. **Verificar la protección de main.** Confirmar desde los ajustes de GitHub que los cambios requieren PR y que los controles necesarios son obligatorios. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
