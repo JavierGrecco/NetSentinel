@@ -48,6 +48,14 @@ def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
 def scans(limit: int = Query(default=30, ge=1, le=100)) -> list[dict]:
     return database.get_scans(limit=limit)
 
+@router.get("/api/scans/{scan_id}/observations")
+def scan_observations(scan_id: int) -> list[dict]:
+    """Devuelve evidencia histórica exacta de una lectura para reconstruir su mapa."""
+    result = database.get_scan_observations(scan_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No se encontró la lectura solicitada.")
+    return result
+
 
 @router.get("/api/devices/{device_id}/history")
 def device_history(device_id: int, limit: int = Query(default=100, ge=1, le=500)) -> dict:
