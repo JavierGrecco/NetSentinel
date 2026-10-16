@@ -98,6 +98,12 @@ def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
         [Neighbor("192.168.22.4", "AA:BB:CC:DD:EE:11", "en0")],
         path=source,
     )
+    monitor = database.create_monitor(
+        "Respaldo de prueba", "tcp", "127.0.0.1:9", 60, 2, path=source
+    )
+    database.record_monitor_check(
+        monitor["id"], "down", None, "Fallo de prueba", path=source
+    )
     backup_path = tmp_path / "backup.sqlite3"
     backup_path.write_bytes(database.export_sqlite_backup(source))
 
@@ -129,7 +135,32 @@ def test_sqlite_backup_is_consistent_and_contains_history(tmp_path: Path):
     restored_scans = database.get_scans(path=restored_path)
     assert len(restored_scans) == 1
     assert restored_scans[0]["devices_found"] == 1
-    assert len(database.get_events(restored_path)) == 1
+
+    # Monitoring state is related data too: checks, incidents and events must
+    # remain consistent after a backup is restored and initialized.
+    restored_monitors = database.list_monitors(path=restored_path)
+    assert len(restored_monitors) == 1
+    restored_monitor = restored_monitors[0]
+    assert restored_monitor["name"] == "Respaldo de prueba"
+    assert restored_monitor["last_status"] == "down"
+
+    restored_checks = database.get_monitor_checks(
+        restored_monitor["id"], path=restored_path
+    )
+    assert len(restored_checks) == 1
+    assert restored_checks[0]["status"] == "down"
+    assert restored_checks[0]["detail"] == "Fallo de prueba"
+
+    restored_incidents = database.get_incidents(path=restored_path, limit=10)
+    assert len(restored_incidents) == 1
+    assert restored_incidents[0]["monitor_id"] == restored_monitor["id"]
+    assert restored_incidents[0]["status"] == "open"
+    assert restored_incidents[0]["failure_count"] == 1
+
+    restored_event_types = {
+        event["event_type"] for event in database.get_events(restored_path)
+    }
+    assert restored_event_types == {"new_device", "monitor_down"}
 
 
 def test_scan_discovery_report_is_persisted(tmp_path: Path):
