@@ -267,7 +267,7 @@ def _topology_panel_failures(page) -> list[str]:
     if panel.count() != 1:
         return ["no aparece un único panel del mapa de relaciones"]
 
-    summary_button = panel.locator("summary")
+    summary_button = panel.locator(":scope > summary")
     if summary_button.count() != 1:
         return ["el mapa no tiene un control claro para abrir o cerrar la vista"]
 
