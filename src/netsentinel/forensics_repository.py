@@ -14,6 +14,7 @@ from typing import Any
 from .database_storage import connect, utc_now
 from .forensics_audit_integrity import audit_event_hash
 from .forensics_audit_manifest import build_audit_manifest
+from .forensics_errors import ForensicConflictError
 
 
 def _append_audit(
@@ -170,7 +171,7 @@ def create_case(
                 ),
             )
         except sqlite3.IntegrityError as exc:
-            raise ValueError("Ya existe un caso con ese identificador.") from exc
+            raise ForensicConflictError("Ya existe un caso con ese identificador.") from exc
         _append_audit(
             db,
             case_id=case_id,
@@ -238,7 +239,7 @@ def add_evidence(
         if case is None:
             return None
         if case["status"] != "open":
-            raise ValueError("El caso está cerrado. No se puede agregar evidencia.")
+            raise ForensicConflictError("El caso está cerrado. No se puede agregar evidencia.")
         existing = db.execute(
             "SELECT COUNT(*) FROM forensic_evidence WHERE case_id = ?",
             (case_id,),
@@ -357,11 +358,11 @@ def record_integrity_check(
         if case is None or evidence is None:
             return None
         if case["status"] != "open":
-            raise ValueError("El caso está cerrado. No se pueden registrar nuevas comprobaciones.")
+            raise ForensicConflictError("El caso está cerrado. No se pueden registrar nuevas comprobaciones.")
 
         expected = evidence["reported_sha256"]
         if not expected:
-            raise ValueError("No hay un SHA-256 de referencia informado para comparar.")
+            raise ForensicConflictError("No hay un SHA-256 de referencia informado para comparar.")
         if error_code:
             result = "failed"
             calculated_sha256 = None
