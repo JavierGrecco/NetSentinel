@@ -284,6 +284,20 @@
         if (!original || original.id === undefined || original.id === null) continue;
         const id = String(original.id);
         if (observedInventoryIds.has(id)) continue;
+        // Solo afirmar "no visto" si alguna dirección cae dentro de una
+        // subred cuyo descubrimiento no se registró como limitado.
+        // Los equipos fuera de ese alcance no pertenecen a esta comparación.
+        const inCompleteScope = deviceAddresses(original).some(address => {
+          const value = String(address && address.ip_address || "");
+          const number = ipv4ToNumber(value);
+          if (number === null) return false;
+          return networks.some(network => {
+            if (network.rangeLimited) return false;
+            const subnet = parsePrivateCidr(network.cidr);
+            return Boolean(subnet && (((number & subnet.mask) >>> 0) === subnet.networkNumber));
+          });
+        });
+        if (!inCompleteScope) continue;
         observedEntries.push({
           id: id,
           device: original,

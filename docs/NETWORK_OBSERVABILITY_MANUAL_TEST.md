@@ -102,3 +102,10 @@ Anotá fecha, sistema operativo, navegador, tema visual y tamaño de ventana. Pa
 - Recargá la página y comprobá que la disposición se conserve para los mismos nodos.
 - En Chromium, el verificador también debe poder recuperarse si la preferencia local está corrupta; al guardar de nuevo, cada coordenada tiene que ser finita y estar dentro del rango validado, con un máximo de 1200 entradas.
 - Las posiciones son preferencias visuales locales; no deben modificar las lecturas guardadas ni las relaciones de red.
+
+
+### Equipos fuera del alcance o con descubrimiento limitado
+
+- Al abrir una lectura con la subred `192.168.1.0/24`, un activo cuya IP pertenece a otra subred no debe aparecer como “no visto” en esa lectura.
+- Si el informe marca esa subred como limitada, los activos del inventario que no se observaron en esa lectura no deben presentarse como ausencias confirmadas.
+- Los activos que sí se observaron se mantienen visibles, aunque el descubrimiento haya sido parcial.

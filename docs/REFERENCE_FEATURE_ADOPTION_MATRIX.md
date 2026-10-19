@@ -30,7 +30,7 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 ## Reglas que no debemos negociar
 
 1. **La evidencia es la fuente de verdad.** El servidor define las observaciones y las relaciones del modelo. La UI puede agrupar visualmente varias IP del mismo dispositivo dentro de una subred, pero no puede inventar relaciones.
-2. **La ausencia no es una desconexión.** Solo clasificamos un equipo como “no visto en esta lectura” cuando el alcance de red de esa lectura puede interpretarse.
+2. **La ausencia no es una desconexión.** Solo clasificamos un equipo como “no visto en esta lectura” si alguna IP del inventario pertenece a una subred registrada y el descubrimiento de esa subred no figura como limitado. Los equipos fuera de alcance no se mezclan con esa lectura.
 3. **Cada relación tiene significado explícito.** `observed-subnet-membership` indica que una IP observada cae dentro de una subred registrada; no significa tráfico, conexión física ni un enlace directo.
 4. **Se distingue el dato de la ficha actual de la evidencia histórica.** Nombre, fabricante y confianza del registro de inventario pueden cambiar y no se presentan como si fueran un histórico inmutable.
 5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks se consideran válidos solo para el SHA que ejecutaron. La PR del explorador permanece como borrador hasta pasar CI, seguridad y cadena de suministro en su cabeza final, además de revisión manual responsive y accesible.

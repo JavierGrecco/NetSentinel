@@ -311,3 +311,70 @@ test("unknown network scope never classifies inventory devices as absent when no
   assert.equal(graph.elements.length, 0);
   assert.match(model.reason, /no se pudo interpretar/i);
 });
+
+
+test("inventory devices outside the selected scan's subnet scope are not classified as absent", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: true,
+    nodes: [{
+      id: "subnet:192.168.1.0%2F24%40en0",
+      kind: "subnet",
+      label: "192.168.1.0/24",
+      network_id: "subnet:192.168.1.0%2F24%40en0",
+      interface: "en0",
+      local_address: "192.168.1.5",
+      range_limited: false
+    }],
+    edges: [],
+    stats: { observed_devices: 0, known_subnets: 1, observed_memberships: 0, unlinked_devices: 0 },
+    warnings: []
+  };
+  const inventory = [
+    device(21, "192.168.1.21"),
+    device(22, "10.12.0.22")
+  ];
+  const model = buildTopologyModelFromApi(payload, inventory, [currentScan], "1");
+  const graph = buildGraphElements(model, { status: "all" });
+
+  assert.deepEqual(model.devices.map(entry => entry.id), ["21"]);
+  assert.equal(model.devices[0].observedInScan, false);
+  assert.equal(graph.entries.length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 0);
+});
+
+
+test("inventory devices within a limited range are not marked absent", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: true,
+    nodes: [{
+      id: "subnet:192.168.1.0%2F24%40en0",
+      kind: "subnet",
+      label: "192.168.1.0/24",
+      network_id: "subnet:192.168.1.0%2F24%40en0",
+      interface: "en0",
+      local_address: "192.168.1.5",
+      range_limited: true
+    }],
+    edges: [],
+    stats: { observed_devices: 0, known_subnets: 1, observed_memberships: 0, unlinked_devices: 0 },
+    warnings: ["El alcance de descubrimiento estuvo limitado."]
+  };
+  const inventory = [device(23, "192.168.1.23")];
+  const model = buildTopologyModelFromApi(payload, inventory, [currentScan], "1");
+  const graph = buildGraphElements(model, { status: "all" });
+
+  assert.deepEqual(model.devices, []);
+  assert.equal(model.networkScopeAvailable, true);
+  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "device").length, 0);
+  assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 0);
+});
