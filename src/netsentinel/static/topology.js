@@ -640,7 +640,7 @@
       const data = {
         id, type:"network", cidr:network.cidr, networkIndex:network.index,
         label:network.cidr + "\n" + network.interface + "\n" + memberCount + " dispositivo(s) visto(s)",
-        interface:network.interface, memberCount, rangeLimited:Boolean(network.rangeLimited)
+        interface:network.interface, localAddress:network.localAddress || "", memberCount, rangeLimited:Boolean(network.rangeLimited)
       };
       const element = { data, classes:"network-node" };
       if (validPosition(positions[id])) element.position = positions[id];
@@ -779,6 +779,7 @@
     const details = root.document.createElement("dl");
     details.className = "topology-detail-grid";
     addDetailField(details, "Interfaz", network.interface);
+    addDetailField(details, "Dirección local", network.localAddress || "");
     addDetailField(details, "Dispositivos asociados en esta vista", String(network.members.length));
     addDetailField(details, "Límite de exploración", network.rangeLimited ? "El recorrido se limitó a un rango /24" : "No se registró ese límite");
     addDetailField(details, "Lectura utilizada", "#" + model.scan.id + " · " + formatTimestamp(model.scan.finished_at || model.scan.started_at));
