@@ -56,7 +56,13 @@ class TopologyRelation:
 
 @dataclass(frozen=True, slots=True)
 class TopologyModel:
-    """Resultado de una lectura. Un resultado sin evidencia no equivale a cero."""
+    """Lectura y evidencia para topología, con alcance histórico explícito.
+
+    evidence_available describe si se recuperaron las observaciones de la lectura.
+    network_scope_available describe si el informe de redes se pudo interpretar.
+    Son dimensiones distintas: conocer los dispositivos no garantiza conocer el
+    rango de red donde deben agruparse.
+    """
 
     scan_id: str | None
     captured_at: str | None
