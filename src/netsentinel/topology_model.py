@@ -100,7 +100,7 @@ def _read_networks(
         return (), ("La lectura no contiene una lista de subredes registrada.",)
 
     networks: list[TopologyNetwork] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str | None]] = set()
     warnings: list[str] = []
     for item in raw_networks:
         if not isinstance(item, Mapping):
@@ -119,17 +119,29 @@ def _read_networks(
             # La topología LAN actual solo representa rangos privados IPv4.
             continue
         cidr = parsed.with_prefixlen
-        if cidr in seen:
+        interface = _text(item.get("interface"))
+        identity = (cidr, interface)
+        if identity in seen:
             continue
-        seen.add(cidr)
+        seen.add(identity)
+        network_id = f"subnet:{cidr}" if interface is None else f"subnet:{cidr}@{interface}"
         networks.append(
             TopologyNetwork(
-                id=f"subnet:{cidr}",
+                id=network_id,
                 cidr=cidr,
-                interface=_text(item.get("interface")),
+                interface=interface,
                 local_address=_text(item.get("local_address")),
             )
         )
+        if item.get("range_limited") is True:
+            warnings.append(
+                "Al menos una subred tuvo alcance de descubrimiento limitado; "
+                "las ausencias no son concluyentes."
+            )
+
+    # Una ordenación estable evita que el grafo cambie solo porque cambió
+    # el orden en que el sistema operativo informó sus interfaces.
+    networks.sort(key=lambda network: (network.cidr, network.interface or ""))
     return tuple(networks), tuple(dict.fromkeys(warnings))
 
 
@@ -188,6 +200,17 @@ def build_topology_model(
     assert isinstance(scan, Mapping)
     captured_at = _text(scan.get("finished_at")) or _text(scan.get("started_at"))
     networks, network_warnings = _read_networks(scan)
+    if scan.get("discovery_available") is False:
+        network_warnings = tuple(dict.fromkeys((
+            *network_warnings,
+            "No se pudo interpretar el informe de descubrimiento guardado.",
+        )))
+    scan_errors = scan.get("errors")
+    if isinstance(scan_errors, list) and scan_errors:
+        network_warnings = tuple(dict.fromkeys((
+            *network_warnings,
+            f"La lectura registró {len(scan_errors)} aviso(s); revisá su alcance antes de interpretar ausencias.",
+        )))
 
     if observations is None:
         return TopologyModel(
