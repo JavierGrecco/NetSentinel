@@ -27,7 +27,7 @@ def load_topology_for_scan(
     scan = database.get_scan_by_id(scan_id, path=path)
     if scan is None:
         return TopologyModel(
-            scan_id=str(scan_id),
+            scan_id=None,
             captured_at=None,
             evidence_available=False,
             warnings=("No se encontró la lectura solicitada.",),
