@@ -295,6 +295,227 @@
   }
 
 
+
+  function buildTopologyModelFromApi(payload, allDevices, scans, selectedScanId) {
+    const inventory = Array.isArray(allDevices) ? allDevices : [];
+    const sortedScans = orderedScans(scans);
+    const latestScan = sortedScans[0] || null;
+    const selectedScan = payload && payload.scan_id != null
+      ? sortedScans.find(scan => String(scan.id) === String(payload.scan_id)) || null
+      : null;
+    const historicalSelection = Boolean(
+      selectedScanId != null &&
+      latestNetworkScan(sortedScans) &&
+      String(selectedScanId) !== String(latestNetworkScan(sortedScans).id)
+    );
+    const warnings = Array.isArray(payload && payload.warnings) ? payload.warnings.filter(Boolean) : [];
+    const totalDevices = inventory.length;
+    const evidenceAvailable = Boolean(payload && payload.evidence_available === true);
+    const networkScopeAvailable = Boolean(payload && payload.network_scope_available === true);
+
+    if (!payload || !selectedScan || !evidenceAvailable) {
+      return {
+        hasNetworkData: false,
+        latestScan: latestScan,
+        scan: selectedScan,
+        networks: [],
+        devices: [],
+        unlinkedObserved: [],
+        notObserved: [],
+        stale: Boolean(latestScan),
+        historicalSelection: historicalSelection,
+        totalDevices: totalDevices,
+        observedCount: null,
+        scanObservedCount: null,
+        networkScopeAvailable: networkScopeAvailable,
+        warnings: warnings,
+        reason: warnings.join(" ") ||
+          (selectedScan
+            ? "No se pudo recuperar la evidencia exacta de la lectura seleccionada. No se muestran relaciones sin sus observaciones originales."
+            : "Todavía no hay una lectura de red seleccionada para construir el mapa.")
+      };
+    }
+
+    const sourceNodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+    const sourceEdges = Array.isArray(payload.edges) ? payload.edges : [];
+    const nodeById = new Map(sourceNodes.map(node => [String(node.id), node]));
+    const sourceNetworks = sourceNodes.filter(node => node.kind === "subnet");
+    const networks = sourceNetworks.map((node, index) => ({
+      id: String(node.id),
+      index: index,
+      cidr: String(node.label || ""),
+      interface: String(node.interface || "interfaz sin identificar"),
+      localAddress: "",
+      rangeLimited: warnings.some(message => /alcance de descubrimiento limitado/i.test(message)),
+      members: []
+    }));
+    const networkById = new Map(networks.map(network => [network.id, network]));
+    const networkByIndex = new Map(networks.map(network => [network.index, network]));
+    const relationsByDeviceId = new Map();
+
+    for (const edge of sourceEdges) {
+      if (!edge || edge.kind !== "observed-subnet-membership") continue;
+      const sourceId = String(edge.source || "");
+      const targetId = String(edge.target || "");
+      const sourceNode = nodeById.get(sourceId);
+      const targetNode = nodeById.get(targetId);
+      const deviceNode = sourceNode && sourceNode.kind === "device"
+        ? sourceNode
+        : targetNode && targetNode.kind === "device" ? targetNode : null;
+      const networkNode = sourceNode && sourceNode.kind === "subnet"
+        ? sourceNode
+        : targetNode && targetNode.kind === "subnet" ? targetNode : null;
+      if (!deviceNode || !networkNode || !networkById.has(String(networkNode.id))) continue;
+
+      const rawId = String(deviceNode.device_id || deviceNode.id || "");
+      const deviceId = rawId.startsWith("device:") ? rawId.slice(7) : rawId;
+      const network = networkById.get(String(networkNode.id));
+      const sources = Array.isArray(edge.sources) ? edge.sources.filter(Boolean) : [];
+      const times = Array.isArray(edge.observed_at) ? edge.observed_at.filter(Boolean) : [];
+      const relation = {
+        networkIndex: network.index,
+        cidr: network.cidr,
+        interface: network.interface,
+        address: {
+          ip_address: String(edge.ip_address || edge.label || ""),
+          last_seen: times.length ? times[times.length - 1] : "",
+          source: sources[0] || "fuente desconocida"
+        },
+        source: sources[0] || "fuente desconocida"
+      };
+      const list = relationsByDeviceId.get(deviceId) || [];
+      list.push(relation);
+      relationsByDeviceId.set(deviceId, list);
+    }
+
+    const inventoryById = new Map(inventory
+      .filter(device => device && device.id !== undefined && device.id !== null)
+      .map(device => [String(device.id), device]));
+    const observedEntries = [];
+    const observedInventoryIds = new Set();
+
+    for (const node of sourceNodes.filter(item => item.kind === "device")) {
+      const rawId = String(node.device_id || node.id || "");
+      const deviceId = rawId.startsWith("device:") ? rawId.slice(7) : rawId;
+      const original = inventoryById.get(deviceId) || null;
+      const device = original ? Object.assign({}, original) : {
+        id: deviceId,
+        ip_address: "",
+        mac_address: node.mac_address || "",
+        display_name: "",
+        manufacturer: node.manufacturer || "",
+        trusted: node.trusted === true,
+        addresses: []
+      };
+      const candidateLabel = String(node.label || "");
+      const labelLooksLikeAddress = ipv4ToNumber(candidateLabel) !== null ||
+        candidateLabel.includes(":");
+      if (!device.display_name && candidateLabel &&
+          !labelLooksLikeAddress && !candidateLabel.startsWith("Dispositivo ")) {
+        device.display_name = candidateLabel;
+      }
+      if (!device.mac_address && node.mac_address) device.mac_address = node.mac_address;
+      if (!device.manufacturer && node.manufacturer) device.manufacturer = node.manufacturer;
+      if (original && typeof original.trusted === "boolean") {
+        device.trusted = original.trusted;
+      } else if (typeof node.trusted === "boolean") {
+        device.trusted = node.trusted;
+      }
+
+      const rawObservations = Array.isArray(node.observations) ? node.observations : [];
+      let currentAddresses = rawObservations.map(observation => {
+        const times = Array.isArray(observation.observed_at) ? observation.observed_at.filter(Boolean) : [];
+        const sources = Array.isArray(observation.sources) ? observation.sources.filter(Boolean) : [];
+        return {
+          ip_address: String(observation.ip_address || ""),
+          last_seen: times.length ? times[times.length - 1] : "",
+          source: sources[0] || "fuente desconocida"
+        };
+      }).filter(address => address.ip_address);
+      if (!currentAddresses.length) {
+        currentAddresses = (Array.isArray(node.ip_addresses) ? node.ip_addresses : [])
+          .filter(Boolean)
+          .map(ip => ({ ip_address: String(ip), last_seen: "", source: "fuente desconocida" }));
+      }
+      currentAddresses.sort((left, right) => {
+        const a = timestamp(left.last_seen), b = timestamp(right.last_seen);
+        if (a !== null && b !== null && a !== b) return b - a;
+        return left.ip_address.localeCompare(right.ip_address);
+      });
+      const firstObservedIp = currentAddresses.length ? currentAddresses[0].ip_address : "";
+      device.observed_ip_address = firstObservedIp;
+      const relations = (relationsByDeviceId.get(deviceId) || []).slice().sort(
+        (left, right) => left.networkIndex - right.networkIndex
+      );
+      const id = String(device.id);
+      observedInventoryIds.add(id);
+      observedEntries.push({
+        id: id,
+        device: device,
+        addresses: deviceAddresses(device).concat(currentAddresses),
+        currentAddresses: currentAddresses,
+        observedInScan: true,
+        relations: relations,
+        primaryNetworkIndex: relations.length ? relations[0].networkIndex : null
+      });
+    }
+
+    // El inventario actual se conserva como contexto: la falta de una observación
+    // histórica no crea enlaces ni se presenta como una desconexión confirmada.
+    for (const original of inventory) {
+      if (!original || original.id === undefined || original.id === null) continue;
+      const id = String(original.id);
+      if (observedInventoryIds.has(id)) continue;
+      observedEntries.push({
+        id: id,
+        device: original,
+        addresses: deviceAddresses(original),
+        currentAddresses: [],
+        observedInScan: false,
+        relations: [],
+        primaryNetworkIndex: null
+      });
+    }
+
+    observedEntries.sort((left, right) =>
+      deviceLabel(left.device).localeCompare(deviceLabel(right.device), "es")
+    );
+    const unlinkedObserved = observedEntries.filter(entry =>
+      entry.observedInScan && entry.relations.length === 0
+    );
+    const notObserved = observedEntries.filter(entry => !entry.observedInScan);
+    const linkedDeviceCount = observedEntries.filter(entry =>
+      entry.observedInScan && entry.relations.length > 0
+    ).length;
+    const reportedObservedCount = payload.stats &&
+      Number.isFinite(payload.stats.observed_devices) ? payload.stats.observed_devices :
+      sourceNodes.filter(node => node.kind === "device").length;
+
+    return {
+      hasNetworkData: true,
+      latestScan: latestScan,
+      scan: selectedScan,
+      networks: networks,
+      devices: observedEntries,
+      unlinkedObserved: unlinkedObserved,
+      notObserved: notObserved,
+      stale: Boolean(
+        latestScan && latestNetworkScan(sortedScans) &&
+        String(latestScan.id) !== String(latestNetworkScan(sortedScans).id) &&
+        String(selectedScan.id) === String(latestNetworkScan(sortedScans).id)
+      ),
+      historicalSelection: historicalSelection,
+      totalDevices: totalDevices,
+      observedCount: linkedDeviceCount,
+      scanObservedCount: reportedObservedCount,
+      networkScopeAvailable: networkScopeAvailable,
+      warnings: warnings,
+      reason: networkScopeAvailable ? "" :
+        (warnings.join(" ") ||
+          "La lectura contiene observaciones, pero no se pudo confirmar el alcance de las subredes. Se muestran los equipos sin inventar relaciones.")
+    };
+  }
+
   function searchableText(entry) {
     const device = entry.device || {};
     const values = [
