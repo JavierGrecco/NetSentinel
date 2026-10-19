@@ -383,7 +383,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     focused.dataset.deviceId === deviceId &&
                     focused.getAttribute("aria-pressed") === "true";
                 }""",
-                keyboard_device_id,
+                arg=keyboard_device_id,
                 timeout=2500,
             )
         except Exception:
@@ -398,7 +398,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     focused.dataset.deviceId === deviceId &&
                     focused.getAttribute("aria-pressed") === "true";
                 }""",
-                keyboard_device_id,
+                arg=keyboard_device_id,
                 timeout=2500,
             )
         except Exception:
@@ -509,7 +509,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             try:
                 page.wait_for_function(
                     "(expected) => document.documentElement.dataset.theme === expected",
-                    theme,
+                    arg=theme,
                     timeout=2500,
                 )
                 theme_tokens = page.evaluate(

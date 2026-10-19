@@ -657,13 +657,15 @@
     note.textContent = "La subred agrupa las direcciones observadas en este rango. No confirma qué puerto, punto de acceso o enlace físico usa cada dispositivo.";
     container.appendChild(note);
   }
-  function renderAccessibleList(container, entries, selectedId, select) {
-    // Actualizar aria-pressed reconstruye los botones. Si la selección vino del
-    // teclado, devolver el foco al mismo dispositivo para que Tab no se reinicie.
+  function renderAccessibleList(container, entries, selectedId, select, restoreFocusId) {
+    // Actualizar aria-pressed reconstruye los botones. Pasamos explícitamente
+    // el ID del botón activado para que el foco se conserve tras el rerender.
     const activeElement = root.document && root.document.activeElement;
-    const focusedDeviceId = activeElement && container.contains(activeElement) &&
-      activeElement.matches && activeElement.matches("button.topology-accessible-node")
-      ? activeElement.dataset.deviceId : null;
+    const focusedDeviceId = restoreFocusId != null
+      ? String(restoreFocusId)
+      : activeElement && container.contains(activeElement) &&
+        activeElement.matches && activeElement.matches("button.topology-accessible-node")
+        ? activeElement.dataset.deviceId : null;
     container.replaceChildren();
     if (!entries.length) {
       const empty = root.document.createElement("p");
@@ -685,7 +687,7 @@
       const ip = address && address.ip_address || device.ip_address || device.mac_address || "Sin dirección";
       const status = entry.relations.length ? "observado" : entry.observedInScan ? "sin rango asociado" : "no visto en la lectura";
       button.textContent = deviceLabel(device) + " · " + ip + " · " + status;
-      button.addEventListener("click", () => select(entry));
+      button.addEventListener("click", () => select(entry, String(entry.id)));
       item.appendChild(button); list.appendChild(item);
     });
     container.appendChild(list);
@@ -699,7 +701,7 @@
       }
     }
   }
-  function chooseEntry(entry, shouldNotify) {
+  function chooseEntry(entry, shouldNotify, restoreFocusId) {
     if (!activeGraph || !activeConfig || !activeModel) return;
     activeSelectedDeviceId = entry ? String(entry.id) : null;
     activeGraph.elements().removeClass("is-faded is-selected highlighted");
@@ -713,7 +715,13 @@
       }
     }
     renderSelection(activeConfig.selection, entry, activeModel, activeConfig.onOpenHistory);
-    renderAccessibleList(activeConfig.accessible, activeConfig.visibleEntries, activeSelectedDeviceId, next=>chooseEntry(next,true));
+    renderAccessibleList(
+      activeConfig.accessible,
+      activeConfig.visibleEntries,
+      activeSelectedDeviceId,
+      (next, focusId) => chooseEntry(next, true, focusId),
+      restoreFocusId
+    );
     if (shouldNotify !== false && typeof activeConfig.onSelect === "function") activeConfig.onSelect(entry ? entry.device : null);
   }
   function positionForNewNode(element, graphData, index) {
@@ -905,7 +913,12 @@
       renderSelection(selection,null,model,config.onOpenHistory);
       if(hadSelection&&typeof config.onSelect==="function") config.onSelect(null);
     }
-    renderAccessibleList(accessible,graphData.entries,activeSelectedDeviceId,next=>chooseEntry(next,true));
+    renderAccessibleList(
+      accessible,
+      graphData.entries,
+      activeSelectedDeviceId,
+      (next, focusId) => chooseEntry(next, true, focusId)
+    );
     const observedCount=graphData.entries.filter(entry=>entry.observedInScan).length;
     const trustedCount=graphData.entries.filter(entry=>entry.device&&entry.device.trusted).length;
     const notSeenCount=graphData.entries.filter(entry=>!entry.observedInScan).length;
