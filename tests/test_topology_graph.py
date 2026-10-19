@@ -176,3 +176,27 @@ def test_unavailable_subnet_scope_keeps_observed_devices_but_counts_unknown():
     assert graph.stats.observed_memberships is None
     assert graph.stats.unlinked_devices is None
     assert any("informe de descubrimiento guardado" in warning for warning in graph.warnings)
+
+
+def test_discovery_limit_stays_with_the_interface_that_reported_it():
+    graph = _graph(
+        scan=_scan([
+            {
+                "network": "192.168.40.0/24",
+                "interface": "en0",
+                "range_limited": True,
+            },
+            {
+                "network": "192.168.40.0/24",
+                "interface": "en1",
+                "range_limited": False,
+            },
+        ]),
+        observations=[_observation()],
+    )
+    subnet_by_interface = {
+        node.interface: node for node in graph.nodes if node.kind == "subnet"
+    }
+
+    assert subnet_by_interface["en0"].range_limited is True
+    assert subnet_by_interface["en1"].range_limited is False
