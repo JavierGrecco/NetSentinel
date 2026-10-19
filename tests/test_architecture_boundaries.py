@@ -658,9 +658,9 @@ def test_monitoring_repository_facade_reexports_historical_functions() -> None:
 
 
 def test_html_pages_belong_to_pages_router() -> None:
-    """Las cinco páginas HTML se sirven desde su router dedicado."""
+    """Las páginas HTML se sirven desde su router dedicado."""
     paths = {route.path for route in pages.router.routes}
-    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools"}
+    assert paths == {"/", "/network", "/monitors", "/activity", "/findings", "/tools"}
     assert all(not route.include_in_schema for route in pages.router.routes)
 
 
