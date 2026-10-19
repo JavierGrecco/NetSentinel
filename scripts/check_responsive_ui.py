@@ -32,6 +32,7 @@ DEFAULT_VIEWPORTS_TEXT = (
 )
 PAGE_CASES = (
     ("/", "Inventario de red", "inventario"),
+    ("/network", "Explorador de red", "mapa-de-red"),
     ("/findings", "Hallazgos con evidencia", "hallazgos"),
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
@@ -318,19 +319,13 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
 
 
 def _topology_panel_failures(page) -> list[str]:
-    """Comprueba el grafo real con una fixture local, selección y filtro."""
+    """Comprueba el explorador de red con una fixture sintética y controles reales."""
     failures: list[str] = []
     panel = page.locator("#topologyPanel")
     if panel.count() != 1:
-        return ["no aparece un único panel del mapa de relaciones"]
-
-    summary_button = panel.locator(":scope > summary")
-    if summary_button.count() != 1:
-        return ["el mapa no tiene un control claro para abrir o cerrar la vista"]
+        return ["no aparece un único explorador de topología"]
 
     try:
-        if panel.get_attribute("open") is None:
-            summary_button.click()
         page.wait_for_function(
             """() => {
               const canvas = document.querySelector("#topologyCanvas canvas");
@@ -345,7 +340,7 @@ def _topology_panel_failures(page) -> list[str]:
 
     accessible_details = panel.locator("details.topology-accessible")
     if accessible_details.count() != 1:
-        failures.append("falta el acceso a la alternativa textual")
+        failures.append("falta la alternativa textual del mapa")
     elif accessible_details.get_attribute("open") is None:
         accessible_details.locator("summary").click()
 
@@ -360,13 +355,14 @@ def _topology_panel_failures(page) -> list[str]:
         ("#topologyCanvas", "el área del grafo"),
         ("#topologySelection", "el panel de detalle"),
         ("#topologyHistory", "el historial de observaciones"),
+        ("#topologyEvents", "los cambios registrados"),
         ("#topologyAccessibleList", "la alternativa textual"),
     ):
         element = panel.locator(selector)
         if element.count() != 1:
             failures.append(f"falta {description}")
         elif not element.is_visible():
-            failures.append(f"no está visible {description} al abrir el mapa")
+            failures.append(f"no está visible {description}")
 
     try:
         node = panel.locator("#topologyAccessibleList .topology-accessible-node").first
@@ -380,6 +376,8 @@ def _topology_panel_failures(page) -> list[str]:
             failures.append("el detalle no muestra la dirección observada en la fixture")
         if "Historial de observaciones" not in panel.inner_text():
             failures.append("el panel no explica que la línea temporal es de observaciones")
+        if "Cambios registrados" not in panel.inner_text():
+            failures.append("falta la sección que explica los eventos de inventario")
 
         page.locator("#topologyZoomIn").click()
         page.locator("#topologyFit").click()
@@ -405,7 +403,6 @@ def _topology_panel_failures(page) -> list[str]:
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
     return failures
-
 
 
 def _scan_comparison_failures(page) -> list[str]:
@@ -604,9 +601,10 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
-                                case_failures.extend(_topology_panel_failures(page))
                                 if viewport == Viewport(1440, 900):
                                     case_failures.extend(_scan_comparison_failures(page))
+                            if path == "/network":
+                                case_failures.extend(_topology_panel_failures(page))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
 
@@ -616,7 +614,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 )
 
                             should_capture = screenshots and (
-                                path == "/" or viewport == Viewport(1440, 900)
+                                path in {"/", "/network"} or viewport == Viewport(1440, 900)
                             )
                             if should_capture:
                                 capture_path = output_dir / (

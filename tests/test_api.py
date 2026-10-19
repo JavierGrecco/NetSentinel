@@ -271,6 +271,7 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
     ("route", "html_asset", "script_asset"),
     [
         ("/", "index.html", "index.js"),
+        ("/network", "network.html", "network.js"),
         ("/monitors", "monitors.html", "monitors.js"),
         ("/activity", "activity.html", "activity.js"),
         ("/tools", "tools.html", "tools.js"),
@@ -286,9 +287,10 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
     if route == "/":
+        expected_scripts.add("/static/scan-comparison.js")
+    if route == "/network":
         expected_scripts.add("/static/cytoscape.min.js")
         expected_scripts.add("/static/topology.js")
-        expected_scripts.add("/static/scan-comparison.js")
     if route in {"/monitors", "/activity"}:
         expected_scripts.add("/static/section-tabs.js")
 

@@ -225,7 +225,8 @@ jobs:
 
           static_dir = Path("src/netsentinel/static")
           pages = {
-              "index.html": ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/scan-comparison.js", "/static/index.js"),
+              "index.html": ("/static/theme.js", "/static/scan-comparison.js", "/static/index.js"),
+              "network.html": ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/network.js"),
               "monitors.html": ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js"),
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),
@@ -273,7 +274,7 @@ jobs:
                       f"Missing frontend asset {script_name}."
                   )
 
-          print("All five pages load the expected local scripts without inline JavaScript.")
+          print("All six pages load the expected local scripts without inline JavaScript.")
           PY
           for script in src/netsentinel/static/*.js; do
             node --check "$script"
@@ -318,6 +319,8 @@ jobs:
               )
               required = {
                   "netsentinel/static/index.html",
+                  "netsentinel/static/network.html",
+                  "netsentinel/static/network.js",
                   "netsentinel/static/monitors.html",
                   "netsentinel/static/styles.css",
                   "netsentinel/static/monitors.css",
