@@ -159,20 +159,35 @@
       const network = networkById.get(String(networkNode.id));
       const sources = Array.isArray(edge.sources) ? edge.sources.filter(Boolean) : [];
       const times = Array.isArray(edge.observed_at) ? edge.observed_at.filter(Boolean) : [];
-      const relation = {
-        networkIndex: network.index,
-        cidr: network.cidr,
-        interface: network.interface,
-        address: {
-          ip_address: String(edge.ip_address || edge.label || ""),
-          last_seen: times.length ? times[times.length - 1] : "",
-          source: sources[0] || "fuente desconocida"
-        },
-        source: sources[0] || "fuente desconocida"
-      };
-      const list = relationsByDeviceId.get(deviceId) || [];
-      list.push(relation);
-      relationsByDeviceId.set(deviceId, list);
+      const ipAddress = String(edge.ip_address || edge.label || "");
+      if (!ipAddress) continue;
+
+      // Una relación visual por dispositivo y subred. Varias IP del mismo
+      // equipo se conservan como evidencia, pero no generan líneas superpuestas.
+      const relations = relationsByDeviceId.get(deviceId) || new Map();
+      let relation = relations.get(network.index);
+      if (!relation) {
+        relation = {
+          networkIndex: network.index,
+          cidr: network.cidr,
+          interface: network.interface,
+          addresses: [],
+          sources: [],
+          observedAt: []
+        };
+        relations.set(network.index, relation);
+        relationsByDeviceId.set(deviceId, relations);
+      }
+
+      let addressEvidence = relation.addresses.find(item => item.ip_address === ipAddress);
+      if (!addressEvidence) {
+        addressEvidence = { ip_address: ipAddress, observed_at: [], sources: [] };
+        relation.addresses.push(addressEvidence);
+      }
+      addressEvidence.sources = Array.from(new Set([...addressEvidence.sources, ...sources])).sort();
+      addressEvidence.observed_at = Array.from(new Set([...addressEvidence.observed_at, ...times])).sort();
+      relation.sources = Array.from(new Set([...relation.sources, ...sources])).sort();
+      relation.observedAt = Array.from(new Set([...relation.observedAt, ...times])).sort();
     }
 
     const inventoryById = new Map(inventory
@@ -231,9 +246,23 @@
       });
       const firstObservedIp = currentAddresses.length ? currentAddresses[0].ip_address : "";
       device.observed_ip_address = firstObservedIp;
-      const relations = (relationsByDeviceId.get(deviceId) || []).slice().sort(
-        (left, right) => left.networkIndex - right.networkIndex
-      );
+      const relations = Array.from((relationsByDeviceId.get(deviceId) || new Map()).values())
+        .map(relation => {
+          relation.addresses.sort((left, right) => left.ip_address.localeCompare(right.ip_address));
+          const firstAddress = relation.addresses[0] || { ip_address: "", observed_at: [], sources: [] };
+          const observedTimes = firstAddress.observed_at || [];
+          const sources = firstAddress.sources || [];
+          return {
+            ...relation,
+            address: {
+              ip_address: firstAddress.ip_address,
+              last_seen: observedTimes.length ? observedTimes[observedTimes.length - 1] : "",
+              source: sources[0] || "fuente desconocida"
+            },
+            source: sources[0] || relation.sources[0] || "fuente desconocida"
+          };
+        })
+        .sort((left, right) => left.networkIndex - right.networkIndex);
       const id = String(device.id);
       observedInventoryIds.add(id);
       observedEntries.push({
@@ -480,7 +509,8 @@
         type:"observed-subnet-membership",
         label:"IP observada dentro del rango de la subred",
         ipAddress:relation.address && relation.address.ip_address || "",
-        cidr:relation.cidr, sourceName:relation.source || "fuente desconocida"
+        ipAddresses:(relation.addresses || []).map(item => item.ip_address),
+        cidr:relation.cidr, sourceName:(relation.sources || [relation.source]).filter(Boolean).join(", ") || "fuente desconocida"
       }, classes:"membership-edge" });
     }));
 
@@ -536,16 +566,26 @@
     addDetailField(details, "MAC", device.mac_address || "");
     addDetailField(details, "Fabricante", device.manufacturer || "No identificado");
     addDetailField(details, "Última observación", formatTimestamp(currentAddress.last_seen || device.last_seen));
-    addDetailField(details, "Fuente", (relation && relation.source) || currentAddress.source || (model.scan && model.scan.source) || "Sin información");
+    addDetailField(details, "Direcciones observadas en esta subred", relation && relation.addresses
+      ? relation.addresses.map(item => item.ip_address).join(", ")
+      : currentAddress.ip_address || device.ip_address || "");
+    addDetailField(details, "Fuente", (relation && relation.sources && relation.sources.join(", ")) ||
+      (relation && relation.source) || currentAddress.source || (model.scan && model.scan.source) || "Sin información");
     addDetailField(details, "Confianza", device.trusted ? "Marcado como conocido" : "Pendiente de revisar");
     container.appendChild(details);
 
     const evidence = root.document.createElement("p");
     evidence.className = "topology-selection-evidence";
     if (relation) {
-      evidence.textContent = "La lectura #" + model.scan.id + " registró la IP " + relation.address.ip_address +
-        " dentro del rango " + relation.cidr + " (interfaz " + relation.interface + "; fuente " + relation.source + "). " +
-        "La línea agrupa una dirección por rango: no representa tráfico, una conexión física ni acciones realizadas por el equipo.";
+      const observedIps = relation.addresses
+        ? relation.addresses.map(item => item.ip_address).join(", ")
+        : relation.address.ip_address;
+      const sourceNames = relation.sources && relation.sources.length
+        ? relation.sources.join(", ")
+        : relation.source;
+      evidence.textContent = "La lectura #" + model.scan.id + " registró la(s) IP " + observedIps +
+        " dentro del rango " + relation.cidr + " (interfaz " + relation.interface + "; fuente(s) " + sourceNames + "). " +
+        "La línea agrupa direcciones observadas dentro de la misma subred; no representa tráfico, una conexión física ni acciones realizadas por el equipo.";
     } else if (entry.observedInScan) {
       evidence.textContent = "El equipo apareció en la lectura #" + model.scan.id +
         ", pero sus direcciones no se pudieron asociar a las subredes registradas. No se crea una relación para completar el dibujo.";

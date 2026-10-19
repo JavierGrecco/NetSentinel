@@ -76,30 +76,49 @@ test("the explorer adapts the server graph without rebuilding network relations"
         label: "Notebook",
         device_id: "device:9",
         ip_addresses: ["192.168.1.20"],
-        observations: [{
-          ip_address: "192.168.1.20",
-          sources: ["fixture-history"],
-          observed_at: ["2026-10-16T10:01:10+00:00"]
-        }],
+        observations: [
+          {
+            ip_address: "192.168.1.20",
+            sources: ["fixture-history"],
+            observed_at: ["2026-10-16T10:01:10+00:00"]
+          },
+          {
+            ip_address: "192.168.1.21",
+            sources: ["fixture-second-address"],
+            observed_at: ["2026-10-16T10:01:11+00:00"]
+          }
+        ],
         mac_address: currentDevice.mac_address,
         manufacturer: "Fabricante de prueba",
         trusted: false
       }
     ],
-    edges: [{
-      id: "membership:device%3A9:subnet:192.168.1.0%2F24%40en0:192.168.1.20",
-      source: "device:9",
-      target: "subnet:192.168.1.0%2F24%40en0",
-      kind: "observed-subnet-membership",
-      label: "192.168.1.20",
-      ip_address: "192.168.1.20",
-      sources: ["fixture-history"],
-      observed_at: ["2026-10-16T10:01:10+00:00"]
-    }],
+    edges: [
+      {
+        id: "membership:device%3A9:subnet:192.168.1.0%2F24%40en0:192.168.1.20",
+        source: "device:9",
+        target: "subnet:192.168.1.0%2F24%40en0",
+        kind: "observed-subnet-membership",
+        label: "192.168.1.20",
+        ip_address: "192.168.1.20",
+        sources: ["fixture-history"],
+        observed_at: ["2026-10-16T10:01:10+00:00"]
+      },
+      {
+        id: "membership:device%3A9:subnet:192.168.1.0%2F24%40en0:192.168.1.21",
+        source: "device:9",
+        target: "subnet:192.168.1.0%2F24%40en0",
+        kind: "observed-subnet-membership",
+        label: "192.168.1.21",
+        ip_address: "192.168.1.21",
+        sources: ["fixture-second-address"],
+        observed_at: ["2026-10-16T10:01:11+00:00"]
+      }
+    ],
     stats: {
       observed_devices: 1,
       known_subnets: 1,
-      observed_memberships: 1,
+      observed_memberships: 2,
       unlinked_devices: 0
     },
     warnings: []
@@ -122,10 +141,13 @@ test("the explorer adapts the server graph without rebuilding network relations"
   assert.equal(notebook.currentAddresses[0].ip_address, "192.168.1.20");
   assert.equal(notebook.currentAddresses[0].source, "fixture-history");
   assert.equal(notebook.relations[0].cidr, "192.168.1.0/24");
-  assert.equal(notebook.relations[0].address.ip_address, "192.168.1.20");
+  assert.deepEqual(notebook.relations[0].addresses.map(item => item.ip_address), ["192.168.1.20", "192.168.1.21"]);
+  assert.deepEqual(notebook.relations[0].sources, ["fixture-history", "fixture-second-address"]);
   assert.equal(model.devices.find(entry => entry.id === "10").observedInScan, false);
   assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
-  assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 1);
+  const visualEdges = graph.elements.filter(item => item.data.type === "observed-subnet-membership");
+  assert.equal(visualEdges.length, 1);
+  assert.deepEqual(visualEdges[0].data.ipAddresses, ["192.168.1.20", "192.168.1.21"]);
 });
 
 
