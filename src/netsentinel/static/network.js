@@ -5,6 +5,7 @@
   const state = {
     devices: [],
     scans: [],
+    selectedScanId: null,
     deviceEventsRequest: 0,
     deviceEventsRequestDeviceId: null,
     observations: null,
@@ -58,6 +59,53 @@
     return body;
   }
 
+  function availableNetworkScans() {
+    const graph = window.NetSentinelTopology;
+    if (!graph) return [];
+    return state.scans.filter(scan =>
+      Array.isArray(scan.discovery && scan.discovery.networks) &&
+      scan.discovery.networks.some(network => graph.parsePrivateCidr(network && network.network))
+    ).sort((left, right) => {
+      const leftTime = Date.parse(left.started_at || left.finished_at || "");
+      const rightTime = Date.parse(right.started_at || right.finished_at || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+      return Number(right.id || 0) - Number(left.id || 0);
+    });
+  }
+
+  function renderNetworkScanOptions() {
+    const select = $("topologyScanSelect");
+    if (!select) return;
+    const scans = availableNetworkScans();
+    const availableIds = new Set(scans.map(scan => String(scan.id)));
+    if (!state.selectedScanId || !availableIds.has(String(state.selectedScanId))) {
+      state.selectedScanId = scans.length ? String(scans[0].id) : null;
+      state.observations = null;
+      state.observationScanId = null;
+    }
+    select.replaceChildren();
+    if (!scans.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay capturas de red disponibles";
+      select.appendChild(option);
+      select.disabled = true;
+      return;
+    }
+    for (const scan of scans) {
+      const option = document.createElement("option");
+      option.value = String(scan.id);
+      option.textContent = "Lectura #" + scan.id + " · " +
+        dateTime(scan.started_at || scan.finished_at) + " · " +
+        Number(scan.devices_found || 0) + " equipo(s)";
+      select.appendChild(option);
+    }
+    select.disabled = false;
+    select.value = String(state.selectedScanId);
+  }
+
   async function refresh() {
     try {
       const [devices, scans] = await Promise.all([
@@ -66,12 +114,15 @@
       ]);
       state.devices = Array.isArray(devices) ? devices : [];
       state.scans = Array.isArray(scans) ? scans : [];
+      const graph = window.NetSentinelTopology;
+      renderNetworkScanOptions();
       if (window.NetSentinelScanComparison) {
         window.NetSentinelScanComparison.renderSelectors(state.scans);
       }
 
-      const graph = window.NetSentinelTopology;
-      const scan = graph ? graph.latestNetworkScan(state.scans) : null;
+      const scan = state.selectedScanId
+        ? state.scans.find(item => String(item.id) === String(state.selectedScanId))
+        : graph ? graph.latestNetworkScan(state.scans) : null;
       const targetScanId = scan ? String(scan.id) : null;
       if (!targetScanId) {
         state.observations = null;
@@ -121,6 +172,7 @@
       scans: state.scans,
       observations: state.observations,
       observationsScanId: state.observationScanId,
+      selectedScanId: state.selectedScanId,
       search: $("topologySearch").value,
       status: $("topologyStatusFilter").value,
       selectedId: state.selectedId,
@@ -281,6 +333,15 @@
     }
   }
 
+  $("topologyScanSelect").addEventListener("change", () => {
+    state.selectedScanId = $("topologyScanSelect").value || null;
+    state.observations = null;
+    state.observationScanId = null;
+    state.selectedId = null;
+    clearDeviceHistory();
+    clearDeviceEvents();
+    refresh();
+  });
   $("topologySearch").addEventListener("input", renderTopologyView);
   $("topologyStatusFilter").addEventListener("change", renderTopologyView);
   $("topologyResetSearch").addEventListener("click", () => {

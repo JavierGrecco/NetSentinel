@@ -179,3 +179,33 @@ test("el filtro del grafo diferencia equipos vistos de los no vistos", () => {
   assert.equal(notSeen.elements.filter(item => item.data.type === "device").length, 1);
   assert.equal(notSeen.elements.some(item => item.data.source), false);
 });
+
+
+test("permite reconstruir una captura histórica elegida explícitamente", () => {
+  const olderScan = scan(1, "192.168.1.0/24");
+  const newestScan = scan(2, "192.168.1.0/24");
+  const currentDevice = device(3, "192.168.1.21");
+  const observations = [{
+    scan_id: 1,
+    device_id: 3,
+    ip_address: "192.168.1.20",
+    observed_at: "2026-10-16T10:01:10+00:00",
+    source: "fixture-anterior",
+    mac_address: currentDevice.mac_address
+  }];
+  const model = buildTopologyModel(
+    [currentDevice],
+    [newestScan, olderScan],
+    observations,
+    1,
+    1
+  );
+
+  assert.equal(model.hasNetworkData, true);
+  assert.equal(model.scan.id, 1);
+  assert.equal(model.historicalSelection, true);
+  assert.equal(model.stale, false);
+  assert.equal(model.devices[0].observedInScan, true);
+  assert.equal(model.devices[0].currentAddresses[0].ip_address, "192.168.1.20");
+  assert.equal(model.devices[0].relations[0].address.source, "fixture-anterior");
+});

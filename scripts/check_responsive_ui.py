@@ -350,6 +350,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
         accessible_details.locator("summary").click()
 
     for selector, description in (
+        ("#topologyScanSelect", "el selector de lectura del mapa"),
         ("#topologySearch", "el filtro de dispositivos"),
         ("#topologyStatusFilter", "el filtro de estado"),
         ("#topologyResetSearch", "el botón para limpiar filtros"),
@@ -383,6 +384,29 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             failures.append("el panel no explica que la línea temporal es de observaciones")
         if "Cambios registrados" not in panel.inner_text():
             failures.append("falta la sección que explica los eventos de inventario")
+        if check_missing_evidence:
+            scan_select = page.locator("#topologyScanSelect")
+            options = scan_select.locator("option").evaluate_all("(items) => items.map(item => item.value).filter(Boolean)")
+            if len(options) < 2:
+                failures.append("la fixture no ofrece dos lecturas para seleccionar")
+            else:
+                latest_id = scan_select.input_value()
+                previous_id = next((value for value in options if value != latest_id), None)
+                if previous_id is None:
+                    failures.append("no se encontró una captura anterior diferente")
+                else:
+                    scan_select.select_option(value=previous_id)
+                    page.wait_for_function(
+                        "() => document.querySelector('#topologySummary')?.textContent.includes('Vista histórica elegida')",
+                        timeout=4000,
+                    )
+                    if scan_select.input_value() != previous_id:
+                        failures.append("el explorador no conservó la captura histórica elegida")
+                    scan_select.select_option(value=latest_id)
+                    page.wait_for_function(
+                        "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                        timeout=4000,
+                    )
         page.wait_for_function(
             "() => document.querySelectorAll('#topologyEvents .topology-history-entry').length > 0",
             timeout=3000,

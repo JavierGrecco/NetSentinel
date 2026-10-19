@@ -100,11 +100,23 @@
     return null;
   }
 
-  function buildTopologyModel(devices, scans, observations, observationsScanId) {
+  function buildTopologyModel(devices, scans, observations, observationsScanId, selectedScanId) {
     const allDevices = Array.isArray(devices) ? devices : [];
     const sortedScans = orderedScans(scans);
     const latestScan = sortedScans[0] || null;
-    const selectedScan = latestNetworkScan(sortedScans);
+    const newestNetworkScan = latestNetworkScan(sortedScans);
+    const selectedScan = selectedScanId == null
+      ? newestNetworkScan
+      : sortedScans.find(scan =>
+        String(scan.id) === String(selectedScanId) &&
+        Array.isArray(scan.discovery && scan.discovery.networks) &&
+        scan.discovery.networks.some(raw => parsePrivateCidr(raw && raw.network))
+      ) || null;
+    const historicalSelection = Boolean(
+      selectedScanId != null &&
+      newestNetworkScan &&
+      String(selectedScanId) !== String(newestNetworkScan.id)
+    );
     let selectedNetworks = [];
 
     if (selectedScan) {
@@ -157,7 +169,8 @@
         devices: [],
         unlinkedObserved: [],
         notObserved: [],
-        stale: Boolean(latestScan && String(latestScan.id) !== String(selectedScan.id)),
+        stale: Boolean(selectedScanId == null && latestScan && String(latestScan.id) !== String(selectedScan.id)),
+        historicalSelection: historicalSelection,
         totalDevices: allDevices.length,
         observedCount: 0,
         reason: "No se pudo recuperar la evidencia exacta de la lectura seleccionada. No se dibujan relaciones hasta disponer de sus observaciones históricas."
@@ -264,7 +277,8 @@
       devices: modeledDevices,
       unlinkedObserved: unlinkedObserved,
       notObserved: notObserved,
-      stale: Boolean(latestScan && String(latestScan.id) !== String(selectedScan.id)),
+      stale: Boolean(selectedScanId == null && latestScan && String(latestScan.id) !== String(selectedScan.id)),
+      historicalSelection: historicalSelection,
       totalDevices: allDevices.length,
       observedCount: observedCount,
       scanObservedCount: modeledDevices.filter(device => device.observedInScan).length,
@@ -683,7 +697,7 @@
     const canvas=config.canvas, summary=config.summary, selection=config.selection, accessible=config.accessible;
     if(!canvas||!summary||!selection||!accessible) return null;
     activeConfig=config;
-    const model=buildTopologyModel(config.devices,config.scans,config.observations,config.observationsScanId);
+    const model=buildTopologyModel(config.devices,config.scans,config.observations,config.observationsScanId,config.selectedScanId);
     const graphData=model.hasNetworkData?buildGraphElements(model,{
       search:config.search,status:config.status,positions:readSavedPositions()
     }):{elements:[],entries:[],entryByGraphId:new Map(),networkByGraphId:new Map(),visibleDeviceIds:[]};
@@ -760,12 +774,13 @@
     const trustedCount=graphData.entries.filter(entry=>entry.device&&entry.device.trusted).length;
     const notSeenCount=graphData.entries.filter(entry=>!entry.observedInScan).length;
     const staleMessage=model.stale?" La lectura más reciente no tiene una subred válida; se muestra la lectura #"+model.scan.id+".":"";
+    const historicalMessage=model.historicalSelection?" Vista histórica elegida: lectura #"+model.scan.id+".":"";
     const queryMessage=String(config.search||"").trim()?" Filtro de texto: "+graphData.entries.length+" coincidencia(s).":"";
     const statusMessage=config.status&&config.status!=="all"?" Filtro de estado: "+config.status+".":"";
     summary.textContent="Lectura #"+model.scan.id+" · "+formatTimestamp(model.scan.finished_at||model.scan.started_at)+
       " · "+model.networks.length+" subred(es) · "+graphData.entries.length+" dispositivo(s) en esta vista ("+
       observedCount+" observado(s), "+notSeenCount+" no visto(s), "+trustedCount+" marcado(s) conocido(s))."+
-      staleMessage+queryMessage+statusMessage+" Las líneas agrupan IP observadas con rangos de subred; no muestran tráfico ni conexiones físicas.";
+      staleMessage+historicalMessage+queryMessage+statusMessage+" Las líneas agrupan IP observadas con rangos de subred; no muestran tráfico ni conexiones físicas.";
     updateZoomStatus();
     return model;
   }
