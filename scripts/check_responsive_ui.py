@@ -734,6 +734,13 @@ def _scan_comparison_failures(page) -> list[str]:
         return [f"la comparación entre capturas sintéticas no terminó correctamente: {exc}"]
 
     rendered = result.inner_text()
+    evidence_note = page.locator("#scanComparisonEvidenceNote")
+    if evidence_note.count() != 1:
+        failures.append("falta la nota que distingue la identidad actual de la evidencia histórica")
+    else:
+        note_text = evidence_note.inner_text()
+        if "ficha actual del inventario" not in note_text or "captura guardada" not in note_text:
+            failures.append("la comparación no aclara qué datos son históricos y cuáles vienen del inventario actual")
     if "192.168.56.0/24" not in rendered:
         failures.append("la comparación no informa la subred compartida")
     if "No demuestra que esté desconectado" not in rendered:
