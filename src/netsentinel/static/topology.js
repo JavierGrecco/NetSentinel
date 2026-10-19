@@ -348,7 +348,7 @@
       cidr: String(node.label || ""),
       interface: String(node.interface || "interfaz sin identificar"),
       localAddress: String(node.local_address || ""),
-      rangeLimited: warnings.some(message => /alcance de descubrimiento limitado/i.test(message)),
+      rangeLimited: Boolean(node.range_limited),
       members: []
     }));
     const networkById = new Map(networks.map(network => [network.id, network]));
