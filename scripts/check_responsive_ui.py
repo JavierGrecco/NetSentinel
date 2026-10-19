@@ -373,7 +373,7 @@ def _topology_panel_failures(page) -> list[str]:
         node.click()
         detail = panel.locator("#topologySelection")
         page.wait_for_function(
-            "() => document.querySelector('#topologySelection')?.textContent.includes('La lectura #')",
+            "() => document.querySelector('#topologySelection')?.textContent.toLocaleLowerCase().includes('lectura #')",
             timeout=4000,
         )
         if "192.168.56.20" not in detail.inner_text():
