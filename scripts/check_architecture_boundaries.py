@@ -81,6 +81,11 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.api.inventory_assets",
         "netsentinel.api.inventory_discovery",
         "netsentinel.api.inventory_exports",
+        "netsentinel.api.inventory_topology",
+    },
+    "netsentinel.api.inventory_topology": {
+        "netsentinel.topology_graph",
+        "netsentinel.topology_service",
     },
     "netsentinel.api.inventory_assets": {
         "netsentinel.database",
