@@ -156,6 +156,8 @@ Cada capa se entrega como una PR pequeña contra una base actualizada, con sus p
 - [x] Servicio de consulta en `src/netsentinel/topology_service.py`, con pruebas que usan SQLite temporal.
 - [x] Proyección neutral en `src/netsentinel/topology_graph.py`; produce nodos, relaciones, contadores y procedencia sin depender de Cytoscape.
 - [x] Pruebas para relaciones observadas, dispositivos sin enlace confirmado, direcciones múltiples, IDs estables, evidencia no disponible y lectura vacía.
+- [x] Incorporada la allow-list explícita del servicio de topología en `scripts/check_architecture_boundaries.py` tras un fallo real de CI en el prototipo.
+- [ ] Confirmar que la comprobación de límites y el conjunto completo de tests pasan en la cabeza final de la PR #172.
 - [ ] Aprobar CI, análisis de seguridad y cadena de suministro en la cabeza final de la PR #172. Los resultados de commits anteriores no validan automáticamente los cambios posteriores.
 - [ ] Revisar con detalle el ajuste del repositorio de lecturas y la semántica de los metadatos actuales frente al historial.
 - [ ] Resolver los pendientes de la PR #171 antes de conectar la proyección neutral con la interfaz visual.
