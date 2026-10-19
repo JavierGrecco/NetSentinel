@@ -100,7 +100,9 @@ Los nombres son orientativos; antes de crear archivos nuevos se compararán con 
 
 ### Etapa 1 — Fijar el contrato y las pruebas
 
-Crear fixtures deterministas de lecturas con datos conocidos. Comprobar identidad estable, deduplicación, varias direcciones por equipo, CIDR reales, lecturas incompletas, fallos de fuente y comparación de capturas incompatibles.
+El primer prototipo ya contiene un modelo puro y un servicio de consulta que usa la persistencia existente. La consulta exacta de una lectura se agregó a la fachada existente para no depender del límite de las capturas recientes. Hay pruebas de regresión para la lectura histórica, informes corruptos, direcciones múltiples, subredes repetidas por interfaz y alcance limitado.
+
+Falta validar la nueva cabeza completa. Las pruebas escritas no se consideran aprobadas hasta que CI concluya sobre ese SHA.
 
 **Salida exigida:** contrato documentado y pruebas que fallen cuando el modelo fabrique relaciones o interprete una ausencia como desconexión.
 
@@ -108,7 +110,7 @@ Crear fixtures deterministas de lecturas con datos conocidos. Comprobar identida
 
 Extraer o reescribir la construcción de nodos y relaciones como funciones pequeñas sin interfaz ni acceso a la base de datos. Evaluar algoritmos de disposición, pero mantener la presentación intercambiable.
 
-**Salida exigida:** las mismas entradas producen el mismo modelo; los identificadores permanecen estables entre ejecuciones; ninguna relación se crea sin una regla documentada.
+**Salida exigida:** las mismas entradas producen el mismo modelo; los identificadores permanecen estables entre ejecuciones; ninguna relación se crea sin una regla documentada. La prueba actual separa el constructor puro de la consulta de persistencia y comprueba que una lectura anterior conserve la IP registrada originalmente aunque el inventario actual haya cambiado.
 
 ### Etapa 3 — Añadir comparación histórica
 
