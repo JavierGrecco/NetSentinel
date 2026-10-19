@@ -37,11 +37,6 @@
     };
   }
 
-  function isAddressInNetwork(address, network) {
-    const parsed = ipv4ToNumber(address);
-    return parsed !== null && ((parsed & network.mask) >>> 0) === network.networkNumber;
-  }
-
   function timestamp(value) {
     if (!value) return null;
     const parsed = Date.parse(value);
@@ -70,25 +65,10 @@
     return values;
   }
 
-  function wasSeenDuringScan(address, scan) {
-    const seenAt = timestamp(address && address.last_seen);
-    const startedAt = timestamp(scan && scan.started_at);
-    const finishedAt = timestamp(scan && scan.finished_at);
-    if (seenAt === null || startedAt === null || finishedAt === null) return false;
-    return seenAt >= startedAt - 1000 && seenAt <= finishedAt + 1000;
-  }
-
   function deviceLabel(device) {
     return String(
       device.display_name || device.observed_ip_address || device.ip_address || device.mac_address || "Dispositivo sin nombre"
     );
-  }
-
-  function compareNewestFirst(left, right) {
-    const leftAt = timestamp(left.device.last_seen);
-    const rightAt = timestamp(right.device.last_seen);
-    if (leftAt !== null && rightAt !== null && leftAt !== rightAt) return rightAt - leftAt;
-    return deviceLabel(left.device).localeCompare(deviceLabel(right.device), "es");
   }
 
   function latestNetworkScan(scans) {
@@ -99,202 +79,6 @@
     }
     return null;
   }
-
-  function buildTopologyModel(devices, scans, observations, observationsScanId, selectedScanId) {
-    const allDevices = Array.isArray(devices) ? devices : [];
-    const sortedScans = orderedScans(scans);
-    const latestScan = sortedScans[0] || null;
-    const newestNetworkScan = latestNetworkScan(sortedScans);
-    const selectedScan = selectedScanId == null
-      ? newestNetworkScan
-      : sortedScans.find(scan =>
-        String(scan.id) === String(selectedScanId) &&
-        Array.isArray(scan.discovery && scan.discovery.networks) &&
-        scan.discovery.networks.some(raw => parsePrivateCidr(raw && raw.network))
-      ) || null;
-    const historicalSelection = Boolean(
-      selectedScanId != null &&
-      newestNetworkScan &&
-      String(selectedScanId) !== String(newestNetworkScan.id)
-    );
-    let selectedNetworks = [];
-
-    if (selectedScan) {
-      const rawNetworks = Array.isArray(selectedScan.discovery && selectedScan.discovery.networks)
-        ? selectedScan.discovery.networks : [];
-      const seenCidrs = new Set();
-      for (const raw of rawNetworks) {
-        const parsed = parsePrivateCidr(raw && raw.network);
-        if (!parsed || seenCidrs.has(parsed.cidr)) continue;
-        seenCidrs.add(parsed.cidr);
-        selectedNetworks.push({
-          index: selectedNetworks.length,
-          cidr: parsed.cidr,
-          parsed: parsed,
-          interface: String(raw.interface || "interfaz sin identificar"),
-          localAddress: String(raw.local_address || ""),
-          rangeLimited: Boolean(raw.range_limited),
-          members: []
-        });
-      }
-    }
-
-    if (!selectedScan || !selectedNetworks.length) {
-      return {
-        hasNetworkData: false,
-        latestScan: latestScan,
-        scan: null,
-        networks: [],
-        devices: [],
-        unlinkedObserved: [],
-        notObserved: [],
-        stale: Boolean(latestScan),
-        totalDevices: allDevices.length,
-        observedCount: 0,
-        reason: latestScan
-          ? "Las lecturas disponibles no contienen una subred IPv4 privada válida. Ejecutá un nuevo descubrimiento local para construir el mapa."
-          : "Todavía no hay lecturas de red. Ejecutá un descubrimiento local para construir la primera vista."
-      };
-    }
-
-    const requestedScanId = observationsScanId == null
-      ? (Array.isArray(observations) && observations.length ? observations[0].scan_id : null)
-      : observationsScanId;
-    if (requestedScanId == null || String(requestedScanId) !== String(selectedScan.id) || !Array.isArray(observations)) {
-      return {
-        hasNetworkData: false,
-        latestScan: latestScan,
-        scan: selectedScan,
-        networks: selectedNetworks,
-        devices: [],
-        unlinkedObserved: [],
-        notObserved: [],
-        stale: Boolean(
-          latestScan && newestNetworkScan &&
-          String(latestScan.id) !== String(newestNetworkScan.id) &&
-          String(selectedScan.id) === String(newestNetworkScan.id)
-        ),
-        historicalSelection: historicalSelection,
-        totalDevices: allDevices.length,
-        observedCount: 0,
-        reason: "No se pudo recuperar la evidencia exacta de la lectura seleccionada. No se dibujan relaciones hasta disponer de sus observaciones históricas."
-      };
-    }
-
-    const deviceById = new Map();
-    for (const device of allDevices) {
-      if (!device || device.id === undefined || device.id === null) continue;
-      deviceById.set(String(device.id), device);
-    }
-
-    // Las observaciones están vinculadas por scan_id. No se infiere presencia
-    // usando last_seen, porque ese valor puede haber cambiado en lecturas posteriores.
-    const observationsByDevice = new Map();
-    for (const row of observations) {
-      if (!row || String(row.scan_id) !== String(selectedScan.id) ||
-          row.device_id === undefined || row.device_id === null || !row.ip_address) continue;
-      const id = String(row.device_id);
-      const address = {
-        ip_address: String(row.ip_address),
-        last_seen: row.observed_at || "",
-        source: String(row.source || selectedScan.source || "fuente desconocida")
-      };
-      const list = observationsByDevice.get(id) || [];
-      list.push(address);
-      observationsByDevice.set(id, list);
-
-      if (!deviceById.has(id)) {
-        deviceById.set(id, {
-          id: row.device_id,
-          ip_address: row.primary_ip || row.ip_address,
-          mac_address: row.mac_address || "",
-          display_name: row.display_name || "",
-          manufacturer: row.manufacturer || "",
-          trusted: Boolean(row.trusted),
-          last_seen: row.observed_at || ""
-        });
-      }
-    }
-
-    const modeledDevices = [];
-    for (const [id, device] of deviceById) {
-      const addresses = deviceAddresses(device);
-      const currentAddresses = observationsByDevice.get(id) || [];
-      const relationsByNetwork = new Map();
-
-      for (const address of currentAddresses) {
-        for (const network of selectedNetworks) {
-          if (!isAddressInNetwork(address.ip_address, network.parsed)) continue;
-          const existing = relationsByNetwork.get(network.index);
-          const nextSeen = timestamp(address.last_seen) || 0;
-          const oldSeen = existing ? (timestamp(existing.address.last_seen) || 0) : -1;
-          if (!existing || nextSeen >= oldSeen) {
-            relationsByNetwork.set(network.index, {
-              networkIndex: network.index,
-              cidr: network.cidr,
-              interface: network.interface,
-              address: address,
-              source: String(address.source || selectedScan.source || "fuente desconocida")
-            });
-          }
-        }
-      }
-
-      const relations = Array.from(relationsByNetwork.values())
-        .sort((a, b) => a.networkIndex - b.networkIndex);
-      const graphDevice = {
-        ...device,
-        // Preferimos una dirección que pertenezca a esta lectura, sin alterar el inventario actual.
-        observed_ip_address: currentAddresses.length ? currentAddresses[0].ip_address : ""
-      };
-      const entry = {
-        id: id,
-        device: graphDevice,
-        addresses: addresses.concat(currentAddresses),
-        currentAddresses: currentAddresses,
-        observedInScan: observationsByDevice.has(id),
-        relations: relations,
-        primaryNetworkIndex: relations.length ? relations[0].networkIndex : null
-      };
-      modeledDevices.push(entry);
-    }
-
-    for (const network of selectedNetworks) {
-      network.members = modeledDevices.filter(device =>
-        device.relations.some(relation => relation.networkIndex === network.index)
-      );
-    }
-
-    const observedCount = modeledDevices.filter(device => device.relations.length > 0).length;
-    const unlinkedObserved = modeledDevices
-      .filter(device => device.observedInScan && device.relations.length === 0)
-      .sort(compareNewestFirst);
-    const notObserved = modeledDevices
-      .filter(device => !device.observedInScan)
-      .sort(compareNewestFirst);
-
-    return {
-      hasNetworkData: true,
-      latestScan: latestScan,
-      scan: selectedScan,
-      networks: selectedNetworks,
-      devices: modeledDevices,
-      unlinkedObserved: unlinkedObserved,
-      notObserved: notObserved,
-      stale: Boolean(
-          latestScan && newestNetworkScan &&
-          String(latestScan.id) !== String(newestNetworkScan.id) &&
-          String(selectedScan.id) === String(newestNetworkScan.id)
-        ),
-      historicalSelection: historicalSelection,
-      totalDevices: allDevices.length,
-      observedCount: observedCount,
-      scanObservedCount: modeledDevices.filter(device => device.observedInScan).length,
-      reason: ""
-    };
-  }
-
-
 
   function buildTopologyModelFromApi(payload, allDevices, scans, selectedScanId) {
     const inventory = Array.isArray(allDevices) ? allDevices : [];
@@ -1058,7 +842,7 @@
       edgeCount:activeGraph?visible(activeGraph.edges()):0,
       zoom:activeGraph?activeGraph.zoom():1};
   }
-  const api={buildTopologyModel,buildTopologyModelFromApi,buildGraphElements,renderTopology,latestNetworkScan,parsePrivateCidr,
+  const api={buildTopologyModelFromApi,buildGraphElements,renderTopology,latestNetworkScan,parsePrivateCidr,
     fit:fitGraph,zoomBy:zoomGraph,relayout:relayoutGraph,getGraphStats};
   if(typeof module!=="undefined"&&module.exports) module.exports=api;
   if(root&&typeof root==="object") root.NetSentinelTopology=api;
