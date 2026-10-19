@@ -133,6 +133,42 @@ def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]
     return items
 
 
+def get_scan_by_id(scan_id: int, path: Path | None = None) -> dict[str, Any] | None:
+    """Devuelve una lectura concreta sin depender del límite del listado reciente.
+
+    Los indicadores de decodificación permiten distinguir un informe ausente o
+    corrupto de una lectura válida sin subredes registradas.
+    """
+    if isinstance(scan_id, bool) or not isinstance(scan_id, int) or scan_id < 1:
+        return None
+
+    with connect(path) as db:
+        row = db.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+    if row is None:
+        return None
+
+    item = dict(row)
+    try:
+        errors = json.loads(item.pop("errors_json"))
+        item["errors_available"] = isinstance(errors, list)
+        item["errors"] = errors if isinstance(errors, list) else []
+    except (TypeError, json.JSONDecodeError):
+        item.pop("errors_json", None)
+        item["errors_available"] = False
+        item["errors"] = []
+
+    try:
+        discovery = json.loads(item.pop("discovery_json"))
+        item["discovery_available"] = isinstance(discovery, dict)
+        item["discovery"] = discovery if isinstance(discovery, dict) else {}
+    except (TypeError, json.JSONDecodeError):
+        item.pop("discovery_json", None)
+        item["discovery_available"] = False
+        item["discovery"] = {}
+
+    return item
+
+
 _PRIVATE_IPV4_NETWORKS = (
     ipaddress.ip_network("10.0.0.0/8"),
     ipaddress.ip_network("172.16.0.0/12"),
