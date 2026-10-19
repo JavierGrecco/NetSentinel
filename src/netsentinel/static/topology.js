@@ -689,20 +689,41 @@
     }):{elements:[],entries:[],entryByGraphId:new Map(),networkByGraphId:new Map(),visibleDeviceIds:[]};
     model.visibleDeviceIds=graphData.visibleDeviceIds;
     if(!model.hasNetworkData){
-      destroyGraph(); summary.textContent=model.reason;
+      summary.textContent=model.reason;
       const empty=root.document.createElement("div"); empty.className="empty topology-empty";
       const strong=root.document.createElement("strong"); strong.textContent="Todavía no hay relaciones de red para mostrar";
       const detail=root.document.createElement("p"); detail.textContent=model.reason; empty.append(strong,detail);
-      canvas.replaceChildren(empty); renderSelection(selection,null,model,config.onOpenHistory); renderAccessibleList(accessible,[],null,()=>{});
+      // Evitamos destruir un renderer que podría tener notificaciones de dibujo pendientes.
+      if(activeGraph && activeContainer===canvas){
+        activeGraph.stop();
+        activeGraph.elements().style("display","none");
+        canvas.querySelectorAll(".topology-empty").forEach(node=>node.remove());
+        canvas.appendChild(empty);
+      } else {
+        destroyGraph();
+        canvas.replaceChildren(empty);
+      }
+      renderSelection(selection,null,model,config.onOpenHistory);
+      renderAccessibleList(accessible,[],null,()=>{});
       return model;
     }
     if(!graphData.entries.length){
-      destroyGraph(); summary.textContent="No hay dispositivos que coincidan con el filtro actual.";
+      summary.textContent="No hay dispositivos que coincidan con el filtro actual.";
       const empty=root.document.createElement("div"); empty.className="empty topology-empty";
       const strong=root.document.createElement("strong"); strong.textContent="Sin coincidencias";
       const detail=root.document.createElement("p"); detail.textContent="Probá con otro texto o cambiá el filtro de estado.";
-      empty.append(strong,detail); canvas.replaceChildren(empty);
-      renderSelection(selection,null,model,config.onOpenHistory); renderAccessibleList(accessible,[],null,()=>{});
+      empty.append(strong,detail);
+      // Mantener Cytoscape inicializado evita errores al alternar filtros rápidamente en móvil.
+      if(activeGraph && activeContainer===canvas){
+        activeGraph.stop();
+        activeGraph.elements().style("display","none");
+        canvas.querySelectorAll(".topology-empty").forEach(node=>node.remove());
+        canvas.appendChild(empty);
+      } else {
+        canvas.replaceChildren(empty);
+      }
+      renderSelection(selection,null,model,config.onOpenHistory);
+      renderAccessibleList(accessible,[],null,()=>{});
       return model;
     }
     if(activeContainer!==canvas||!activeGraph){
@@ -710,6 +731,8 @@
       activeEntriesByGraphId=graphData.entryByGraphId; activeNetworkByGraphId=graphData.networkByGraphId; activeModel=model;
       if(!initialiseGraph(config,graphData)){ renderAccessibleList(accessible,graphData.entries,null,()=>{}); return model; }
     } else {
+      canvas.querySelectorAll(".topology-empty").forEach(node=>node.remove());
+      activeGraph.elements().style("display","element");
       activeEntriesByGraphId=graphData.entryByGraphId; activeNetworkByGraphId=graphData.networkByGraphId; activeModel=model;
       syncGraphElements(graphData); activeGraph.style(graphStyles()); activeGraph.style().update();
     }
