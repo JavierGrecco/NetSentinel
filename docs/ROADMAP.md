@@ -4,7 +4,7 @@
 
 ## Estado del proyecto
 
-**Frente de experiencia:** [Explorador de red profesional](NETWORK_OBSERVABILITY_CONSOLE.md), con seguimiento en [issue #170](https://github.com/JavierGrecco/NetSentinel/issues/170). El trabajo se mantiene en una rama separada y no cambia el estado de estabilización de la versión actual hasta que las pruebas y la revisión manual queden registradas.
+**Frente de experiencia:** [Explorador de red profesional](NETWORK_OBSERVABILITY_CONSOLE.md), en la [PR #171](https://github.com/JavierGrecco/NetSentinel/pull/171) y la [issue #170](https://github.com/JavierGrecco/NetSentinel/issues/170). El frontend consume el contrato de `GET /api/scans/{scan_id}/topology`; el servidor mantiene la fuente de verdad para nodos, relaciones y procedencia. La PR #172 es un prototipo de referencia, no una segunda integración. El frente sigue en borrador hasta que pasen los checks del HEAD final y quede registrada la revisión manual. No cambia el estado de estabilización de la versión actual.
 
 **Estado:** estabilización de la versión local 0.10.0. La versión todavía no está lista para declararse estable: faltan pruebas manuales documentadas en sistemas y navegadores reales, completar las comprobaciones de recuperación de datos y confirmar la protección efectiva de `main`. La validación automática más reciente de `main` y el último SHA de código identificado como validado se indican abajo; no deben confundirse entre sí.
 
