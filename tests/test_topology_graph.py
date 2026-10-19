@@ -159,3 +159,20 @@ def test_successful_empty_observation_result_has_known_zero_device_count():
     assert graph.stats.unlinked_devices == 0
     assert len(graph.nodes) == 1
     assert graph.nodes[0].kind == "subnet"
+
+
+def test_unavailable_subnet_scope_keeps_observed_devices_but_counts_unknown():
+    scan = _scan()
+    scan["discovery_available"] = False
+    model = build_topology_model(scan, [_observation()])
+    graph = build_topology_graph(model)
+
+    assert graph.evidence_available is True
+    assert graph.network_scope_available is False
+    assert [node.kind for node in graph.nodes] == ["device"]
+    assert graph.edges == ()
+    assert graph.stats.observed_devices == 1
+    assert graph.stats.known_subnets is None
+    assert graph.stats.observed_memberships is None
+    assert graph.stats.unlinked_devices is None
+    assert any("informe de descubrimiento guardado" in warning for warning in graph.warnings)
