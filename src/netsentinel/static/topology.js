@@ -938,9 +938,14 @@
     const canvas=config.canvas, summary=config.summary, selection=config.selection, accessible=config.accessible;
     if(!canvas||!summary||!selection||!accessible) return null;
     activeConfig=config;
-    const model = config.topologyGraph
-      ? buildTopologyModelFromApi(config.topologyGraph, config.devices, config.scans, config.selectedScanId)
-      : buildTopologyModel(config.devices, config.scans, config.observations, config.observationsScanId, config.selectedScanId);
+    // El navegador solo representa el contrato del servidor. No reconstruye
+    // relaciones cuando la API no pudo recuperar una lectura histórica.
+    const model = buildTopologyModelFromApi(
+      config.topologyGraph,
+      config.devices,
+      config.scans,
+      config.selectedScanId
+    );
     const graphData=model.hasNetworkData?buildGraphElements(model,{
       search:config.search,status:config.status,positions:readSavedPositions()
     }):{elements:[],entries:[],entryByGraphId:new Map(),networkByGraphId:new Map(),visibleDeviceIds:[]};
