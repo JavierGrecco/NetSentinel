@@ -148,7 +148,6 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
             key=lambda item: (item.ip_address, item.observed_at or "", item.source or ""),
         ))
         label, detail = _device_label(observations)
-        first = observations[0]
         # Estos atributos proceden del registro actual de inventario, no de
         # una fotografía histórica inmutable de la ficha.
         context = "Ficha actual del inventario"
@@ -168,7 +167,7 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
     edges: list[TopologyGraphEdge] = []
     observed_device_ids = set(grouped)
     linked_device_ids: set[str] = set()
-    for relation in model.relations if model.network_scope_available else ():
+    for relation in (model.relations if model.network_scope_available else ()):
         # Defensive validation: do not create dangling edges if a malformed
         # model is passed from future code or an incomplete fixture.
         if relation.device_id not in observed_device_ids:
