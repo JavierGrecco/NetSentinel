@@ -462,10 +462,10 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
     if check_missing_evidence:
-        pattern = "**/api/scans/*/observations"
+        pattern = "**/api/scans/*/topology"
         try:
-            # Simula que una fuente histórica no responde. El mapa no debe
-            # inventar líneas ni traducir la falta de datos en un cero confirmado.
+            # Simula que la API del grafo no puede recuperar una lectura. La vista
+            # no debe inventar líneas ni traducir la falta de datos en un cero confirmado.
             page.route(
                 pattern,
                 lambda route: route.fulfill(
@@ -481,8 +481,13 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             )
             if page.locator("#networkObservedMetric").inner_text().strip() != "—":
                 failures.append("la falta de evidencia se muestra como un cero confirmado en lugar de dato desconocido")
-            if page.locator("#topologyCanvas canvas").count() != 0:
+            graph_stats = page.evaluate(
+                "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats()"
+            )
+            if graph_stats and graph_stats.get("edgeCount") != 0:
                 failures.append("el explorador dibuja relaciones cuando no se recuperó la evidencia histórica")
+            if graph_stats and graph_stats.get("deviceCount") != 0:
+                failures.append("el explorador muestra equipos como confirmados cuando la lectura no se recuperó")
         except Exception as exc:
             failures.append(f"no se pudo comprobar el estado de evidencia no disponible: {exc}")
         finally:
