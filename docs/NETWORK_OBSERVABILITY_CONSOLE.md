@@ -27,7 +27,7 @@ Los datos actuales permiten consultar observaciones del inventario y pruebas de 
 
 ### Etapa A — Investigación LAN
 
-Completar mapa, detalle de activo, historial, comparación de lecturas, procedencia y filtros. Mantener una alternativa textual y validar escritorio, móvil, teclado y lectores de pantalla.
+Completar mapa, detalle de activo, historial, comparación de lecturas, procedencia y filtros. La página `/network` incluye un panel que compara dos capturas usando la API histórica existente y exige al menos una subred privada compartida. Mantener una alternativa textual y validar escritorio, móvil, teclado y lectores de pantalla.
 
 ### Etapa B — Actividad por dispositivo
 

@@ -29,6 +29,8 @@ Ejecutá un descubrimiento solo en una red propia o autorizada. Después, recarg
 - Seleccioná un equipo desde el dibujo y desde la alternativa textual. Ambos caminos deben abrir el mismo detalle.
 - Verificá IP, MAC, fabricante si se conoce, estado, fecha y fuente de observación.
 - Mirá el historial del equipo y los cambios registrados. Un evento debe mostrar fecha y contexto, sin presentarse como una captura completa de conexiones.
+- En **Comparar lecturas**, elegí dos capturas distintas y comparalas. Revisá fechas, subredes compartidas, resumen y dispositivos con diferencias; si una captura informa errores o límites de alcance, el resultado debe advertirlo.
+- Elegí dos capturas sin subredes compartidas. La interfaz debe explicar que no son comparables y no atribuir las ausencias a equipos.
 - Probá **Acercar**, **Alejar**, **Ajustar** y **Reordenar**. Después de elegir una posición, el mapa no debe saltar innecesariamente con cada actualización.
 - Cambiá entre tema oscuro, medio y claro. Los nodos, el texto y los estados deben continuar distinguiéndose.
 
