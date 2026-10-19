@@ -464,6 +464,64 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
     if check_missing_evidence:
         pattern = "**/api/scans/*/topology"
         try:
+            # Comprueba el caso de una lectura válida con subred registrada y
+            # sin dispositivos observados. El mapa debe dibujar solo la subred.
+            selected_scan_id = page.locator("#topologyScanSelect").input_value()
+            subnet_only_payload = {
+                "scan_id": selected_scan_id,
+                "captured_at": "2026-10-19T10:00:00+00:00",
+                "evidence_available": True,
+                "network_scope_available": True,
+                "nodes": [{
+                    "id": "subnet:fixture-empty@fixture0",
+                    "kind": "subnet",
+                    "label": "192.168.56.0/24",
+                    "network_id": "subnet:fixture-empty@fixture0",
+                    "interface": "fixture0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                    "detail": "Interfaz fixture0",
+                }],
+                "edges": [],
+                "stats": {
+                    "observed_devices": 0,
+                    "known_subnets": 1,
+                    "observed_memberships": 0,
+                    "unlinked_devices": 0,
+                },
+                "warnings": [],
+            }
+            page.route(
+                pattern,
+                lambda route: route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(subnet_only_payload),
+                ),
+            )
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => { const graph = window.NetSentinelTopology; const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null; return stats && stats.nodeCount === 1 && stats.deviceCount === 0 && stats.edgeCount === 0; }",
+                timeout=5000,
+            )
+            if page.locator("#networkSubnetMetric").inner_text().strip() != "1":
+                failures.append("la lectura sin equipos no conserva el recuento de la subred registrada")
+        except Exception as exc:
+            failures.append(f"la lectura válida sin dispositivos no conserva su nodo de subred: {exc}")
+        finally:
+            try:
+                page.unroute(pattern)
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar el mapa con dispositivos después de la prueba de subred vacía: {exc}")
+
+    if check_missing_evidence:
+        pattern = "**/api/scans/*/topology"
+        try:
             # Simula que la API del grafo no puede recuperar una lectura. La vista
             # no debe inventar líneas ni traducir la falta de datos en un cero confirmado.
             page.route(
