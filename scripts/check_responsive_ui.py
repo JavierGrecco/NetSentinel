@@ -389,6 +389,30 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
         )
         if "Dispositivo detectado por primera vez" not in panel.locator("#topologyEvents").inner_text():
             failures.append("el detalle no muestra un evento del inventario asociado al dispositivo seleccionado")
+        if check_missing_evidence:
+            try:
+                device_id = node.get_attribute("data-device-id")
+                update = page.evaluate(
+                    """async (id) => {
+                      const response = await fetch('/api/devices/' + encodeURIComponent(id), {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({trusted: true})
+                      });
+                      return {status: response.status, body: await response.json()};
+                    }""",
+                    device_id,
+                )
+                if update["status"] != 200:
+                    failures.append("no se pudo generar el cambio sintético de confianza para probar la actualización")
+                else:
+                    page.locator("#refreshBtn").click()
+                    page.wait_for_function(
+                        "() => document.querySelector('#topologyEvents')?.textContent.includes('Cambio en el estado de confianza')",
+                        timeout=4000,
+                    )
+            except Exception as exc:
+                failures.append(f"el botón de actualización no refrescó el contexto del equipo seleccionado: {exc}")
 
         page.locator("#topologyZoomIn").click()
         page.locator("#topologyFit").click()

@@ -87,6 +87,16 @@
       }
 
       renderTopologyView();
+      // Al actualizar, refrescamos también el contexto del equipo seleccionado.
+      // Si no se vuelve a cargar, el mapa cambia pero el historial y los eventos
+      // pueden quedar mostrando información anterior hasta elegir otro dispositivo.
+      if (state.selectedId) {
+        const selected = state.devices.find(device => String(device.id) === String(state.selectedId));
+        if (selected) {
+          loadDeviceHistory(selected, true);
+          renderDeviceEvents(selected);
+        }
+      }
       $("appVersion").textContent = "NetSentinel · Datos guardados en tu computadora";
     } catch (error) {
       $("topologySummary").textContent = "No se pudo actualizar el explorador. " + error.message;
