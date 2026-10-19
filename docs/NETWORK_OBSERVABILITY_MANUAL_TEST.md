@@ -79,3 +79,10 @@ Anotá fecha, sistema operativo, navegador, tema visual y tamaño de ventana. Pa
 - [ ] Resultado de las pruebas automáticas anotado.
 
 **No cerrar la etapa ni presentar el proyecto como producto maduro hasta registrar esta prueba manual.** La actividad real por dispositivo sigue siendo una etapa aparte y requiere una fuente autorizada que entregue esos eventos.
+
+
+### Alcance de lectura desconocido
+
+- Si una lectura no tiene observaciones y su informe de subredes está ausente o dañado, el mapa debe mostrar un mensaje de alcance desconocido.
+- No debe clasificar todos los dispositivos del inventario como “no vistos” cuando no se puede confirmar qué subredes se revisaron.
+- Si sí hay observaciones, deben verse los dispositivos con la advertencia correspondiente y sin líneas inventadas.

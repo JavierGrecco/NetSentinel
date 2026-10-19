@@ -124,8 +124,9 @@
 
     const sourceNodes = Array.isArray(payload.nodes) ? payload.nodes : [];
     const sourceEdges = Array.isArray(payload.edges) ? payload.edges : [];
+    const sourceDeviceNodes = sourceNodes.filter(node => node && node.kind === "device");
     const nodeById = new Map(sourceNodes.map(node => [String(node.id), node]));
-    const sourceNetworks = sourceNodes.filter(node => node.kind === "subnet");
+    const sourceNetworks = sourceNodes.filter(node => node && node.kind === "subnet");
     const networks = sourceNetworks.map((node, index) => ({
       id: String(node.id),
       index: index,
@@ -180,7 +181,7 @@
     const observedEntries = [];
     const observedInventoryIds = new Set();
 
-    for (const node of sourceNodes.filter(item => item.kind === "device")) {
+    for (const node of sourceDeviceNodes) {
       const rawId = String(node.device_id || node.id || "");
       const deviceId = rawId.startsWith("device:") ? rawId.slice(7) : rawId;
       const original = inventoryById.get(deviceId) || null;
@@ -246,21 +247,24 @@
       });
     }
 
-    // El inventario actual se conserva como contexto: la falta de una observación
-    // histórica no crea enlaces ni se presenta como una desconexión confirmada.
-    for (const original of inventory) {
-      if (!original || original.id === undefined || original.id === null) continue;
-      const id = String(original.id);
-      if (observedInventoryIds.has(id)) continue;
-      observedEntries.push({
-        id: id,
-        device: original,
-        addresses: deviceAddresses(original),
-        currentAddresses: [],
-        observedInScan: false,
-        relations: [],
-        primaryNetworkIndex: null
-      });
+    // Solo se puede evaluar "no visto en esta lectura" cuando se conoce el
+    // alcance de la lectura. Si el informe de subredes está ausente o dañado,
+    // la ausencia de una observación no permite clasificar el resto del inventario.
+    if (networkScopeAvailable) {
+      for (const original of inventory) {
+        if (!original || original.id === undefined || original.id === null) continue;
+        const id = String(original.id);
+        if (observedInventoryIds.has(id)) continue;
+        observedEntries.push({
+          id: id,
+          device: original,
+          addresses: deviceAddresses(original),
+          currentAddresses: [],
+          observedInScan: false,
+          relations: [],
+          primaryNetworkIndex: null
+        });
+      }
     }
 
     observedEntries.sort((left, right) =>
@@ -298,7 +302,9 @@
       warnings: warnings,
       reason: networkScopeAvailable ? "" :
         (warnings.join(" ") ||
-          "La lectura contiene observaciones, pero no se pudo confirmar el alcance de las subredes. Se muestran los equipos sin inventar relaciones.")
+          (sourceDeviceNodes.length
+            ? "La lectura contiene observaciones, pero no se pudo confirmar el alcance de las subredes. Se muestran los equipos observados sin inventar relaciones."
+            : "No hay observaciones de dispositivos y tampoco se pudo confirmar el alcance de las subredes. No es posible interpretar ausencias en esta lectura."))
     };
   }
 
@@ -754,10 +760,19 @@
       return model;
     }
     if(!graphData.entries.length){
-      summary.textContent="No hay dispositivos que coincidan con el filtro actual.";
+      const scopeUnknown = model.networkScopeAvailable === false &&
+        !String(config.search || "").trim() &&
+        (!config.status || config.status === "all");
+      summary.textContent = scopeUnknown
+        ? (model.reason || "No se pudo confirmar el alcance de esta lectura.")
+        : "No hay dispositivos que coincidan con el filtro actual.";
       const empty=root.document.createElement("div"); empty.className="empty topology-empty";
-      const strong=root.document.createElement("strong"); strong.textContent="Sin coincidencias";
-      const detail=root.document.createElement("p"); detail.textContent="Probá con otro texto o cambiá el filtro de estado.";
+      const strong=root.document.createElement("strong");
+      strong.textContent = scopeUnknown ? "Alcance de red desconocido" : "Sin coincidencias";
+      const detail=root.document.createElement("p");
+      detail.textContent = scopeUnknown
+        ? "No se muestran equipos como ausentes porque el informe de subredes no permite evaluar qué se pudo revisar."
+        : "Probá con otro texto o cambiá el filtro de estado.";
       empty.append(strong,detail);
       // Mantener Cytoscape inicializado evita errores al alternar filtros rápidamente en móvil.
       if(activeGraph && activeContainer===canvas){

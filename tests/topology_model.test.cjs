@@ -254,3 +254,33 @@ test("the explorer retains registered subnet nodes when a valid reading has no d
   assert.equal(graph.elements.filter(item => item.data.type === "device").length, 0);
   assert.equal(graph.elements.some(item => item.data.source), false);
 });
+
+
+test("unknown network scope never classifies inventory devices as absent when no observations exist", () => {
+  const currentScan = scan(1, null);
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: false,
+    nodes: [],
+    edges: [],
+    stats: {
+      observed_devices: 0,
+      known_subnets: null,
+      observed_memberships: null,
+      unlinked_devices: null
+    },
+    warnings: ["No se pudo interpretar el informe de descubrimiento guardado."]
+  };
+  const inventory = [device(13, "192.168.1.30"), device(14, "192.168.1.31")];
+  const model = buildTopologyModelFromApi(payload, inventory, [currentScan], "1");
+  const graph = buildGraphElements(model, { status: "all" });
+
+  assert.equal(model.hasNetworkData, true);
+  assert.equal(model.networkScopeAvailable, false);
+  assert.equal(model.scanObservedCount, 0);
+  assert.equal(model.devices.length, 0);
+  assert.equal(graph.elements.length, 0);
+  assert.match(model.reason, /no se pudo interpretar/i);
+});
