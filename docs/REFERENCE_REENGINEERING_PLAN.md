@@ -144,14 +144,16 @@ Cada capa se entrega como una PR pequeña contra una base actualizada, con sus p
 - No duplicar lo que ya existe en los módulos actuales; extender la interfaz pública estable de cada módulo.
 - Registrar cada tarea como pendiente, en curso o terminada solo con evidencia. El diseño de un plan no cuenta como implementación.
 
-## Estado inicial
+## Estado al 19 de octubre de 2026
 
 - [x] Rama de laboratorio creada desde el `main` consultado.
 - [x] Revisiones previas de ambos proyectos localizadas y contrastadas.
 - [x] Riesgos de reutilización y primeros límites de arquitectura documentados.
-- [ ] Crear las fixtures y el contrato mínimo del modelo.
+- [x] Primer modelo puro de topología añadido en `src/netsentinel/topology_model.py`, sin integrar en la aplicación ni consultar SQLite.
+- [x] Pruebas de regresión añadidas en `tests/test_topology_model.py` para evidencia ausente, alcance de lectura, CIDR, direcciones múltiples y relaciones sin evidencia.
+- [ ] Ejecutar y aprobar CI sobre esta rama; las pruebas escritas todavía no se consideran validadas.
 - [ ] Revisar el estado final de CI y cerrar los pendientes de la PR #171 antes de usarla como base funcional.
-- [ ] Construir la primera capa aislada con pruebas, sin modificar `main`.
+- [ ] Comparar el prototipo con las consultas reales de inventario y mantener solo las responsabilidades que no dupliquen módulos actuales.
 
 ## Referencias internas
 
