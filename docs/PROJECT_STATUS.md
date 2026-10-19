@@ -7,7 +7,7 @@
 
 **Revisión técnica del repositorio:** [diagnóstico y prioridades al 16/10/2026](REVIEW_2026-10-16.md). Resume los riesgos de publicación, la modularización pendiente y la evidencia que falta; no reemplaza la matriz de pruebas manuales.
 
-**Frente de producto (19 de octubre de 2026):** el rediseño del explorador de red se desarrolla por separado en la [issue #170](https://github.com/JavierGrecco/NetSentinel/issues/170) y la rama `feat/network-observability-console-2026-10`. El mapa no se considerará terminado hasta superar pruebas automáticas, responsive y revisión manual; este trabajo no reemplaza las tareas de estabilización de la versión actual.
+**Frente de producto (19 de octubre de 2026):** el explorador de red se desarrolla en la [PR #171](https://github.com/JavierGrecco/NetSentinel/pull/171), ligada a la [issue #170](https://github.com/JavierGrecco/NetSentinel/issues/170). La rama ya reúne la página `/network`, el modelo/servicio de topología, la API de solo lectura `GET /api/scans/{scan_id}/topology` y el adaptador visual que consume ese contrato. La vista no debe recalcular relaciones en el navegador. La PR #172 queda como prototipo de referencia y no debe fusionarse por separado porque sus cambios de backend se portaron a la PR #171. El explorador no se considera terminado hasta que CI y seguridad terminen en el SHA final y se registre la revisión manual responsive/accesible; este frente no reemplaza la estabilización de la versión actual.
 
 ## Dónde estamos
 
