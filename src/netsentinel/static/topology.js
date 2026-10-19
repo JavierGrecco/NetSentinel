@@ -778,9 +778,10 @@
   }
   function relayoutGraph(){ if(activeGraph) activeGraph.layout(graphLayoutOptions("cose",true)).run(); }
   function getGraphStats(){
-    return {nodeCount:activeGraph?activeGraph.nodes().length:0,
-      deviceCount:activeGraph?activeGraph.nodes('[type = "device"]').length:0,
-      edgeCount:activeGraph?activeGraph.edges().length:0,
+    const visible = collection => collection.filter(node => node.style("display") !== "none").length;
+    return {nodeCount:activeGraph?visible(activeGraph.nodes()):0,
+      deviceCount:activeGraph?visible(activeGraph.nodes('[type = "device"]')):0,
+      edgeCount:activeGraph?visible(activeGraph.edges()):0,
       zoom:activeGraph?activeGraph.zoom():1};
   }
   const api={buildTopologyModel,buildGraphElements,renderTopology,latestNetworkScan,parsePrivateCidr,
