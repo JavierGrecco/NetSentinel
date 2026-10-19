@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   buildTopologyModel,
+  buildTopologyModelFromApi,
   buildGraphElements,
   latestNetworkScan,
   parsePrivateCidr
@@ -208,4 +209,129 @@ test("permite reconstruir una captura histórica elegida explícitamente", () =>
   assert.equal(model.devices[0].observedInScan, true);
   assert.equal(model.devices[0].currentAddresses[0].ip_address, "192.168.1.20");
   assert.equal(model.devices[0].relations[0].address.source, "fixture-anterior");
+});
+
+
+test("the explorer adapts the server graph without rebuilding network relations", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const currentDevice = device(9, "192.168.1.99", { display_name: "Notebook" });
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: true,
+    nodes: [
+      {
+        id: "subnet:192.168.1.0%2F24%40en0",
+        kind: "subnet",
+        label: "192.168.1.0/24",
+        network_id: "subnet:192.168.1.0%2F24%40en0",
+        interface: "en0",
+        detail: "Interfaz en0"
+      },
+      {
+        id: "device:9",
+        kind: "device",
+        label: "Notebook",
+        device_id: "device:9",
+        ip_addresses: ["192.168.1.20"],
+        observations: [{
+          ip_address: "192.168.1.20",
+          sources: ["fixture-history"],
+          observed_at: ["2026-10-16T10:01:10+00:00"]
+        }],
+        mac_address: currentDevice.mac_address,
+        manufacturer: "Fabricante de prueba",
+        trusted: false
+      }
+    ],
+    edges: [{
+      id: "membership:device%3A9:subnet:192.168.1.0%2F24%40en0:192.168.1.20",
+      source: "device:9",
+      target: "subnet:192.168.1.0%2F24%40en0",
+      kind: "observed-subnet-membership",
+      label: "192.168.1.20",
+      ip_address: "192.168.1.20",
+      sources: ["fixture-history"],
+      observed_at: ["2026-10-16T10:01:10+00:00"]
+    }],
+    stats: {
+      observed_devices: 1,
+      known_subnets: 1,
+      observed_memberships: 1,
+      unlinked_devices: 0
+    },
+    warnings: []
+  };
+
+  const model = buildTopologyModelFromApi(
+    payload,
+    [currentDevice, device(10, "192.168.1.30")],
+    [currentScan],
+    "1"
+  );
+  const notebook = model.devices.find(entry => entry.id === "9");
+  const graph = buildGraphElements(model, { status: "all" });
+
+  assert.equal(model.hasNetworkData, true);
+  assert.equal(model.networkScopeAvailable, true);
+  assert.equal(model.scanObservedCount, 1);
+  assert.equal(model.observedCount, 1);
+  assert.equal(notebook.observedInScan, true);
+  assert.equal(notebook.currentAddresses[0].ip_address, "192.168.1.20");
+  assert.equal(notebook.currentAddresses[0].source, "fixture-history");
+  assert.equal(notebook.relations[0].cidr, "192.168.1.0/24");
+  assert.equal(notebook.relations[0].address.ip_address, "192.168.1.20");
+  assert.equal(model.devices.find(entry => entry.id === "10").observedInScan, false);
+  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 1);
+});
+
+
+test("the explorer keeps observations visible but does not invent links when network scope is unknown", () => {
+  const currentScan = scan(1, null);
+  const currentDevice = device(11, "192.168.1.20");
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: false,
+    nodes: [{
+      id: "device:11",
+      kind: "device",
+      label: "AA:BB:CC:DD:EE:11",
+      device_id: "device:11",
+      ip_addresses: ["192.168.1.20"],
+      observations: [{
+        ip_address: "192.168.1.20",
+        sources: ["fixture-neighbor"],
+        observed_at: ["2026-10-16T10:01:10+00:00"]
+      }],
+      mac_address: currentDevice.mac_address,
+      manufacturer: null,
+      trusted: false
+    }],
+    edges: [],
+    stats: {
+      observed_devices: 1,
+      known_subnets: null,
+      observed_memberships: null,
+      unlinked_devices: null
+    },
+    warnings: ["No se pudo interpretar el informe de descubrimiento guardado."]
+  };
+
+  const model = buildTopologyModelFromApi(payload, [currentDevice], [currentScan], "1");
+  const entry = model.devices[0];
+
+  assert.equal(model.hasNetworkData, true);
+  assert.equal(model.networkScopeAvailable, false);
+  assert.equal(model.scanObservedCount, 1);
+  assert.equal(model.observedCount, 0);
+  assert.equal(entry.observedInScan, true);
+  assert.equal(entry.relations.length, 0);
+  assert.equal(entry.currentAddresses[0].ip_address, "192.168.1.20");
+  assert.equal(entry.currentAddresses[0].source, "fixture-neighbor");
+  assert.match(model.reason, /no se pudo interpretar/i);
+  assert.equal(buildGraphElements(model, { status: "all" }).elements.some(item => item.data.source), false);
 });
