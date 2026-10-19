@@ -347,7 +347,7 @@
       index: index,
       cidr: String(node.label || ""),
       interface: String(node.interface || "interfaz sin identificar"),
-      localAddress: "",
+      localAddress: String(node.local_address || ""),
       rangeLimited: warnings.some(message => /alcance de descubrimiento limitado/i.test(message)),
       members: []
     }));
@@ -633,7 +633,9 @@
 
     (Array.isArray(model.networks) ? model.networks : []).forEach(network => {
       if (!visibleNetworkIndexes.has(network.index)) return;
-      const id = graphNodeId("network", network.cidr);
+      // La misma subred puede aparecer en interfaces distintas. Usamos la
+      // identidad de la API para no colapsar nodos que tienen distinto contexto.
+      const id = graphNodeId("network", network.id || (network.cidr + "@" + network.interface));
       const memberCount = entries.filter(entry => (entry.relations || []).some(relation => relation.networkIndex === network.index)).length;
       const data = {
         id, type:"network", cidr:network.cidr, networkIndex:network.index,
