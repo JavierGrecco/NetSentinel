@@ -48,7 +48,7 @@ def test_service_distinguishes_an_unknown_scan_from_empty_observations(tmp_path:
 
     model = load_topology_for_scan(999, path=path)
 
-    assert model.scan_id == "999"
+    assert model.scan_id is None
     assert model.evidence_available is False
     assert model.observations == ()
     assert model.relations == ()
