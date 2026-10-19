@@ -659,3 +659,49 @@ def test_scan_comparison_endpoint_is_read_only_and_handles_invalid_pairs(monkeyp
     assert response.headers["cache-control"] == "no-store"
     assert same.status_code == 422
     assert missing.status_code == 404
+
+
+def test_topology_api_returns_neutral_graph_for_exact_historical_scan(monkeypatch, tmp_path):
+    """La interfaz recibe relaciones con evidencia y sin inferir enlaces físicos."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    scan = database.record_scan(
+        [Neighbor("192.168.56.20", "02:00:00:00:00:20", "en0", "fixture-topology")],
+        discovery={
+            "networks": [
+                {
+                    "network": "192.168.56.0/24",
+                    "interface": "en0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                }
+            ],
+            "scope": "Fixture sintética de prueba.",
+        },
+    )
+    scan_id = int(scan["scan_id"])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(f"/api/scans/{scan_id}/topology")
+        missing = client.get("/api/scans/999999/topology")
+
+    assert response.status_code == 200
+    graph = response.json()
+    assert graph["scan_id"] == str(scan_id)
+    assert graph["evidence_available"] is True
+    assert graph["network_scope_available"] is True
+    assert graph["stats"] == {
+        "observed_devices": 1,
+        "known_subnets": 1,
+        "observed_memberships": 1,
+        "unlinked_devices": 0,
+    }
+    assert {node["kind"] for node in graph["nodes"]} == {"device", "subnet"}
+    assert len(graph["edges"]) == 1
+    edge = graph["edges"][0]
+    assert edge["kind"] == "observed-subnet-membership"
+    assert edge["ip_address"] == "192.168.56.20"
+    assert edge["label"] == "192.168.56.20"
+    assert edge["sources"] == ["fixture-topology"]
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "No se encontró la lectura solicitada."
