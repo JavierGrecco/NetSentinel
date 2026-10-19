@@ -8,8 +8,8 @@
     selectedScanId: null,
     deviceEventsRequest: 0,
     deviceEventsRequestDeviceId: null,
-    observations: null,
-    observationScanId: null,
+    topologyGraph: null,
+    topologyGraphScanId: null,
     selectedId: null,
     historyDeviceId: null,
     historyRequestDeviceId: null,
@@ -82,8 +82,8 @@
     const availableIds = new Set(scans.map(scan => String(scan.id)));
     if (!state.selectedScanId || !availableIds.has(String(state.selectedScanId))) {
       state.selectedScanId = scans.length ? String(scans[0].id) : null;
-      state.observations = null;
-      state.observationScanId = null;
+      state.topologyGraph = null;
+      state.topologyGraphScanId = null;
     }
     select.replaceChildren();
     if (!scans.length) {
@@ -125,17 +125,28 @@
         : graph ? graph.latestNetworkScan(state.scans) : null;
       const targetScanId = scan ? String(scan.id) : null;
       if (!targetScanId) {
-        state.observations = null;
-        state.observationScanId = null;
-      } else if (targetScanId !== state.observationScanId || state.observations === null) {
-        state.observationScanId = targetScanId;
-        state.observations = null;
+        state.topologyGraph = null;
+        state.topologyGraphScanId = null;
+      } else if (targetScanId !== state.topologyGraphScanId || state.topologyGraph === null) {
+        state.topologyGraphScanId = targetScanId;
+        state.topologyGraph = null;
         try {
-          const rows = await api("/api/scans/" + encodeURIComponent(targetScanId) + "/observations");
-          if (state.observationScanId === targetScanId) state.observations = rows;
-        } catch (_) {
-          // Sin observaciones históricas no inferimos relaciones para completar el dibujo.
-          state.observations = null;
+          const model = await api("/api/scans/" + encodeURIComponent(targetScanId) + "/topology");
+          if (state.topologyGraphScanId === targetScanId) state.topologyGraph = model;
+        } catch (error) {
+          // Sin la lectura exacta no sustituimos evidencia histórica por datos actuales.
+          if (state.topologyGraphScanId === targetScanId) {
+            state.topologyGraph = {
+              scan_id: targetScanId,
+              evidence_available: false,
+              network_scope_available: false,
+              nodes: [],
+              edges: [],
+              stats: {},
+              warnings: [error.message]
+            };
+            state.topologyGraphScanId = null;
+          }
         }
       }
 
@@ -164,14 +175,13 @@
       return;
     }
     const model = graph.renderTopology({
+      topologyGraph: state.topologyGraph,
       canvas: $("topologyCanvas"),
       summary: $("topologySummary"),
       selection: $("topologySelection"),
       accessible: $("topologyAccessibleList"),
       devices: state.devices,
       scans: state.scans,
-      observations: state.observations,
-      observationsScanId: state.observationScanId,
       selectedScanId: state.selectedScanId,
       search: $("topologySearch").value,
       status: $("topologyStatusFilter").value,
@@ -195,7 +205,8 @@
       model && model.hasNetworkData ? Number(model.scanObservedCount || 0) : "—";
     $("networkReviewMetric").textContent = state.devices.filter(device => !device.trusted).length;
     $("networkSubnetMetric").textContent =
-      model && model.scan && Array.isArray(model.networks) ? model.networks.length : "—";
+      model && model.scan && model.networkScopeAvailable !== false && Array.isArray(model.networks)
+        ? model.networks.length : "—";
 
     if (state.selectedId && !(model && Array.isArray(model.visibleDeviceIds) &&
         model.visibleDeviceIds.includes(String(state.selectedId)))) {
@@ -335,8 +346,8 @@
 
   $("topologyScanSelect").addEventListener("change", () => {
     state.selectedScanId = $("topologyScanSelect").value || null;
-    state.observations = null;
-    state.observationScanId = null;
+    state.topologyGraph = null;
+      state.topologyGraphScanId = null;
     state.selectedId = null;
     clearDeviceHistory();
     clearDeviceEvents();
