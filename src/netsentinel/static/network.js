@@ -126,9 +126,12 @@
     });
 
     $("networkTotalMetric").textContent = state.devices.length;
-    $("networkObservedMetric").textContent = model ? Number(model.scanObservedCount || 0) : 0;
+    // Si no hay evidencia exacta para la lectura, el valor es desconocido, no cero.
+    $("networkObservedMetric").textContent =
+      model && model.hasNetworkData ? Number(model.scanObservedCount || 0) : "—";
     $("networkReviewMetric").textContent = state.devices.filter(device => !device.trusted).length;
-    $("networkSubnetMetric").textContent = model && Array.isArray(model.networks) ? model.networks.length : 0;
+    $("networkSubnetMetric").textContent =
+      model && model.scan && Array.isArray(model.networks) ? model.networks.length : "—";
 
     if (state.selectedId && !(model && Array.isArray(model.visibleDeviceIds) &&
         model.visibleDeviceIds.includes(String(state.selectedId)))) {
@@ -198,9 +201,12 @@
       box.innerHTML = '<p class="topology-selection-empty">Seleccioná un equipo para ver los eventos de inventario relacionados.</p>';
       return;
     }
+    // Los eventos conservan el ID del activo al que pertenecen. No los asociamos
+    // por IP/MAC, porque una dirección puede cambiar o reutilizarse con el tiempo.
     const related = state.events.filter(event =>
-      (device.mac_address && event.mac_address && event.mac_address === device.mac_address) ||
-      (device.ip_address && event.ip_address && event.ip_address === device.ip_address)
+      event.device_id !== undefined &&
+      event.device_id !== null &&
+      String(event.device_id) === String(device.id)
     ).slice(0, 8);
     if (!related.length) {
       box.innerHTML = '<div class="empty">No hay eventos de inventario asociados a este equipo entre los registros recientes.</div>';

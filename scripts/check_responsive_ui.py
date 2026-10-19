@@ -378,6 +378,12 @@ def _topology_panel_failures(page) -> list[str]:
             failures.append("el panel no explica que la línea temporal es de observaciones")
         if "Cambios registrados" not in panel.inner_text():
             failures.append("falta la sección que explica los eventos de inventario")
+        page.wait_for_function(
+            "() => document.querySelectorAll('#topologyEvents .topology-history-entry').length > 0",
+            timeout=3000,
+        )
+        if "Dispositivo detectado por primera vez" not in panel.locator("#topologyEvents").inner_text():
+            failures.append("el detalle no muestra un evento del inventario asociado al dispositivo seleccionado")
 
         page.locator("#topologyZoomIn").click()
         page.locator("#topologyFit").click()
