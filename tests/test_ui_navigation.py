@@ -55,6 +55,9 @@ def test_historical_selectors_offer_more_readings_without_expanding_recent_activ
     assert "id=\"loadMoreScansButton\"" in network_html
     assert "id=\"scanHistoryLoadStatus\"" in inventory_html
     assert "id=\"scanHistoryLoadStatus\"" in network_html
+    shared_css = (ROOT / "src/netsentinel/static/styles.css").read_text(encoding="utf-8")
+    assert ".scan-history-pagination{display:flex" in shared_css
+    assert "@media(max-width:560px){.scan-history-pagination" in shared_css
     assert "before_started_at: cursor.started_at" in dashboard_js
     assert "before_started_at: cursor.started_at" in network_js
     assert "state.scansCursor = scans.length ? scans[scans.length - 1] : null;" in dashboard_js

@@ -273,3 +273,10 @@
 @media(max-width: 700px) {
   .topology-scan-toolbar { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* El control para seguir el historial es visible, cómodo de pulsar y adaptable. */
+.scan-history-pagination{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 14px}
+.scan-history-pagination button{min-height:36px}
+.scan-history-pagination .panel-sub{margin:0;line-height:1.5}
+@media(max-width:560px){.scan-history-pagination{align-items:stretch}.scan-history-pagination button{width:100%}}
