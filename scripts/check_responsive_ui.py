@@ -462,6 +462,68 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
     if check_missing_evidence:
+        # Comprueba que el mapa se recupera de preferencias locales corruptas,
+        # vuelve a guardar posiciones válidas y mantiene el límite de entradas.
+        position_key = "netsentinel-topology-positions-v1"
+        previous_positions = page.evaluate("(key) => localStorage.getItem(key)", position_key)
+        try:
+            page.evaluate("(key) => localStorage.setItem(key, '{malformed')", position_key)
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                timeout=5000,
+            )
+            position_report = page.evaluate(
+                """(key) => {
+                  try {
+                    const raw = localStorage.getItem(key);
+                    const value = JSON.parse(raw || "null");
+                    if (!value || typeof value !== "object" || Array.isArray(value)) {
+                      return {valid: false, count: 0, positionsValid: false};
+                    }
+                    const entries = Object.entries(value);
+                    return {
+                      valid: true,
+                      count: entries.length,
+                      positionsValid: entries.every(([, position]) =>
+                        position && Number.isFinite(Number(position.x)) &&
+                        Number.isFinite(Number(position.y)) &&
+                        Math.abs(Number(position.x)) < 1000000 &&
+                        Math.abs(Number(position.y)) < 1000000
+                      )
+                    };
+                  } catch (_) {
+                    return {valid: false, count: 0, positionsValid: false};
+                  }
+                }""",
+                position_key,
+            )
+            if not position_report.get("valid") or position_report.get("count", 0) == 0:
+                failures.append("el mapa no recupera ni vuelve a guardar posiciones después de preferencias corruptas")
+            if position_report.get("count", 0) > 1200:
+                failures.append("las posiciones guardadas superan el límite de 1200 nodos")
+            if not position_report.get("positionsValid"):
+                failures.append("el mapa guardó coordenadas de nodos inválidas o fuera de rango")
+        except Exception as exc:
+            failures.append(f"no se pudo verificar la recuperación de las posiciones guardadas: {exc}")
+        finally:
+            try:
+                if previous_positions is None:
+                    page.evaluate("(key) => localStorage.removeItem(key)", position_key)
+                else:
+                    page.evaluate("(args) => localStorage.setItem(args.key, args.value)", {
+                        "key": position_key,
+                        "value": previous_positions,
+                    })
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar la preferencia de posiciones tras la prueba: {exc}")
+
+    if check_missing_evidence:
         pattern = "**/api/scans/*/topology"
         try:
             # Comprueba el caso de una lectura válida con subred registrada y

@@ -94,3 +94,11 @@ Anotá fecha, sistema operativo, navegador, tema visual y tamaño de ventana. Pa
 - El mapa debe conservar el nodo de subred. No debe reemplazarlo por el mensaje de “sin coincidencias” ni dibujar conexiones.
 - El detalle de una subred con exploración limitada debe decir que las ausencias no son concluyentes y no asumir siempre que el límite fue /24.
 - Si no se puede interpretar el alcance de una lectura sin observaciones, la vista debe avisar que el alcance es desconocido; no debe declarar ausente a todo el inventario.
+
+
+### Posiciones guardadas del mapa
+
+- Arrastrá un dispositivo a una ubicación fácil de recordar y soltalo.
+- Recargá la página y comprobá que la disposición se conserve para los mismos nodos.
+- En Chromium, el verificador también debe poder recuperarse si la preferencia local está corrupta; al guardar de nuevo, cada coordenada tiene que ser finita y estar dentro del rango validado, con un máximo de 1200 entradas.
+- Las posiciones son preferencias visuales locales; no deben modificar las lecturas guardadas ni las relaciones de red.
