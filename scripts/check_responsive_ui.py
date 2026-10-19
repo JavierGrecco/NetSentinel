@@ -574,7 +574,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                 "warnings": [],
             }
             def _serve_subnet_only_topology(route):
-                requested_scan_id = urlsplit(route.request.url).path.rsplit("/", 1)[-1]
+                requested_scan_id = urlsplit(route.request.url).path.rstrip("/").rsplit("/", 2)[-2]
                 payload = {**subnet_only_payload, "scan_id": requested_scan_id}
                 route.fulfill(
                     status=200,
