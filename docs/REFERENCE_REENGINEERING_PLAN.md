@@ -122,7 +122,9 @@ Utilizar las observaciones guardadas por NetSentinel. Comparar solo lecturas con
 
 Mantener Cytoscape.js local si supera las pruebas de utilidad, accesibilidad y rendimiento. Separar el modelo, la construcción de elementos, los estilos y la interacción. Conservar las posiciones como preferencia de presentación, con almacenamiento acotado y validado.
 
-**Salida exigida:** selección con ratón y teclado, búsqueda, filtros, foco del nodo elegido, lista textual equivalente, tres temas visuales, diseño responsive y pruebas reproducibles del flujo principal.
+El modelo de servidor se expone ahora mediante `GET /api/scans/{scan_id}/topology`: devuelve nodos, relaciones, contadores y advertencias de una lectura concreta. La página visual existente todavía construye su propio modelo en JavaScript; cuando esta API pase sus controles, la siguiente migración será hacer que la interfaz consuma este contrato y retirar la lógica de negocio duplicada de forma gradual. No conectar ambas implementaciones a la vez como fuentes de verdad.
+
+**Salida exigida:** selección con ratón y teclado, búsqueda, filtros, foco del nodo elegido, lista textual equivalente, tres temas visuales, diseño responsive y pruebas reproducibles del flujo principal. El modelo que alimenta la vista debe venir de una única fuente de verdad; el adaptador gráfico no puede recalcular pertenencias de red.
 
 ### Etapa 5 — Incorporar actividad real por capas
 
@@ -157,10 +159,12 @@ Cada capa se entrega como una PR pequeña contra una base actualizada, con sus p
 - [x] Proyección neutral en `src/netsentinel/topology_graph.py`; produce nodos, relaciones, contadores y procedencia sin depender de Cytoscape.
 - [x] Pruebas para relaciones observadas, dispositivos sin enlace confirmado, direcciones múltiples, IDs estables, evidencia no disponible y lectura vacía.
 - [x] Incorporada la allow-list explícita del servicio de topología en `scripts/check_architecture_boundaries.py` tras un fallo real de CI en el prototipo.
+- [x] Añadida una API de solo lectura en `GET /api/scans/{scan_id}/topology`, con router propio, errores de lectura no encontrada y formato neutral de nodos, relaciones, contadores y advertencias.
+- [x] Prueba de API añadida para una lectura real de SQLite temporal y para el caso de ID inexistente.
 - [ ] Confirmar que la comprobación de límites y el conjunto completo de tests pasan en la cabeza final de la PR #172.
 - [ ] Aprobar CI, análisis de seguridad y cadena de suministro en la cabeza final de la PR #172. Los resultados de commits anteriores no validan automáticamente los cambios posteriores.
+- [ ] Cambiar la interfaz de la PR #171 para consumir la API compartida y retirar de forma gradual la construcción de relaciones duplicada en JavaScript.
 - [ ] Revisar con detalle el ajuste del repositorio de lecturas y la semántica de los metadatos actuales frente al historial.
-- [ ] Resolver los pendientes de la PR #171 antes de conectar la proyección neutral con la interfaz visual.
 - [ ] Mantener la PR como laboratorio hasta verificar que los módulos no duplican responsabilidades y que las pruebas cubren los casos de error.
 
 ## Referencias internas
