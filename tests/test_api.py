@@ -736,6 +736,8 @@ def test_topology_api_returns_evidence_and_preserves_missing_scan_errors(monkeyp
         "observed_memberships": 1,
         "unlinked_devices": 0,
     }
+    subnet_node = next(node for node in graph["nodes"] if node["kind"] == "subnet")
+    assert subnet_node["local_address"] == "192.168.56.10"
     device_node = next(node for node in graph["nodes"] if node["kind"] == "device")
     assert device_node["observations"] == [{
         "ip_address": "192.168.56.20",
