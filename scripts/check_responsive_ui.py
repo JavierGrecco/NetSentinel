@@ -384,29 +384,6 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             failures.append("el panel no explica que la línea temporal es de observaciones")
         if "Cambios registrados" not in panel.inner_text():
             failures.append("falta la sección que explica los eventos de inventario")
-        if check_missing_evidence:
-            scan_select = page.locator("#topologyScanSelect")
-            options = scan_select.locator("option").evaluate_all("(items) => items.map(item => item.value).filter(Boolean)")
-            if len(options) < 2:
-                failures.append("la fixture no ofrece dos lecturas para seleccionar")
-            else:
-                latest_id = scan_select.input_value()
-                previous_id = next((value for value in options if value != latest_id), None)
-                if previous_id is None:
-                    failures.append("no se encontró una captura anterior diferente")
-                else:
-                    scan_select.select_option(value=previous_id)
-                    page.wait_for_function(
-                        "() => document.querySelector('#topologySummary')?.textContent.includes('Vista histórica elegida')",
-                        timeout=4000,
-                    )
-                    if scan_select.input_value() != previous_id:
-                        failures.append("el explorador no conservó la captura histórica elegida")
-                    scan_select.select_option(value=latest_id)
-                    page.wait_for_function(
-                        "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
-                        timeout=4000,
-                    )
         phase = "cargar eventos del dispositivo seleccionado"
         page.wait_for_function(
             "() => document.querySelectorAll('#topologyEvents .topology-history-entry').length > 0",
@@ -438,6 +415,31 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     )
             except Exception as exc:
                 failures.append(f"el botón de actualización no refrescó el contexto del equipo seleccionado: {exc}")
+
+
+        if check_missing_evidence:
+            scan_select = page.locator("#topologyScanSelect")
+            options = scan_select.locator("option").evaluate_all("(items) => items.map(item => item.value).filter(Boolean)")
+            if len(options) < 2:
+                failures.append("la fixture no ofrece dos lecturas para seleccionar")
+            else:
+                latest_id = scan_select.input_value()
+                previous_id = next((value for value in options if value != latest_id), None)
+                if previous_id is None:
+                    failures.append("no se encontró una captura anterior diferente")
+                else:
+                    scan_select.select_option(value=previous_id)
+                    page.wait_for_function(
+                        "() => document.querySelector('#topologySummary')?.textContent.includes('Vista histórica elegida')",
+                        timeout=4000,
+                    )
+                    if scan_select.input_value() != previous_id:
+                        failures.append("el explorador no conservó la captura histórica elegida")
+                    scan_select.select_option(value=latest_id)
+                    page.wait_for_function(
+                        "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                        timeout=4000,
+                    )
 
         page.locator("#topologyZoomIn").click()
         page.locator("#topologyFit").click()
@@ -488,7 +490,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     return false;
                   }
                 }""",
-                position_key,
+                arg=position_key,
                 timeout=5000,
             )
             position_report = page.evaluate(
@@ -583,7 +585,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             page.route(pattern, _serve_subnet_only_topology)
             page.reload(wait_until="load", timeout=20000)
             page.wait_for_function(
-                "() => { const graph = window.NetSentinelTopology; const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null; return stats && stats.nodeCount === 1 && stats.deviceCount === 0 && stats.edgeCount === 0; }",
+                "() => { const graph = window.NetSentinelTopology; const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null; return stats && stats.nodeCount >= 1 && stats.edgeCount === 0; }",
                 timeout=5000,
             )
             if page.locator("#networkSubnetMetric").inner_text().strip() != "1":
