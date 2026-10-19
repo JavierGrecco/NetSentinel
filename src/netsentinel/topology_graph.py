@@ -66,6 +66,7 @@ class TopologyGraph:
     edges: tuple[TopologyGraphEdge, ...]
     stats: TopologyGraphStats
     warnings: tuple[str, ...] = ()
+    network_scope_available: bool = False
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
@@ -129,13 +130,18 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
                 unlinked_devices=None,
             ),
             warnings=model.warnings,
+            network_scope_available=model.network_scope_available,
         )
 
     grouped: dict[str, list[TopologyObservation]] = defaultdict(list)
     for observation in model.observations:
         grouped[observation.device_id].append(observation)
 
-    nodes: list[TopologyGraphNode] = [_network_node(network) for network in model.networks]
+    nodes: list[TopologyGraphNode] = (
+        [_network_node(network) for network in model.networks]
+        if model.network_scope_available
+        else []
+    )
     for device_id in sorted(grouped):
         observations = tuple(sorted(
             grouped[device_id],
@@ -143,10 +149,9 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
         ))
         label, detail = _device_label(observations)
         first = observations[0]
-        context = "Ficha actual del inventario" if any(
-            item.display_name or item.manufacturer or item.trusted is not None
-            for item in observations
-        ) else None
+        # Estos atributos proceden del registro actual de inventario, no de
+        # una fotografía histórica inmutable de la ficha.
+        context = "Ficha actual del inventario"
         nodes.append(TopologyGraphNode(
             id=device_id,
             kind="device",
@@ -163,7 +168,7 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
     edges: list[TopologyGraphEdge] = []
     observed_device_ids = set(grouped)
     linked_device_ids: set[str] = set()
-    for relation in model.relations:
+    for relation in model.relations if model.network_scope_available else ():
         # Defensive validation: do not create dangling edges if a malformed
         # model is passed from future code or an incomplete fixture.
         if relation.device_id not in observed_device_ids:
@@ -192,9 +197,13 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
         edges=tuple(edges),
         stats=TopologyGraphStats(
             observed_devices=len(grouped),
-            known_subnets=len(model.networks),
-            observed_memberships=len(edges),
-            unlinked_devices=len(observed_device_ids - linked_device_ids),
+            known_subnets=len(model.networks) if model.network_scope_available else None,
+            observed_memberships=len(edges) if model.network_scope_available else None,
+            unlinked_devices=(
+                len(observed_device_ids - linked_device_ids)
+                if model.network_scope_available else None
+            ),
         ),
         warnings=model.warnings,
+        network_scope_available=model.network_scope_available,
     )
