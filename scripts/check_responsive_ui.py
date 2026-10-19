@@ -672,7 +672,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
                             if path in {"/", "/network"} and viewport == Viewport(1440, 900):
-                                case_failures.extend(_scan_comparison_failures(page)
+                                case_failures.extend(_scan_comparison_failures(page))
                             if path == "/network":
                                 case_failures.extend(_topology_panel_failures(
                                     page,

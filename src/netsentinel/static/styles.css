@@ -218,3 +218,24 @@
 .network-explorer-callout .panel-sub{max-width:760px;line-height:1.6}
 .network-explorer-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border-radius:9px;text-decoration:none;font-size:12px;font-weight:750;white-space:nowrap}
 @media(max-width:560px){.network-explorer-callout{align-items:stretch}.network-explorer-link{width:100%}}
+
+
+/* La comparación conserva el contraste en los tres temas de la aplicación. */
+.scan-comparison .field select {
+  background: var(--theme-input, #0b1423);
+  color: var(--theme-text, #e7edf7);
+  border-color: var(--theme-line, #29374d);
+}
+.scan-compare-stat,
+.scan-compare-item {
+  border-color: var(--theme-line, #29374d);
+  background: var(--theme-panel-soft, #0d1727);
+}
+.scan-comparison .scan-compare-warning {
+  border-color: var(--theme-note-line, #705b2a);
+  color: var(--theme-note-text, #fde68a);
+  background: var(--theme-note-bg, #362b16);
+}
+.scan-comparison .scan-compare-stat-value {
+  color: var(--theme-text, #e7edf7);
+}
