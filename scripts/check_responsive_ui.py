@@ -372,7 +372,37 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
 
     try:
         node = panel.locator("#topologyAccessibleList .topology-accessible-node").first
-        node.click()
+        keyboard_device_id = node.get_attribute("data-device-id")
+        node.focus()
+        node.press("Enter")
+        try:
+            page.wait_for_function(
+                """(deviceId) => {
+                  const focused = document.activeElement;
+                  return focused && focused.matches("button.topology-accessible-node") &&
+                    focused.dataset.deviceId === deviceId &&
+                    focused.getAttribute("aria-pressed") === "true";
+                }""",
+                keyboard_device_id,
+                timeout=2500,
+            )
+        except Exception:
+            failures.append("la selección por teclado perdió el foco del dispositivo después de actualizar aria-pressed")
+        # Space también debe activar la selección sin sacar el foco de la lista.
+        node.press("Space")
+        try:
+            page.wait_for_function(
+                """(deviceId) => {
+                  const focused = document.activeElement;
+                  return focused && focused.matches("button.topology-accessible-node") &&
+                    focused.dataset.deviceId === deviceId &&
+                    focused.getAttribute("aria-pressed") === "true";
+                }""",
+                keyboard_device_id,
+                timeout=2500,
+            )
+        except Exception:
+            failures.append("la selección con Espacio no conservó el foco del dispositivo")
         detail = panel.locator("#topologySelection")
         page.wait_for_function(
             "() => document.querySelector('#topologySelection')?.textContent.toLocaleLowerCase().includes('lectura #')",
@@ -467,6 +497,26 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
     if check_missing_evidence:
+        # Cambiar tema debe actualizar los estilos del mapa sin romper la vista.
+        theme_group = page.locator('input[name="themeSelect"]')
+        selected_theme = page.locator('input[name="themeSelect"]:checked').input_value()
+        for theme in ("dark", "medium", "light"):
+            page.locator(f'input[name="themeSelect"][value="{theme}"]').check()
+            try:
+                page.wait_for_function(
+                    "(expected) => document.documentElement.dataset.theme === expected",
+                    theme,
+                    timeout=2500,
+                )
+                theme_tokens = page.evaluate(
+                    "() => getComputedStyle(document.documentElement).getPropertyValue('--theme-text').trim()"
+                )
+                if not theme_tokens:
+                    failures.append(f"el tema {theme!r} no proporciona el color de texto del mapa")
+            except Exception as exc:
+                failures.append(f"no se pudo aplicar el tema {theme!r} al explorador: {exc}")
+        page.locator(f'input[name="themeSelect"][value="{selected_theme}"]').check()
+
         # Comprueba que el mapa se recupera de preferencias locales corruptas,
         # vuelve a guardar posiciones válidas y mantiene el límite de entradas.
         position_key = "netsentinel-topology-positions-v1"

@@ -658,6 +658,12 @@
     container.appendChild(note);
   }
   function renderAccessibleList(container, entries, selectedId, select) {
+    // Actualizar aria-pressed reconstruye los botones. Si la selección vino del
+    // teclado, devolver el foco al mismo dispositivo para que Tab no se reinicie.
+    const activeElement = root.document && root.document.activeElement;
+    const focusedDeviceId = activeElement && container.contains(activeElement) &&
+      activeElement.matches && activeElement.matches("button.topology-accessible-node")
+      ? activeElement.dataset.deviceId : null;
     container.replaceChildren();
     if (!entries.length) {
       const empty = root.document.createElement("p");
@@ -683,6 +689,15 @@
       item.appendChild(button); list.appendChild(item);
     });
     container.appendChild(list);
+
+    if (focusedDeviceId !== null) {
+      const nextButton = Array.from(container.querySelectorAll("button.topology-accessible-node"))
+        .find(button => button.dataset.deviceId === focusedDeviceId);
+      if (nextButton) {
+        try { nextButton.focus({ preventScroll: true }); }
+        catch (_) { nextButton.focus(); }
+      }
+    }
   }
   function chooseEntry(entry, shouldNotify) {
     if (!activeGraph || !activeConfig || !activeModel) return;

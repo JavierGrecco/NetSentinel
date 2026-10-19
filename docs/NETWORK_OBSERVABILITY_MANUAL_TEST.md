@@ -47,7 +47,7 @@ Si no hay registros asociados al dispositivo, el panel de cambios debe explicar 
 
 ## 4. Teclado y tamaños de ventana
 
-Navegá con `Tab` y `Shift+Tab`. Debe ser posible usar los filtros, los controles del mapa y la lista textual sin depender de arrastrar nodos. Los controles deben tener foco visible y nombres comprensibles para lectores de pantalla.
+Navegá con `Tab` y `Shift+Tab`. Debe ser posible usar los filtros, los controles del mapa y la lista textual sin depender de arrastrar nodos. Al seleccionar un equipo de la lista con `Enter` o `Espacio`, el foco debe permanecer en ese equipo y su estado seleccionado debe anunciarse mediante `aria-pressed`. Los controles deben tener foco visible y nombres comprensibles para lectores de pantalla.
 
 Repetí el recorrido con una ventana angosta y una amplia. Confirmá que no haya desplazamiento horizontal en toda la página, controles recortados ni texto ilegible. Repetí el cambio de tema y la selección de un equipo en ambos tamaños.
 
