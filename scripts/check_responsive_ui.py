@@ -499,9 +499,13 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
     if check_missing_evidence:
         # Cambiar tema debe actualizar los estilos del mapa sin romper la vista.
         theme_group = page.locator('input[name="themeSelect"]')
+        if theme_group.count() != 3:
+            failures.append("el selector no ofrece exactamente los tres temas documentados")
         selected_theme = page.locator('input[name="themeSelect"]:checked').input_value()
         for theme in ("dark", "medium", "light"):
-            page.locator(f'input[name="themeSelect"][value="{theme}"]').check()
+            # Los radios están visualmente ocultos para mantener el diseño accesible.
+            # Hacer clic en la tarjeta visible activa el control asociado de forma real.
+            page.locator(f'input[name="themeSelect"][value="{theme}"] + .theme-option-card').click()
             try:
                 page.wait_for_function(
                     "(expected) => document.documentElement.dataset.theme === expected",
@@ -515,7 +519,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     failures.append(f"el tema {theme!r} no proporciona el color de texto del mapa")
             except Exception as exc:
                 failures.append(f"no se pudo aplicar el tema {theme!r} al explorador: {exc}")
-        page.locator(f'input[name="themeSelect"][value="{selected_theme}"]').check()
+        page.locator(f'input[name="themeSelect"][value="{selected_theme}"] + .theme-option-card').click()
 
         # Comprueba que el mapa se recupera de preferencias locales corruptas,
         # vuelve a guardar posiciones válidas y mantiene el límite de entradas.
