@@ -710,6 +710,19 @@ def _scan_comparison_failures(page) -> list[str]:
     if first.count() != 1 or second.count() != 1 or button.count() != 1 or result.count() != 1:
         return ["falta uno de los controles de comparación de lecturas"]
 
+    # La navegación histórica debe poder encontrarse y leerse en ambas páginas.
+    history_button = page.locator("#loadMoreScansButton")
+    history_status = page.locator("#scanHistoryLoadStatus")
+    if history_button.count() != 1 or history_status.count() != 1:
+        failures.append("falta el control accesible para continuar el historial de capturas")
+    else:
+        if not history_button.is_visible():
+            failures.append("el control para cargar capturas anteriores no está visible")
+        if not history_status.is_visible() or not history_status.inner_text().strip():
+            failures.append("el estado de carga del historial no está visible o no tiene texto")
+        if not history_button.inner_text().strip():
+            failures.append("el control para cargar capturas anteriores no tiene una etiqueta")
+
     try:
         page.wait_for_function(
             """() => {
