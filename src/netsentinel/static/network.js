@@ -5,6 +5,8 @@
   const state = {
     devices: [],
     scans: [],
+    scansHasMore: false,
+    scansLoadingOlder: false,
     selectedScanId: null,
     deviceEventsRequest: 0,
     deviceEventsRequestDeviceId: null,
@@ -26,6 +28,21 @@
     if (!value) return "Sin dato";
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+  }
+
+  const SCAN_PAGE_SIZE = 100;
+
+  function mergeScans(existing, incoming) {
+    const merged = new Map(existing.map(scan => [String(scan.id), scan]));
+    for (const scan of incoming) merged.set(String(scan.id), scan);
+    return Array.from(merged.values()).sort((left, right) => {
+      const leftTime = Date.parse(left.started_at || left.finished_at || "");
+      const rightTime = Date.parse(right.started_at || right.finished_at || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+      return Number(right.id || 0) - Number(left.id || 0);
+    });
   }
 
   function toast(message) {
@@ -114,7 +131,10 @@
         api("/api/scans?limit=100")
       ]);
       state.devices = Array.isArray(devices) ? devices : [];
-      state.scans = Array.isArray(scans) ? scans : [];
+      const firstScanLoad = state.scans.length === 0;
+      state.scans = mergeScans(state.scans, Array.isArray(scans) ? scans : []);
+      if (firstScanLoad) state.scansHasMore = scans.length === SCAN_PAGE_SIZE;
+      updateScanHistoryControls();
       const graph = window.NetSentinelTopology;
       renderNetworkScanOptions();
       if (window.NetSentinelScanComparison) {
@@ -166,6 +186,51 @@
     } catch (error) {
       $("topologySummary").textContent = "No se pudo actualizar el explorador. " + error.message;
       toast("No se pudo actualizar el mapa: " + error.message);
+    }
+  }
+
+  function updateScanHistoryControls() {
+    const button = $("loadMoreScansButton");
+    const status = $("scanHistoryLoadStatus");
+    if (!button || !status) return;
+    button.disabled = state.scansLoadingOlder || !state.scansHasMore;
+    button.textContent = state.scansLoadingOlder ? "Cargando capturas…" :
+      state.scansHasMore ? "Cargar capturas anteriores" : "No hay más capturas";
+    status.textContent = state.scansLoadingOlder
+      ? "Buscando capturas anteriores…"
+      : state.scansHasMore
+        ? "Hay " + state.scans.length + " capturas cargadas. Podés consultar más antiguas."
+        : "Capturas cargadas: " + state.scans.length + ". No hay más resultados por cargar.";
+  }
+
+  async function loadOlderScans() {
+    if (state.scansLoadingOlder || !state.scansHasMore || !state.scans.length) return;
+    const cursor = state.scans[state.scans.length - 1];
+    if (!cursor || !cursor.started_at || cursor.id === undefined || cursor.id === null) {
+      toast("No se pudo continuar el historial porque la última captura no tiene una referencia válida.");
+      return;
+    }
+    state.scansLoadingOlder = true;
+    updateScanHistoryControls();
+    try {
+      const query = new URLSearchParams({
+        limit: String(SCAN_PAGE_SIZE),
+        before_started_at: cursor.started_at,
+        before_id: String(cursor.id)
+      });
+      const older = await api("/api/scans?" + query.toString());
+      const page = Array.isArray(older) ? older : [];
+      state.scans = mergeScans(state.scans, page);
+      state.scansHasMore = page.length === SCAN_PAGE_SIZE;
+      renderNetworkScanOptions();
+      if (window.NetSentinelScanComparison) window.NetSentinelScanComparison.renderSelectors(state.scans);
+    } catch (error) {
+      toast("No se pudieron cargar capturas anteriores: " + error.message);
+      const status = $("scanHistoryLoadStatus");
+      if (status) status.textContent = "No se pudieron cargar capturas anteriores. Volvé a intentarlo.";
+    } finally {
+      state.scansLoadingOlder = false;
+      updateScanHistoryControls();
     }
   }
 
@@ -345,6 +410,7 @@
     }
   }
 
+  $("loadMoreScansButton").addEventListener("click", loadOlderScans);
   $("topologyScanSelect").addEventListener("change", () => {
     state.selectedScanId = $("topologyScanSelect").value || null;
     state.topologyGraph = null;

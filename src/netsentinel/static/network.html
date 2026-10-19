@@ -96,7 +96,11 @@
           <p class="scan-comparison-empty">Elegí dos lecturas diferentes para ver las diferencias registradas.</p>
         </div>
       </section>
-      <p id="scanComparisonEvidenceNote" class="topology-history-note">Las IP y las fuentes se comparan desde cada captura guardada. El nombre visible y la MAC se consultan desde la ficha actual del inventario y pueden haber cambiado desde entonces. Que un dispositivo no aparezca en una captura no demuestra que esté desconectado. Los selectores ofrecen hasta las 100 lecturas más recientes.</p>
+      <p id="scanComparisonEvidenceNote" class="topology-history-note">Las IP y las fuentes se comparan desde cada captura guardada. El nombre visible y la MAC se consultan desde la ficha actual del inventario y pueden haber cambiado desde entonces.</p>
+      <div class="scan-history-pagination">
+            <button type="button" id="loadMoreScansButton" class="quiet tiny" disabled>Cargando capturas…</button>
+            <p id="scanHistoryLoadStatus" class="panel-sub" aria-live="polite">Consultando historial de capturas…</p>
+          </div>
     </section>
 
     <section class="panel topology-panel section-gap" id="topologyPanel" aria-labelledby="topologyPageTitle">

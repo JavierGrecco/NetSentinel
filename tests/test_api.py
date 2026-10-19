@@ -105,6 +105,43 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         assert not (tmp_path / "netsentinel-errors.jsonl").exists()
 
 
+def test_scan_history_api_supports_stable_cursor_pagination(monkeypatch, tmp_path):
+    """Cada página continúa por la captura anterior sin repetir las ya devueltas."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    for octet in (31, 32, 33):
+        database.record_scan([
+            Neighbor(f"192.168.90.{octet}", f"02:00:00:00:90:{octet:02X}", "fixture0", "fixture-pagination"),
+        ])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        first_page = client.get("/api/scans", params={"limit": 2})
+        assert first_page.status_code == 200
+        first_items = first_page.json()
+        assert len(first_items) == 2
+        cursor = first_items[-1]
+        second_page = client.get(
+            "/api/scans",
+            params={
+                "limit": 2,
+                "before_started_at": cursor["started_at"],
+                "before_id": cursor["id"],
+            },
+        )
+        incomplete_cursor = client.get(
+            "/api/scans",
+            params={"limit": 2, "before_id": cursor["id"]},
+        )
+
+    assert second_page.status_code == 200
+    second_items = second_page.json()
+    assert len(second_items) == 1
+    assert {item["id"] for item in first_items}.isdisjoint(
+        {item["id"] for item in second_items}
+    )
+    assert incomplete_cursor.status_code == 422
+
+
 def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()

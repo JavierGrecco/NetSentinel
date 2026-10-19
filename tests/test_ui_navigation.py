@@ -49,5 +49,11 @@ def test_historical_selectors_offer_more_readings_without_expanding_recent_activ
     assert "const recentScans = state.scans.slice(0, 12);" in dashboard_js
     assert "recentScans.map(scan=>" in dashboard_js
     assert 'api("/api/scans?limit=100")' in network_js
-    assert "hasta las 100 lecturas más recientes" in inventory_html
-    assert "hasta las 100 lecturas más recientes" in network_html
+    assert "hasta las 100 lecturas más recientes" not in inventory_html
+    assert "hasta las 100 lecturas más recientes" not in network_html
+    assert "id=\"loadMoreScansButton\"" in inventory_html
+    assert "id=\"loadMoreScansButton\"" in network_html
+    assert "id=\"scanHistoryLoadStatus\"" in inventory_html
+    assert "id=\"scanHistoryLoadStatus\"" in network_html
+    assert "before_started_at: cursor.started_at" in dashboard_js
+    assert "before_started_at: cursor.started_at" in network_js

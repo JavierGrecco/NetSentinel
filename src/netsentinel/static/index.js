@@ -1,5 +1,24 @@
   const $ = (id) => document.getElementById(id);
-  const state = { devices: [], events: [], scans: [] };
+  const SCAN_PAGE_SIZE = 100;
+  const state = {
+    devices: [], events: [], scans: [],
+    scansHasMore: false, scansLoadingOlder: false
+  };
+  function sortScans(scans) {
+    return scans.slice().sort((left, right) => {
+      const leftTime = Date.parse(left.started_at || left.finished_at || "");
+      const rightTime = Date.parse(right.started_at || right.finished_at || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+      return Number(right.id || 0) - Number(left.id || 0);
+    });
+  }
+  function mergeScans(existing, incoming) {
+    const merged = new Map(existing.map(scan => [String(scan.id), scan]));
+    for (const scan of incoming) merged.set(String(scan.id), scan);
+    return sortScans(Array.from(merged.values()));
+  }
   function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
@@ -47,7 +66,10 @@
       ]);
       state.devices = devices;
       state.events = events;
-      state.scans = scans;
+      const firstScanLoad = state.scans.length === 0;
+      state.scans = mergeScans(state.scans, Array.isArray(scans) ? scans : []);
+      if (firstScanLoad) state.scansHasMore = scans.length === SCAN_PAGE_SIZE;
+      updateScanHistoryControls();
       $('totalMetric').textContent = summary.devices_total;
       $('trustedMetric').textContent = summary.devices_trusted;
       $('unknownMetric').textContent = summary.devices_untrusted;
@@ -122,6 +144,49 @@
     }).join('');
     box.querySelectorAll('[data-ack]').forEach(button=>button.addEventListener('click',async()=>{try{await api(`/api/events/${button.dataset.ack}`,{method:'PATCH',body:JSON.stringify({acknowledged:true})});await refresh();}catch(e){toast(e.message);}}));
   }
+  function updateScanHistoryControls() {
+    const button = $('loadMoreScansButton');
+    const status = $('scanHistoryLoadStatus');
+    if (!button || !status) return;
+    button.disabled = state.scansLoadingOlder || !state.scansHasMore;
+    button.textContent = state.scansLoadingOlder ? 'Cargando capturas…' :
+      state.scansHasMore ? 'Cargar capturas anteriores' : 'No hay más capturas';
+    status.textContent = state.scansLoadingOlder
+      ? 'Buscando capturas anteriores…'
+      : state.scansHasMore
+        ? 'Hay ' + state.scans.length + ' capturas cargadas. Podés consultar más antiguas.'
+        : 'Capturas cargadas: ' + state.scans.length + '. No hay más resultados por cargar.';
+  }
+  async function loadOlderScans() {
+    if (state.scansLoadingOlder || !state.scansHasMore || !state.scans.length) return;
+    const cursor = state.scans[state.scans.length - 1];
+    if (!cursor || !cursor.started_at || cursor.id === undefined || cursor.id === null) {
+      toast('No se pudo continuar el historial porque la última captura no tiene una referencia válida.');
+      return;
+    }
+    state.scansLoadingOlder = true;
+    updateScanHistoryControls();
+    try {
+      const query = new URLSearchParams({
+        limit: String(SCAN_PAGE_SIZE),
+        before_started_at: cursor.started_at,
+        before_id: String(cursor.id)
+      });
+      const older = await api('/api/scans?' + query.toString());
+      const page = Array.isArray(older) ? older : [];
+      state.scans = mergeScans(state.scans, page);
+      state.scansHasMore = page.length === SCAN_PAGE_SIZE;
+      renderScans();
+      if (window.NetSentinelScanComparison) window.NetSentinelScanComparison.renderSelectors(state.scans);
+    } catch (error) {
+      toast('No se pudieron cargar capturas anteriores: ' + error.message);
+      const status = $('scanHistoryLoadStatus');
+      if (status) status.textContent = 'No se pudieron cargar capturas anteriores. Volvé a intentarlo.';
+    } finally {
+      state.scansLoadingOlder = false;
+      updateScanHistoryControls();
+    }
+  }
   function renderScans() {
     const box=$('scansList');
     // La lista de actividad debe seguir siendo breve aunque el selector use más historial.
@@ -137,6 +202,7 @@
       return `<div class="event"><div class="dot ${scan.errors&&scan.errors.length?'':'info'}"></div><div><div class="event-title">Lectura #${scan.id} · ${Number(scan.devices_found)} dispositivo(s)</div><div class="event-meta">${escapeHtml(dateTime(scan.started_at))} · Fuente: ${escapeHtml(scan.source||'—')}</div>${networks?`<div class="event-message">Redes detectadas: ${networks}</div>`:''}${summary?`<div class="event-message">${escapeHtml(summary)}</div>`:''}${duration?`<div class="event-message">${escapeHtml(duration)}</div>`:''}<div class="event-message">${scan.errors&&scan.errors.length?escapeHtml(scan.errors.join(' · ')):'Sin errores informados por las fuentes disponibles.'}</div></div></div>`;
     }).join('');
   }
+  $('loadMoreScansButton').addEventListener('click', loadOlderScans);
   $('gettingStartedScanBtn').addEventListener('click',()=>$('scanBtn').click());
   $('scanBtn').addEventListener('click',async()=>{if(!window.confirm('NetSentinel detectará automáticamente hasta dos subredes IPv4 privadas y consultará hasta 254 direcciones por subred con un solo ping por dirección. Esto genera tráfico en tu red local, sin modificar equipos ni explorar Internet. ¿Querés continuar?'))return;const button=$('scanBtn');button.disabled=true;button.textContent='Buscando…';try{const result=await api('/api/scan',{method:'POST'});const errors=(result.errors||[]).length?` Avisos: ${result.errors.join(' · ')}`:'';const scope=result.discovery?.networks||[];const networkText=scope.length?' Redes: '+scope.map(n=>n.network+' ('+n.interface+')').join(', ')+'. Direcciones consultadas: '+(result.discovery.addresses_checked||0)+'; respuestas ping: '+(result.discovery.ping_responses||0)+'.':'';toast(`${result.message} Equipos: ${result.devices_found}; direcciones: ${result.addresses_found}; nuevos: ${result.new_devices}.${networkText}${errors}`);await refresh();}catch(error){toast(`Falló el descubrimiento: ${error.message}`);}finally{button.disabled=false;button.textContent='⌕ Descubrir dispositivos';}});
   $('closeHistory').addEventListener('click',()=>$('historyDialog').close());

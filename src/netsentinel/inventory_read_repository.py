@@ -109,12 +109,31 @@ def get_device_history(device_id: int, limit: int = 100, path: Path | None = Non
     }
 
 
-def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]:
+def get_scans(
+    path: Path | None = None,
+    limit: int = 30,
+    before_started_at: str | None = None,
+    before_id: int | None = None,
+) -> list[dict[str, Any]]:
+    """Devuelve capturas por páginas sin repetir las más recientes al cargar anteriores."""
+    bounded_limit = max(1, min(limit, 100))
+    if (before_started_at is None) != (before_id is None):
+        raise ValueError("La fecha y el identificador de referencia deben enviarse juntos.")
+
     with connect(path) as db:
-        rows = db.execute(
-            "SELECT * FROM scans ORDER BY started_at DESC, id DESC LIMIT ?",
-            (max(1, min(limit, 100)),),
-        ).fetchall()
+        if before_started_at is None:
+            rows = db.execute(
+                "SELECT * FROM scans ORDER BY started_at DESC, id DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                """SELECT * FROM scans
+                   WHERE started_at < ? OR (started_at = ? AND id < ?)
+                   ORDER BY started_at DESC, id DESC
+                   LIMIT ?""",
+                (before_started_at, before_started_at, max(1, int(before_id)), bounded_limit),
+            ).fetchall()
     items: list[dict[str, Any]] = []
     for row in rows:
         item = dict(row)
