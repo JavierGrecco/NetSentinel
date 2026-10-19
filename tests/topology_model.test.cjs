@@ -335,3 +335,42 @@ test("the explorer keeps observations visible but does not invent links when net
   assert.match(model.reason, /no se pudo interpretar/i);
   assert.equal(buildGraphElements(model, { status: "all" }).elements.some(item => item.data.source), false);
 });
+
+
+test("the visual adapter keeps equal CIDRs distinct when they belong to different interfaces", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const currentDevice = device(12, "192.168.1.20");
+  const subnetEn0 = "subnet:192.168.1.0/24@en0";
+  const subnetEn1 = "subnet:192.168.1.0/24@en1";
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: true,
+    nodes: [
+      { id: subnetEn0, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn0, interface: "en0", local_address: "192.168.1.10" },
+      { id: subnetEn1, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn1, interface: "en1", local_address: "192.168.1.11" },
+      {
+        id: "device:12", kind: "device", label: currentDevice.mac_address, device_id: "device:12",
+        ip_addresses: ["192.168.1.20"],
+        observations: [{ ip_address: "192.168.1.20", sources: ["fixture"], observed_at: ["2026-10-16T10:01:10+00:00"] }],
+        mac_address: currentDevice.mac_address, manufacturer: null, trusted: false
+      }
+    ],
+    edges: [
+      { id: "e0", source: "device:12", target: subnetEn0, kind: "observed-subnet-membership", label: "192.168.1.20", ip_address: "192.168.1.20", sources: ["fixture"], observed_at: ["2026-10-16T10:01:10+00:00"] },
+      { id: "e1", source: "device:12", target: subnetEn1, kind: "observed-subnet-membership", label: "192.168.1.20", ip_address: "192.168.1.20", sources: ["fixture"], observed_at: ["2026-10-16T10:01:10+00:00"] }
+    ],
+    stats: { observed_devices: 1, known_subnets: 2, observed_memberships: 2, unlinked_devices: 0 },
+    warnings: []
+  };
+  const model = buildTopologyModelFromApi(payload, [currentDevice], [currentScan], "1");
+  const graph = buildGraphElements(model, { status: "all" });
+  const subnetNodes = graph.elements.filter(item => item.data.type === "network");
+
+  assert.equal(subnetNodes.length, 2);
+  assert.equal(new Set(subnetNodes.map(item => item.data.id)).size, 2);
+  assert.deepEqual(new Set(subnetNodes.map(item => item.data.interface)), new Set(["en0", "en1"]));
+  assert.equal(subnetNodes.find(item => item.data.interface === "en0").data.cidr, "192.168.1.0/24");
+  assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 2);
+});
