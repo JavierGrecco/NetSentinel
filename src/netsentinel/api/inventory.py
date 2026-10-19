@@ -11,8 +11,10 @@ from fastapi import APIRouter
 from .inventory_assets import router as assets_router
 from .inventory_discovery import router as discovery_router
 from .inventory_exports import router as exports_router
+from .inventory_topology import router as topology_router
 
 router = APIRouter()
 router.include_router(assets_router)
+router.include_router(topology_router)
 router.include_router(discovery_router)
 router.include_router(exports_router)
