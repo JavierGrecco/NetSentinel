@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   buildTopologyModel,
+  buildGraphElements,
   latestNetworkScan,
   parsePrivateCidr
 } = require("../src/netsentinel/static/topology.js");
@@ -135,4 +136,46 @@ test("un activo observado en dos rangos produce dos relaciones, no dos nodos", (
     "192.168.1.0/24",
     "10.0.0.0/24"
   ]);
+});
+
+
+test("genera nodos y enlaces de subred con significado explícito", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const currentDevice = device(9, "192.168.1.20", { display_name: "Notebook" });
+  const observations = [{
+    scan_id: 1, device_id: 9, ip_address: "192.168.1.20",
+    observed_at: "2026-10-16T10:01:10+00:00", source: "fixture-local",
+    mac_address: currentDevice.mac_address, display_name: "Notebook",
+    manufacturer: "Fabricante de prueba", trusted: false, primary_ip: "192.168.1.20"
+  }];
+  const model = buildTopologyModel([currentDevice], [currentScan], observations, 1);
+  const graph = buildGraphElements(model, { search: "", status: "all", positions: {} });
+  const networkNode = graph.elements.find(item => item.data.type === "network");
+  const deviceNode = graph.elements.find(item => item.data.type === "device");
+  const edge = graph.elements.find(item => item.data.source);
+  assert.ok(networkNode);
+  assert.ok(deviceNode);
+  assert.ok(edge);
+  assert.match(networkNode.data.label, /192\.168\.1\.0\/24/);
+  assert.match(deviceNode.data.label, /192\.168\.1\.20/);
+  assert.equal(edge.data.type, "observed-subnet-membership");
+  assert.deepEqual(graph.visibleDeviceIds, ["9"]);
+});
+
+test("el filtro del grafo diferencia equipos vistos de los no vistos", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const currentDevice = device(1, "192.168.1.20");
+  const oldDevice = device(2, "192.168.1.30", { last_seen: "2026-10-15T10:00:00+00:00" });
+  const observations = [{
+    scan_id: 1, device_id: 1, ip_address: "192.168.1.20",
+    observed_at: "2026-10-16T10:01:10+00:00", source: "fixture",
+    mac_address: currentDevice.mac_address, primary_ip: "192.168.1.20"
+  }];
+  const model = buildTopologyModel([currentDevice, oldDevice], [currentScan], observations, 1);
+  const observed = buildGraphElements(model, { status: "observed" });
+  const notSeen = buildGraphElements(model, { status: "not-seen" });
+  assert.deepEqual(observed.visibleDeviceIds, ["1"]);
+  assert.deepEqual(notSeen.visibleDeviceIds, ["2"]);
+  assert.equal(notSeen.elements.filter(item => item.data.type === "device").length, 1);
+  assert.equal(notSeen.elements.some(item => item.data.source), false);
 });

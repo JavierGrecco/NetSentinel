@@ -1,5 +1,5 @@
   const $ = (id) => document.getElementById(id);
-  const state = { devices: [], topologyDevices: [], topologySelectionId: null, topologyObservations: null, topologyObservationScanId: null, events: [], scans: [] };
+  const state = { devices: [], topologyDevices: [], topologySelectionId: null, topologyObservations: null, topologyObservationScanId: null, topologyHistoryDeviceId: null, topologyHistoryRequestDeviceId: null, topologyHistoryRequest: 0, events: [], scans: [] };
   function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function dateTime(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toLocaleString(); }
   function toast(message) { const el=$('toast'); el.textContent=message; el.hidden=false; window.clearTimeout(toast.timer); toast.timer=window.setTimeout(()=>el.hidden=true,4200); }
@@ -67,25 +67,83 @@
   function renderTopologyView() {
     const graph = window.NetSentinelTopology;
     if (!graph) {
-      $('topologySummary').textContent = 'No se pudo cargar el módulo del mapa. Actualizá la página y revisá los recursos locales.';
+      $("topologySummary").textContent = "No se pudo cargar el módulo del mapa. Actualizá la página y revisá los recursos locales.";
       return;
     }
     const model = graph.renderTopology({
-      canvas: $('topologyCanvas'),
-      summary: $('topologySummary'),
-      selection: $('topologySelection'),
-      accessible: $('topologyAccessibleList'),
-      devices: state.topologyDevices,
-      scans: state.scans,
-      observations: state.topologyObservations,
+      canvas: $("topologyCanvas"), summary: $("topologySummary"),
+      selection: $("topologySelection"), accessible: $("topologyAccessibleList"),
+      devices: state.topologyDevices, scans: state.scans, observations: state.topologyObservations,
       observationsScanId: state.topologyObservationScanId,
-      search: $('topologySearch').value,
+      search: $("topologySearch").value, status: $("topologyStatusFilter").value,
       selectedId: state.topologySelectionId,
-      onSelect: device => { state.topologySelectionId = String(device.id); }
+      onSelect: device => {
+        state.topologySelectionId = device ? String(device.id) : null;
+        if (device) loadTopologyHistory(device, true);
+        else clearTopologyHistory();
+      },
+      onOpenHistory: device => showDeviceHistory(device.id)
     });
-    if (model && state.topologySelectionId &&
-        !model.devices.some(entry => entry.id === state.topologySelectionId)) {
-      state.topologySelectionId = null;
+    if (state.topologySelectionId &&
+        !(model && Array.isArray(model.visibleDeviceIds) && model.visibleDeviceIds.includes(String(state.topologySelectionId)))) {
+      state.topologySelectionId = null; clearTopologyHistory();
+    }
+    if (state.topologySelectionId && state.topologyHistoryDeviceId !== String(state.topologySelectionId)) {
+      const device = state.topologyDevices.find(item => String(item.id) === String(state.topologySelectionId));
+      if (device) loadTopologyHistory(device, false);
+    }
+  }
+  function clearTopologyHistory() {
+    state.topologyHistoryRequest += 1;
+    state.topologyHistoryRequestDeviceId = null;
+    state.topologyHistoryDeviceId = null;
+    const box = $("topologyHistory");
+    if (box) box.innerHTML = '<p class="topology-selection-empty">Seleccioná un dispositivo para consultar cuándo se observó y qué direcciones tenía.</p>';
+  }
+  async function loadTopologyHistory(device, force) {
+    if (!device || device.id === undefined || device.id === null) return;
+    const id = String(device.id);
+    if (!force && (state.topologyHistoryDeviceId === id || state.topologyHistoryRequestDeviceId === id)) return;
+    state.topologyHistoryRequest += 1;
+    const requestId = state.topologyHistoryRequest;
+    state.topologyHistoryRequestDeviceId = id;
+    const box = $("topologyHistory");
+    box.innerHTML = '<div class="empty">Cargando observaciones…</div>';
+    try {
+      const data = await api("/api/devices/" + encodeURIComponent(id) + "/history?limit=12");
+      if (requestId !== state.topologyHistoryRequest || String(state.topologySelectionId) !== id) return;
+      state.topologyHistoryDeviceId = id; state.topologyHistoryRequestDeviceId = null;
+      if (!Array.isArray(data.observations) || !data.observations.length) {
+        box.innerHTML = '<div class="empty">Todavía no hay observaciones guardadas para este dispositivo. Ejecutá un descubrimiento local para empezar a construir el historial.</div>';
+        return;
+      }
+      box.innerHTML = data.observations.map(item =>
+        '<article class="topology-history-entry"><span class="topology-history-marker" aria-hidden="true"></span>' +
+        '<div><strong>' + escapeHtml(item.ip_address || "Dirección sin identificar") + '</strong>' +
+        '<div class="topology-history-meta">' + escapeHtml(dateTime(item.observed_at)) + '</div>' +
+        '<div class="topology-history-meta">Fuente: ' + escapeHtml(item.source || item.scan_source || "desconocida") + '</div></div></article>'
+      ).join("");
+    } catch (error) {
+      if (requestId !== state.topologyHistoryRequest || String(state.topologySelectionId) !== id) return;
+      state.topologyHistoryDeviceId = id; state.topologyHistoryRequestDeviceId = null;
+      box.textContent = "No se pudo cargar el historial: " + error.message;
+    }
+  }
+  async function showDeviceHistory(id) {
+    $("historyContent").innerHTML = '<div class="empty">Cargando historial…</div>';
+    $("historyDialog").showModal();
+    try {
+      const data = await api("/api/devices/" + encodeURIComponent(id) + "/history?limit=200");
+      $("historyTitle").textContent = "Historial · " + (data.device.display_name || data.device.ip_address || ("Dispositivo " + id));
+      $("historySubtitle").textContent = data.count + " observación(es) recuperadas; más recientes primero.";
+      $("historyContent").innerHTML = data.observations.length ? data.observations.map(item =>
+        '<div class="event"><div class="dot info"></div><div><div class="event-title">' +
+        escapeHtml(item.ip_address) + '</div><div class="event-meta">' + escapeHtml(dateTime(item.observed_at)) +
+        ' · Fuente: ' + escapeHtml(item.source || item.scan_source || "desconocida") +
+        '</div></div></div>'
+      ).join("") : '<div class="empty">Todavía no hay observaciones guardadas para este dispositivo. Ejecutá un descubrimiento local para empezar a construir el historial.</div>';
+    } catch (error) {
+      $("historyContent").textContent = "No se pudo cargar el historial: " + error.message;
     }
   }
   function renderDevices() {
@@ -109,13 +167,8 @@
     }));
     tbody.querySelectorAll('[data-trust]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{await api(`/api/devices/${button.dataset.trust}`,{method:'PATCH',body:JSON.stringify({trusted:button.dataset.next==='true'})});toast(button.dataset.next==='true'?'Dispositivo marcado como de confianza.':'Confianza revocada.');await refresh();}catch(e){toast(e.message);button.disabled=false;}}));
     tbody.querySelectorAll('[data-history]').forEach(button=>button.addEventListener('click',async()=>{
-      const id=button.dataset.history;button.disabled=true;$('historyContent').innerHTML='<div class="empty">Cargando historial…</div>';
-      $('historyDialog').showModal();
-      try{const data=await api('/api/devices/'+id+'/history?limit=200');
-        $('historyTitle').textContent='Historial · '+(data.device.display_name||data.device.ip_address||('Dispositivo '+id));
-        $('historySubtitle').textContent=data.count+' observación(es) recuperadas; más recientes primero.';
-        $('historyContent').innerHTML=data.observations.length?data.observations.map(item=>'<div class="event"><div class="dot info"></div><div><div class="event-title">'+escapeHtml(item.ip_address)+'</div><div class="event-meta">'+escapeHtml(dateTime(item.observed_at))+' · Fuente: '+escapeHtml(item.source||item.scan_source||'desconocida')+'</div></div></div>').join(''):'<div class="empty">Todavía no hay observaciones guardadas para este dispositivo. Ejecutá un descubrimiento local para empezar a construir el historial.</div>';
-      }catch(error){$('historyContent').textContent='No se pudo cargar el historial: '+error.message;}
+      button.disabled=true;
+      try{await showDeviceHistory(button.dataset.history);}
       finally{button.disabled=false;}
     }));
     tbody.querySelectorAll('[data-edit]').forEach(button=>button.addEventListener('click',()=>{const device=state.devices.find(item=>item.id===Number(button.dataset.edit));if(!device)return;$('editDialog').dataset.deviceId=device.id;$('editName').value=device.display_name||'';$('editNotes').value=device.notes||'';$('editDialog').showModal();}));
@@ -148,7 +201,17 @@
     }).join('');
   }
   $('topologySearch').addEventListener('input',renderTopologyView);
-  $('topologyResetSearch').addEventListener('click',()=>{$('topologySearch').value='';renderTopologyView();$('topologySearch').focus();});
+  $('topologyStatusFilter').addEventListener('change',renderTopologyView);
+  $('topologyResetSearch').addEventListener('click',()=>{
+    $('topologySearch').value='';
+    $('topologyStatusFilter').value='all';
+    renderTopologyView();
+    $('topologySearch').focus();
+  });
+  $('topologyZoomIn').addEventListener('click',()=>window.NetSentinelTopology&&window.NetSentinelTopology.zoomBy(1));
+  $('topologyZoomOut').addEventListener('click',()=>window.NetSentinelTopology&&window.NetSentinelTopology.zoomBy(-1));
+  $('topologyFit').addEventListener('click',()=>window.NetSentinelTopology&&window.NetSentinelTopology.fit());
+  $('topologyRelayout').addEventListener('click',()=>window.NetSentinelTopology&&window.NetSentinelTopology.relayout());
   $('gettingStartedScanBtn').addEventListener('click',()=>$('scanBtn').click());
   $('scanBtn').addEventListener('click',async()=>{if(!window.confirm('NetSentinel detectará automáticamente hasta dos subredes IPv4 privadas y consultará hasta 254 direcciones por subred con un solo ping por dirección. Esto genera tráfico en tu red local, sin modificar equipos ni explorar Internet. ¿Querés continuar?'))return;const button=$('scanBtn');button.disabled=true;button.textContent='Buscando…';try{const result=await api('/api/scan',{method:'POST'});const errors=(result.errors||[]).length?` Avisos: ${result.errors.join(' · ')}`:'';const scope=result.discovery?.networks||[];const networkText=scope.length?' Redes: '+scope.map(n=>n.network+' ('+n.interface+')').join(', ')+'. Direcciones consultadas: '+(result.discovery.addresses_checked||0)+'; respuestas ping: '+(result.discovery.ping_responses||0)+'.':'';toast(`${result.message} Equipos: ${result.devices_found}; direcciones: ${result.addresses_found}; nuevos: ${result.new_devices}.${networkText}${errors}`);await refresh();}catch(error){toast(`Falló el descubrimiento: ${error.message}`);}finally{button.disabled=false;button.textContent='⌕ Descubrir dispositivos';}});
   $('closeHistory').addEventListener('click',()=>$('historyDialog').close());

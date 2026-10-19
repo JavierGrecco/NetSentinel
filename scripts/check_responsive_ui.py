@@ -333,8 +333,10 @@ def _topology_panel_failures(page) -> list[str]:
             summary_button.click()
         page.wait_for_function(
             """() => {
-              const svg = document.querySelector("#topologyCanvas svg.topology-svg");
-              return svg && svg.querySelectorAll(".topology-device-node").length > 0;
+              const canvas = document.querySelector("#topologyCanvas canvas");
+              const graph = window.NetSentinelTopology;
+              const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null;
+              return canvas && stats && stats.deviceCount > 0;
             }""",
             timeout=5000,
         )
@@ -349,9 +351,15 @@ def _topology_panel_failures(page) -> list[str]:
 
     for selector, description in (
         ("#topologySearch", "el filtro de dispositivos"),
-        ("#topologyResetSearch", "el botón para limpiar el filtro"),
+        ("#topologyStatusFilter", "el filtro de estado"),
+        ("#topologyResetSearch", "el botón para limpiar filtros"),
+        ("#topologyZoomIn", "el botón para acercar"),
+        ("#topologyZoomOut", "el botón para alejar"),
+        ("#topologyFit", "el botón para ajustar el mapa"),
+        ("#topologyRelayout", "el botón para reorganizar el mapa"),
         ("#topologyCanvas", "el área del grafo"),
         ("#topologySelection", "el panel de detalle"),
+        ("#topologyHistory", "el historial de observaciones"),
         ("#topologyAccessibleList", "la alternativa textual"),
     ):
         element = panel.locator(selector)
@@ -361,22 +369,32 @@ def _topology_panel_failures(page) -> list[str]:
             failures.append(f"no está visible {description} al abrir el mapa")
 
     try:
-        node = panel.locator("#topologyCanvas .topology-device-node").first
+        node = panel.locator("#topologyAccessibleList .topology-accessible-node").first
         node.click()
         detail = panel.locator("#topologySelection")
-        if "Evidencia de la lectura #" not in detail.inner_text():
-            failures.append("seleccionar un nodo no muestra la evidencia de la lectura")
+        page.wait_for_function(
+            "() => document.querySelector('#topologySelection')?.textContent.includes('La lectura #')",
+            timeout=4000,
+        )
         if "192.168.56.20" not in detail.inner_text():
             failures.append("el detalle no muestra la dirección observada en la fixture")
+        if "Historial de observaciones" not in panel.inner_text():
+            failures.append("el panel no explica que la línea temporal es de observaciones")
 
+        page.locator("#topologyZoomIn").click()
+        page.locator("#topologyFit").click()
         search = panel.locator("#topologySearch")
         reset = panel.locator("#topologyResetSearch")
         search.fill("filtro-sin-coincidencias")
-        if panel.locator("#topologyCanvas .topology-device-node").count() != 0:
-            failures.append("el filtro del grafo no oculta nodos que no coinciden")
+        page.wait_for_function(
+            "() => window.NetSentinelTopology.getGraphStats().deviceCount === 0",
+            timeout=3000,
+        )
         reset.click()
-        if panel.locator("#topologyCanvas .topology-device-node").count() == 0:
-            failures.append("Limpiar filtro no restablece los nodos del mapa")
+        page.wait_for_function(
+            "() => window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+            timeout=4000,
+        )
     except Exception as exc:
         failures.append(f"no se pudo seleccionar o filtrar un nodo del mapa: {exc}")
 

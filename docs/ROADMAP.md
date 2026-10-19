@@ -4,6 +4,8 @@
 
 ## Estado del proyecto
 
+**Frente de experiencia:** [Explorador de red profesional](NETWORK_OBSERVABILITY_CONSOLE.md), con seguimiento en [issue #170](https://github.com/JavierGrecco/NetSentinel/issues/170). El trabajo se mantiene en una rama separada y no cambia el estado de estabilización de la versión actual hasta que las pruebas y la revisión manual queden registradas.
+
 **Estado:** estabilización de la versión local 0.10.0. La versión todavía no está lista para declararse estable: faltan pruebas manuales documentadas en sistemas y navegadores reales, completar las comprobaciones de recuperación de datos y confirmar la protección efectiva de `main`. La validación automática más reciente de `main` y el último SHA de código identificado como validado se indican abajo; no deben confundirse entre sí.
 
 - **Revisión de repositorio (16/10/2026):** [diagnóstico técnico y prioridades](REVIEW_2026-10-16.md). El HEAD consultado es [`8a7756b`](https://github.com/JavierGrecco/NetSentinel/commit/8a7756b1ab2a471401fc7e557ca236f8edc8920e); CI [#38970565141](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565141), seguridad [#38970565046](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565046) y cadena de suministro [#38970565067](https://github.com/JavierGrecco/NetSentinel/actions/runs/38970565067) terminaron correctamente para ese SHA. El último SHA de código identificado como validado es [`f23c30c`](https://github.com/JavierGrecco/NetSentinel/commit/f23c30cc85d1e5610ee0ed3254176cbf624728c6); la validación manual y la protección de `main` siguen pendientes.

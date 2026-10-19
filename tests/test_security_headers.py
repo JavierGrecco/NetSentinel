@@ -143,7 +143,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
 @pytest.mark.parametrize(
     ("path", "expected_title", "expected_scripts"),
     [
-        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/topology.js", "/static/scan-comparison.js", "/static/index.js")),
+        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/scan-comparison.js", "/static/index.js")),
         ("/monitors", "NetSentinel · Monitorización", ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js")),
         ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),

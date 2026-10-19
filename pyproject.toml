@@ -33,7 +33,7 @@ where = ["src"]
 version = {attr = "netsentinel.__version__"}
 
 [tool.setuptools.package-data]
-netsentinel = ["static/*.html", "static/*.css", "static/*.js"]
+netsentinel = ["static/*.html", "static/*.css", "static/*.js", "static/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
