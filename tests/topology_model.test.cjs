@@ -348,8 +348,8 @@ test("the visual adapter keeps equal CIDRs distinct when they belong to differen
     evidence_available: true,
     network_scope_available: true,
     nodes: [
-      { id: subnetEn0, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn0, interface: "en0", local_address: "192.168.1.10" },
-      { id: subnetEn1, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn1, interface: "en1", local_address: "192.168.1.11" },
+      { id: subnetEn0, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn0, interface: "en0", local_address: "192.168.1.10", range_limited: true },
+      { id: subnetEn1, kind: "subnet", label: "192.168.1.0/24", network_id: subnetEn1, interface: "en1", local_address: "192.168.1.11", range_limited: false },
       {
         id: "device:12", kind: "device", label: currentDevice.mac_address, device_id: "device:12",
         ip_addresses: ["192.168.1.20"],
@@ -373,6 +373,8 @@ test("the visual adapter keeps equal CIDRs distinct when they belong to differen
   assert.deepEqual(new Set(subnetNodes.map(item => item.data.interface)), new Set(["en0", "en1"]));
   assert.equal(subnetNodes.find(item => item.data.interface === "en0").data.cidr, "192.168.1.0/24");
   assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 2);
+  assert.equal(subnetNodes.find(item => item.data.interface === "en0").data.rangeLimited, true);
+  assert.equal(subnetNodes.find(item => item.data.interface === "en1").data.rangeLimited, false);
 });
 
 
