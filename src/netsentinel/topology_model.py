@@ -61,6 +61,7 @@ class TopologyModel:
     scan_id: str | None
     captured_at: str | None
     evidence_available: bool
+    network_scope_available: bool = False
     networks: tuple[TopologyNetwork, ...] = ()
     observations: tuple[TopologyObservation, ...] = ()
     relations: tuple[TopologyRelation, ...] = ()
@@ -94,6 +95,9 @@ def _is_rfc1918(network: ipaddress.IPv4Network | ipaddress.IPv6Network) -> bool:
 def _read_networks(
     scan: Mapping[str, Any],
 ) -> tuple[tuple[TopologyNetwork, ...], tuple[str, ...]]:
+    if scan.get("discovery_available") is False:
+        return (), ("No se pudo interpretar el informe de descubrimiento guardado.",)
+
     discovery = scan.get("discovery")
     raw_networks = discovery.get("networks") if isinstance(discovery, Mapping) else None
     if not isinstance(raw_networks, list):
@@ -198,12 +202,13 @@ def build_topology_model(
 
     assert isinstance(scan, Mapping)
     captured_at = _text(scan.get("finished_at")) or _text(scan.get("started_at"))
+    discovery = scan.get("discovery")
+    network_scope_available = (
+        scan.get("discovery_available") is not False
+        and isinstance(discovery, Mapping)
+        and isinstance(discovery.get("networks"), list)
+    )
     networks, network_warnings = _read_networks(scan)
-    if scan.get("discovery_available") is False:
-        network_warnings = tuple(dict.fromkeys((
-            *network_warnings,
-            "No se pudo interpretar el informe de descubrimiento guardado.",
-        )))
     scan_errors = scan.get("errors")
     if isinstance(scan_errors, list) and scan_errors:
         network_warnings = tuple(dict.fromkeys((
@@ -221,6 +226,7 @@ def build_topology_model(
             scan_id=scan_id,
             captured_at=captured_at,
             evidence_available=False,
+            network_scope_available=network_scope_available,
             networks=networks,
             warnings=tuple(dict.fromkeys((
                 *network_warnings,
@@ -250,22 +256,23 @@ def build_topology_model(
     )
     relations_by_key: dict[tuple[str, str, str], dict[str, set[str]]] = {}
     unlinked: list[TopologyObservation] = []
-    for observation in normalised:
-        address = ipaddress.ip_address(observation.ip_address)
-        matched_networks = [
-            network for network, parsed in parsed_networks
-            if address.version == 4 and address in parsed
-        ]
-        if not matched_networks:
-            unlinked.append(observation)
-            continue
-        for network in matched_networks:
-            key = (observation.device_id, network.id, observation.ip_address)
-            values = relations_by_key.setdefault(key, {"sources": set(), "times": set()})
-            if observation.source:
-                values["sources"].add(observation.source)
-            if observation.observed_at:
-                values["times"].add(observation.observed_at)
+    if network_scope_available:
+        for observation in normalised:
+            address = ipaddress.ip_address(observation.ip_address)
+            matched_networks = [
+                network for network, parsed in parsed_networks
+                if address.version == 4 and address in parsed
+            ]
+            if not matched_networks:
+                unlinked.append(observation)
+                continue
+            for network in matched_networks:
+                key = (observation.device_id, network.id, observation.ip_address)
+                values = relations_by_key.setdefault(key, {"sources": set(), "times": set()})
+                if observation.source:
+                    values["sources"].add(observation.source)
+                if observation.observed_at:
+                    values["times"].add(observation.observed_at)
 
     relations = tuple(
         TopologyRelation(
@@ -281,6 +288,7 @@ def build_topology_model(
         scan_id=scan_id,
         captured_at=captured_at,
         evidence_available=True,
+        network_scope_available=network_scope_available,
         networks=networks,
         observations=tuple(normalised),
         relations=relations,
