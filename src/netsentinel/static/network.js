@@ -7,6 +7,7 @@
     scans: [],
     scansHasMore: false,
     scansLoadingOlder: false,
+    scansCursor: null,
     selectedScanId: null,
     deviceEventsRequest: 0,
     deviceEventsRequestDeviceId: null,
@@ -133,7 +134,10 @@
       state.devices = Array.isArray(devices) ? devices : [];
       const firstScanLoad = state.scans.length === 0;
       state.scans = mergeScans(state.scans, Array.isArray(scans) ? scans : []);
-      if (firstScanLoad) state.scansHasMore = scans.length === SCAN_PAGE_SIZE;
+      if (firstScanLoad) {
+        state.scansHasMore = scans.length === SCAN_PAGE_SIZE;
+        state.scansCursor = scans.length ? scans[scans.length - 1] : null;
+      }
       updateScanHistoryControls();
       const graph = window.NetSentinelTopology;
       renderNetworkScanOptions();
@@ -205,7 +209,7 @@
 
   async function loadOlderScans() {
     if (state.scansLoadingOlder || !state.scansHasMore || !state.scans.length) return;
-    const cursor = state.scans[state.scans.length - 1];
+    const cursor = state.scansCursor;
     if (!cursor || !cursor.started_at || cursor.id === undefined || cursor.id === null) {
       toast("No se pudo continuar el historial porque la última captura no tiene una referencia válida.");
       return;
@@ -221,6 +225,7 @@
       const older = await api("/api/scans?" + query.toString());
       const page = Array.isArray(older) ? older : [];
       state.scans = mergeScans(state.scans, page);
+      if (page.length) state.scansCursor = page[page.length - 1];
       state.scansHasMore = page.length === SCAN_PAGE_SIZE;
       renderNetworkScanOptions();
       if (window.NetSentinelScanComparison) window.NetSentinelScanComparison.renderSelectors(state.scans);

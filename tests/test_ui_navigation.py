@@ -57,3 +57,7 @@ def test_historical_selectors_offer_more_readings_without_expanding_recent_activ
     assert "id=\"scanHistoryLoadStatus\"" in network_html
     assert "before_started_at: cursor.started_at" in dashboard_js
     assert "before_started_at: cursor.started_at" in network_js
+    assert "state.scansCursor = scans.length ? scans[scans.length - 1] : null;" in dashboard_js
+    assert "state.scansCursor = scans.length ? scans[scans.length - 1] : null;" in network_js
+    assert "if (page.length) state.scansCursor = page[page.length - 1];" in dashboard_js
+    assert "if (page.length) state.scansCursor = page[page.length - 1];" in network_js
