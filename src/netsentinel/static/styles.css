@@ -211,3 +211,10 @@
 @media(max-width:700px){.topology-summary{padding:15px}.topology-body{padding:0 12px 14px}.topology-toolbar{grid-template-columns:minmax(0,1fr)}.topology-view-controls{grid-column:auto;justify-content:flex-start}.topology-view-controls button{flex:0 0 auto}.topology-canvas{height:390px}.topology-inspector{grid-template-columns:minmax(0,1fr)}.topology-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.topology-accessible-list{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:400px){.topology-canvas{height:340px}.topology-view-controls{gap:4px}.topology-view-controls button{padding:6px 8px;font-size:10px}.topology-detail-grid{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.topology-canvas *{animation:none!important;transition:none!important}}
+
+
+/* Acceso claro al explorador de red desde el inventario. */
+.network-explorer-callout{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.network-explorer-callout .panel-sub{max-width:760px;line-height:1.6}
+.network-explorer-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border-radius:9px;text-decoration:none;font-size:12px;font-weight:750;white-space:nowrap}
+@media(max-width:560px){.network-explorer-callout{align-items:stretch}.network-explorer-link{width:100%}}
