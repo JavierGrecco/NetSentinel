@@ -169,7 +169,11 @@
         devices: [],
         unlinkedObserved: [],
         notObserved: [],
-        stale: Boolean(selectedScanId == null && latestScan && String(latestScan.id) !== String(selectedScan.id)),
+        stale: Boolean(
+          latestScan && newestNetworkScan &&
+          String(latestScan.id) !== String(newestNetworkScan.id) &&
+          String(selectedScan.id) === String(newestNetworkScan.id)
+        ),
         historicalSelection: historicalSelection,
         totalDevices: allDevices.length,
         observedCount: 0,
@@ -277,7 +281,11 @@
       devices: modeledDevices,
       unlinkedObserved: unlinkedObserved,
       notObserved: notObserved,
-      stale: Boolean(selectedScanId == null && latestScan && String(latestScan.id) !== String(selectedScan.id)),
+      stale: Boolean(
+          latestScan && newestNetworkScan &&
+          String(latestScan.id) !== String(newestNetworkScan.id) &&
+          String(selectedScan.id) === String(newestNetworkScan.id)
+        ),
       historicalSelection: historicalSelection,
       totalDevices: allDevices.length,
       observedCount: observedCount,

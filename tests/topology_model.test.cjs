@@ -67,7 +67,7 @@ test("construye la relación a partir de observaciones del scan, no de last_seen
   })];
 
   assert.equal(latestNetworkScan([newestScan, oldScan]).id, 1);
-  const model = buildTopologyModel(devices, [newestScan, oldScan], observed, 1);
+  const model = buildTopologyModel(devices, [newestScan, oldScan], observed, 1, 1);
 
   assert.equal(model.hasNetworkData, true);
   assert.equal(model.scan.id, 1);
