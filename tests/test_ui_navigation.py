@@ -36,3 +36,18 @@ def test_every_module_has_consistent_primary_navigation():
             f"{relative_path} must mark only {current_route!r} as the current page"
         )
         assert all(link.group("label").strip() for link in links)
+
+
+def test_historical_selectors_offer_more_readings_without_expanding_recent_activity():
+    """Los selectores consultan más historial y la lista principal sigue acotada."""
+    dashboard_js = (ROOT / "src/netsentinel/static/index.js").read_text(encoding="utf-8")
+    network_js = (ROOT / "src/netsentinel/static/network.js").read_text(encoding="utf-8")
+    inventory_html = (ROOT / "src/netsentinel/static/index.html").read_text(encoding="utf-8")
+    network_html = (ROOT / "src/netsentinel/static/network.html").read_text(encoding="utf-8")
+
+    assert "api('/api/scans?limit=100')" in dashboard_js
+    assert "const recentScans = state.scans.slice(0, 12);" in dashboard_js
+    assert "recentScans.map(scan=>" in dashboard_js
+    assert 'api("/api/scans?limit=100")' in network_js
+    assert "hasta las 100 lecturas más recientes" in inventory_html
+    assert "hasta las 100 lecturas más recientes" in network_html

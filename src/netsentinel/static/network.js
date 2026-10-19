@@ -60,7 +60,7 @@
   }
 
   function availableNetworkScans() {
-    // Todas las lecturas se pueden inspeccionar. La vista inicial sigue eligiendo
+    // La API ofrece hasta 100 lecturas recientes. La vista inicial sigue eligiendo
     // la última que tenga subredes válidas, pero una lectura dañada también se
     // puede abrir para mostrar observaciones sin inventar sus asociaciones.
     return state.scans.slice().sort((left, right) => {
@@ -111,7 +111,7 @@
     try {
       const [devices, scans] = await Promise.all([
         api("/api/devices"),
-        api("/api/scans?limit=12")
+        api("/api/scans?limit=100")
       ]);
       state.devices = Array.isArray(devices) ? devices : [];
       state.scans = Array.isArray(scans) ? scans : [];

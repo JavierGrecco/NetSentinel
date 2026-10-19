@@ -43,7 +43,7 @@
         api('/api/summary'),
         api('/api/devices?q=' + encodeURIComponent($('searchInput').value)),
         api('/api/events?limit=30'),
-        api('/api/scans?limit=12')
+        api('/api/scans?limit=100')
       ]);
       state.devices = devices;
       state.events = events;
@@ -124,8 +124,10 @@
   }
   function renderScans() {
     const box=$('scansList');
-    if(!state.scans.length){box.innerHTML='<div class="empty"><strong>Sin lecturas registradas</strong>Usá “Descubrir dispositivos” para buscar equipos en las subredes locales detectadas.</div>';return;}
-    box.innerHTML=state.scans.map(scan=>{
+    // La lista de actividad debe seguir siendo breve aunque el selector use más historial.
+    const recentScans = state.scans.slice(0, 12);
+    if(!recentScans.length){box.innerHTML='<div class="empty"><strong>Sin lecturas registradas</strong>Usá “Descubrir dispositivos” para buscar equipos en las subredes locales detectadas.</div>';return;}
+    box.innerHTML=recentScans.map(scan=>{
       const report=scan.discovery||{};
       const networks=(report.networks||[]).map(n=>`${escapeHtml(n.network)} (${escapeHtml(n.interface)})${n.range_limited?' · rango limitado a /24':''}`).join(', ');
       const checked=Number.isFinite(Number(report.addresses_checked))?Number(report.addresses_checked):null;
