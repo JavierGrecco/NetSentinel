@@ -42,6 +42,15 @@ test("solo admite redes privadas IPv4 válidas", () => {
   assert.equal(parsePrivateCidr("192.168.1.0/not-a-prefix"), null);
 });
 
+test("rejects CIDR ranges that extend beyond private IPv4 space and normalizes valid ranges", () => {
+  assert.equal(parsePrivateCidr("172.16.0.0/11"), null);
+  assert.equal(parsePrivateCidr("172.31.255.255/11"), null);
+  assert.equal(parsePrivateCidr("192.168.0.0/15"), null);
+  assert.equal(parsePrivateCidr("192.168.1.1/15"), null);
+  assert.equal(parsePrivateCidr("172.31.255.255/12").cidr, "172.16.0.0/12");
+  assert.equal(parsePrivateCidr("192.168.1.42/24").cidr, "192.168.1.0/24");
+});
+
 test("el selector inicial elige la lectura más reciente con una subred válida", () => {
   const newestWithoutNetwork = scan(3, null);
   const olderWithNetwork = scan(2, "192.168.1.0/24");

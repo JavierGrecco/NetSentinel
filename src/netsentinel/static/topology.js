@@ -22,18 +22,35 @@
       (first === 192 && second === 168);
   }
 
+  function ipv4FromNumber(value) {
+    return [
+      (value >>> 24) & 255,
+      (value >>> 16) & 255,
+      (value >>> 8) & 255,
+      value & 255
+    ].join(".");
+  }
+
   function parsePrivateCidr(value) {
     const parts = String(value || "").trim().split("/");
     if (parts.length !== 2 || !/^\d{1,2}$/.test(parts[1])) return null;
     const address = ipv4ToNumber(parts[0]);
     const prefix = Number(parts[1]);
     if (address === null || prefix < 8 || prefix > 32 || !isPrivateIPv4(address)) return null;
+
+    // Un CIDR solo es privado si el rango completo queda dentro de RFC 1918.
+    // La primera IP no basta: 172.16.0.0/11 y 192.168.0.0/15 abarcan redes públicas.
+    const first = (address >>> 24) & 255;
+    const minimumPrefix = first === 10 ? 8 : first === 172 ? 12 : 16;
+    if (prefix < minimumPrefix) return null;
+
     const mask = (0xffffffff << (32 - prefix)) >>> 0;
+    const networkNumber = (address & mask) >>> 0;
     return {
-      cidr: parts[0] + "/" + prefix,
+      cidr: ipv4FromNumber(networkNumber) + "/" + prefix,
       prefix: prefix,
       mask: mask,
-      networkNumber: (address & mask) >>> 0
+      networkNumber: networkNumber
     };
   }
 

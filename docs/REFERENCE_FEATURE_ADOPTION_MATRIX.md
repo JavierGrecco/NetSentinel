@@ -34,6 +34,7 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 3. **Cada relación tiene significado explícito.** `observed-subnet-membership` indica que una IP observada cae dentro de una subred registrada; no significa tráfico, conexión física ni un enlace directo.
 4. **Se distingue el dato de la ficha actual de la evidencia histórica.** Nombre, fabricante y confianza del registro de inventario pueden cambiar y no se presentan como si fueran un histórico inmutable.
 5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks se consideran válidos solo para el SHA que ejecutaron. La PR del explorador permanece como borrador hasta pasar CI, seguridad y cadena de suministro en su cabeza final, además de revisión manual responsive y accesible.
+6. **Los validadores de alcance deben coincidir.** La interfaz y el servidor solo aceptan una subred si el rango completo está dentro de RFC 1918; una dirección privada al comienzo de un CIDR no vuelve privado todo el rango.
 
 ## Próxima secuencia
 
