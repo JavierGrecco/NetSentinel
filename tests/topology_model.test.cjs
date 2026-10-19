@@ -374,3 +374,40 @@ test("the visual adapter keeps equal CIDRs distinct when they belong to differen
   assert.equal(subnetNodes.find(item => item.data.interface === "en0").data.cidr, "192.168.1.0/24");
   assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 2);
 });
+
+
+test("the explorer retains registered subnet nodes when a valid reading has no devices", () => {
+  const currentScan = scan(1, "192.168.1.0/24");
+  const subnetId = "subnet:192.168.1.0/24@en0";
+  const payload = {
+    scan_id: "1",
+    captured_at: currentScan.finished_at,
+    evidence_available: true,
+    network_scope_available: true,
+    nodes: [{
+      id: subnetId,
+      kind: "subnet",
+      label: "192.168.1.0/24",
+      network_id: subnetId,
+      interface: "en0",
+      local_address: "192.168.1.10"
+    }],
+    edges: [],
+    stats: {
+      observed_devices: 0,
+      known_subnets: 1,
+      observed_memberships: 0,
+      unlinked_devices: 0
+    },
+    warnings: []
+  };
+  const model = buildTopologyModelFromApi(payload, [], [currentScan], "1");
+  const graph = buildGraphElements(model, { status: "all" });
+
+  assert.equal(model.hasNetworkData, true);
+  assert.equal(model.scanObservedCount, 0);
+  assert.equal(model.networks.length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "device").length, 0);
+  assert.equal(graph.elements.some(item => item.data.source), false);
+});
