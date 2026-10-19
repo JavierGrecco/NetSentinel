@@ -926,7 +926,9 @@
     const canvas=config.canvas, summary=config.summary, selection=config.selection, accessible=config.accessible;
     if(!canvas||!summary||!selection||!accessible) return null;
     activeConfig=config;
-    const model=buildTopologyModel(config.devices,config.scans,config.observations,config.observationsScanId,config.selectedScanId);
+    const model = config.topologyGraph
+      ? buildTopologyModelFromApi(config.topologyGraph, config.devices, config.scans, config.selectedScanId)
+      : buildTopologyModel(config.devices, config.scans, config.observations, config.observationsScanId, config.selectedScanId);
     const graphData=model.hasNetworkData?buildGraphElements(model,{
       search:config.search,status:config.status,positions:readSavedPositions()
     }):{elements:[],entries:[],entryByGraphId:new Map(),networkByGraphId:new Map(),visibleDeviceIds:[]};
@@ -1006,10 +1008,21 @@
     const historicalMessage=model.historicalSelection?" Vista histórica elegida: lectura #"+model.scan.id+".":"";
     const queryMessage=String(config.search||"").trim()?" Filtro de texto: "+graphData.entries.length+" coincidencia(s).":"";
     const statusMessage=config.status&&config.status!=="all"?" Filtro de estado: "+config.status+".":"";
+    const subnetSummary = model.networkScopeAvailable === false
+      ? "subredes desconocidas"
+      : model.networks.length + " subred(es)";
+    const scopeMessage = model.networkScopeAvailable === false
+      ? " No se pudieron confirmar las subredes de esta lectura; no se inventan relaciones."
+      : "";
+    const warningList = Array.isArray(model.warnings) ? model.warnings.slice(0, 2) : [];
+    const warningMessage = warningList.length
+      ? " Avisos: " + warningList.join(" ")
+      : "";
     summary.textContent="Lectura #"+model.scan.id+" · "+formatTimestamp(model.scan.finished_at||model.scan.started_at)+
-      " · "+model.networks.length+" subred(es) · "+graphData.entries.length+" dispositivo(s) en esta vista ("+
+      " · "+subnetSummary+" · "+graphData.entries.length+" dispositivo(s) en esta vista ("+
       observedCount+" observado(s), "+notSeenCount+" no visto(s), "+trustedCount+" marcado(s) conocido(s))."+
-      staleMessage+historicalMessage+queryMessage+statusMessage+" Las líneas agrupan IP observadas con rangos de subred; no muestran tráfico ni conexiones físicas.";
+      staleMessage+historicalMessage+queryMessage+statusMessage+scopeMessage+warningMessage+
+      " Las líneas agrupan IP observadas con rangos de subred; no muestran tráfico ni conexiones físicas.";
     updateZoomStatus();
     return model;
   }
@@ -1028,7 +1041,7 @@
       edgeCount:activeGraph?visible(activeGraph.edges()):0,
       zoom:activeGraph?activeGraph.zoom():1};
   }
-  const api={buildTopologyModel,buildGraphElements,renderTopology,latestNetworkScan,parsePrivateCidr,
+  const api={buildTopologyModel,buildTopologyModelFromApi,buildGraphElements,renderTopology,latestNetworkScan,parsePrivateCidr,
     fit:fitGraph,zoomBy:zoomGraph,relayout:relayoutGraph,getGraphStats};
   if(typeof module!=="undefined"&&module.exports) module.exports=api;
   if(root&&typeof root==="object") root.NetSentinelTopology=api;
