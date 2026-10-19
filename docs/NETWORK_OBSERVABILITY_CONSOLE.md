@@ -13,6 +13,7 @@ La experiencia de topología vive en una sección propia, accesible desde **Mapa
 - Al seleccionar un dispositivo se muestran IP, MAC, fabricante cuando está disponible, estado, fuente y momento de observación.
 - El historial lateral muestra observaciones históricas del equipo, con su hora, IP y fuente.
 - La sección «Cambios registrados» muestra eventos del inventario asociados al equipo (por ejemplo, primera detección o cambio de IP). Estos eventos describen lo que NetSentinel observó, no toda la actividad de red del dispositivo.
+- **Selector de lectura histórica:** se puede reconstruir el mapa de una captura anterior con las observaciones ligadas a esa lectura, sin reemplazarlas por direcciones actuales del inventario.
 - Buscar, filtrar, acercar, alejar, ajustar al área y reorganizar el grafo son acciones independientes y tienen etiquetas claras.
 - Las posiciones del mapa se guardan localmente como una preferencia de presentación; no se guardan como una nueva observación de red.
 - La lista textual permite elegir dispositivos sin depender del mapa visual.

@@ -26,6 +26,7 @@ Ejecutá un descubrimiento solo en una red propia o autorizada. Después, recarg
 
 - Se ven los equipos de la lectura y las subredes registradas. La cantidad coincide con los datos de inventario, sin duplicar el mismo dispositivo por tener más de una dirección.
 - Buscá un nombre, una IP, una MAC y un fabricante, uno por vez. Los filtros deben reducir el grafo y poder limpiarse sin perder la página.
+- En **Lectura del mapa**, seleccioná una captura anterior. Comprobá que cambien la fecha, las direcciones y las relaciones según las observaciones históricas de esa captura; luego regresá a la más reciente.
 - Seleccioná un equipo desde el dibujo y desde la alternativa textual. Ambos caminos deben abrir el mismo detalle.
 - Verificá IP, MAC, fabricante si se conoce, estado, fecha y fuente de observación.
 - Mirá el historial del equipo y los cambios registrados. Un evento debe mostrar fecha y contexto, sin presentarse como una captura completa de conexiones.
