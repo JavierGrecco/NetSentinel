@@ -726,6 +726,7 @@ def test_topology_api_returns_evidence_and_preserves_missing_scan_errors(monkeyp
         missing = client.get("/api/scans/999999/topology")
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     graph = response.json()
     assert graph["scan_id"] == str(scan_id)
     assert graph["evidence_available"] is True

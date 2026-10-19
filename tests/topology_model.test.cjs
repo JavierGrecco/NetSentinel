@@ -138,8 +138,13 @@ test("the explorer adapts the server graph without rebuilding network relations"
   assert.equal(model.scanObservedCount, 1);
   assert.equal(model.observedCount, 1);
   assert.equal(notebook.observedInScan, true);
-  assert.equal(notebook.currentAddresses[0].ip_address, "192.168.1.20");
-  assert.equal(notebook.currentAddresses[0].source, "fixture-history");
+  assert.deepEqual(
+    notebook.currentAddresses.map(item => [item.ip_address, item.source]),
+    [
+      ["192.168.1.21", "fixture-second-address"],
+      ["192.168.1.20", "fixture-history"]
+    ]
+  );
   assert.equal(notebook.relations[0].cidr, "192.168.1.0/24");
   assert.deepEqual(notebook.relations[0].addresses.map(item => item.ip_address), ["192.168.1.20", "192.168.1.21"]);
   assert.deepEqual(notebook.relations[0].sources, ["fixture-history", "fixture-second-address"]);
