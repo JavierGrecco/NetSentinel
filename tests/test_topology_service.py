@@ -69,6 +69,8 @@ def test_service_flags_a_corrupt_discovery_report(tmp_path: Path):
     model = load_topology_for_scan(scan_id, path=path)
 
     assert model.evidence_available is True
+    assert model.network_scope_available is False
     assert model.networks == ()
     assert model.relations == ()
+    assert model.unlinked_observations == ()
     assert any("No se pudo interpretar el informe" in warning for warning in model.warnings)
