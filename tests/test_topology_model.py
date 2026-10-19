@@ -150,3 +150,43 @@ def test_missing_observation_ip_is_reported_and_ignored():
     assert model.observations == ()
     assert model.relations == ()
     assert any("dirección IP inválida" in warning for warning in model.warnings)
+
+
+def test_same_cidr_on_different_interfaces_keeps_distinct_network_context():
+    model = build_topology_model(
+        scan(networks=[
+            {"network": "192.168.56.0/24", "interface": "en0"},
+            {"network": "192.168.56.0/24", "interface": "en1"},
+        ]),
+        [observation()],
+    )
+
+    assert len(model.networks) == 2
+    assert {network.interface for network in model.networks} == {"en0", "en1"}
+    assert len(model.relations) == 2
+    assert len({relation.network_id for relation in model.relations}) == 2
+
+
+def test_limited_discovery_scope_is_visible_in_model_warnings():
+    model = build_topology_model(
+        scan(networks=[
+            {
+                "network": "192.168.56.0/24",
+                "interface": "en0",
+                "range_limited": True,
+            },
+        ]),
+        [observation()],
+    )
+
+    assert any("alcance de descubrimiento limitado" in warning for warning in model.warnings)
+    assert any("ausencias no son concluyentes" in warning for warning in model.warnings)
+
+
+def test_scan_errors_warn_before_treating_missing_devices_as_changes():
+    partial_scan = scan()
+    partial_scan["errors"] = ["El sistema omitió una parte del rango solicitado."]
+
+    model = build_topology_model(partial_scan, [observation()])
+
+    assert any("registró 1 aviso(s)" in warning for warning in model.warnings)
