@@ -618,7 +618,7 @@
     addDetailField(details, "Interfaz", network.interface);
     addDetailField(details, "Dirección local", network.localAddress || "");
     addDetailField(details, "Dispositivos asociados en esta vista", String(network.members.length));
-    addDetailField(details, "Límite de exploración", network.rangeLimited ? "El recorrido se limitó a un rango /24" : "No se registró ese límite");
+    addDetailField(details, "Límite de exploración", network.rangeLimited ? "El descubrimiento se limitó a este rango; las ausencias no son concluyentes" : "No se registró ese límite");
     addDetailField(details, "Lectura utilizada", "#" + model.scan.id + " · " + formatTimestamp(model.scan.finished_at || model.scan.started_at));
     container.appendChild(details);
     const note = root.document.createElement("p");
@@ -799,7 +799,10 @@
       renderAccessibleList(accessible,[],null,()=>{});
       return model;
     }
-    if(!graphData.entries.length){
+    const hasVisibleSubnet = graphData.elements.some(element =>
+      element.data && element.data.type === "network"
+    );
+    if(!graphData.entries.length && !hasVisibleSubnet){
       const scopeUnknown = model.networkScopeAvailable === false &&
         !String(config.search || "").trim() &&
         (!config.status || config.status === "all");

@@ -1,3 +1,5 @@
+> La adopción de patrones de los dos proyectos de referencia se registra en [matriz de decisiones y trazabilidad](REFERENCE_FEATURE_ADOPTION_MATRIX.md): qué incorporamos, qué se pospone y qué descartamos por fiabilidad o seguridad.
+
 # Explorador de red y observabilidad
 
 ## Qué problema resuelve

@@ -86,3 +86,11 @@ Anotá fecha, sistema operativo, navegador, tema visual y tamaño de ventana. Pa
 - Si una lectura no tiene observaciones y su informe de subredes está ausente o dañado, el mapa debe mostrar un mensaje de alcance desconocido.
 - No debe clasificar todos los dispositivos del inventario como “no vistos” cuando no se puede confirmar qué subredes se revisaron.
 - Si sí hay observaciones, deben verse los dispositivos con la advertencia correspondiente y sin líneas inventadas.
+
+
+### Lectura válida sin dispositivos
+
+- Elegí una lectura que tenga subred registrada y ninguna observación de dispositivo.
+- El mapa debe conservar el nodo de subred. No debe reemplazarlo por el mensaje de “sin coincidencias” ni dibujar conexiones.
+- El detalle de una subred con exploración limitada debe decir que las ausencias no son concluyentes y no asumir siempre que el límite fue /24.
+- Si no se puede interpretar el alcance de una lectura sin observaciones, la vista debe avisar que el alcance es desconocido; no debe declarar ausente a todo el inventario.
