@@ -40,8 +40,12 @@ def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
 
 
 @router.get("/api/events")
-def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
-    return database.get_events(limit=limit)
+def events(
+    limit: int = Query(default=50, ge=1, le=200),
+    device_id: int | None = Query(default=None, ge=1),
+) -> list[dict]:
+    """Lista los eventos recientes y permite ver solo los de un dispositivo."""
+    return database.get_events(limit=limit, device_id=device_id)
 
 
 @router.get("/api/scans")

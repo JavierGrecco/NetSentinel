@@ -4,8 +4,9 @@
   const $ = id => document.getElementById(id);
   const state = {
     devices: [],
-    events: [],
     scans: [],
+    deviceEventsRequest: 0,
+    deviceEventsRequestDeviceId: null,
     observations: null,
     observationScanId: null,
     selectedId: null,
@@ -59,13 +60,11 @@
 
   async function refresh() {
     try {
-      const [devices, events, scans] = await Promise.all([
+      const [devices, scans] = await Promise.all([
         api("/api/devices"),
-        api("/api/events?limit=30"),
         api("/api/scans?limit=12")
       ]);
       state.devices = Array.isArray(devices) ? devices : [];
-      state.events = Array.isArray(events) ? events : [];
       state.scans = Array.isArray(scans) ? scans : [];
 
       const graph = window.NetSentinelTopology;
@@ -94,7 +93,7 @@
         const selected = state.devices.find(device => String(device.id) === String(state.selectedId));
         if (selected) {
           loadDeviceHistory(selected, true);
-          renderDeviceEvents(selected);
+          loadDeviceEvents(selected, true);
         }
       }
       $("appVersion").textContent = "NetSentinel · Datos guardados en tu computadora";
@@ -126,10 +125,10 @@
         state.selectedId = device ? String(device.id) : null;
         if (device) {
           loadDeviceHistory(device, true);
-          renderDeviceEvents(device);
+          loadDeviceEvents(device, true);
         } else {
           clearDeviceHistory();
-          renderDeviceEvents(null);
+          clearDeviceEvents();
         }
       },
       onOpenHistory: device => showDeviceHistory(device.id)
@@ -147,7 +146,7 @@
         model.visibleDeviceIds.includes(String(state.selectedId)))) {
       state.selectedId = null;
       clearDeviceHistory();
-      renderDeviceEvents(null);
+      clearDeviceEvents();
     }
   }
 
@@ -205,21 +204,48 @@
     return labels[event.event_type] || String(event.event_type || "Evento registrado");
   }
 
-  function renderDeviceEvents(device) {
+  function clearDeviceEvents() {
+    state.deviceEventsRequest += 1;
+    state.deviceEventsRequestDeviceId = null;
     const box = $("topologyEvents");
-    if (!device) {
+    if (box) {
       box.innerHTML = '<p class="topology-selection-empty">Seleccioná un equipo para ver los eventos de inventario relacionados.</p>';
+    }
+  }
+
+  async function loadDeviceEvents(device, force) {
+    if (!device || device.id === undefined || device.id === null) {
+      clearDeviceEvents();
       return;
     }
-    // Los eventos conservan el ID del activo al que pertenecen. No los asociamos
-    // por IP/MAC, porque una dirección puede cambiar o reutilizarse con el tiempo.
-    const related = state.events.filter(event =>
-      event.device_id !== undefined &&
-      event.device_id !== null &&
-      String(event.device_id) === String(device.id)
-    ).slice(0, 8);
+    const id = String(device.id);
+    if (!force && state.deviceEventsRequestDeviceId === id) return;
+    state.deviceEventsRequest += 1;
+    const requestId = state.deviceEventsRequest;
+    state.deviceEventsRequestDeviceId = id;
+    const box = $("topologyEvents");
+    box.innerHTML = '<div class="empty">Cargando cambios registrados…</div>';
+    try {
+      const events = await api("/api/events?device_id=" + encodeURIComponent(id) + "&limit=8");
+      if (requestId !== state.deviceEventsRequest || String(state.selectedId) !== id) return;
+      state.deviceEventsRequestDeviceId = null;
+      renderDeviceEvents(device, Array.isArray(events) ? events : []);
+    } catch (error) {
+      if (requestId !== state.deviceEventsRequest || String(state.selectedId) !== id) return;
+      state.deviceEventsRequestDeviceId = null;
+      box.textContent = "No se pudieron cargar los cambios registrados: " + error.message;
+    }
+  }
+
+  function renderDeviceEvents(device, events) {
+    const box = $("topologyEvents");
+    if (!device) {
+      clearDeviceEvents();
+      return;
+    }
+    const related = Array.isArray(events) ? events : [];
     if (!related.length) {
-      box.innerHTML = '<div class="empty">No hay eventos de inventario asociados a este equipo entre los registros recientes.</div>';
+      box.innerHTML = '<div class="empty">No hay eventos de inventario asociados a este equipo en el historial reciente.</div>';
       return;
     }
     box.innerHTML = related.map(event =>

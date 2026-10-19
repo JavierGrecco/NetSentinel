@@ -662,3 +662,39 @@ def test_scan_comparison_endpoint_is_read_only_and_handles_invalid_pairs(monkeyp
     assert response.headers["cache-control"] == "no-store"
     assert same.status_code == 422
     assert missing.status_code == 404
+
+
+def test_events_api_can_filter_history_to_one_device(monkeypatch, tmp_path):
+    """Los eventos de un dispositivo no se mezclan con los de otro equipo."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([
+        Neighbor("192.168.50.10", "02:00:00:00:50:10", "fixture0", "fixture-events"),
+        Neighbor("192.168.50.20", "02:00:00:00:50:20", "fixture0", "fixture-events"),
+    ])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        devices = {
+            item["ip_address"]: item
+            for item in client.get("/api/devices").json()
+        }
+        first_id = devices["192.168.50.10"]["id"]
+        second_id = devices["192.168.50.20"]["id"]
+
+        all_events = client.get("/api/events?limit=50").json()
+        first_events = client.get(
+            "/api/events",
+            params={"device_id": first_id, "limit": 8},
+        )
+        second_events = client.get(
+            "/api/events",
+            params={"device_id": second_id, "limit": 8},
+        )
+
+    assert first_events.status_code == 200
+    assert second_events.status_code == 200
+    assert first_events.json()
+    assert second_events.json()
+    assert all(item["device_id"] == first_id for item in first_events.json())
+    assert all(item["device_id"] == second_id for item in second_events.json())
+    assert {item["device_id"] for item in all_events} == {first_id, second_id}
