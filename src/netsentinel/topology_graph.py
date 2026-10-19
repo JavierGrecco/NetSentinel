@@ -39,6 +39,7 @@ class TopologyGraphNode:
     trusted: bool | None = None
     interface: str | None = None
     local_address: str | None = None
+    range_limited: bool = False
     context_label: str | None = None
 
 
@@ -118,6 +119,7 @@ def _network_node(network: TopologyNetwork) -> TopologyGraphNode:
         network_id=network.id,
         interface=network.interface,
         local_address=network.local_address,
+        range_limited=network.range_limited,
     )
 
 
