@@ -144,7 +144,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
     ("path", "expected_title", "expected_scripts"),
     [
         ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/scan-comparison.js", "/static/index.js")),
-        ("/network", "NetSentinel · Explorador de red", ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/network.js")),
+        ("/network", "NetSentinel · Explorador de red", ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/scan-comparison.js", "/static/network.js")),
         ("/monitors", "NetSentinel · Monitorización", ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js")),
         ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),

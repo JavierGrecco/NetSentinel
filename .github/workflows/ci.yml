@@ -226,7 +226,7 @@ jobs:
           static_dir = Path("src/netsentinel/static")
           pages = {
               "index.html": ("/static/theme.js", "/static/scan-comparison.js", "/static/index.js"),
-              "network.html": ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/network.js"),
+              "network.html": ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/scan-comparison.js", "/static/network.js"),
               "monitors.html": ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js"),
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),

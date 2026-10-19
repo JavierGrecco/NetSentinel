@@ -73,6 +73,32 @@
       <div class="metric"><div class="metric-label">Pendientes de revisar</div><div class="metric-value" id="networkReviewMetric">—</div><div class="metric-help">No marcados como conocidos</div></div>
       <div class="metric"><div class="metric-label">Subredes observadas</div><div class="metric-value" id="networkSubnetMetric">—</div><div class="metric-help">Rangos registrados por NetSentinel</div></div>
     </section>
+    <section class="panel section-gap" aria-labelledby="networkScanCompareTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="networkScanCompareTitle" class="panel-title">Comparar lecturas</h2>
+          <p class="panel-sub">Identificá diferencias entre dos capturas de una misma red y volvé a su evidencia original.</p>
+        </div>
+      </div>
+      <section class="scan-comparison" aria-label="Comparación de observaciones históricas">
+        <div class="scan-comparison-controls">
+          <div class="field">
+            <label for="scanCompareFirst">Lectura anterior</label>
+            <select id="scanCompareFirst" aria-label="Lectura anterior para comparar"><option value="">Cargando lecturas…</option></select>
+          </div>
+          <div class="field">
+            <label for="scanCompareSecond">Lectura posterior</label>
+            <select id="scanCompareSecond" aria-label="Lectura posterior para comparar"><option value="">Cargando lecturas…</option></select>
+          </div>
+          <button type="button" id="scanCompareButton" class="primary" disabled>Comparar lecturas</button>
+        </div>
+        <div id="scanComparisonResult" class="scan-comparison-result" role="status" aria-live="polite">
+          <p class="scan-comparison-empty">Elegí dos lecturas diferentes para ver las diferencias registradas.</p>
+        </div>
+      </section>
+      <p class="topology-history-note">Solo se comparan direcciones observadas dentro de subredes compartidas por ambas lecturas. Que un dispositivo no aparezca en una captura no demuestra que esté desconectado.</p>
+    </section>
+
     <section class="panel topology-panel section-gap" id="topologyPanel" aria-labelledby="topologyPageTitle">
       <div class="topology-summary">
         <div class="topology-summary-copy">
@@ -158,6 +184,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <script src="/static/cytoscape.min.js" defer></script>
 <script src="/static/topology.js" defer></script>
+<script src="/static/scan-comparison.js" defer></script>
 <script src="/static/network.js" defer></script>
 </body>
 </html>

@@ -66,6 +66,9 @@
       ]);
       state.devices = Array.isArray(devices) ? devices : [];
       state.scans = Array.isArray(scans) ? scans : [];
+      if (window.NetSentinelScanComparison) {
+        window.NetSentinelScanComparison.renderSelectors(state.scans);
+      }
 
       const graph = window.NetSentinelTopology;
       const scan = graph ? graph.latestNetworkScan(state.scans) : null;
