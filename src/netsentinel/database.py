@@ -30,6 +30,7 @@ from .inventory_repository import (
     get_device_history,
     compare_scans,
     get_scan_observations,
+    get_scan_by_id,
     get_scans,
     list_devices,
     record_scan,
