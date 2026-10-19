@@ -60,12 +60,10 @@
   }
 
   function availableNetworkScans() {
-    const graph = window.NetSentinelTopology;
-    if (!graph) return [];
-    return state.scans.filter(scan =>
-      Array.isArray(scan.discovery && scan.discovery.networks) &&
-      scan.discovery.networks.some(network => graph.parsePrivateCidr(network && network.network))
-    ).sort((left, right) => {
+    // Todas las lecturas se pueden inspeccionar. La vista inicial sigue eligiendo
+    // la última que tenga subredes válidas, pero una lectura dañada también se
+    // puede abrir para mostrar observaciones sin inventar sus asociaciones.
+    return state.scans.slice().sort((left, right) => {
       const leftTime = Date.parse(left.started_at || left.finished_at || "");
       const rightTime = Date.parse(right.started_at || right.finished_at || "");
       if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
@@ -81,7 +79,10 @@
     const scans = availableNetworkScans();
     const availableIds = new Set(scans.map(scan => String(scan.id)));
     if (!state.selectedScanId || !availableIds.has(String(state.selectedScanId))) {
-      state.selectedScanId = scans.length ? String(scans[0].id) : null;
+      const graph = window.NetSentinelTopology;
+      const preferred = graph ? graph.latestNetworkScan(scans) : null;
+      state.selectedScanId = preferred ? String(preferred.id) :
+        scans.length ? String(scans[0].id) : null;
       state.topologyGraph = null;
       state.topologyGraphScanId = null;
     }
