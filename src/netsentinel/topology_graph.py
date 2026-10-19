@@ -14,6 +14,15 @@ from .topology_model import TopologyModel, TopologyNetwork, TopologyObservation
 
 
 @dataclass(frozen=True, slots=True)
+class TopologyGraphObservation:
+    """Procedencia de una dirección registrada en la lectura seleccionada."""
+
+    ip_address: str
+    sources: tuple[str, ...] = ()
+    observed_at: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class TopologyGraphNode:
     """Nodo que puede representar un dispositivo observado o una subred conocida."""
 
@@ -24,6 +33,7 @@ class TopologyGraphNode:
     device_id: str | None = None
     network_id: str | None = None
     ip_addresses: tuple[str, ...] = ()
+    observations: tuple[TopologyGraphObservation, ...] = ()
     mac_address: str | None = None
     manufacturer: str | None = None
     trusted: bool | None = None
@@ -158,6 +168,7 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
             detail=detail,
             device_id=device_id,
             ip_addresses=tuple(sorted({item.ip_address for item in observations})),
+            observations=address_evidence,
             mac_address=next((item.mac_address for item in observations if item.mac_address), None),
             manufacturer=next((item.manufacturer for item in observations if item.manufacturer), None),
             trusted=next((item.trusted for item in observations if item.trusted is not None), None),
