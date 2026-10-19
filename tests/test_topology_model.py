@@ -179,6 +179,7 @@ def test_limited_discovery_scope_is_visible_in_model_warnings():
         [observation()],
     )
 
+    assert model.networks[0].range_limited is True
     assert any("alcance de descubrimiento limitado" in warning for warning in model.warnings)
     assert any("ausencias no son concluyentes" in warning for warning in model.warnings)
 
