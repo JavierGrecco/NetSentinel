@@ -20,6 +20,12 @@ def index() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html")
 
 
+@router.get("/network", include_in_schema=False)
+def network_page() -> FileResponse:
+    """Muestra el explorador de topología y la evidencia de cada dispositivo."""
+    return FileResponse(_STATIC_DIR / "network.html")
+
+
 @router.get("/monitors", include_in_schema=False)
 def monitors_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "monitors.html")

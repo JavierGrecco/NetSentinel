@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>NetSentinel · Explorador de red</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+  <main class="wrap">
+<header class="top app-header">
+  <div class="app-header-content">
+    <div class="app-header-brand-row">
+      <div class="app-brand">
+        <div class="logo" aria-hidden="true">⌁</div>
+        <div class="app-brand-copy">
+          <div class="eyebrow">Observabilidad local</div>
+          <div class="app-brand-name">NetSentinel</div>
+        </div>
+      </div>
+      <div class="app-header-utilities">
+        <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+      <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+      <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+        <label class="theme-option">
+          <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="theme-option-label">Oscuro</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Medio</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Claro</span>
+          </span>
+        </label>
+      </div>
+    </div>
+      </div>
+    </div>
+    <div class="app-section-heading-row">
+      <div class="app-section-heading">
+        <h1 class="app-section-title">Explorador de red</h1>
+        <p class="app-section-description">Explorá los dispositivos observados y consultá qué evidencia y cambios están registrados.</p>
+      </div>
+      <div class="actions app-page-actions"><button id="refreshBtn" class="quiet">↻ Actualizar mapa</button><button id="scanBtn" class="primary">⌕ Descubrir dispositivos</button></div>
+    </div>
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a class="nav-link" href="/">Inventario</a>
+      <a class="nav-link" aria-current="page" href="/network">Mapa de red</a>
+      <a class="nav-link" href="/findings">Hallazgos</a>
+      <a class="nav-link" href="/monitors">Monitorización</a>
+      <a class="nav-link" href="/tools">Herramientas</a>
+      <a class="nav-link" href="/activity">Actividad</a>
+    </nav>
+  </div>
+</header>
+    <section class="metrics network-metrics" aria-label="Resumen de la red">
+      <div class="metric"><div class="metric-label">Dispositivos en inventario</div><div class="metric-value" id="networkTotalMetric">—</div><div class="metric-help">Equipos registrados localmente</div></div>
+      <div class="metric"><div class="metric-label">Vistos en esta lectura</div><div class="metric-value" id="networkObservedMetric">—</div><div class="metric-help">Basado en observaciones guardadas</div></div>
+      <div class="metric"><div class="metric-label">Pendientes de revisar</div><div class="metric-value" id="networkReviewMetric">—</div><div class="metric-help">No marcados como conocidos</div></div>
+      <div class="metric"><div class="metric-label">Subredes observadas</div><div class="metric-value" id="networkSubnetMetric">—</div><div class="metric-help">Rangos registrados por NetSentinel</div></div>
+    </section>
+    <section class="panel topology-panel section-gap" id="topologyPanel" aria-labelledby="topologyPageTitle">
+      <div class="topology-summary">
+        <div class="topology-summary-copy">
+          <h2 class="panel-title" id="topologyPageTitle">Explorador de topología</h2>
+          <p class="panel-sub">Seleccioná un dispositivo para ver sus identificadores, las observaciones y los cambios registrados.</p>
+        </div>
+        <span class="pill info">Evidencia local</span>
+      </div>
+      <div class="topology-body">
+        <div class="topology-toolbar">
+          <label class="topology-search-label" for="topologySearch">Buscar dispositivo
+            <input id="topologySearch" class="search" type="search" placeholder="Nombre, IP, MAC o fabricante…" autocomplete="off">
+          </label>
+          <label class="topology-filter-label" for="topologyStatusFilter">Mostrar
+            <select id="topologyStatusFilter" class="search">
+              <option value="all">Todos los dispositivos</option>
+              <option value="observed">Vistos en la lectura</option>
+              <option value="not-seen">No vistos en la lectura</option>
+              <option value="needs-review">Pendientes de revisar</option>
+            </select>
+          </label>
+          <div class="topology-view-controls" role="group" aria-label="Controles del mapa">
+            <button type="button" id="topologyZoomOut" class="quiet tiny" aria-label="Alejar mapa" title="Alejar">−</button>
+            <output id="topologyZoomStatus" class="topology-zoom-status" aria-live="polite">100%</output>
+            <button type="button" id="topologyZoomIn" class="quiet tiny" aria-label="Acercar mapa" title="Acercar">+</button>
+            <button type="button" id="topologyFit" class="quiet tiny">Ajustar</button>
+            <button type="button" id="topologyRelayout" class="quiet tiny">Reordenar</button>
+            <button type="button" id="topologyResetSearch" class="quiet tiny">Limpiar filtros</button>
+          </div>
+        </div>
+        <p class="topology-explainer">Las líneas agrupan una IP observada con el rango de su subred. No representan tráfico en vivo, un cable o puerto físico ni acciones realizadas por un dispositivo. “No visto” significa que no apareció en esa lectura; no confirma que esté desconectado.</p>
+        <div class="topology-legend" role="group" aria-label="Leyenda del mapa de relaciones">
+          <span><i class="topology-legend-symbol subnet" aria-hidden="true"></i>Subred observada</span>
+          <span><i class="topology-legend-symbol trusted" aria-hidden="true"></i>Marcado como conocido</span>
+          <span><i class="topology-legend-symbol observed" aria-hidden="true"></i>Visto en la lectura</span>
+          <span><i class="topology-legend-symbol unobserved" aria-hidden="true"></i>No visto en la lectura</span>
+        </div>
+        <div id="topologySummary" class="topology-summary-text" role="status" aria-live="polite">Cargando la última lectura…</div>
+        <div class="topology-workspace">
+          <div id="topologyCanvas" class="topology-canvas" role="region" aria-label="Mapa interactivo de subredes y dispositivos. Las líneas agrupan direcciones observadas; no representan tráfico en vivo." tabindex="0"></div>
+          <aside class="topology-inspector" aria-label="Detalle del elemento seleccionado">
+            <section class="topology-inspector-section">
+              <div class="topology-inspector-section-heading"><h2>Detalle del dispositivo</h2><span>Selección</span></div>
+              <div id="topologySelection" class="topology-selection" aria-live="polite">
+                <p class="topology-selection-empty">Elegí un dispositivo del mapa para consultar su evidencia.</p>
+              </div>
+            </section>
+            <section class="topology-history-panel" aria-labelledby="topologyHistoryTitle">
+              <div class="topology-inspector-section-heading"><h2 id="topologyHistoryTitle">Historial de observaciones</h2><span>Más recientes primero</span></div>
+              <div id="topologyHistory" class="topology-history" aria-live="polite">
+                <p class="topology-selection-empty">Seleccioná un equipo para consultar cuándo se observó y qué direcciones tenía.</p>
+              </div>
+              <p class="topology-history-note">Son observaciones registradas por NetSentinel; no equivalen a todas las conexiones del equipo.</p>
+            </section>
+            <section class="topology-history-panel" aria-labelledby="topologyEventsTitle">
+              <div class="topology-inspector-section-heading"><h2 id="topologyEventsTitle">Cambios registrados</h2><span>Inventario</span></div>
+              <div id="topologyEvents" class="topology-history" aria-live="polite">
+                <p class="topology-selection-empty">Seleccioná un equipo para ver los eventos de inventario relacionados.</p>
+              </div>
+              <p class="topology-history-note">Incluye altas y cambios detectados por NetSentinel. No es un registro de tráfico ni de navegación.</p>
+            </section>
+          </aside>
+        </div>
+        <details class="topology-accessible">
+          <summary>Alternativa textual y navegación por teclado</summary>
+          <p class="topology-accessible-note">Usá esta lista para seleccionar un equipo sin depender del mapa visual.</p>
+          <div id="topologyAccessibleList"></div>
+        </details>
+      </div>
+    </section>
+    <footer class="footer"><span id="appVersion">NetSentinel · Datos guardados en tu computadora</span><span>Documentación API: <a href="/api/docs" class="export-link">/api/docs</a></span></footer>
+
+  </main>
+  <dialog id="historyDialog" class="dialog" aria-labelledby="historyTitle">
+    <div>
+      <h2 id="historyTitle">Historial del dispositivo</h2>
+      <div class="sub" id="historySubtitle">Observaciones registradas por NetSentinel</div>
+      <p class="notice"><strong>Alcance:</strong> este historial muestra cuándo se observó el equipo y qué IP tenía. No equivale a un registro de páginas visitadas ni de todas sus conexiones.</p>
+      <div id="historyContent" class="events"><div class="empty">Seleccioná un dispositivo para consultar su historial.</div></div>
+      <div class="dialog-actions"><button type="button" id="closeHistory" class="quiet">Cerrar</button></div>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="/static/cytoscape.min.js" defer></script>
+<script src="/static/topology.js" defer></script>
+<script src="/static/network.js" defer></script>
+</body>
+</html>
