@@ -629,6 +629,13 @@
     });
     const visibleNetworkIndexes = new Set();
     entries.forEach(entry => (entry.relations || []).forEach(relation => visibleNetworkIndexes.add(relation.networkIndex)));
+    // Con filtros limpios, conservar la subred registrada aunque la lectura no
+    // haya observado equipos. El nodo de red es evidencia de alcance, no de presencia.
+    if (filter === "all" && !query) {
+      (Array.isArray(model.networks) ? model.networks : []).forEach(network => {
+        visibleNetworkIndexes.add(network.index);
+      });
+    }
     const elements = [], networkByGraphId = new Map(), entryByGraphId = new Map(), networkIdByIndex = new Map();
 
     (Array.isArray(model.networks) ? model.networks : []).forEach(network => {
