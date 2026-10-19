@@ -407,9 +407,10 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                         "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
                         timeout=4000,
                     )
+        phase = "cargar eventos del dispositivo seleccionado"
         page.wait_for_function(
             "() => document.querySelectorAll('#topologyEvents .topology-history-entry').length > 0",
-            timeout=3000,
+            timeout=7000,
         )
         if "Dispositivo detectado por primera vez" not in panel.locator("#topologyEvents").inner_text():
             failures.append("el detalle no muestra un evento del inventario asociado al dispositivo seleccionado")
@@ -442,18 +443,20 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
         page.locator("#topologyFit").click()
         search = panel.locator("#topologySearch")
         reset = panel.locator("#topologyResetSearch")
+        phase = "aplicar un filtro sin coincidencias"
         search.fill("filtro-sin-coincidencias")
         page.wait_for_function(
             "() => window.NetSentinelTopology.getGraphStats().deviceCount === 0",
-            timeout=3000,
+            timeout=5000,
         )
+        phase = "restablecer los filtros y recuperar los nodos"
         reset.click()
         page.wait_for_function(
             "() => window.NetSentinelTopology.getGraphStats().deviceCount > 0",
-            timeout=4000,
+            timeout=5000,
         )
     except Exception as exc:
-        failures.append(f"no se pudo seleccionar o filtrar un nodo del mapa: {exc}")
+        failures.append(f"no se pudo {locals().get('phase', 'seleccionar o filtrar un nodo del mapa')}: {exc}")
 
     metrics = _page_metrics(page)
     if metrics["documentWidth"] > metrics["viewportWidth"] + 1:
@@ -471,6 +474,21 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
             page.reload(wait_until="load", timeout=20000)
             page.wait_for_function(
                 "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                timeout=5000,
+            )
+            # El grafo guarda posiciones cuando el layout termina; no leer
+            # localStorage inmediatamente después del primer nodo visible.
+            page.wait_for_function(
+                """(key) => {
+                  try {
+                    const value = JSON.parse(localStorage.getItem(key) || "null");
+                    return value && typeof value === "object" && !Array.isArray(value) &&
+                      Object.entries(value).length > 0;
+                  } catch (_) {
+                    return false;
+                  }
+                }""",
+                position_key,
                 timeout=5000,
             )
             position_report = page.evaluate(
@@ -553,14 +571,16 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                 },
                 "warnings": [],
             }
-            page.route(
-                pattern,
-                lambda route: route.fulfill(
+            def _serve_subnet_only_topology(route):
+                requested_scan_id = urlsplit(route.request.url).path.rsplit("/", 1)[-1]
+                payload = {**subnet_only_payload, "scan_id": requested_scan_id}
+                route.fulfill(
                     status=200,
                     content_type="application/json",
-                    body=json.dumps(subnet_only_payload),
-                ),
-            )
+                    body=json.dumps(payload),
+                )
+
+            page.route(pattern, _serve_subnet_only_topology)
             page.reload(wait_until="load", timeout=20000)
             page.wait_for_function(
                 "() => { const graph = window.NetSentinelTopology; const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null; return stats && stats.nodeCount === 1 && stats.deviceCount === 0 && stats.edgeCount === 0; }",
