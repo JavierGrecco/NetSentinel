@@ -329,10 +329,12 @@
         scanObservedCount: null,
         networkScopeAvailable: networkScopeAvailable,
         warnings: warnings,
-        reason: warnings.join(" ") ||
-          (selectedScan
-            ? "No se pudo recuperar la evidencia exacta de la lectura seleccionada. No se muestran relaciones sin sus observaciones originales."
-            : "Todavía no hay una lectura de red seleccionada para construir el mapa.")
+        reason: !selectedScan
+          ? "Todavía no hay una lectura de red seleccionada para construir el mapa."
+          : !evidenceAvailable
+            ? "No se pudo recuperar la evidencia exacta de la lectura seleccionada. " +
+              (warnings.join(" ") || "No se dibujan relaciones hasta recuperar sus observaciones.")
+            : warnings.join(" ") || "La lectura no tiene datos suficientes para mostrar el grafo."
       };
     }
 
