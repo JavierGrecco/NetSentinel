@@ -106,6 +106,11 @@ def _read_networks(
         if not isinstance(item, Mapping):
             warnings.append("Se ignoró una entrada de subred con formato inválido.")
             continue
+        if item.get("range_limited") is True:
+            warnings.append(
+                "Al menos una subred tuvo alcance de descubrimiento limitado; "
+                "las ausencias no son concluyentes."
+            )
         raw_cidr = _text(item.get("network"))
         if raw_cidr is None:
             warnings.append("Se ignoró una subred sin rango registrado.")
@@ -133,12 +138,6 @@ def _read_networks(
                 local_address=_text(item.get("local_address")),
             )
         )
-        if item.get("range_limited") is True:
-            warnings.append(
-                "Al menos una subred tuvo alcance de descubrimiento limitado; "
-                "las ausencias no son concluyentes."
-            )
-
     # Una ordenación estable evita que el grafo cambie solo porque cambió
     # el orden en que el sistema operativo informó sus interfaces.
     networks.sort(key=lambda network: (network.cidr, network.interface or ""))
@@ -210,6 +209,11 @@ def build_topology_model(
         network_warnings = tuple(dict.fromkeys((
             *network_warnings,
             f"La lectura registró {len(scan_errors)} aviso(s); revisá su alcance antes de interpretar ausencias.",
+        )))
+    if scan.get("errors_available") is False:
+        network_warnings = tuple(dict.fromkeys((
+            *network_warnings,
+            "No se pudieron interpretar los avisos guardados de la lectura.",
         )))
 
     if observations is None:
