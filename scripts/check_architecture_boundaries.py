@@ -174,6 +174,10 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.database",
         "netsentinel.findings",
     },
+    "netsentinel.topology_service": {
+        "netsentinel.database",
+        "netsentinel.topology_model",
+    },
     "netsentinel.data_export_service": {
         "netsentinel.config",
         "netsentinel.csv_safety",
