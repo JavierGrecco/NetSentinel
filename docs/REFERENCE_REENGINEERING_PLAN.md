@@ -151,11 +151,15 @@ Cada capa se entrega como una PR pequeña contra una base actualizada, con sus p
 - [x] Rama de laboratorio creada desde el `main` consultado.
 - [x] Revisiones previas de ambos proyectos localizadas y contrastadas.
 - [x] Riesgos de reutilización y primeros límites de arquitectura documentados.
-- [x] Primer modelo puro de topología añadido en `src/netsentinel/topology_model.py`, sin integrar en la aplicación ni consultar SQLite.
-- [x] Pruebas de regresión añadidas en `tests/test_topology_model.py` para evidencia ausente, alcance de lectura, CIDR, direcciones múltiples y relaciones sin evidencia.
-- [ ] Ejecutar y aprobar CI sobre esta rama; las pruebas escritas todavía no se consideran validadas.
-- [ ] Revisar el estado final de CI y cerrar los pendientes de la PR #171 antes de usarla como base funcional.
-- [ ] Comparar el prototipo con las consultas reales de inventario y mantener solo las responsabilidades que no dupliquen módulos actuales.
+- [x] Modelo puro en `src/netsentinel/topology_model.py`, separado de la persistencia y la presentación.
+- [x] Consulta exacta de lecturas históricas expuesta por los repositorios/fachada existentes; evita depender del límite de las capturas recientes.
+- [x] Servicio de consulta en `src/netsentinel/topology_service.py`, con pruebas que usan SQLite temporal.
+- [x] Proyección neutral en `src/netsentinel/topology_graph.py`; produce nodos, relaciones, contadores y procedencia sin depender de Cytoscape.
+- [x] Pruebas para relaciones observadas, dispositivos sin enlace confirmado, direcciones múltiples, IDs estables, evidencia no disponible y lectura vacía.
+- [ ] Aprobar CI, análisis de seguridad y cadena de suministro en la cabeza final de la PR #172. Los resultados de commits anteriores no validan automáticamente los cambios posteriores.
+- [ ] Revisar con detalle el ajuste del repositorio de lecturas y la semántica de los metadatos actuales frente al historial.
+- [ ] Resolver los pendientes de la PR #171 antes de conectar la proyección neutral con la interfaz visual.
+- [ ] Mantener la PR como laboratorio hasta verificar que los módulos no duplican responsabilidades y que las pruebas cubren los casos de error.
 
 ## Referencias internas
 
