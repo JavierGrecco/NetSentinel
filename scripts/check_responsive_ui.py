@@ -318,7 +318,7 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
 
 
 
-def _topology_panel_failures(page) -> list[str]:
+def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list[str]:
     """Comprueba el explorador de red con una fixture sintética y controles reales."""
     failures: list[str] = []
     panel = page.locator("#topologyPanel")
@@ -337,6 +337,11 @@ def _topology_panel_failures(page) -> list[str]:
         )
     except Exception as exc:
         return [f"el mapa no terminó de dibujar la fixture de prueba: {exc}"]
+
+    if page.locator("#networkObservedMetric").inner_text().strip() != "1":
+        failures.append("el resumen no cuenta el dispositivo observado en la lectura sintética")
+    if page.locator("#networkSubnetMetric").inner_text().strip() != "1":
+        failures.append("el resumen no cuenta la subred registrada en la lectura sintética")
 
     accessible_details = panel.locator("details.topology-accessible")
     if accessible_details.count() != 1:
@@ -408,6 +413,41 @@ def _topology_panel_failures(page) -> list[str]:
             "el mapa abierto produce desplazamiento horizontal global "
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
+    if check_missing_evidence:
+        pattern = "**/api/scans/*/observations"
+        try:
+            # Simula que una fuente histórica no responde. El mapa no debe
+            # inventar líneas ni traducir la falta de datos en un cero confirmado.
+            page.route(
+                pattern,
+                lambda route: route.fulfill(
+                    status=503,
+                    content_type="application/json",
+                    body='{"detail":"Fallo sintético de lectura histórica"}',
+                ),
+            )
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => document.querySelector('#topologySummary')?.textContent.includes('No se pudo recuperar la evidencia exacta')",
+                timeout=5000,
+            )
+            if page.locator("#networkObservedMetric").inner_text().strip() != "—":
+                failures.append("la falta de evidencia se muestra como un cero confirmado en lugar de dato desconocido")
+            if page.locator("#topologyCanvas canvas").count() != 0:
+                failures.append("el explorador dibuja relaciones cuando no se recuperó la evidencia histórica")
+        except Exception as exc:
+            failures.append(f"no se pudo comprobar el estado de evidencia no disponible: {exc}")
+        finally:
+            try:
+                page.unroute(pattern)
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar la vista con evidencia tras la prueba: {exc}")
+
     return failures
 
 
@@ -610,7 +650,10 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 if viewport == Viewport(1440, 900):
                                     case_failures.extend(_scan_comparison_failures(page))
                             if path == "/network":
-                                case_failures.extend(_topology_panel_failures(page))
+                                case_failures.extend(_topology_panel_failures(
+                                    page,
+                                    check_missing_evidence=(viewport == Viewport(1440, 900)),
+                                ))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
 
