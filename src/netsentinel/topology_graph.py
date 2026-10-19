@@ -38,6 +38,7 @@ class TopologyGraphNode:
     manufacturer: str | None = None
     trusted: bool | None = None
     interface: str | None = None
+    local_address: str | None = None
     context_label: str | None = None
 
 
@@ -116,6 +117,7 @@ def _network_node(network: TopologyNetwork) -> TopologyGraphNode:
         detail=detail,
         network_id=network.id,
         interface=network.interface,
+        local_address=network.local_address,
     )
 
 
