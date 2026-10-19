@@ -158,6 +158,25 @@ def build_topology_graph(model: TopologyModel) -> TopologyGraph:
             key=lambda item: (item.ip_address, item.observed_at or "", item.source or ""),
         ))
         label, detail = _device_label(observations)
+        # Conserva fuente y fecha por IP incluso cuando no se pudo asociar
+        # la dirección a una subred y por eso la vista no dibuja una arista.
+        evidence_by_ip: dict[str, dict[str, set[str]]] = {}
+        for item in observations:
+            evidence = evidence_by_ip.setdefault(
+                item.ip_address, {"sources": set(), "times": set()}
+            )
+            if item.source:
+                evidence["sources"].add(item.source)
+            if item.observed_at:
+                evidence["times"].add(item.observed_at)
+        address_evidence = tuple(
+            TopologyGraphObservation(
+                ip_address=ip_address,
+                sources=tuple(sorted(evidence["sources"])),
+                observed_at=tuple(sorted(evidence["times"])),
+            )
+            for ip_address, evidence in sorted(evidence_by_ip.items())
+        )
         # Estos atributos proceden del registro actual de inventario, no de
         # una fotografía histórica inmutable de la ficha.
         context = "Ficha actual del inventario"
