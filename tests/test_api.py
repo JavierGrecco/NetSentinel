@@ -699,3 +699,54 @@ def test_events_api_can_filter_history_to_one_device(monkeypatch, tmp_path):
     assert all(item["device_id"] == first_id for item in first_events.json())
     assert all(item["device_id"] == second_id for item in second_events.json())
     assert {item["device_id"] for item in all_events} == {first_id, second_id}
+
+
+def test_topology_api_returns_evidence_and_preserves_missing_scan_errors(monkeypatch, tmp_path):
+    """La API entrega un grafo documentado y distingue una lectura inexistente."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    scan = database.record_scan(
+        [Neighbor("192.168.56.20", "02:00:00:00:00:20", "en0", "fixture-topology")],
+        discovery={
+            "networks": [
+                {
+                    "network": "192.168.56.0/24",
+                    "interface": "en0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                }
+            ],
+            "scope": "Fixture sintética de prueba.",
+        },
+    )
+    scan_id = int(scan["scan_id"])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(f"/api/scans/{scan_id}/topology")
+        missing = client.get("/api/scans/999999/topology")
+
+    assert response.status_code == 200
+    graph = response.json()
+    assert graph["scan_id"] == str(scan_id)
+    assert graph["evidence_available"] is True
+    assert graph["network_scope_available"] is True
+    assert graph["stats"] == {
+        "observed_devices": 1,
+        "known_subnets": 1,
+        "observed_memberships": 1,
+        "unlinked_devices": 0,
+    }
+    device_node = next(node for node in graph["nodes"] if node["kind"] == "device")
+    assert device_node["observations"] == [{
+        "ip_address": "192.168.56.20",
+        "sources": ["fixture-topology"],
+        "observed_at": [device_node["observations"][0]["observed_at"][0]],
+    }]
+    assert len(graph["edges"]) == 1
+    edge = graph["edges"][0]
+    assert edge["kind"] == "observed-subnet-membership"
+    assert edge["ip_address"] == "192.168.56.20"
+    assert edge["label"] == "192.168.56.20"
+    assert edge["sources"] == ["fixture-topology"]
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "No se encontró la lectura solicitada."
