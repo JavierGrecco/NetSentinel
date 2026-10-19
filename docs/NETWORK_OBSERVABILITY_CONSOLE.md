@@ -14,11 +14,15 @@ La experiencia de topología vive en una sección propia, accesible desde **Mapa
 - El historial lateral muestra observaciones históricas del equipo, con su hora, IP y fuente.
 - La sección «Cambios registrados» muestra eventos del inventario asociados al equipo (por ejemplo, primera detección o cambio de IP). Estos eventos describen lo que NetSentinel observó, no toda la actividad de red del dispositivo.
 - **Selector de lectura histórica:** se puede reconstruir el mapa de una captura anterior con las observaciones ligadas a esa lectura, sin reemplazarlas por direcciones actuales del inventario.
+- **Contrato único de topología:** la página solicita `GET /api/scans/{scan_id}/topology`. El servidor construye los nodos y las relaciones desde la evidencia guardada; el navegador se limita a aplicar búsqueda, filtros, selección y disposición visual. El endpoint también devuelve procedencia y contadores desconocidos cuando no se puede confirmar el alcance de las subredes.
+- Las lecturas sin rangos válidos también se pueden seleccionar. Si hay observaciones pero no hay alcance de red interpretable, se muestran equipos aislados y no se dibujan asociaciones inventadas. La lectura inicial sigue prefiriendo la captura más reciente con subredes válidas.
 - Buscar, filtrar, acercar, alejar, ajustar al área y reorganizar el grafo son acciones independientes y tienen etiquetas claras.
 - Las posiciones del mapa se guardan localmente como una preferencia de presentación; no se guardan como una nueva observación de red.
 - La lista textual permite elegir dispositivos sin depender del mapa visual.
 
 ## Qué no representa
+
+La API de topología es de solo lectura. No ejecuta descubrimientos por sí misma ni muta el inventario al reconstruir una lectura.
 
 La primera entrega no es una captura de paquetes ni una vista de tráfico en vivo. Una línea no significa que dos dispositivos intercambiaron tráfico, que estén conectados directamente por un cable o que se conozca el puerto de switch. La ausencia de un dispositivo en una lectura tampoco demuestra que esté desconectado.
 
