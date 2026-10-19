@@ -26,6 +26,7 @@ class TopologyNetwork:
     cidr: str
     interface: str | None = None
     local_address: str | None = None
+    range_limited: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +147,7 @@ def _read_networks(
                 cidr=cidr,
                 interface=interface,
                 local_address=_text(item.get("local_address")),
+                range_limited=item.get("range_limited") is True,
             )
         )
     # Una ordenación estable evita que el grafo cambie solo porque cambió
