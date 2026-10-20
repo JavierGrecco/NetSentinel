@@ -52,6 +52,35 @@ def _record(uid: str = "CZeekApi42") -> dict:
 def _jsonl(*records: dict) -> str:
     return "\n".join(json.dumps(record) for record in records) + "\n"
 
+def _zeek_tsv(*records: dict) -> str:
+    fields = [
+        "ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p",
+        "proto", "orig_bytes", "resp_bytes", "orig_pkts", "orig_ip_bytes",
+        "resp_pkts", "resp_ip_bytes",
+    ]
+    types = [
+        "time", "string", "addr", "port", "addr", "port", "enum",
+        "count", "count", "count", "count", "count", "count",
+    ]
+    lines = [
+        r"#separator \x09",
+        "#set_separator ,",
+        "#empty_field (empty)",
+        "#unset_field -",
+        "#path conn",
+        "#open 2026-10-20-12-00-00",
+        "#fields " + "\t".join(fields),
+        "#types " + "\t".join(types),
+    ]
+    for record in records:
+        lines.append(
+            "\t".join("-" if record.get(field) is None else str(record.get(field, "-")) for field in fields)
+        )
+    lines.append("#close 2026-10-20-12-00-00")
+    return "\n".join(lines) + "\n"
+
+
+
 
 def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
@@ -63,7 +92,7 @@ def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypat
     with TestClient(app, base_url="http://127.0.0.1") as client:
         preview = client.post(
             "/api/activity/import/zeek/preview",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(sample, sample)},
+            json={"device_id": selected_device, "log_data": _jsonl(sample, sample)},
         )
         assert preview.status_code == 200, preview.text
         preview_body = preview.json()
@@ -79,7 +108,7 @@ def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypat
 
         imported = client.post(
             "/api/activity/import/zeek",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(sample, sample)},
+            json={"device_id": selected_device, "log_data": _jsonl(sample, sample)},
         )
         assert imported.status_code == 200, imported.text
         assert imported.json()["imported"] == 1
@@ -89,7 +118,7 @@ def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypat
 
         imported_again = client.post(
             "/api/activity/import/zeek",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(sample, sample)},
+            json={"device_id": selected_device, "log_data": _jsonl(sample, sample)},
         )
         assert imported_again.status_code == 200, imported_again.text
         assert imported_again.json()["imported"] == 0
@@ -124,7 +153,7 @@ def test_zeek_import_rejects_malformed_data_without_partial_writes(monkeypatch, 
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.post(
             "/api/activity/import/zeek",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(good, bad)},
+            json={"device_id": selected_device, "log_data": _jsonl(good, bad)},
         )
         assert response.status_code == 422
         assert "Fila 2" in response.json()["detail"]
@@ -144,7 +173,7 @@ def test_zeek_import_skips_rows_outside_selected_device_scope(monkeypatch, tmp_p
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.post(
             "/api/activity/import/zeek/preview",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(matching, outside)},
+            json={"device_id": selected_device, "log_data": _jsonl(matching, outside)},
         )
         assert response.status_code == 200, response.text
         preview = response.json()
@@ -159,7 +188,7 @@ def test_zeek_import_skips_rows_outside_selected_device_scope(monkeypatch, tmp_p
 
         imported = client.post(
             "/api/activity/import/zeek",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(matching, outside)},
+            json={"device_id": selected_device, "log_data": _jsonl(matching, outside)},
         )
         assert imported.status_code == 200, imported.text
         assert imported.json()["imported"] == 1
@@ -191,7 +220,7 @@ def test_zeek_import_supports_legacy_device_without_address_history(monkeypatch,
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.post(
             "/api/activity/import/zeek/preview",
-            json={"device_id": selected_device, "jsonl_data": _jsonl(_record())},
+            json={"device_id": selected_device, "log_data": _jsonl(_record())},
         )
         assert response.status_code == 200, response.text
         result = response.json()
@@ -200,6 +229,42 @@ def test_zeek_import_supports_legacy_device_without_address_history(monkeypatch,
         assert result["would_import"] == 1
         assert result["skipped_out_of_scope"] == 0
         assert result["skipped_ambiguous"] == 0
+
+
+def test_zeek_import_accepts_native_tsv_conn_log(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+    selected_device = _create_device()
+    record = _record("CZeekTsv42")
+    record["id.orig_h"] = "192.0.2.42"
+    log_data = _zeek_tsv(record)
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        preview = client.post(
+            "/api/activity/import/zeek/preview",
+            json={"device_id": selected_device, "log_data": log_data},
+        )
+        assert preview.status_code == 200, preview.text
+        preview_body = preview.json()
+        assert preview_body["valid_rows"] == 1
+        assert preview_body["matching_rows"] == 1
+        assert preview_body["would_import"] == 1
+        assert preview_body["preview_rows"][0]["source_event_id"] == "zeek:CZeekTsv42"
+        assert preview_body["preview_rows"][0]["bytes_sent"] == 118
+        assert preview_body["preview_rows"][0]["bytes_received"] == 197
+        assert client.get(f"/api/activity?device_id={selected_device}").json()["events"] == []
+
+        imported = client.post(
+            "/api/activity/import/zeek",
+            json={"device_id": selected_device, "log_data": log_data},
+        )
+        assert imported.status_code == 200, imported.text
+        assert imported.json()["imported"] == 1
+        event = client.get(f"/api/activity?device_id={selected_device}").json()["events"][0]
+        assert event["source_event_id"] == "zeek:CZeekTsv42"
+        assert event["bytes_sent"] == 118
+        assert event["bytes_received"] == 197
 
 
 def test_zeek_import_rejects_unknown_request_fields(monkeypatch, tmp_path):
@@ -213,7 +278,7 @@ def test_zeek_import_rejects_unknown_request_fields(monkeypatch, tmp_path):
             "/api/activity/import/zeek/preview",
             json={
                 "device_id": selected_device,
-                "jsonl_data": _jsonl(_record()),
+                "log_data": _jsonl(_record()),
                 "unexpected": "ignored data must not enter the import contract",
             },
         )

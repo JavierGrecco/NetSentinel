@@ -141,11 +141,11 @@ def test_zeek_import_enforces_size_and_row_limits(monkeypatch):
     monkeypatch.setattr(importer.activity_repository, "require_device_exists", lambda _id: None)
 
     with pytest.raises(ValueError, match="1 MB"):
-        importer.import_jsonl(1, " " * (importer.MAX_IMPORT_BYTES + 1))
+        importer.import_log(1, " " * (importer.MAX_IMPORT_BYTES + 1))
 
     jsonl = _jsonl(*[_record(uid=f"uid-{index}") for index in range(importer.MAX_IMPORT_ROWS + 1)])
     with pytest.raises(ValueError, match="1000"):
-        importer.import_jsonl(1, jsonl)
+        importer.import_log(1, jsonl)
 
 
 def test_zeek_preview_does_not_write_and_reports_duplicate_source_ids(monkeypatch):
@@ -167,7 +167,7 @@ def test_zeek_preview_does_not_write_and_reports_duplicate_source_ids(monkeypatc
 
     monkeypatch.setattr(importer.activity_repository, "import_manual_events", fake_import)
 
-    result = importer.import_jsonl(
+    result = importer.import_log(
         7,
         _jsonl(_record(), _record()),
         normalize_event=lambda event, **kwargs: {**event, "source": kwargs["source_override"]},
@@ -203,7 +203,7 @@ def test_zeek_import_skips_connections_that_do_not_touch_the_selected_device(mon
         "id.orig_h": "203.0.113.44",
         "id.resp_h": "198.51.100.80",
     })
-    result = importer.import_jsonl(
+    result = importer.import_log(
         1,
         _jsonl(_record(), other),
         normalize_event=lambda event, **kwargs: {**event, "source": kwargs["source_override"]},
@@ -228,7 +228,7 @@ def test_zeek_import_does_not_use_ip_outside_its_observed_interval(monkeypatch):
 
     monkeypatch.setattr(importer.activity_repository, "import_manual_events", fail_if_called)
     old_ts = (datetime.now(timezone.utc) - timedelta(hours=2)).timestamp()
-    result = importer.import_jsonl(
+    result = importer.import_log(
         1,
         _jsonl(_record(ts=old_ts)),
         normalize_event=lambda event, **kwargs: {**event, "source": kwargs["source_override"]},
@@ -270,7 +270,7 @@ def test_zeek_import_skips_flows_when_ip_history_overlaps_another_asset(monkeypa
         raise AssertionError("Una dirección con propietarios solapados no debe importarse.")
 
     monkeypatch.setattr(importer.activity_repository, "import_manual_events", fail_if_called)
-    result = importer.import_jsonl(
+    result = importer.import_log(
         1,
         _jsonl(_record()),
         normalize_event=lambda event, **kwargs: {**event, "source": kwargs["source_override"]},
@@ -295,4 +295,4 @@ def test_zeek_import_rejects_bad_record_before_repository_write(monkeypatch):
 
     invalid = _record(**{"id.orig_h": "invalid-ip"})
     with pytest.raises(ValueError, match="Fila 1"):
-        importer.import_jsonl(1, _jsonl(invalid))
+        importer.import_log(1, _jsonl(invalid))

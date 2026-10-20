@@ -2,11 +2,11 @@
 
 **Estado:** primera versión del adaptador, aislada en la rama `feat/zeek-connlog-import-2026-10`.  
 **Modalidad:** importación explícita de archivo; solo lectura de la fuente original.  
-**Límites:** 1 MB por petición y hasta 1000 registros JSON Lines.
+**Límites:** 1 MB por petición y hasta 1000 registros.
 
 ## Para qué sirve
 
-Permite incorporar a la sección Actividad metadatos de conexión que Zeek ya haya exportado a un archivo JSON Lines. NetSentinel no inicia Zeek, no captura paquetes, no abre interfaces de red y no configura sensores. El archivo debe provenir de una red propia o de una fuente para la que exista autorización.
+Permite incorporar a la sección Actividad metadatos de conexión que Zeek ya haya exportado a su formato TSV habitual o a JSON Lines. NetSentinel no inicia Zeek, no captura paquetes, no abre interfaces de red y no configura sensores. El archivo debe provenir de una red propia o de una fuente para la que exista autorización.
 
 Zeek documenta `conn.log` como un registro de conversaciones de red con campos como `ts`, `uid`, `id.orig_h`, `id.orig_p`, `id.resp_h`, `id.resp_p`, `proto`, `orig_bytes`, `resp_bytes`, `orig_ip_bytes`, `resp_ip_bytes`, `orig_pkts` y `resp_pkts`. La referencia de campos es la [documentación oficial de conn.log](https://docs.zeek.org/en/current/reference/logs/conn.html).
 
@@ -28,7 +28,7 @@ Como un archivo de Zeek puede contener conexiones de muchos equipos, la asociaci
 
 ## Validaciones y protección de datos
 
-- Solo se acepta JSON Lines: un objeto JSON por línea. Los archivos TSV habituales de Zeek no se interpretan como JSON.
+- Se admite JSON Lines (un objeto JSON por línea) y el TSV nativo de Zeek. El TSV estándar se lee mediante sus directivas `#separator`, `#path`, `#fields` y `#types`; también se acepta TSV simple con una primera fila de nombres de campo.
 - Se rechazan filas malformadas, claves JSON repetidas, IP no válidas, puertos fuera de rango, contadores negativos o no enteros, marcas de tiempo no válidas y más de 1000 registros.
 - Se valida el lote completo antes de escribir. Una fila inválida hace que la importación completa falle, sin guardar filas anteriores del mismo archivo.
 - La vista previa usa la misma validación, política de retención y deduplicación que la importación real, pero no escribe eventos.
@@ -39,7 +39,7 @@ Como un archivo de Zeek puede contener conexiones de muchos equipos, la asociaci
 
 ## API disponible en esta primera entrega
 
-La integración ofrece dos operaciones locales. En ambas, el cuerpo usa `device_id` del dispositivo que se asocia a esta importación y `jsonl_data` con el contenido del archivo.
+La integración ofrece dos operaciones locales. En ambas, el cuerpo usa `device_id` del dispositivo asociado y `log_data` con el contenido de `conn.log`, ya sea TSV o JSON Lines.
 
 - `POST /api/activity/import/zeek/preview`: valida y muestra hasta diez registros de ejemplo, con indicación de duplicados. No guarda datos.
 - `POST /api/activity/import/zeek`: importa el lote validado y devuelve los recuentos de registros nuevos y duplicados.
@@ -49,7 +49,7 @@ Ejemplo de JSON para una petición de vista previa:
 ```json
 {
   "device_id": 1,
-  "jsonl_data": "{\"ts\": 1792490400, \"uid\": \"CZeekExample42\", \"id.orig_h\": \"192.0.2.20\", \"id.orig_p\": 51514, \"id.resp_h\": \"198.51.100.53\", \"id.resp_p\": 53, \"proto\": \"udp\", \"orig_bytes\": 62, \"resp_bytes\": 141, \"orig_ip_bytes\": 118, \"resp_ip_bytes\": 197, \"orig_pkts\": 2, \"resp_pkts\": 3}"
+  "log_data": "{\"ts\": 1792490400, \"uid\": \"CZeekExample42\", \"id.orig_h\": \"192.0.2.20\", \"id.orig_p\": 51514, \"id.resp_h\": \"198.51.100.53\", \"id.resp_p\": 53, \"proto\": \"udp\", \"orig_bytes\": 62, \"resp_bytes\": 141, \"orig_ip_bytes\": 118, \"resp_ip_bytes\": 197, \"orig_pkts\": 2, \"resp_pkts\": 3}"
 }
 ```
 
@@ -57,7 +57,7 @@ La sección Actividad incluye selector de archivo, selección de dispositivo, vi
 
 ## Pruebas previstas y límites conocidos
 
-La sección Actividad incluye selección de archivo, selección explícita del dispositivo, vista previa y confirmación de importación. La vista previa indica cuántas filas están dentro del alcance temporal, cuántas se omitirían por quedar fuera del intervalo observado y cuántas son ambiguas por intervalos de propiedad de IP solapados.
+La sección Actividad incluye selección de archivo, selección explícita del dispositivo, vista previa y confirmación de importación para ambos formatos. La vista previa indica cuántas filas están dentro del alcance temporal, cuántas se omitirían por quedar fuera del intervalo observado y cuántas son ambiguas por intervalos de propiedad de IP solapados.
 
 Las pruebas automáticas usan únicamente registros sintéticos y una base SQLite temporal. Cubren el mapeo direccional, cero frente a desconocido, registros repetidos, vista previa, reimportación idempotente, alcance por IP del dispositivo seleccionado, validación estricta y ausencia de escrituras parciales.
 
@@ -66,11 +66,11 @@ Esto no sustituye la prueba manual con un archivo Zeek real, sanitizado y autori
 ## Comprobación manual antes de salir del borrador
 
 1. Abrí **Actividad → Importar** y elegí un dispositivo que tenga direcciones con historial de observación.
-2. Cargá un archivo `.jsonl` o `.ndjson` de una red propia o autorizada. Primero usá **Previsualizar registros**. Confirmá que se muestran el origen, destino, protocolo y contadores; los campos ausentes deben indicar que son desconocidos.
+2. Cargá el `conn.log` TSV predeterminado o un archivo `.jsonl`/`.ndjson` de una red propia o autorizada. Primero usá **Previsualizar registros**. Confirmá que se muestran el origen, destino, protocolo y contadores; los campos ausentes deben indicar que son desconocidos.
 3. Antes de importar, consultá **Actividad → Eventos**: el evento sintético de prueba no debe aparecer. Volvé a Importar, confirmá la acción y verificá que se guarde una sola fila con identificador `zeek:<uid>`.
 4. Previsualizá e importá de nuevo el mismo archivo. La segunda operación debe señalar duplicados y no crear otra fila.
 5. Probá un archivo con una fila malformada después de una fila válida. La petición debe informar la fila con error y no guardar ninguna parte del lote. Probá también un registro cuya IP cae fuera del intervalo de observación y otro cuya IP tenga propietarios solapados; ambos deben quedar omitidos y contabilizados.
 6. Repetí el recorrido en escritorio y móvil, incluyendo selección de archivo, teclado, mensajes de error, desplazamiento horizontal y los tres temas visuales.
 
-Usá registros sanitizados y no incluyas datos sensibles innecesarios. No hace falta ejecutar Zeek ni generar tráfico de red para completar las primeras comprobaciones.
+Usá registros sanitizados y no incluyas datos sensibles innecesarios. No hace falta ejecutar Zeek ni generar tráfico de red para completar las primeras comprobaciones. La estructura del TSV de Zeek sigue la [guía oficial de formatos de registro](https://docs.zeek.org/en/current/tutorial/logs.html).
 

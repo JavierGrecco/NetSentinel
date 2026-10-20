@@ -1,6 +1,6 @@
-"""Importación explícita de registros Zeek conn.log en JSON Lines.
+"""Importación explícita de registros Zeek conn.log en JSON Lines o TSV.
 
-El servicio no ejecuta Zeek ni abre interfaces de red. Valida un archivo que la
+El servicio no ejecuta Zeek ni abre interfaces de red. Valida el archivo que la
 persona selecciona, adapta solo metadatos de conexión al contrato compartido y
 delega la persistencia transaccional y la deduplicación al repositorio existente.
 """
@@ -9,6 +9,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import math
+import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -73,6 +74,120 @@ def _parse_json_line(raw_line: str, line_number: int) -> dict[str, Any] | None:
     return record
 
 
+_REQUIRED_ZEEK_FIELDS = {
+    "ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto",
+}
+_ZEEK_PORT_FIELDS = {"id.orig_p", "id.resp_p"}
+_ZEEK_COUNTER_FIELDS = {"orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts"}
+
+
+def _decode_zeek_separator(value: str) -> str:
+    """Interpreta el separador declarado por Zeek sin aceptar saltos de línea."""
+    raw = value.strip()
+    match = re.fullmatch(r"\\x\s*([0-9a-fA-F]{2})", raw)
+    if match:
+        separator = chr(int(match.group(1), 16))
+    elif len(raw) == 1:
+        separator = raw
+    else:
+        raise ValueError("El separador declarado por Zeek no es válido.")
+    if separator in {"\r", "\n", "\x00"}:
+        raise ValueError("El separador declarado por Zeek no está permitido.")
+    return separator
+
+
+def _zeek_tsv_value(field: str, value: str, line_number: int) -> Any:
+    """Convierte a número solo los campos de conn.log que lo requieren."""
+    if field == "ts":
+        try:
+            parsed = float(value)
+        except ValueError as exc:
+            raise ValueError(f"Fila {line_number}: ts debe ser un número Unix válido.") from exc
+        if not math.isfinite(parsed):
+            raise ValueError(f"Fila {line_number}: ts debe ser un número Unix finito.")
+        return parsed
+    if field in _ZEEK_PORT_FIELDS | _ZEEK_COUNTER_FIELDS:
+        try:
+            return int(value, 10)
+        except ValueError as exc:
+            raise ValueError(f"Fila {line_number}: {field} debe ser un entero válido.") from exc
+    return value
+
+
+def _parse_zeek_tsv(log_data: str) -> list[tuple[int, dict[str, Any]]]:
+    """Lee el TSV nativo de Zeek, incluidos encabezados y campos sin valor."""
+    separator = "\t"
+    unset_field = "-"
+    empty_field = "(empty)"
+    fields: list[str] | None = None
+    field_types: list[str] | None = None
+    log_path: str | None = None
+    rows: list[tuple[int, dict[str, Any]]] = []
+
+    for line_number, raw_line in enumerate(log_data.splitlines(), start=1):
+        if not raw_line.strip():
+            continue
+
+        if raw_line.startswith("#"):
+            if raw_line.startswith("#separator"):
+                separator = _decode_zeek_separator(raw_line[len("#separator"):])
+            elif raw_line.startswith("#unset_field"):
+                unset_field = raw_line[len("#unset_field"):].strip()
+            elif raw_line.startswith("#empty_field"):
+                empty_field = raw_line[len("#empty_field"):].strip()
+            elif raw_line.startswith("#path"):
+                log_path = raw_line[len("#path"):].strip()
+            elif raw_line.startswith("#fields"):
+                fields = raw_line[len("#fields"):].lstrip().split(separator)
+            elif raw_line.startswith("#types"):
+                field_types = raw_line[len("#types"):].lstrip().split(separator)
+            # #open, #close, #set_separator y otras directivas son metadatos.
+            continue
+
+        if fields is None:
+            # También se admite TSV simple con una fila de nombres, sin directivas
+            # #separator/#fields. En ese caso se utiliza el separador tabulado.
+            possible_fields = raw_line.split(separator)
+            if _REQUIRED_ZEEK_FIELDS.issubset(set(possible_fields)):
+                fields = possible_fields
+                continue
+            raise ValueError(
+                f"Fila {line_number}: falta la cabecera de campos del registro Zeek."
+            )
+
+        values = raw_line.split(separator)
+        if len(values) != len(fields):
+            raise ValueError(
+                f"Fila {line_number}: se esperaban {len(fields)} columnas Zeek "
+                f"y se encontraron {len(values)}."
+            )
+
+        record: dict[str, Any] = {}
+        for field, value in zip(fields, values):
+            if value == unset_field or value == empty_field:
+                record[field] = None
+            else:
+                record[field] = _zeek_tsv_value(field, value, line_number)
+        rows.append((line_number, record))
+        if len(rows) > MAX_IMPORT_ROWS:
+            raise ValueError("Se permiten hasta 1000 registros por importación.")
+
+    if log_path and log_path != "conn":
+        raise ValueError("El archivo Zeek no es un conn.log: la cabecera indica otro tipo de registro.")
+    if fields is None:
+        raise ValueError("El archivo no contiene una cabecera Zeek válida.")
+    if len(set(fields)) != len(fields):
+        raise ValueError("La cabecera Zeek contiene nombres de campo repetidos.")
+    missing = sorted(_REQUIRED_ZEEK_FIELDS - set(fields))
+    if missing:
+        raise ValueError(
+            "El conn.log no contiene los campos necesarios: " + ", ".join(missing) + "."
+        )
+    if field_types is not None and len(field_types) != len(fields):
+        raise ValueError("La cantidad de tipos de la cabecera Zeek no coincide con sus campos.")
+    return rows
+
+
 def _required_text(record: dict[str, Any], field: str, line_number: int, *, maximum: int = 160) -> str:
     """Valida los identificadores y etiquetas que Zeek debe aportar."""
     value = record.get(field)
@@ -105,6 +220,8 @@ def _zeek_port(record: dict[str, Any], field: str, line_number: int) -> int | No
     if field not in record:
         raise ValueError(f"Fila {line_number}: falta el campo obligatorio {field}.")
     value = record[field]
+    if value is None or value == "-":
+        return None
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"Fila {line_number}: {field} debe ser un entero.")
     if value < 0 or value > 65535:
@@ -224,39 +341,46 @@ def _device_address_history(device_id: int) -> list[dict[str, Any]]:
     return history
 
 
-def import_jsonl(
+def import_log(
     device_id: int,
-    jsonl_data: str,
+    log_data: str,
     *,
     normalize_event: EventNormalizer | None = None,
     preview: bool = False,
 ) -> dict[str, Any]:
-    """Valida un archivo Zeek JSONL y lo previsualiza o importa de forma atómica.
+    """Valida JSON Lines o TSV de Zeek y previsualiza/importa el lote atómicamente.
 
-    Solo se admite el formato JSON Lines, con un objeto por línea. No se leen
-    paquetes ni se contacta con la fuente Zeek. La escritura reutiliza la política
-    común de retención y deduplicación de las importaciones manuales.
+    Se admiten objetos JSON Lines y el TSV nativo de Zeek, con cabecera estándar
+    o una primera fila de nombres de campo. No se leen paquetes ni se contacta
+    con Zeek. La persistencia reutiliza retención y deduplicación compartidas.
     """
-    if not isinstance(jsonl_data, str):
-        raise ValueError("El archivo debe ser texto JSON Lines.")
+    if not isinstance(log_data, str):
+        raise ValueError("El archivo debe ser texto UTF-8 de Zeek.")
     try:
-        encoded_size = len(jsonl_data.encode("utf-8"))
+        encoded_size = len(log_data.encode("utf-8"))
     except UnicodeEncodeError as exc:
         raise ValueError("El archivo debe contener texto UTF-8 válido.") from exc
     if encoded_size > MAX_IMPORT_BYTES:
         raise ValueError("El archivo supera el máximo de 1 MB.")
-    # Tolerar el BOM de un archivo UTF-8, sin permitirlo en mitad de los registros.
-    if jsonl_data.startswith("\ufeff"):
-        jsonl_data = jsonl_data[1:]
+    # Tolerar el BOM de un archivo UTF-8 sin alterar el contenido de cada fila.
+    if log_data.startswith("\ufeff"):
+        log_data = log_data[1:]
 
     rows: list[tuple[int, dict[str, Any]]] = []
-    for line_number, raw_line in enumerate(jsonl_data.split("\n"), start=1):
-        record = _parse_json_line(raw_line, line_number)
-        if record is None:
-            continue
-        if len(rows) >= MAX_IMPORT_ROWS:
-            raise ValueError("Se permiten hasta 1000 registros por importación.")
-        rows.append((line_number, record))
+    first_line = next((line.lstrip() for line in log_data.splitlines() if line.strip()), "")
+    if not first_line:
+        rows = []
+    elif first_line.startswith("{") or first_line.startswith("["):
+        # JSON Lines: un objeto JSON por línea.
+        for line_number, raw_line in enumerate(log_data.splitlines(), start=1):
+            record = _parse_json_line(raw_line, line_number)
+            if record is None:
+                continue
+            rows.append((line_number, record))
+            if len(rows) > MAX_IMPORT_ROWS:
+                raise ValueError("Se permiten hasta 1000 registros por importación.")
+    else:
+        rows = _parse_zeek_tsv(log_data)
 
     activity_repository.require_device_exists(device_id)
     if not rows:
