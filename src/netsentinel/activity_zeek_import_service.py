@@ -406,8 +406,6 @@ def import_jsonl(
         else:
             note = "No se añadieron registros nuevos; las conexiones asociadas ya existían."
         if skipped_out_of_scope:
-            note += f" Se omitieron {skipped_out_of_scope} registro(s) de otros dispositivos."
-        if skipped_out_of_scope:
             note += f" Se omitieron {skipped_out_of_scope} registro(s) fuera del intervalo observado."
         if skipped_ambiguous:
             note += f" Se omitieron {skipped_ambiguous} registro(s) con propiedad de IP ambigua."

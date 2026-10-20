@@ -165,6 +165,8 @@ def test_zeek_import_skips_rows_outside_selected_device_scope(monkeypatch, tmp_p
         assert imported.json()["imported"] == 1
         assert imported.json()["skipped_out_of_scope"] == 1
         assert imported.json()["skipped_ambiguous"] == 0
+        assert imported.json()["note"].count("fuera del intervalo observado") == 1
+        assert "otros dispositivos" not in imported.json()["note"]
         events = client.get(f"/api/activity?device_id={selected_device}").json()["events"]
         assert len(events) == 1
         assert events[0]["source_event_id"] == "zeek:CMatchesDevice"

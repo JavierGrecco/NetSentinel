@@ -1,4 +1,4 @@
-"""Persistencia transaccional de eventos importados desde CSV.
+"""Persistencia transaccional de eventos importados manualmente.
 
 La validación del archivo y sus mensajes se resuelven en el servicio de importación.
 Aquí se aplican retención, deduplicación y escritura atómica; la vista previa no escribe.
@@ -61,7 +61,7 @@ def import_manual_events(
                 raise ValueError(
                     f"Fila {line}: la fecha queda fuera de la retención configurada "
                     f"de {retention_days} día(s). Aumentá la retención antes de importar "
-                    "ese período y volvé a previsualizar el CSV."
+                    "ese período y volvé a previsualizar la importación."
                 )
 
         duplicate_sql = (

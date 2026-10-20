@@ -893,6 +893,19 @@ def _zeek_import_ui_failures(page, base_url: str, viewport: Viewport) -> list[st
         if "no se guardó" not in preview_text.lower():
             failures.append("la vista previa Zeek no aclara que no se guardaron eventos")
 
+        displayed_time = page.locator("#zeekPreviewRows tr td").first.inner_text()
+        expected_utc_time = page.evaluate(
+            """(timestamp) => new Intl.DateTimeFormat(undefined, {
+              dateStyle: "short", timeStyle: "medium", timeZone: "UTC"
+            }).format(new Date(timestamp * 1000)) + " UTC" """,
+            observed_at,
+        )
+        if displayed_time != expected_utc_time:
+            failures.append(
+                "la hora de la vista previa Zeek no coincide con UTC "
+                f"(mostrada: {displayed_time}; esperada: {expected_utc_time})"
+            )
+
         before = page.request.get(
             f"{base_url}/api/activity?device_id={device_id}",
             timeout=5000,
