@@ -718,9 +718,25 @@ def test_scan_comparison_uses_historical_observations_and_does_not_claim_disconn
     assert moved["status"] == "address_changed"
     assert moved["baseline_addresses"] == ["192.168.5.10"]
     assert moved["comparison_addresses"] == ["192.168.5.11"]
+    assert moved["baseline_evidence"] == [{
+        "scan_id": baseline["scan_id"],
+        "ip_address": "192.168.5.10",
+        "observed_at": moved["baseline_evidence"][0]["observed_at"],
+        "source": "automatic-local-network",
+    }]
+    assert moved["baseline_evidence"][0]["observed_at"]
+    assert moved["comparison_evidence"] == [{
+        "scan_id": comparison["scan_id"],
+        "ip_address": "192.168.5.11",
+        "observed_at": moved["comparison_evidence"][0]["observed_at"],
+        "source": "automatic-local-network",
+    }]
+    assert moved["comparison_evidence"][0]["observed_at"]
     not_seen_later = changes["AA:BB:CC:DD:EE:03"]
     assert not_seen_later["status"] == "only_in_baseline"
     assert not_seen_later["comparison_addresses"] == []
+    assert not_seen_later["baseline_evidence"]
+    assert not_seen_later["comparison_evidence"] == []
     assert "No demuestra" in result["absence_note"]
     assert "desconectado" not in not_seen_later["status"]
 

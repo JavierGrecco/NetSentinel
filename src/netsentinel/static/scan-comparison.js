@@ -100,6 +100,55 @@
       for (const item of response.warnings) appendText(list, "li", item);
     }
   }
+  function renderCaptureEvidence(parent, label, scan, observations, side) {
+    const section = appendText(parent, "section", "", "scan-compare-evidence");
+    appendText(section, "strong", label + " · captura #" + scan.id, "scan-compare-evidence-title");
+    const evidence = Array.isArray(observations) ? observations : [];
+    if (!evidence.length) {
+      appendText(
+        section,
+        "p",
+        "No se registraron observaciones para este dispositivo en esa captura.",
+        "scan-compare-item-meta"
+      );
+    } else {
+      for (const observation of evidence) {
+        const address = observation.ip_address || "Dirección sin identificar";
+        const source = observation.source || "fuente desconocida";
+        appendText(
+          section,
+          "div",
+          address + " · " + dateLabel(observation.observed_at) + " · Fuente: " + source,
+          "scan-compare-item-meta"
+        );
+      }
+    }
+
+    const scanSelect = element("topologyScanSelect");
+    if (!scanSelect) return;
+    const button = root.document.createElement("button");
+    button.type = "button";
+    button.className = "quiet scan-compare-evidence-action";
+    button.textContent = "Ver en el mapa";
+    button.setAttribute("aria-label", "Ver la captura " + side + " #" + scan.id + " en el mapa");
+    button.addEventListener("click", function () {
+      const available = Array.from(scanSelect.options).some(option => option.value === String(scan.id));
+      if (!available) {
+        showMessage(
+          "La captura #" + scan.id + " ya no está en la lista cargada. Cargá capturas anteriores y volvé a comparar."
+        );
+        return;
+      }
+      scanSelect.value = String(scan.id);
+      scanSelect.dispatchEvent(new root.Event("change", { bubbles: true }));
+      const panel = element("topologyPanel");
+      if (panel && typeof panel.scrollIntoView === "function") {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+    section.appendChild(button);
+  }
+
   function renderChanges(parent, response) {
     const changes = Array.isArray(response.changes) ? response.changes : [];
     if (!changes.length) {
@@ -121,11 +170,20 @@
         ? change.comparison_addresses.join(", ") : "Sin observación registrada";
       appendText(item, "div", "En la captura anterior: " + before, "scan-compare-item-meta");
       appendText(item, "div", "En la captura posterior: " + after, "scan-compare-item-meta");
-      const sources = [...new Set([
-        ...(Array.isArray(change.baseline_sources) ? change.baseline_sources : []),
-        ...(Array.isArray(change.comparison_sources) ? change.comparison_sources : [])
-      ])];
-      if (sources.length) appendText(item, "div", "Fuentes registradas: " + sources.join(", "), "scan-compare-item-meta");
+      renderCaptureEvidence(
+        item,
+        "Captura anterior",
+        response.baseline_scan || {},
+        change.baseline_evidence,
+        "anterior"
+      );
+      renderCaptureEvidence(
+        item,
+        "Captura posterior",
+        response.comparison_scan || {},
+        change.comparison_evidence,
+        "posterior"
+      );
     }
   }
   function renderComparison(response) {

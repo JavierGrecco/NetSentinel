@@ -34,7 +34,7 @@ Los datos actuales permiten consultar observaciones del inventario y pruebas de 
 
 ### Etapa A — Investigación LAN
 
-Completar mapa, detalle de activo, historial, comparación de lecturas, procedencia y filtros. La página `/network` incluye un panel que compara dos capturas usando la API histórica existente y exige al menos una subred privada compartida. Las IP y fuentes mostradas proceden de cada captura; el nombre y la MAC visibles se toman de la ficha actual del inventario y no deben presentarse como identidad histórica inmutable. La interfaz lo aclara junto al comparador. Mantener una alternativa textual y validar escritorio, móvil, teclado y lectores de pantalla.
+Completar mapa, detalle de activo, historial, comparación de lecturas, procedencia y filtros. La página `/network` incluye un panel que compara dos capturas usando la API histórica existente y exige al menos una subred privada compartida. Cada diferencia muestra la dirección, la hora y la fuente de las observaciones que la sustentan; desde cada lado se puede abrir esa captura en el mapa. Las IP y fuentes proceden de cada captura; el nombre y la MAC visibles se toman de la ficha actual del inventario y no deben presentarse como identidad histórica inmutable. La interfaz lo aclara junto al comparador. Mantener una alternativa textual y validar escritorio, móvil, teclado y lectores de pantalla.
 
 ### Etapa B — Actividad por dispositivo
 
@@ -44,7 +44,7 @@ Las integraciones se diseñarán como adaptadores separados, inicialmente de sol
 
 ### Etapa C — Investigación de cambios
 
-Comparar dos lecturas compatibles, destacar equipos que aparecen o dejan de aparecer y cambios de dirección, y enlazar cada conclusión con la observación original. La interfaz debe evitar tratar ausencia o datos antiguos como fallos confirmados.
+Comparar dos lecturas compatibles, destacar equipos que aparecen o dejan de aparecer y cambios de dirección, mostrar la hora y fuente de cada observación y permitir abrir en el mapa cualquiera de las capturas de respaldo. La interfaz debe evitar tratar ausencia o datos antiguos como fallos confirmados.
 
 ### Etapa D — Vistas especializadas
 

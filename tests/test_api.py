@@ -696,6 +696,14 @@ def test_scan_comparison_endpoint_is_read_only_and_handles_invalid_pairs(monkeyp
     assert body["summary"]["address_changed"] == 1
     assert body["changes"][0]["baseline_addresses"] == ["192.168.5.4"]
     assert body["changes"][0]["comparison_addresses"] == ["192.168.5.5"]
+    assert body["changes"][0]["baseline_evidence"][0]["scan_id"] == first["scan_id"]
+    assert body["changes"][0]["baseline_evidence"][0]["ip_address"] == "192.168.5.4"
+    assert body["changes"][0]["baseline_evidence"][0]["observed_at"]
+    assert body["changes"][0]["baseline_evidence"][0]["source"] == "automatic-local-network"
+    assert body["changes"][0]["comparison_evidence"][0]["scan_id"] == second["scan_id"]
+    assert body["changes"][0]["comparison_evidence"][0]["ip_address"] == "192.168.5.5"
+    assert body["changes"][0]["comparison_evidence"][0]["observed_at"]
+    assert body["changes"][0]["comparison_evidence"][0]["source"] == "automatic-local-network"
     assert body["absence_note"]
     assert response.headers["cache-control"] == "no-store"
     assert same.status_code == 422

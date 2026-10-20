@@ -105,12 +105,20 @@ def _seed_topology_fixture(data_dir: Path) -> None:
     try:
         database.initialize(database_file)
         database.record_scan(
-            [Neighbor(
-                "192.168.56.20",
-                "02:00:00:00:00:20",
-                "fixture0",
-                "responsive-ui-fixture",
-            )],
+            [
+                Neighbor(
+                    "192.168.56.20",
+                    "02:00:00:00:00:20",
+                    "fixture0",
+                    "responsive-ui-fixture",
+                ),
+                Neighbor(
+                    "192.168.56.21",
+                    "02:00:00:00:00:20",
+                    "fixture0",
+                    "responsive-ui-fixture",
+                ),
+            ],
             path=database_file,
             discovery={
                 "networks": [{
@@ -738,7 +746,9 @@ def _scan_comparison_failures(page) -> list[str]:
         page.wait_for_function(
             """() => {
               const result = document.querySelector("#scanComparisonResult");
-              return result && result.textContent.includes("No se detectaron diferencias") &&
+              return result && result.textContent.includes("Cambió el conjunto de direcciones observadas") &&
+                result.textContent.includes("192.168.56.21") &&
+                result.textContent.includes("responsive-ui-fixture") &&
                 result.textContent.includes("No demuestra");
             }""",
             timeout=5000,
@@ -756,8 +766,32 @@ def _scan_comparison_failures(page) -> list[str]:
             failures.append("la comparación no aclara qué datos son históricos y cuáles vienen del inventario actual")
     if "192.168.56.0/24" not in rendered:
         failures.append("la comparación no informa la subred compartida")
+    if "192.168.56.21" not in rendered or "responsive-ui-fixture" not in rendered:
+        failures.append("la comparación no vincula las IP modificadas con su fuente histórica")
+    evidence_rows = page.locator(".scan-compare-evidence .scan-compare-item-meta")
+    if evidence_rows.count() < 3:
+        failures.append("la comparación no muestra hora, dirección y fuente para cada evidencia")
+    elif any("Fuente: responsive-ui-fixture" not in value for value in evidence_rows.all_inner_texts()):
+        failures.append("alguna observación del cambio perdió su fuente original")
     if "No demuestra que esté desconectado" not in rendered:
         failures.append("la comparación no explica el límite de interpretar ausencias")
+
+    scan_select = page.locator("#topologyScanSelect")
+    if scan_select.count() == 1:
+        baseline_id = first.input_value()
+        action = page.get_by_role("button", name=f"Ver la captura anterior #{baseline_id} en el mapa")
+        if action.count() != 1:
+            failures.append("la diferencia no ofrece un salto accesible a la captura que la sustenta")
+        else:
+            try:
+                action.click()
+                page.wait_for_function(
+                    "(expected) => document.querySelector('#topologyScanSelect')?.value === expected",
+                    arg=baseline_id,
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo abrir en el mapa la captura que sustenta la diferencia: {exc}")
     return failures
 
 
