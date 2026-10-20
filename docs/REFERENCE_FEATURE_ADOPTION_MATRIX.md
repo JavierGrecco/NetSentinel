@@ -25,7 +25,27 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 | Animar paquetes o destacar actividad reciente | Pospuesto hasta que exista telemetría real adecuada | No se usarán tamaños de paquete inventados ni animaciones que hagan parecer capturado un tráfico que no se midió |
 | Indicadores y hallazgos derivados de puertos | No copiar inferencias como vulnerabilidades confirmadas | Un puerto abierto puede justificar revisión, pero no demuestra CVE, explotación ni falta de autenticación. Cada hallazgo debe señalar la evidencia y el nivel de certeza |
 | Bloqueo de IP y acciones privilegiadas desde la interfaz | Fuera del alcance de esta integración | Una acción de cambio de red necesita autorización, límites, confirmación del servidor, auditoría y reversión antes de diseñarse |
-| Aplicación concentrada y licencia/origen dudoso | No reutilizar código literal sin aclarar licencia y procedencia | Se adaptan ideas de arquitectura y UX; las capacidades nuevas se implementan contra los módulos existentes del proyecto |
+| Aplicación concentrada y procedencia/licencia no aclaradas | No reutilizar código literal hasta aclarar licencia y procedencia | La revisión actual confirma que el repositorio tiene cuatro archivos en la raíz, no incluye un archivo `LICENSE` y su README indica clonar `spiderxploit/netsentinel` en vez de `blacsecurity/netsentinel`. Tomamos ideas, no código. |
+
+## Hallazgos de la revisión actualizada (20 de octubre de 2026)
+
+### Salud de las fuentes y errores visibles
+
+La versión actual de [ossianericson/netsentinel](https://github.com/ossianericson/netsentinel/commit/e2ab5eebaed9816860a8a807e6154e9eb28c189f) pone el foco en algo que merece adoptarse más allá del grafo: una operación que falla no debe aparecer como correcta, vacía, nunca ejecutada ni saludable. El error debe comunicarse con una explicación y un paso siguiente acordes con su impacto. El estado de salud de una tarea debe mantenerse visible mientras el problema persista y recuperarse cuando una ejecución vuelva a funcionar.
+
+En nuestro proyecto ya existen respuestas HTTP con códigos de error, referencias de seguimiento, clasificación segura y un registro local. No hay que crear otro sistema paralelo. La oportunidad es reutilizarlo cuando llegue el primer adaptador de datos y mostrar, por fuente, al menos:
+
+- Estado legible: disponible, degradado, sin datos recientes o no disponible.
+- Hora de la última lectura correcta y, si ocurrió, de la última falla.
+- Explicación y acción siguiente sin exponer secretos ni detalles internos.
+- Una diferencia inequívoca entre «la fuente informó cero eventos» y «no pudimos consultar o interpretar la fuente».
+- Pruebas de regresión para fallo, recuperación, datos vacíos y datos incompletos.
+
+La parte de interfaz de esta referencia se construyó para una aplicación de escritorio; no trasladaremos su implementación de hilos o widgets. NetSentinel debe conservar su separación actual entre servicios, API y presentación web.
+
+### Procedencia del segundo proyecto
+
+La revisión actual de [blacsecurity/netsentinel](https://github.com/blacsecurity/netsentinel/tree/c4924dbe23a2b990a970395a645481c79e687634) vuelve más importante la cautela sobre la reutilización: la raíz publicada contiene `README.md`, `dashboard.png`, `netsentinel.py` y `requirements.txt`; no se encontró un archivo `LICENSE` en la raíz y el README dirige la instalación a `spiderxploit/netsentinel`. Hasta aclarar licencia y procedencia, no copiamos su código. Sí podemos implementar patrones generales de lectura rápida y selección usando nuestros contratos y pruebas.
 
 ## Reglas que no debemos negociar
 
@@ -43,3 +63,4 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 3. Verificar persistencia de posiciones, preferencias de tema y recuperación tras datos locales inválidos.
 4. Revisar el resultado junto con las responsabilidades actuales para no mantener dos fuentes de verdad.
 5. Mantener la PR en borrador hasta completar los puntos anteriores.
+6. Después de cerrar la revisión visual, preparar un adaptador de solo lectura para una fuente real. Candidato inicial: importar archivos JSON Lines de `conn.log` de Zeek, exportados previamente desde una red autorizada. NetSentinel no iniciará captura ni instalará agentes para esta etapa. Antes de integrarlo, fijar límites de archivo y filas, validación de hora y direcciones, deduplicación por ID estable, vista previa sin escrituras y pruebas de error/recuperación usando registros sintéticos.
