@@ -98,7 +98,7 @@ def test_unknown_network_evidence_stays_null_instead_of_becoming_zero():
         ("source_port", 0, "source_port"), ("bytes_sent", True, "bytes_sent"),
         ("bytes_received", -1, "bytes_received"), ("packets_sent", 1.5, "packets_sent"),
         ("packets_received", 9_223_372_036_854_775_808, "packets_received"),
-        ("network_interface", "wan0\\ninvalid", "network_interface"),
+        ("network_interface", "wan0\ninvalid", "network_interface"),
         ("source_event_id", "x" * 161, "source_event_id"),
     ],
 )
