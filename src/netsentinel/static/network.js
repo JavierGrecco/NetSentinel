@@ -193,6 +193,53 @@
     }
   }
 
+  async function openEvidence(scanId, deviceId) {
+    const targetScanId = String(scanId);
+    const targetDeviceId = String(deviceId);
+    const scanSelect = $("topologyScanSelect");
+    const scan = state.scans.find(item => String(item.id) === targetScanId);
+    if (!scan || !scanSelect) {
+      toast("No se encontró esa captura entre las lecturas cargadas. Cargá capturas anteriores y volvé a intentarlo.");
+      return false;
+    }
+
+    // Abrir la captura y limpiar filtros para no ocultar el equipo que originó la diferencia.
+    state.selectedScanId = targetScanId;
+    state.selectedId = targetDeviceId;
+    state.topologyGraph = null;
+    state.topologyGraphScanId = null;
+    scanSelect.value = targetScanId;
+    $("topologySearch").value = "";
+    $("topologyStatusFilter").value = "all";
+    clearDeviceHistory();
+    clearDeviceEvents();
+
+    await refresh();
+
+    const selectedButton = Array.from(
+      $("topologyAccessibleList").querySelectorAll(".topology-accessible-node")
+    ).find(button => button.dataset.deviceId === targetDeviceId);
+    const selected = state.selectedId === targetDeviceId &&
+      selectedButton && selectedButton.getAttribute("aria-pressed") === "true";
+    const panel = $("topologyPanel");
+    if (panel && typeof panel.scrollIntoView === "function") {
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    if (selected) {
+      toast("Lectura #" + targetScanId + " abierta con el equipo seleccionado.");
+    } else {
+      toast(
+        "Se abrió la lectura #" + targetScanId +
+        ", pero esta captura no aporta evidencia suficiente para ubicar ese equipo en el mapa. " +
+        "Esto no demuestra que esté desconectado."
+      );
+    }
+    return Boolean(selected);
+  }
+
+  window.NetSentinelNetworkNavigation = { openEvidence: openEvidence };
+
   function updateScanHistoryControls() {
     const button = $("loadMoreScansButton");
     const status = $("scanHistoryLoadStatus");

@@ -100,7 +100,7 @@
       for (const item of response.warnings) appendText(list, "li", item);
     }
   }
-  function renderCaptureEvidence(parent, label, scan, observations, side) {
+  function renderCaptureEvidence(parent, label, scan, observations, side, deviceId) {
     const section = appendText(parent, "section", "", "scan-compare-evidence");
     appendText(section, "strong", label + " · captura #" + scan.id, "scan-compare-evidence-title");
     const evidence = Array.isArray(observations) ? observations : [];
@@ -124,26 +124,27 @@
       }
     }
 
-    const scanSelect = element("topologyScanSelect");
-    if (!scanSelect) return;
+    const navigator = root.NetSentinelNetworkNavigation;
+    if (!navigator || typeof navigator.openEvidence !== "function") return;
     const button = root.document.createElement("button");
     button.type = "button";
     button.className = "quiet scan-compare-evidence-action";
-    button.textContent = "Ver en el mapa";
-    button.setAttribute("aria-label", "Ver la captura " + side + " #" + scan.id + " en el mapa");
-    button.addEventListener("click", function () {
-      const available = Array.from(scanSelect.options).some(option => option.value === String(scan.id));
-      if (!available) {
+    button.textContent = "Ver equipo en el mapa";
+    button.setAttribute(
+      "aria-label",
+      "Ver equipo #" + deviceId + " en la captura " + side + " #" + scan.id + " en el mapa"
+    );
+    button.addEventListener("click", async function () {
+      button.disabled = true;
+      try {
+        await navigator.openEvidence(scan.id, deviceId);
+      } catch (error) {
         showMessage(
-          "La captura #" + scan.id + " ya no está en la lista cargada. Cargá capturas anteriores y volvé a comparar."
+          "No se pudo abrir la evidencia del dispositivo: " +
+            (error && error.message ? error.message : "error inesperado") + "."
         );
-        return;
-      }
-      scanSelect.value = String(scan.id);
-      scanSelect.dispatchEvent(new root.Event("change", { bubbles: true }));
-      const panel = element("topologyPanel");
-      if (panel && typeof panel.scrollIntoView === "function") {
-        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      } finally {
+        button.disabled = false;
       }
     });
     section.appendChild(button);
@@ -170,19 +171,22 @@
         ? change.comparison_addresses.join(", ") : "Sin observación registrada";
       appendText(item, "div", "En la captura anterior: " + before, "scan-compare-item-meta");
       appendText(item, "div", "En la captura posterior: " + after, "scan-compare-item-meta");
+      item.dataset.deviceId = String(change.device_id);
       renderCaptureEvidence(
         item,
         "Captura anterior",
         response.baseline_scan || {},
         change.baseline_evidence,
-        "anterior"
+        "anterior",
+        change.device_id
       );
       renderCaptureEvidence(
         item,
         "Captura posterior",
         response.comparison_scan || {},
         change.comparison_evidence,
-        "posterior"
+        "posterior",
+        change.device_id
       );
     }
   }

@@ -779,19 +779,32 @@ def _scan_comparison_failures(page) -> list[str]:
     scan_select = page.locator("#topologyScanSelect")
     if scan_select.count() == 1:
         baseline_id = first.input_value()
-        action = page.get_by_role("button", name=f"Ver la captura anterior #{baseline_id} en el mapa")
+        change = result.locator(".scan-compare-item").first
+        device_id = change.get_attribute("data-device-id")
+        action = page.get_by_role(
+            "button",
+            name=f"Ver equipo #{device_id} en la captura anterior #{baseline_id} en el mapa",
+        )
         if action.count() != 1:
-            failures.append("la diferencia no ofrece un salto accesible a la captura que la sustenta")
+            failures.append("la diferencia no ofrece una acción accesible para abrir y seleccionar el equipo")
         else:
             try:
                 action.click()
                 page.wait_for_function(
-                    "(expected) => document.querySelector('#topologyScanSelect')?.value === expected",
-                    arg=baseline_id,
-                    timeout=5000,
+                    """(expected) => {
+                      const scanSelect = document.querySelector('#topologyScanSelect');
+                      const selected = document.querySelector('#topologyAccessibleList .topology-accessible-node[aria-pressed=' + JSON.stringify('true') + ']');
+                      return scanSelect?.value === expected.scanId &&
+                        selected?.dataset.deviceId === expected.deviceId;
+                    }""",
+                    arg={"scanId": baseline_id, "deviceId": device_id},
+                    timeout=7000,
                 )
+                selected_text = page.locator("#topologySelection").inner_text()
+                if "192.168.56.21" not in selected_text:
+                    failures.append("el detalle del dispositivo no muestra la IP histórica que motivó la diferencia")
             except Exception as exc:
-                failures.append(f"no se pudo abrir en el mapa la captura que sustenta la diferencia: {exc}")
+                failures.append(f"no se pudo abrir la captura y seleccionar el equipo que sustenta la diferencia: {exc}")
     return failures
 
 
