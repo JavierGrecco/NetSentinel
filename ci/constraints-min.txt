@@ -1,7 +1,7 @@
 # Minimum direct runtime and test versions declared in pyproject.toml.
 # Keep these pins aligned with the lower bounds in [project.dependencies]
 # and [project.optional-dependencies.test]; CI installs this set together.
-fastapi==0.143.0
+fastapi==0.143.3
 uvicorn==0.54.0
 psutil==7.2.2
 pytest==9.1.1
