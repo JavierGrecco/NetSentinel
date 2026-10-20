@@ -91,9 +91,11 @@ def test_csv_preview_normalizes_rows_and_delegates_without_writing(monkeypatch) 
     assert calls["repository"]["line_numbers"] == [2]
     assert calls["repository"]["events"][0]["domain"] == "example.com"
     assert calls["repository"]["events"][0]["source_ip"] == "192.0.2.4"
-    assert calls["repository"]["events"][0]["source_port"] == 53
-    assert calls["repository"]["events"][0]["bytes_sent"] == 120
-    assert calls["repository"]["events"][0]["packets_received"] == 2
+    # Este doble de normalize_event devuelve los valores CSV tal cual;
+    # la conversión de cadenas numéricas se comprueba en el servicio real.
+    assert calls["repository"]["events"][0]["source_port"] == "53"
+    assert calls["repository"]["events"][0]["bytes_sent"] == "120"
+    assert calls["repository"]["events"][0]["packets_received"] == "2"
     assert calls["repository"]["events"][0]["network_interface"] == "wan0"
     assert calls["repository"]["events"][0]["source_event_id"] == "record-42"
     assert result["would_import"] == 1
