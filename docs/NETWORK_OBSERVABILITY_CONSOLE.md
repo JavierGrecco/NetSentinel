@@ -40,7 +40,9 @@ Completar mapa, detalle de activo, historial, comparación de lecturas, proceden
 
 Antes de dibujar conexiones entre dispositivos, definir un contrato de evento común. Cada evento debe conservar origen de datos, hora original y normalizada, IP de origen/destino, protocolo y contadores solo cuando la fuente realmente los proporcione. Debe mostrar alcance, retraso, errores, retención y campos desconocidos.
 
-Las integraciones se diseñarán como adaptadores separados, inicialmente de solo lectura: registros DNS autorizados y, si la infraestructura los ofrece, flujos de conexión (NetFlow/IPFIX u otro formato documentado). No asumir que un router genérico expone estas fuentes ni instalar agentes de manera implícita.
+El contrato de eventos ya admite hora observada y recibida, IP y puerto de origen/destino, protocolo, contadores de bytes/paquetes, interfaz e identificador del registro original. Los campos opcionales permanecen en `NULL` si la fuente no los aporta; cero representa un contador medido en cero, no un dato desconocido. La ingesta de sesión autorizada y la importación CSV conservan estos campos y la exportación los incluye.
+
+Esto todavía no incorpora colectores de router, NetFlow/IPFIX ni agentes. Las integraciones se diseñarán como adaptadores separados y de solo lectura: registros DNS autorizados y, si la infraestructura los ofrece, flujos de conexión u otro formato documentado. No asumir que un router genérico expone estas fuentes ni instalar agentes de manera implícita.
 
 ### Etapa C — Investigación de cambios
 

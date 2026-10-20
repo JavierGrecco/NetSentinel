@@ -13,6 +13,10 @@ def test_csv_header_normalization_handles_bom_and_camel_case() -> None:
     assert importer._normalized_csv_header("\ufeffreceivedDateTime") == "received_date_time"
     assert importer._canonical_csv_header("senderAddress") == "email_from"
     assert importer._canonical_csv_header("recipientAddress") == "email_to"
+    assert importer._canonical_csv_header("src_ip") == "source_ip"
+    assert importer._canonical_csv_header("src_port") == "source_port"
+    assert importer._canonical_csv_header("eventId") == "source_event_id"
+    assert importer._canonical_csv_header("interface") == "network_interface"
 
 
 @pytest.mark.parametrize(
@@ -76,7 +80,8 @@ def test_csv_preview_normalizes_rows_and_delegates_without_writing(monkeypatch) 
 
     result = importer.import_csv(
         42,
-        "observed_at,event_type,domain\n2026-10-14T10:00:00Z,dns_query,example.com\n",
+        "observed_at,event_type,domain,source_ip,source_port,bytes_sent,packets_received,interface,event_id\n"
+        "2026-10-14T10:00:00Z,dns_query,example.com,192.0.2.4,53,120,2,wan0,record-42\n",
         normalize_event=normalize_event,
         preview=True,
     )
@@ -85,6 +90,12 @@ def test_csv_preview_normalizes_rows_and_delegates_without_writing(monkeypatch) 
     assert calls["repository"]["preview"] is True
     assert calls["repository"]["line_numbers"] == [2]
     assert calls["repository"]["events"][0]["domain"] == "example.com"
+    assert calls["repository"]["events"][0]["source_ip"] == "192.0.2.4"
+    assert calls["repository"]["events"][0]["source_port"] == 53
+    assert calls["repository"]["events"][0]["bytes_sent"] == 120
+    assert calls["repository"]["events"][0]["packets_received"] == 2
+    assert calls["repository"]["events"][0]["network_interface"] == "wan0"
+    assert calls["repository"]["events"][0]["source_event_id"] == "record-42"
     assert result["would_import"] == 1
     assert result["preview_rows"][0]["disposition"] == "new"
     assert "no se guardó ningún evento" in result["note"]

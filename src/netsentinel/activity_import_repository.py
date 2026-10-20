@@ -16,8 +16,10 @@ from .activity_retention_repository import _utc_iso, cleanup, get_retention_days
 
 
 _MANUAL_IMPORT_DEDUP_FIELDS = (
-    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
-    "protocol", "app_name", "page_url", "search_engine", "search_terms",
+    "observed_at", "event_type", "domain", "source_ip", "source_port",
+    "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
+    "packets_sent", "packets_received", "network_interface", "source_event_id",
+    "app_name", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject", "blocked",
 )
 
@@ -79,7 +81,7 @@ def import_manual_events(
 
         now_text = _utc_iso(now)
         for item in events:
-            values = tuple(item[field] for field in _MANUAL_IMPORT_DEDUP_FIELDS)
+            values = tuple(item.get(field) for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             disposition = "new"
             if values in seen_in_batch:
                 skipped_duplicates += 1
@@ -96,13 +98,18 @@ def import_manual_events(
                         db.execute(
                             """INSERT INTO activity_events
                                (session_id, device_id, observed_at, received_at, event_type, source, domain,
-                                destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
+                                source_ip, source_port, destination_ip, destination_port, protocol,
+                                bytes_sent, bytes_received, packets_sent, packets_received, network_interface, source_event_id,
+                                app_name, page_url, search_engine, search_terms,
                                 email_provider, email_from, email_to, email_subject, blocked)
-                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (
                                 device_id, item["observed_at"], now_text, item["event_type"], item["domain"],
-                                item["destination_ip"], item["destination_port"], item["protocol"], item["app_name"],
-                                item["page_url"], item["search_engine"], item["search_terms"],
+                                item.get("source_ip"), item.get("source_port"), item["destination_ip"],
+                                item["destination_port"], item["protocol"], item.get("bytes_sent"),
+                                item.get("bytes_received"), item.get("packets_sent"), item.get("packets_received"),
+                                item.get("network_interface"), item.get("source_event_id"),
+                                item["app_name"], item["page_url"], item["search_engine"], item["search_terms"],
                                 item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
                             ),
                         )

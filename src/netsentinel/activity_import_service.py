@@ -18,13 +18,17 @@ from . import activity_repository
 EventNormalizer = Callable[..., dict[str, Any]]
 
 CSV_FIELDS = {
-    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
-    "protocol", "app_name", "blocked", "page_url", "search_engine", "search_terms",
+    "observed_at", "event_type", "domain", "source_ip", "source_port",
+    "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
+    "packets_sent", "packets_received", "network_interface", "source_event_id",
+    "app_name", "blocked", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject",
 }
 CSV_PREVIEW_FIELDS = (
-    "observed_at", "event_type", "domain", "destination_ip", "destination_port",
-    "protocol", "app_name", "page_url", "search_engine", "search_terms",
+    "observed_at", "event_type", "domain", "source_ip", "source_port",
+    "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
+    "packets_sent", "packets_received", "network_interface", "source_event_id",
+    "app_name", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject", "blocked",
 )
 SENSITIVE_HEADERS = {
@@ -62,6 +66,10 @@ CSV_HEADER_ALIASES = {
     "email_subject": {
         "subject", "subject_line", "message_subject", "subject_or_message_id",
     },
+    "source_ip": {"src_ip", "source_address", "src_address"},
+    "source_port": {"src_port"},
+    "network_interface": {"interface", "ifname", "interface_name"},
+    "source_event_id": {"event_id", "event_identifier", "record_id"},
 }
 
 
