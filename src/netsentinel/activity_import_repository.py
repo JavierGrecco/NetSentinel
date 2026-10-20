@@ -70,6 +70,12 @@ def import_manual_events(
             + " AND ".join(f"{field} IS ?" for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             + " LIMIT 1"
         )
+        if preview:
+            # La vista previa solo compara con eventos que seguirían en retención.
+            duplicate_sql = duplicate_sql.replace(
+                "source = 'manual_import' AND",
+                "source = 'manual_import' AND observed_at >= ? AND",
+            )
         duplicate_source_id_sql = (
             "SELECT 1 FROM activity_events "
             "WHERE device_id = ? AND source = 'manual_import' AND source_event_id = ?"
