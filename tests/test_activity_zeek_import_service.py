@@ -127,10 +127,21 @@ def test_native_zeek_tsv_keeps_unset_counters_unknown():
     ("mutate", "message"),
     [
         (lambda text: text.replace("#path conn", "#path dns"), "no es un conn.log"),
-        (lambda text: text.replace("#separator \\\\x09", "#separator invalid"), "separador declarado"),
-        (lambda text: text.replace("#fields ", "#fields duplicate\\\\t"), "columnas Zeek"),
-        (lambda text: text.replace("proto\\\\t", ""), "no contiene los campos necesarios"),
-        (lambda text: text.replace("118\\\\t197", "bad\\\\t197"), "orig_ip_bytes debe ser un entero"),
+        (lambda text: text.replace("#separator " + r"\x09", "#separator invalid"), "separador declarado"),
+        (
+            lambda text: text.replace("#fields ts" + "\t", "#fields uid" + "\t", 1),
+            "nombres de campo repetidos",
+        ),
+        (
+            lambda text: text.replace("proto" + "\t", "", 1)
+            .replace("enum" + "\t", "", 1)
+            .replace("udp" + "\t", "", 1),
+            "no contiene los campos necesarios",
+        ),
+        (
+            lambda text: text.replace("118" + "\t" + "197", "bad" + "\t" + "197"),
+            "orig_ip_bytes debe ser un entero",
+        ),
     ],
 )
 def test_native_zeek_tsv_rejects_invalid_header_or_row(mutate, message):
