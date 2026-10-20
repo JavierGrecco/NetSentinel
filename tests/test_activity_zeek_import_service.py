@@ -1,4 +1,4 @@
-"""Pruebas del importador Zeek JSONL sin captura ni acceso a redes reales."""
+"""Pruebas del importador Zeek TSV/JSONL sin captura ni redes reales."""
 from __future__ import annotations
 
 import json
@@ -32,6 +32,37 @@ def _record(**overrides):
 def _jsonl(*records):
     return "\n".join(json.dumps(record) for record in records) + "\n"
 
+def _zeek_tsv(*records):
+    fields = [
+        "ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p",
+        "proto", "orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts",
+    ]
+    types = [
+        "time", "string", "addr", "port", "addr", "port", "enum",
+        "count", "count", "count", "count",
+    ]
+    lines = [
+        r"#separator \x09",
+        "#set_separator ,",
+        "#empty_field (empty)",
+        "#unset_field -",
+        "#path conn",
+        "#open 2026-10-20-12-00-00",
+        "#fields " + "\t".join(fields),
+        "#types " + "\t".join(types),
+    ]
+    for record in records:
+        lines.append(
+            "\t".join(
+                "-" if record.get(field) is None else str(record.get(field, "-"))
+                for field in fields
+            )
+        )
+    lines.append("#close 2026-10-20-12-00-00")
+    return "\n".join(lines) + "\n"
+
+
+
 
 def _active_interval():
     now = datetime.now(timezone.utc).replace(microsecond=0)
@@ -61,6 +92,51 @@ def _mock_selected_ip_history(monkeypatch, device_id: int, selected_ip: str = "1
         }
 
     monkeypatch.setattr(importer.inventory_read_repository, "get_address_owners", owners_for_ips)
+
+
+def test_native_zeek_tsv_parses_headers_and_maps_numeric_fields():
+    rows = importer._parse_zeek_tsv(_zeek_tsv(_record()))
+
+    assert len(rows) == 1
+    line_number, record = rows[0]
+    assert line_number == 9
+    assert record["uid"] == "CZeekFixture42"
+    assert record["ts"] == pytest.approx(_record()["ts"])
+    assert record["id.orig_p"] == 51514
+    assert record["orig_ip_bytes"] == 118
+    assert record["resp_ip_bytes"] == 197
+
+    event = importer._to_event(record, line_number)
+    assert event["source_event_id"] == "zeek:CZeekFixture42"
+    assert event["bytes_sent"] == 118
+    assert event["bytes_received"] == 197
+
+
+def test_native_zeek_tsv_keeps_unset_counters_unknown():
+    record = _record(orig_ip_bytes=None, resp_ip_bytes=0, orig_pkts=None)
+    rows = importer._parse_zeek_tsv(_zeek_tsv(record))
+    event = importer._to_event(rows[0][1], rows[0][0])
+
+    assert event["bytes_sent"] is None
+    assert event["bytes_received"] == 0
+    assert event["packets_sent"] is None
+    assert event["packets_received"] == 3
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda text: text.replace("#path conn", "#path dns"), "no es un conn.log"),
+        (lambda text: text.replace("#separator \\\\x09", "#separator invalid"), "separador declarado"),
+        (lambda text: text.replace("#fields ", "#fields duplicate\\\\t"), "columnas Zeek"),
+        (lambda text: text.replace("proto\\\\t", ""), "no contiene los campos necesarios"),
+        (lambda text: text.replace("118\\\\t197", "bad\\\\t197"), "orig_ip_bytes debe ser un entero"),
+    ],
+)
+def test_native_zeek_tsv_rejects_invalid_header_or_row(mutate, message):
+    log_data = mutate(_zeek_tsv(_record()))
+    with pytest.raises(ValueError, match=message):
+        importer._parse_zeek_tsv(log_data)
 
 
 def test_zeek_mapping_keeps_directions_and_source_uid():
