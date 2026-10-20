@@ -11,6 +11,7 @@ from netsentinel.api import (
     activity_read as activity_read_api,
     activity_retention as activity_retention_api,
     activity_sessions as activity_sessions_api,
+    activity_zeek_import as activity_zeek_import_api,
     diagnostics as diagnostics_api,
     error_handling as error_handling_api,
     validation_errors,
@@ -90,8 +91,13 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.api.activity_read",
         "netsentinel.api.activity_retention",
         "netsentinel.api.activity_sessions",
+        "netsentinel.api.activity_zeek_import",
     }
     assert graph["netsentinel.api.activity_models"] == set()
+    assert graph["netsentinel.api.activity_zeek_import"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
     assert graph["netsentinel.api.activity_read"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.activity_sessions"] == {
         "netsentinel.activity_tracking",
@@ -147,6 +153,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_read_service",
         "netsentinel.activity_retention_service",
         "netsentinel.activity_session_service",
+        "netsentinel.activity_zeek_import_service",
     }
     assert graph["netsentinel.activity_retention_service"] == {"netsentinel.activity_repository"}
     assert "netsentinel.activity_event_service" in graph["netsentinel.activity_tracking"]
@@ -178,6 +185,12 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.csv_safety",
     }
     assert graph["netsentinel.activity_import_service"] == {"netsentinel.activity_repository"}
+    assert graph["netsentinel.activity_zeek_import_service"] == {
+        "netsentinel.activity_event_service",
+        "netsentinel.activity_repository",
+        "netsentinel.activity_retention_service",
+        "netsentinel.inventory_read_repository",
+    }
     assert graph["netsentinel.activity_event_service"] == {
         "netsentinel.activity_catalog",
         "netsentinel.activity_privacy",

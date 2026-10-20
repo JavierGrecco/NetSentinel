@@ -53,8 +53,13 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.api.activity_read",
         "netsentinel.api.activity_retention",
         "netsentinel.api.activity_sessions",
+        "netsentinel.api.activity_zeek_import",
     },
     "netsentinel.api.activity_models": set(),
+    "netsentinel.api.activity_zeek_import": {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    },
     "netsentinel.api.activity_read": {
         "netsentinel.activity_tracking",
     },
@@ -175,6 +180,12 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
     },
+    "netsentinel.activity_zeek_import_service": {
+        "netsentinel.activity_event_service",
+        "netsentinel.activity_repository",
+        "netsentinel.activity_retention_service",
+        "netsentinel.inventory_read_repository",
+    },
     "netsentinel.findings_service": {
         "netsentinel.database",
         "netsentinel.findings",
@@ -207,6 +218,7 @@ FACADE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.activity_read_service",
         "netsentinel.activity_retention_service",
         "netsentinel.activity_session_service",
+        "netsentinel.activity_zeek_import_service",
     },
 }
 REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {

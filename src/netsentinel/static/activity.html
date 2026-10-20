@@ -99,8 +99,24 @@
 <div class="small">Esquema normalizado: <code>observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked,page_url,search_engine,search_terms,email_provider,email_from,email_to,email_subject</code>. También se reconocen algunas cabeceras de Google Workspace (Date, Sender, Recipient, Subject or Message ID) y Microsoft 365 (receivedDateTime, senderAddress, recipientAddress, subject). El campo de Google puede contener un ID en vez del asunto. Correo solo desde exportaciones de auditoría autorizadas; se rechazan columnas de cuerpo y adjuntos.</div>
 <div class="actions import-actions"><button id="previewImport" type="button">Previsualizar CSV</button><button id="import" type="button">Importar metadatos</button></div><p id="importStatus" class="small" role="status"></p>
 <div id="previewPanel" class="section-gap" hidden><strong>Vista previa validada</strong><p id="previewSummary" class="small" role="status"></p><div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Evento</th><th>Dominio</th><th>Detalle normalizado</th><th>Resultado</th></tr></thead><tbody id="previewRows"></tbody></table></div><p class="small">La vista previa no guarda eventos. Se validan todas las filas y se muestran hasta las primeras 10. Revisá los metadatos antes de confirmar la importación.</p></div>
-
-</section></div>
+</section>
+<section class="panel section-gap" aria-labelledby="zeekImportTitle">
+  <h2 id="zeekImportTitle">Importar conexiones de Zeek (JSON Lines)</h2>
+  <p class="small">Importá una exportación JSON Lines de <code>conn.log</code> de Zeek generada previamente desde una red propia o autorizada. Esta acción no inicia captura ni se conecta a Zeek. Se admiten hasta 1.000 registros y 1 MB por archivo.</p>
+  <p class="small">NetSentinel conserva los bytes medidos a nivel IP cuando Zeek los aporta. Los contadores ausentes permanecen desconocidos; no se convierten en cero. Las importaciones usan el origen <code>manual_import</code> y conservan el identificador original con prefijo <code>zeek:</code> para evitar duplicados.</p>
+  <div class="field"><label for="zeekDevice">Asociar al dispositivo</label><select id="zeekDevice"><option value="">Seleccioná dispositivo</option></select></div>
+  <div class="field"><label for="zeekFile">Archivo Zeek JSON Lines</label><input id="zeekFile" type="file" accept=".jsonl,.ndjson,.json,.log,application/x-ndjson,application/json,text/plain"></div>
+  <p class="small">El archivo puede contener conexiones de varios equipos. Para evitar atribuciones incorrectas por reutilización de IP, NetSentinel solo importará filas cuya IP de origen o destino esté dentro del intervalo histórico observado del dispositivo elegido y no tenga otro activo con un intervalo solapado para esa IP. Las filas fuera de ese intervalo o con propietario ambiguo se contabilizan como omitidas.</p>
+  <div class="actions import-actions"><button id="previewZeekImport" type="button">Previsualizar registros</button><button id="importZeek" type="button">Importar conexiones</button></div>
+  <p id="zeekImportStatus" class="small" role="status"></p>
+  <div id="zeekPreviewPanel" class="section-gap" hidden>
+    <strong>Vista previa de conexiones</strong>
+    <p id="zeekPreviewSummary" class="small" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Fecha/hora (UTC)</th><th>Origen</th><th>Destino</th><th>Protocolo</th><th>Bytes IP enviados/recibidos</th><th>Paquetes enviados/recibidos</th><th>Resultado</th></tr></thead><tbody id="zeekPreviewRows"></tbody></table></div>
+    <p class="small">La vista previa valida el archivo completo, muestra hasta los primeros 10 registros y no guarda eventos. Revisá el dispositivo asociado y los datos antes de confirmar.</p>
+  </div>
+</section>
+</div>
 <div id="activity-events" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
 <section class="panel section-gap"><div class="section-heading"><h2>Eventos</h2><div class="small">Ordenados por hora observada, más recientes primero</div></div>
 <div class="two">
