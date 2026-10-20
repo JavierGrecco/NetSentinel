@@ -2,12 +2,26 @@
 
 > Esta es la nota breve para retomar el trabajo. El [roadmap](ROADMAP.md) contiene las tareas completas y la [matriz de validación](VALIDATION_MATRIX.md) guarda la evidencia de las pruebas reales.
 
-**Actualizado:** 16 de octubre de 2026  
+**Actualizado:** 20 de octubre de 2026  
 **Versión objetivo:** 0.10.0. Sigue en estabilización; no hay fecha prometida.
 
 **Revisión técnica del repositorio:** [diagnóstico y prioridades al 16/10/2026](REVIEW_2026-10-16.md). Resume los riesgos de publicación, la modularización pendiente y la evidencia que falta; no reemplaza la matriz de pruebas manuales.
 
-## Dónde estamos
+## Estado vigente — 20 de octubre de 2026
+
+- **Último cambio de código de aplicación:** el commit [`b4ef762`](https://github.com/JavierGrecco/NetSentinel/commit/b4ef762c60871c2f00dd45bc02608292fc6fec7f) integró la PR [#178](https://github.com/JavierGrecco/NetSentinel/pull/178). Después se integró la actualización documental [#179](https://github.com/JavierGrecco/NetSentinel/pull/179), commit [`bd7045f`](https://github.com/JavierGrecco/NetSentinel/commit/bd7045f205838eb2e190306885caa43325c31b1d). Para una release, consultá el HEAD actual de `main` y sus workflows: no hay que atribuir a un SHA las pruebas ejecutadas sobre otro.
+- **Última validación del código de aplicación (`b4ef762`):** CI [18/18 trabajos](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907707), Security [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907679) y Supply Chain [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907662). La actualización documental posterior tiene workflows propios: [CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39501250559), [Security](https://github.com/JavierGrecco/NetSentinel/actions/runs/39501250565) y [Supply Chain](https://github.com/JavierGrecco/NetSentinel/actions/runs/39501250543). Revisá su estado más reciente antes de publicar.
+- **Explorador de red:** la [PR #171](https://github.com/JavierGrecco/NetSentinel/pull/171) continúa en borrador. Su cabeza `dd4819f` pasó CI, Security y Supply Chain tras incorporar el último cambio de código de `main`; después se integró un commit documental. Antes de integrar la PR, volver a comprobar la comparación con la base vigente y completar la revisión manual del grafo, responsive, teclado y lector de pantalla.
+- **Importador Zeek:** la [PR #177](https://github.com/JavierGrecco/NetSentinel/pull/177) sigue apilada sobre la PR #171 y su CI pasó en la cabeza `c7463f6`. Security y Supply Chain no se ejecutan para esta PR mientras su base sea la rama de otra PR; habrá que exigirlos al llevarla a `main`. Falta verificar el recorrido con un archivo sintético o sanitizado y revisar la experiencia de importación.
+- **NetSentinel Forense:** la [PR #157](https://github.com/JavierGrecco/NetSentinel/pull/157) incorporó el último cambio de código de `main` en la cabeza `6e36c5b`, pero sigue en borrador. Security y Supply Chain pasaron; CI está pendiente en [su ejecución actual](https://github.com/JavierGrecco/NetSentinel/actions/runs/39500538477). Desde entonces se integró una actualización documental: volver a verificar la base antes de integrar. Falta la prueba manual con archivos sintéticos y registrar la revisión de teclado/accesibilidad.
+- **Estabilización de la versión 0.10.0:** la [matriz manual](VALIDATION_MATRIX.md) tiene 54 comprobaciones pendientes de registrar y ninguna marcada como completada. Las pruebas automatizadas no reemplazan las pruebas reales de instalación, recuperación de datos, navegador y extensión.
+- **Protección de `main`:** sigue pendiente la acción de administración descrita en el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La configuración revisada no tenía checks requeridos configurados ni un alcance explícito para la rama; no hay que darla por resuelta hasta probar que un cambio sin checks no se pueda integrar.
+
+La prioridad es terminar las validaciones de las ramas abiertas y registrar las pruebas manuales. No integrar las PR grandes solo porque hayan pasado CI: sus recorridos manuales pendientes forman parte de los criterios de aceptación.
+
+## Historial técnico y decisiones anteriores
+
+> Las notas que siguen conservan el contexto de etapas anteriores. Para el estado de las ramas, los checks y los bloqueos actuales, prevalece el resumen anterior.
 
 NetSentinel continúa siendo una aplicación local. Estamos ordenando el código por responsabilidades sin cambiar la forma en que la usa la persona que la instala.
 
