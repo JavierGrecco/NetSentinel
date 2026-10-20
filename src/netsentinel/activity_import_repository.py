@@ -70,26 +70,39 @@ def import_manual_events(
             + " AND ".join(f"{field} IS ?" for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             + " LIMIT 1"
         )
-        if preview:
-            # La vista previa compara solo con eventos que aún deberían conservarse.
-            duplicate_sql = duplicate_sql.replace(
-                "source = 'manual_import' AND",
-                "source = 'manual_import' AND observed_at >= ? AND",
-            )
-        else:
+        duplicate_source_id_sql = (
+            "SELECT 1 FROM activity_events "
+            "WHERE device_id = ? AND source = 'manual_import' AND source_event_id = ?"
+            + (" AND observed_at >= ?" if preview else "")
+            + " LIMIT 1"
+        )
+        if not preview:
             cleanup(db, now=now)
 
         now_text = _utc_iso(now)
         for item in events:
             values = tuple(item.get(field) for field in _MANUAL_IMPORT_DEDUP_FIELDS)
+            source_event_id = item.get("source_event_id")
+            # Una fuente puede exportar el mismo registro con metadatos añadidos
+            # después. Si trae un ID estable, ese ID es la identidad principal.
+            # Sin ID de origen conservamos la deduplicación por todos los campos.
+            identity = ("source_event_id", source_event_id) if source_event_id else ("fields", *values)
             disposition = "new"
-            if values in seen_in_batch:
+            if identity in seen_in_batch:
                 skipped_duplicates += 1
                 disposition = "duplicate"
             else:
-                seen_in_batch.add(values)
-                params = (device_id, cutoff, *values) if preview else (device_id, *values)
-                duplicate = db.execute(duplicate_sql, params).fetchone()
+                seen_in_batch.add(identity)
+                if source_event_id:
+                    params = (
+                        (device_id, source_event_id, cutoff)
+                        if preview
+                        else (device_id, source_event_id)
+                    )
+                    duplicate = db.execute(duplicate_source_id_sql, params).fetchone()
+                else:
+                    params = (device_id, cutoff, *values) if preview else (device_id, *values)
+                    duplicate = db.execute(duplicate_sql, params).fetchone()
                 if duplicate:
                     skipped_duplicates += 1
                     disposition = "duplicate"
