@@ -2,12 +2,26 @@
 
 > Esta es la nota breve para retomar el trabajo. El [roadmap](ROADMAP.md) contiene las tareas completas y la [matriz de validación](VALIDATION_MATRIX.md) guarda la evidencia de las pruebas reales.
 
-**Actualizado:** 16 de octubre de 2026  
+**Actualizado:** 20 de octubre de 2026  
 **Versión objetivo:** 0.10.0. Sigue en estabilización; no hay fecha prometida.
 
 **Revisión técnica del repositorio:** [diagnóstico y prioridades al 16/10/2026](REVIEW_2026-10-16.md). Resume los riesgos de publicación, la modularización pendiente y la evidencia que falta; no reemplaza la matriz de pruebas manuales.
 
-## Dónde estamos
+## Estado vigente — 20 de octubre de 2026
+
+- **`main`** está en el commit [`b4ef762`](https://github.com/JavierGrecco/NetSentinel/commit/b4ef762c60871c2f00dd45bc02608292fc6fec7f). La PR [#178](https://github.com/JavierGrecco/NetSentinel/pull/178) integró el cambio de dependencias de prueba y convirtió las advertencias de obsolescencia de Starlette en errores de CI.
+- **Validación de `main`:** CI [18/18 trabajos](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907707), Security [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907679) y Supply Chain [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39498907662), sobre el commit actual.
+- **Explorador de red:** la [PR #171](https://github.com/JavierGrecco/NetSentinel/pull/171) continúa en borrador. Su cabeza actual, `dd4819f`, está sincronizada con `main` y pasó CI, Security y Supply Chain. Falta la revisión manual del grafo, su uso responsive y su accesibilidad con teclado y lector de pantalla.
+- **Importador Zeek:** la [PR #177](https://github.com/JavierGrecco/NetSentinel/pull/177) sigue apilada sobre la PR #171. La cabeza actual es `c7463f6`; las validaciones deben completarse sobre esa cabeza. Falta verificar el recorrido con un archivo sintético o sanitizado y revisar la experiencia de importación.
+- **NetSentinel Forense:** la [PR #157](https://github.com/JavierGrecco/NetSentinel/pull/157) está sincronizada con `main` en `6e36c5b`, pero sigue en borrador. Falta la prueba manual con archivos sintéticos y registrar la revisión de teclado/accesibilidad.
+- **Estabilización de la versión 0.10.0:** la [matriz manual](VALIDATION_MATRIX.md) tiene 54 comprobaciones pendientes de registrar y ninguna marcada como completada. Las pruebas automatizadas no reemplazan las pruebas reales de instalación, recuperación de datos, navegador y extensión.
+- **Protección de `main`:** sigue pendiente la acción de administración descrita en el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La configuración revisada no tenía checks requeridos configurados ni un alcance explícito para la rama; no hay que darla por resuelta hasta probar que un cambio sin checks no se pueda integrar.
+
+La prioridad es terminar las validaciones de las ramas abiertas y registrar las pruebas manuales. No integrar las PR grandes solo porque hayan pasado CI: sus recorridos manuales pendientes forman parte de los criterios de aceptación.
+
+## Historial técnico y decisiones anteriores
+
+> Las notas que siguen conservan el contexto de etapas anteriores. Para el estado de las ramas, los checks y los bloqueos actuales, prevalece el resumen anterior.
 
 NetSentinel continúa siendo una aplicación local. Estamos ordenando el código por responsabilidades sin cambiar la forma en que la usa la persona que la instala.
 
