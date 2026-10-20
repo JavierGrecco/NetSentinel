@@ -93,12 +93,16 @@ def insert_event(
     cursor = db.execute(
         """INSERT INTO activity_events
            (session_id, device_id, observed_at, received_at, event_type, source, domain,
-            destination_ip, destination_port, protocol, app_name, page_url, search_engine, search_terms,
-            email_provider, email_from, email_to, email_subject, blocked)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            source_ip, source_port, destination_ip, destination_port, protocol,
+            bytes_sent, bytes_received, packets_sent, packets_received, network_interface, source_event_id,
+            app_name, page_url, search_engine, search_terms, email_provider, email_from, email_to, email_subject, blocked)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             session_id, device_id, event["observed_at"], received_at, event["event_type"], event["source"],
-            event["domain"], event["destination_ip"], event["destination_port"], event["protocol"],
+            event["domain"], event.get("source_ip"), event.get("source_port"),
+            event["destination_ip"], event["destination_port"], event["protocol"],
+            event.get("bytes_sent"), event.get("bytes_received"), event.get("packets_sent"),
+            event.get("packets_received"), event.get("network_interface"), event.get("source_event_id"),
             event["app_name"], event["page_url"], event["search_engine"], event["search_terms"],
             event["email_provider"], event["email_from"], event["email_to"], event["email_subject"], event["blocked"],
         ),

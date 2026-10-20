@@ -128,10 +128,18 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 received_at TEXT NOT NULL,
                 event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                 source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                source_event_id TEXT,
                 domain TEXT,
+                source_ip TEXT,
+                source_port INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL),
                 destination_ip TEXT,
                 destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
                 protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                bytes_sent INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL),
+                bytes_received INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL),
+                packets_sent INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL),
+                packets_received INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL),
+                network_interface TEXT,
                 app_name TEXT,
                 page_url TEXT,
                 search_engine TEXT,
@@ -182,10 +190,18 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                     received_at TEXT NOT NULL,
                     event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                     source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                    source_event_id TEXT,
                     domain TEXT,
+                    source_ip TEXT,
+                    source_port INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL),
                     destination_ip TEXT,
                     destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
                     protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                    bytes_sent INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL),
+                    bytes_received INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL),
+                    packets_sent INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL),
+                    packets_received INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL),
+                    network_interface TEXT,
                     app_name TEXT,
                     page_url TEXT,
                     search_engine TEXT,
@@ -199,7 +215,9 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             """)
             core_columns = [
                 "id", "session_id", "device_id", "observed_at", "received_at", "event_type",
-                "source", "domain", "destination_ip", "destination_port", "protocol", "app_name",
+                "source", "source_event_id", "domain", "source_ip", "source_port",
+                "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
+                "packets_sent", "packets_received", "network_interface", "app_name",
             ]
             select_columns = [name if name in old_columns else "NULL" for name in core_columns]
             extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
@@ -214,9 +232,26 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             db.execute("ALTER TABLE activity_events_migrated RENAME TO activity_events")
         else:
             activity_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
-            for column in ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject"):
+            column_definitions = {
+                "page_url": "TEXT",
+                "search_engine": "TEXT",
+                "search_terms": "TEXT",
+                "email_provider": "TEXT",
+                "email_from": "TEXT",
+                "email_to": "TEXT",
+                "email_subject": "TEXT",
+                "source_event_id": "TEXT",
+                "source_ip": "TEXT",
+                "source_port": "INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL)",
+                "bytes_sent": "INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL)",
+                "bytes_received": "INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL)",
+                "packets_sent": "INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL)",
+                "packets_received": "INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL)",
+                "network_interface": "TEXT",
+            }
+            for column, definition in column_definitions.items():
                 if column not in activity_columns:
-                    db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} TEXT")
+                    db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} {definition}")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC)")
         # Compatibility for existing v0.1 installations.
