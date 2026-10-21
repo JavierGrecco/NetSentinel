@@ -527,3 +527,64 @@ def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
             events=list(reversed(events_newest_first)),
             exported_at=utc_now(),
         )
+
+
+def export_case_manifest_data(*, case_id: str) -> dict[str, Any] | None:
+    """Lee una instantánea coherente del caso, la evidencia, los checks y la auditoría.
+
+    Devuelve metadatos únicamente: nunca lee el contenido de los archivos de evidencia
+    ni serializa rutas completas. La construcción del formato exportable pertenece al
+    servicio, no a la capa de persistencia.
+    """
+    with connect() as db:
+        # Mantener las lecturas en una misma instantánea evita mezclar una actualización
+        # del caso con verificaciones o eventos agregados durante la exportación.
+        db.execute("BEGIN")
+        case_row = _get_case_row(db, case_id)
+        if case_row is None:
+            return None
+
+        case = _case_dict(case_row)
+        evidence_rows = db.execute(
+            """SELECT e.*,
+                      (SELECT status FROM forensic_integrity_checks h
+                       WHERE h.evidence_id = e.id ORDER BY h.id DESC LIMIT 1)
+                      AS last_integrity_check_status,
+                      (SELECT checked_at FROM forensic_integrity_checks h
+                       WHERE h.evidence_id = e.id ORDER BY h.id DESC LIMIT 1)
+                      AS last_integrity_check_at,
+                      (SELECT calculated_sha256 FROM forensic_integrity_checks h
+                       WHERE h.evidence_id = e.id ORDER BY h.id DESC LIMIT 1)
+                      AS last_calculated_sha256
+               FROM forensic_evidence e
+               WHERE e.case_id = ? ORDER BY e.created_at ASC, e.evidence_number ASC""",
+            (case_id,),
+        ).fetchall()
+
+        check_rows = db.execute(
+            """SELECT * FROM forensic_integrity_checks
+               WHERE case_id = ? ORDER BY id ASC""",
+            (case_id,),
+        ).fetchall()
+        checks_by_evidence: dict[str, list[dict[str, Any]]] = {}
+        for row in check_rows:
+            check = _integrity_check_dict(row)
+            checks_by_evidence.setdefault(check["evidence_id"], []).append(check)
+
+        evidence = []
+        for row in evidence_rows:
+            item = _evidence_dict(row)
+            item["integrity_checks"] = checks_by_evidence.get(item["id"], [])
+            evidence.append(item)
+
+        audit_events_newest_first = _audit_events_from_connection(
+            db, case_id=case_id, limit=None
+        )
+        exported_at = utc_now()
+
+    return {
+        "case": case,
+        "evidence": evidence,
+        "audit_events": list(reversed(audit_events_newest_first)),
+        "exported_at": exported_at,
+    }
