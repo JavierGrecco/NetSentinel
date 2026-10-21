@@ -73,9 +73,11 @@ El código consulta una base GeoLite2 local y omite direcciones privadas o espec
 
 Las direcciones como `192.168.x.x`, `10.x.x.x` y `172.16.x.x`–`172.31.x.x` son privadas: no deberían aparecer en un mapa mundial como si tuvieran una ubicación pública. Una ubicación GeoIP también puede representar un punto aproximado del proveedor o de su infraestructura; no demuestra que una actividad maliciosa se haya originado exactamente allí.
 
-La referencia conserva la base geográfica por separado y documenta sus condiciones de licencia. Para nuestro producto no conviene descargar una base grande de un tercero en segundo plano ni remitir cada IP a un geolocalizador externo. Si más adelante se implementa esta vista, primero debemos definir fuente autorizada, licencia, procedencia del archivo, actualización, tamaño, controles de descarga y comportamiento sin base local.
+La geometría del mapa no contiene datos de geolocalización: es cartografía local separada, incorporada desde el recurso GeoJSON de la referencia bajo su licencia MIT y atribuida en `THIRD_PARTY_NOTICES.md`. Para las coordenadas se requiere una base GeoLite2-City local autorizada; GeoLite2-ASN es opcional. No se descargan esas bases en segundo plano ni se envían IP a un geolocalizador externo.
 
-**Prioridad propuesta: posterior al grafo y a las métricas.** La pantalla mundial no debería ser un adorno con ubicaciones de ejemplo ni una promesa si todavía no existe un origen real de IP públicas.
+**Estado actualizado:** la rama `feat/ip-world-map-geoip-2026-10` implementa una primera vista `/world-map` separada del grafo LAN. Enriquecerá solo IP públicas que ya aparecen como `destination_ip` en eventos locales; las IP privadas/especiales se omiten, las IP sin coordenadas no reciben marcadores falsos y los dominios sin IP histórica no se resuelven retroactivamente. La vista muestra país/ciudad aproximados, ASN cuando existe una base local, recuento de eventos registrados y hora del último evento.
+
+Esta primera entrega **no** integra el mapa animado de tráfico TCP/UDP/ICMP, captura continua de paquetes, fuentes de exposición WAN ni inteligencia de amenazas. Esas funciones requieren adaptadores y fuentes observadas reales; no se simulan con tráfico generado. La rama aún no está fusionada en `main` y necesita pasar CI y revisión manual.
 
 ## 3. Métricas: primero aprovechar lo que nuestro proyecto ya sabe medir
 
