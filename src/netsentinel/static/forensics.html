@@ -245,7 +245,10 @@
               <h3>Historial de operaciones</h3>
               <p>Las entradas se agregan; la aplicación no permite editarlas ni borrarlas. El digest del manifiesto no es una firma digital.</p>
             </div>
-            <button type="button" id="exportForensicAuditManifest" class="quiet" disabled>Descargar manifiesto</button>
+            <div class="forensic-manifest-actions">
+              <button type="button" id="exportForensicAuditManifest" class="quiet" disabled>Descargar auditoría</button>
+              <button type="button" id="exportForensicCaseManifest" class="primary" disabled>Exportar expediente</button>
+            </div>
           </div>
           <ol id="forensicAuditList" class="forensic-audit-list">
             <li class="forensic-empty-inline">Cargando historial…</li>
@@ -290,8 +293,8 @@
       <article class="forensic-card" data-phase="first">
         <div class="forensic-card-top"><span class="forensic-number">02</span><span class="forensic-phase">Primera entrega</span></div>
         <h3>Evidencia e integridad</h3>
-        <p>Registra la recepción y compara SHA-256 de una copia con el valor declarado. Falta un manifiesto consolidado y la validación manual.</p>
-        <span class="forensic-card-state">Comparación SHA-256 inicial implementada; en validación</span>
+        <p>Registra la recepción, compara SHA-256 y exporta un manifiesto versionado del caso, la evidencia, las verificaciones y la auditoría. La validación manual sigue pendiente.</p>
+        <span class="forensic-card-state">Manifiesto consolidado v1 incorporado; en validación</span>
       </article>
       <article class="forensic-card" data-phase="first">
         <div class="forensic-card-top"><span class="forensic-number">03</span><span class="forensic-phase">Primera entrega</span></div>
