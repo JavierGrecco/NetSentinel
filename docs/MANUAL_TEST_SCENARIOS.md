@@ -33,7 +33,15 @@ No apuntes NETSENTINEL_DATA_DIR a la carpeta de tu instalación habitual.
 El auxiliar de prueba se niega a trabajar con la ruta predeterminada
 ~/.netsentinel y también se niega a sobrescribir una base SQLite existente.
 
-En macOS o Linux, desde la raíz del repositorio con el entorno virtual activado:
+En macOS o Linux, desde la raíz del repositorio, prepará el entorno una sola vez
+antes de usar el auxiliar. El script importa módulos reales de NetSentinel, por
+eso no alcanza con tener Python instalado:
+
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -e ".[test]"
+
+Con el entorno activado, generá los archivos de prueba:
 
     python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-test-$(date +%Y%m%d-%H%M%S)"
@@ -46,7 +54,9 @@ crea un único activo ficticio en la base vacía; no ejecuta descubrimiento de r
 Generá los archivos antes de crear el activo para que las fechas sintéticas queden
 dentro del intervalo histórico. Usá la misma IP en ambos comandos. Para otra
 ejecución, elegí una carpeta de datos distinta.
-Si el archivo SQLite ya existe, el auxiliar se detiene sin modificarlo.
+Si el archivo SQLite ya existe, el auxiliar se detiene sin modificarlo. Al
+iniciar después la app desde otra worktree/branch, usá el entorno virtual de esa
+copia y mantené el mismo NETSENTINEL_DATA_DIR para que use la base de prueba.
 
 La base de prueba queda separada de la instalación normal. Al cerrar la prueba,
 guardá el resultado que necesitás y eliminá esa carpeta solamente cuando estés
