@@ -46,7 +46,9 @@ La adquisición de discos, memoria o móviles no forma parte de esta primera ent
 - Importar artefactos de sistema, archivos, correo y registros de red que estén disponibles y autorizados.
 - Correlacionar eventos en una línea de tiempo que conserve tiempos originales, zona horaria y conversiones.
 - Generar informes con fuentes, hashes, herramientas y versiones, resultados, límites y anexos reproducibles.
-- Evaluar adaptadores para Autopsy/The Sleuth Kit, Hindsight y, en otra etapa, colecciones de Velociraptor. Cada integración requiere revisar licencia, compatibilidad y resultados con muestras conocidas.
+- **Siguiente integración recomendada: Hindsight JSONL.** Su exportación actual documenta JSON Lines con un registro por línea y campos como `data_type`, `datetime`, `parser` y `source_long`. El adaptador deberá conservar el tipo de artefacto, la procedencia, la versión del parser y el timestamp original; solo importará tipos y campos incluidos en una lista permitida y validada. No debe copiar registros crudos: el JSONL de origen también puede contener cookies, autocompletado, almacenamiento local/de sesión y otros valores sensibles. Esos tipos y campos quedan fuera del índice común por defecto. Referencias: [salidas JSONL de Hindsight](https://github.com/RyanDFIR/hindsight#command-line) y [codificador del formato](https://github.com/RyanDFIR/hindsight/blob/main/pyhindsight/analysis.py).
+
+- Evaluar Autopsy/The Sleuth Kit para exportar resultados e integridad, y más adelante colecciones offline de Velociraptor. Cada integración requiere revisar licencia, compatibilidad, tratamiento de secretos y resultados con muestras conocidas.
 
 ## Reglas que no deben romperse
 
