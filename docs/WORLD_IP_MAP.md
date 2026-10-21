@@ -2,7 +2,7 @@
 
 ## Estado y propósito
 
-La primera versión del mapa vive en la rama `feat/ip-world-map-geoip-2026-10`; todavía no está integrada en `main`. La pantalla es `/world-map` y su API de solo lectura es `/api/geolocation/map`.
+La primera versión del mapa vive en la rama `feat/ip-world-map-geoip-2026-10`; todavía no está integrada en `main`. La pantalla es `/world-map`. `/api/geolocation/map` lista destinos observados y `/api/geolocation/lookup` enriquece direcciones que la persona usuaria ya resolvió manualmente.
 
 La vista muestra ubicaciones aproximadas de direcciones IP públicas que **ya existen como `destination_ip` en eventos guardados en la base local de NetSentinel**. No es un mapa de dispositivos LAN, no descubre IP externas y no captura conexiones o paquetes en vivo.
 
@@ -32,8 +32,8 @@ La cartografía mundial se incluye localmente en `src/netsentinel/static/world_1
 - Las direcciones privadas y especiales (por ejemplo, `192.168.x.x`, `10.x.x.x`, loopback y rangos reservados) no se muestran como ubicaciones geográficas públicas.
 - Un punto representa una aproximación de GeoIP para una dirección; no determina una ubicación física exacta, la identidad de una persona ni el origen verdadero de un incidente.
 - El recuento se refiere a **eventos almacenados**, no a paquetes, bytes ni sesiones confirmadas. La pantalla no dibuja conexiones entre países ni trayectorias de ataque.
-- Si un evento contiene solo un dominio y no una `destination_ip`, el mapa no resuelve ese dominio ahora para fingir que conoce la IP que se usó históricamente. Se necesita un registro original de conexión/DNS con el dato de destino.
-- No se realizan solicitudes a APIs GeoIP externas y no se remiten direcciones IP ni dominios a proveedores. Las consultas leen los archivos MMDB locales.
+- Si un evento contiene solo un dominio y no una `destination_ip`, el mapa histórico no lo resuelve para fingir que conoce la IP que se usó entonces. La pantalla permite una consulta DNS actual, explícita y separada: se consulta el resolvedor configurado en el sistema y luego se geolocalizan localmente las IP públicas devueltas. Eso puede consultar un resolvedor remoto y nunca se presenta como prueba de la IP usada en una visita anterior.
+- No se realizan solicitudes a APIs GeoIP externas: el enriquecimiento lee los archivos MMDB locales. Solo al enviar el formulario manual de dominio se hace una consulta DNS a través del resolvedor configurado en el sistema, que puede estar fuera de la computadora.
 - La respuesta de la API se limita a un máximo de 500 IP únicas por consulta; si la muestra está truncada, se indica en la interfaz.
 
 ## Integraciones todavía pendientes
