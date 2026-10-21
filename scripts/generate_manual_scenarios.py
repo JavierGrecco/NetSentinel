@@ -79,7 +79,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
 
     activity_rows = [
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=50)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=50)),
             "event_type": "dns_query",
             "domain": "dns-probe.invalid",
             "destination_ip": "1.1.1.1",
@@ -89,7 +89,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
             "blocked": "0",
         },
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=40)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=40)),
             "event_type": "connection",
             "domain": "web-probe.invalid",
             "destination_ip": "1.1.1.1",
@@ -99,7 +99,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
             "blocked": "0",
         },
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=30)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=30)),
             "event_type": "tls_sni",
             "domain": "tls-probe.invalid",
             "destination_ip": "203.0.113.10",
@@ -109,7 +109,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
             "blocked": "0",
         },
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=20)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=20)),
             "event_type": "blocked",
             "domain": "policy-probe.invalid",
             "destination_ip": "198.51.100.20",
@@ -119,13 +119,13 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
             "blocked": "1",
         },
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=10)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=10)),
             "event_type": "app_usage",
             "app_name": "Aplicación simulada",
             "blocked": "0",
         },
         {
-            "observed_at": _iso_utc(current - timedelta(seconds=5)),
+            "observed_at": _iso_utc(current - timedelta(minutes=5, seconds=5)),
             "event_type": "search_query",
             "search_engine": "Motor de prueba",
             "search_terms": "consulta ficticia sin datos personales",
@@ -136,7 +136,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
 
     # Se conserva una IP pública conocida únicamente para probar el recorrido
     # de enriquecimiento GeoIP. La relación dominio/IP es deliberadamente falsa.
-    base_ts = int(current.timestamp())
+    base_ts = int(current.timestamp()) - 300
     zeek_records = [
         {
             "ts": base_ts - 45,

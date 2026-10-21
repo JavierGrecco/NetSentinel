@@ -27,28 +27,36 @@ prueba. El generador se niega a sobrescribir cualquiera de sus archivos ya
 existentes, salvo que agregues --force. Esa opción reemplaza únicamente los
 archivos que crea el generador; no borra los demás archivos del directorio.
 
-## Aislar la base de datos
+## Aislar la base de datos y preparar un dispositivo ficticio
 
-Antes de iniciar NetSentinel, creá una ruta nueva y exclusiva para esta prueba.
 No apuntes NETSENTINEL_DATA_DIR a la carpeta de tu instalación habitual.
+El auxiliar de prueba se niega a trabajar con la ruta predeterminada
+~/.netsentinel y también se niega a sobrescribir una base SQLite existente.
 
-En macOS o Linux, podés usar:
+En macOS o Linux, desde la raíz del repositorio con el entorno virtual activado:
 
     export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-test-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$NETSENTINEL_DATA_DIR"
+    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+    python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     ./run.sh
 
-La aplicación usa esa carpeta para su base local. Al cerrar la prueba, guardá
-el resultado que necesitás y eliminá esa carpeta solamente cuando estés seguro
-de que no contiene información que quieras conservar. Para la siguiente
-ejecución, usá otra carpeta vacía.
+El primer comando crea un único activo ficticio en una base nueva; no ejecuta
+un descubrimiento de red. El segundo genera archivos locales. Usá la misma IP
+en ambos comandos. Para otra ejecución, elegí una carpeta de datos distinta.
+Si el archivo SQLite ya existe, el auxiliar se detiene sin modificarlo.
+
+La base de prueba queda separada de la instalación normal. Al cerrar la prueba,
+guardá el resultado que necesitás y eliminá esa carpeta solamente cuando estés
+seguro de que no contiene información que quieras conservar. El generador deja
+sus archivos fuera de Git, en .netsentinel-test-artifacts/manual-scenarios.
 
 ## Prueba A: importación CSV en Actividad
 
 Esta parte utiliza el importador CSV de la aplicación principal.
 
 1. Iniciá NetSentinel con la base aislada y abrí la sección Actividad.
-2. Seleccioná un dispositivo de prueba y abrí la opción de importar CSV.
+2. Seleccioná el dispositivo **Dispositivo sintético de prueba** creado por el auxiliar y abrí la opción de importar CSV.
 3. Elegí activity.csv del directorio generado y ejecutá primero la vista previa.
    Deben aparecer seis filas válidas. La vista previa no debe crear eventos.
 4. Confirmá la importación y verificá que el resumen indique cuántas filas se
@@ -98,8 +106,8 @@ la rama del explorador de red. No está disponible en main. Probalo en otra
 copia de trabajo y no mezcles esta rama de escenarios con las ramas funcionales.
 
 1. Iniciá la rama candidata con una base de datos aislada.
-2. En el inventario, seleccioná un dispositivo cuya dirección histórica
-   corresponda a la opción --device-ip que usaste para generar los archivos.
+2. En el inventario, seleccioná **Dispositivo sintético de prueba**, cuya dirección
+   debe coincidir con la opción --device-ip que usaste para crear la base y los archivos.
    Si es necesario, actualizá primero el inventario en tu red autorizada.
 3. En Actividad, elegí ese dispositivo y previsualizá zeek-conn.jsonl.
    Confirmá que se reconocen origen, destino, protocolo, puerto e ID de Zeek.
@@ -123,7 +131,7 @@ equivocado; no debilites esa validación para que el ejemplo aparezca.
 
 ## Pruebas automatizadas
 
-El generador tiene pruebas unitarias que no necesitan conexión de red:
+El generador, la validación real del CSV y el auxiliar de inventario sintético tienen pruebas automatizadas que no necesitan conexión de red:
 
     python -m pytest -q tests/test_manual_scenario_generator.py
 
