@@ -1,6 +1,8 @@
 """API de solo lectura para el mapa mundial de IP observadas."""
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
 
@@ -9,7 +11,7 @@ from .. import geolocation_service
 class GeolocationLookupRequest(BaseModel):
     """Direcciones ya resueltas por el usuario; esta API no ejecuta DNS."""
 
-    addresses: list[str] = Field(min_length=1, max_length=32)
+    addresses: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(min_length=1, max_length=32)
 
 
 router = APIRouter(tags=["geolocation"])

@@ -86,5 +86,10 @@ def test_current_dns_ip_lookup_requires_a_bounded_nonempty_list():
             "/api/geolocation/lookup",
             json={"addresses": [f"8.8.8.{index % 255}" for index in range(33)]},
         )
+        overlong = client.post(
+            "/api/geolocation/lookup",
+            json={"addresses": ["1" * 65]},
+        )
     assert empty.status_code == 422
     assert too_many.status_code == 422
+    assert overlong.status_code == 422
