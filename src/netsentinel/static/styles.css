@@ -30,28 +30,30 @@
 .history-actions{display:flex;gap:5px}
 
 
-/* Inventario: la información de apoyo aprovecha el ancho de la segunda fila. */
+/* Inventario: columnas independientes para evitar huecos causados por paneles desiguales. */
 .layout.inventory-layout {
   grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-  grid-template-areas:
-    "inventory activity"
-    "diagnostics scans";
+  align-items: start;
 }
 
-.inventory-layout > .inventory-panel { grid-area: inventory; }
-.inventory-layout > .activity-panel { grid-area: activity; }
-.inventory-layout > .diagnostics-panel { grid-area: diagnostics; }
-.inventory-layout > .scans-panel { grid-area: scans; }
+.inventory-column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  min-width: 0;
+}
 
-/* En ventanas más estrechas, cada sección conserva un ancho cómodo y legible. */
+.inventory-column > .panel {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+/* En ventanas más estrechas, apilamos los bloques sin aplastar sus controles. */
 @media (max-width: 1080px) {
   .layout.inventory-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "inventory"
-      "activity"
-      "diagnostics"
-      "scans";
   }
 }
 
