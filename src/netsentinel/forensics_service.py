@@ -18,6 +18,8 @@ from . import __version__, forensics_repository
 from .config import data_dir
 from .forensics_integrity import ForensicIntegrityError, calculate_sha256
 from .forensics_errors import ForensicConflictError
+from .forensics_audit_manifest import build_audit_manifest
+from .forensics_case_manifest import build_case_manifest
 
 
 _ALLOWED_SOURCE_TYPES = frozenset({
@@ -386,3 +388,21 @@ def list_audit_events(*, case_id: str, limit: int = 100) -> list[dict[str, Any]]
 def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
     """Prepara un manifiesto con toda la auditoría del caso, en orden cronológico."""
     return forensics_repository.export_audit_manifest(case_id=case_id)
+
+
+def export_case_manifest(*, case_id: str) -> dict[str, Any] | None:
+    """Prepara un expediente consolidado desde una instantánea de la base local."""
+    snapshot = forensics_repository.export_case_manifest_data(case_id=case_id)
+    if snapshot is None:
+        return None
+    audit_manifest = build_audit_manifest(
+        case=snapshot["case"],
+        events=snapshot["audit_events"],
+        exported_at=snapshot["exported_at"],
+    )
+    return build_case_manifest(
+        case=snapshot["case"],
+        evidence=snapshot["evidence"],
+        audit_manifest=audit_manifest,
+        exported_at=snapshot["exported_at"],
+    )
