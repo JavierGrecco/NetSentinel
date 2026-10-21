@@ -601,7 +601,7 @@ def _world_map_empty_state_failures(page) -> list[str]:
             "() => document.querySelector('#geoSelectedDetails')?.textContent.includes('Resolución DNS actual')"
         )
         details = page.locator("#geoSelectedDetails").inner_text()
-        if "example.test" not in details or "No es un evento histórico" not in details:
+        if "example.test" not in details or "no es un evento histórico" not in details.lower():
             failures.append("el detalle seleccionado no distingue la resolución DNS actual del historial")
     except Exception as exc:
         failures.append(f"no se pudo probar el flujo sintético de búsqueda DNS en el mapa: {exc}")
