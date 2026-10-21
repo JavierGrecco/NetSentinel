@@ -187,9 +187,9 @@ def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -
         addresses = db.execute(
             "SELECT ip_address, first_seen, last_seen, source FROM device_addresses"
         ).fetchall()
-        scans = db.execute(
-            "SELECT source, devices_found, discovery_json FROM scans"
-        ).fetchall()
+        scans = db.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+        observations = db.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+        events = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
 
     assert len(devices) == 1
     assert devices[0][0:3] == (
@@ -200,9 +200,9 @@ def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -
     assert addresses[0][0] == "192.168.56.20"
     assert addresses[0][1] < addresses[0][2]
     assert addresses[0][3] == "synthetic-test-fixture"
-    assert scans[0][0] == "synthetic-test-fixture"
-    assert scans[0][1] == 1
-    assert '"network_scan_performed": false' in scans[0][2]
+    assert scans == 0
+    assert observations == 0
+    assert events == 0
 
 
 def test_seed_refuses_a_nonempty_directory_without_database(tmp_path: Path) -> None:
