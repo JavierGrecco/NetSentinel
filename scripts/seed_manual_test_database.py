@@ -41,6 +41,11 @@ def main() -> int:
         default="192.168.56.20",
         help="IPv4 privada ficticia del activo (por defecto: 192.168.56.20).",
     )
+    parser.add_argument(
+        "--include-topology",
+        action="store_true",
+        help="Añade una única lectura y observación de topología marcadas como sintéticas; no son un escaneo real.",
+    )
     args = parser.parse_args()
 
     configured_dir = os.environ.get("NETSENTINEL_DATA_DIR", "").strip()
@@ -111,7 +116,45 @@ def main() -> int:
             ),
         )
 
-    print("Base sintética creada sin descubrir equipos ni crear lecturas ficticias.")
+    if args.include_topology:
+        # Este modo optativo crea una lectura explícitamente sintética para
+        # revisar el explorador LAN. No ejecuta comandos ni consulta la red.
+        from netsentinel.network_models import Neighbor
+
+        network = ipaddress.ip_network(f"{args.device_ip}/24", strict=False)
+        local_address = next(
+            str(candidate)
+            for candidate in network.hosts()
+            if str(candidate) != args.device_ip
+        )
+        database.record_scan(
+            [
+                Neighbor(
+                    ip_address=args.device_ip,
+                    mac_address="02:00:00:00:00:20",
+                    interface="synthetic-fixture",
+                    source="synthetic-test-fixture",
+                )
+            ],
+            errors=[],
+            discovery={
+                "networks": [
+                    {
+                        "network": network.with_prefixlen,
+                        "interface": "synthetic-fixture",
+                        "local_address": local_address,
+                        "range_limited": False,
+                    }
+                ],
+                "scope": "Solo fixture sintética; no representa una red real.",
+                "kind": "synthetic_fixture",
+                "network_scan_performed": False,
+            },
+        )
+        print("Se añadió una lectura sintética explícita para probar el explorador LAN.")
+    else:
+        print("No se crearon lecturas, observaciones ni eventos de descubrimiento.")
+
     print(f"Base SQLite: {db_path}")
     print(f"Dispositivo de prueba: {args.device_ip} (ID {device_id})")
     print("El historial de IP de prueba abarca 30 días para permitir atribución temporal de Zeek.")

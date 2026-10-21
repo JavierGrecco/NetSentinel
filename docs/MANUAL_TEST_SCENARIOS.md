@@ -131,6 +131,37 @@ la IP no corresponde al dispositivo seleccionado o el evento queda fuera del
 intervalo observado, puede omitirse. Eso es preferible a atribuirlo al equipo
 equivocado; no debilites esa validación para que el ejemplo aparezca.
 
+## Prueba D: explorador LAN con topología sintética
+
+El escenario predeterminado **no** crea lecturas de inventario. Para probar la
+PR #171, prepará una segunda base nueva y exclusiva. El generador de archivos
+puede reutilizarse, pero no uses una base de datos con información real.
+
+Desde el checkout que contiene este script:
+
+    export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-topology-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$NETSENTINEL_DATA_DIR"
+    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology
+
+Este modo opcional agrega una única lectura, una observación y una subred
+RFC1918 ficticias, etiquetadas como `synthetic-test-fixture`. No ejecuta
+descubrimiento, ping ni comandos del sistema. Para abrir esa base con el
+explorador, iniciá después la copia de NetSentinel de la PR #171 usando el mismo
+`NETSENTINEL_DATA_DIR`, sin ejecutar dos instancias contra la misma base.
+
+1. Abrí la página **Explorador de red** y elegí la única lectura sintética.
+2. Verificá que el dispositivo `192.168.56.20` se relacione con
+   `192.168.56.0/24` y la interfaz `synthetic-fixture`.
+3. Revisá el detalle textual, selección, filtros y vista en escritorio/móvil.
+4. La lectura debe indicar que es sintética; no la interpretes como prueba de
+   un escaneo real. La base dedicada puede eliminarse al acabar la prueba.
+
+La fixture actual tiene una sola observación: sirve para revisar el recorrido
+básico del grafo, pero no prueba comparaciones entre varias lecturas ni cambios
+de IP históricos. Esos escenarios deben verificarse mediante las regresiones
+automatizadas específicas o ampliando explícitamente la fixture, siempre con
+datos etiquetados como ficticios.
+
 ## Pruebas automatizadas
 
 El generador, la validación real del CSV y el auxiliar de inventario sintético tienen pruebas automatizadas que no necesitan conexión de red:
