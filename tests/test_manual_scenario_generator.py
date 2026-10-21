@@ -10,6 +10,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from netsentinel import activity_event_service, activity_import_service
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -144,6 +146,65 @@ def test_generated_activity_csv_passes_real_validator_without_database_writes(
     ]
     assert captured["events"][0]["destination_ip"] == "1.1.1.1"
     assert captured["events"][3]["blocked"] == 1
+
+
+def test_generated_negative_csv_scenarios_are_rejected_before_repository_access(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Los archivos negativos reales se rechazan por el validador de producción."""
+    generated = run_generator(tmp_path)
+    assert generated.returncode == 0, generated.stderr
+
+    def unexpected_repository_call(*_args, **_kwargs):
+        raise AssertionError("Un CSV rechazado no debe acceder a la persistencia.")
+
+    monkeypatch.setattr(
+        activity_import_service.activity_repository,
+        "require_device_exists",
+        unexpected_repository_call,
+    )
+    monkeypatch.setattr(
+        activity_import_service.activity_repository,
+        "import_manual_events",
+        unexpected_repository_call,
+    )
+    cases = (
+        ("activity-invalid-sensitive.csv", "por privacidad"),
+        ("activity-invalid-duplicate-header.csv", "repite una cabecera"),
+    )
+    for filename, error_text in cases:
+        with pytest.raises(ValueError, match=error_text):
+            activity_import_service.import_csv(
+                77,
+                (tmp_path / filename).read_text(encoding="utf-8"),
+                normalize_event=activity_event_service.normalize_event,
+            )
+
+
+def test_generated_zeek_tsv_has_consistent_fields_and_preserves_unknown_values(
+    tmp_path: Path
+) -> None:
+    """El TSV fixture conserva número de columnas y distingue '-' de cero."""
+    generated = run_generator(tmp_path)
+    assert generated.returncode == 0, generated.stderr
+    lines = (tmp_path / "zeek-conn.tsv").read_text(encoding="utf-8").splitlines()
+    fields_line = next(line for line in lines if line.startswith("#fields "))
+    types_line = next(line for line in lines if line.startswith("#types "))
+    fields = fields_line[len("#fields "):].split("\t")
+    types = types_line[len("#types "):].split("\t")
+    rows = [
+        line.split("\t")
+        for line in lines
+        if line and not line.startswith("#")
+    ]
+    assert len(fields) == len(types) == 11
+    assert len(rows) == 2
+    assert all(len(row) == len(fields) for row in rows)
+    indexes = {name: index for index, name in enumerate(fields)}
+    assert rows[0][indexes["orig_ip_bytes"]] == "128"
+    assert rows[1][indexes["orig_ip_bytes"]] == "-"
+    assert rows[1][indexes["resp_ip_bytes"]] == "0"
+    assert rows[1][indexes["id.orig_h"]] == "192.168.56.20"
 
 
 def run_seed(directory: Path | None, *extra_args: str) -> subprocess.CompletedProcess[str]:
