@@ -25,6 +25,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Preguntas frecuentes](docs/FAQ.md)
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
+- [Escenarios de prueba manuales sintéticos](docs/MANUAL_TEST_SCENARIOS.md)
 
 ## Qué podés hacer
 
