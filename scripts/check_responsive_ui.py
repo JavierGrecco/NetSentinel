@@ -311,14 +311,25 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
         if abs(activity["left"] - scans["left"]) > tolerance:
             failures.append("Historial no queda debajo de Actividad reciente")
         if diagnostics["top"] < inventory["bottom"] - tolerance:
-            failures.append("la segunda fila invade verticalmente la primera")
+            failures.append("Diagnóstico invade verticalmente el Inventario")
+        if scans["top"] < activity["bottom"] - tolerance:
+            failures.append("Historial invade verticalmente Actividad reciente")
+        for upper, lower, label in (
+            (inventory, diagnostics, "Inventario y Diagnóstico"),
+            (activity, scans, "Actividad reciente e Historial"),
+        ):
+            gap = lower["top"] - upper["bottom"]
+            if gap > 36:
+                failures.append(f"{label} dejan un hueco vertical innecesario ({gap:.0f}px)")
     else:
-        ordered = [inventory, activity, diagnostics, scans]
+        # En móvil se sigue el orden de lectura por columnas: Inventario,
+        # Diagnóstico y luego Actividad reciente e Historial.
+        ordered = [inventory, diagnostics, activity, scans]
         if any(
             ordered[index + 1]["top"] < ordered[index]["bottom"] - tolerance
             for index in range(len(ordered) - 1)
         ):
-            failures.append("los paneles no se apilan en orden en una ventana estrecha")
+            failures.append("los paneles no se apilan en el orden de columnas en una ventana estrecha")
         if any(abs(box["left"] - inventory["left"]) > tolerance for box in ordered):
             failures.append("los paneles estrechos no comparten el mismo margen izquierdo")
 
