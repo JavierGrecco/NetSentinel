@@ -481,6 +481,7 @@
       $("geoMapLimitNotice").hidden = true;
       $("geoMapLimitNotice").textContent = "";
     }
+    const located = Number(summary.mapped_destination_ips || 0);
     updateMapLegend();
     const sourceEvents = Number(summary.events_with_destination_ip || 0);
     $("geoMapStatus").classList.remove("is-error");
