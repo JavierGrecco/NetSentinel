@@ -14,6 +14,8 @@ Sin embargo, el repositorio no ofrece garantías suficientes para copiar su dise
 
 **Resultado para nuestro producto:** tomar patrones de visualización y lectura rápida, pero no portar el servicio, sus rutas de administración ni sus inferencias. El mejor grafo es el que deja claro qué se observó, en qué momento y mediante qué fuente; no el que dibuja más líneas.
 
+**Estado tras la última revisión:** en la rama `feat/ip-world-map-geoip-2026-10` se añadió una primera vista mundial de IP públicas observadas, con enriquecimiento desde bases GeoLite2 locales opcionales. Esto no cubre todavía el mapa de paquetes TCP/UDP/ICMP en vivo, las fuentes WAN/UPnP ni la inteligencia de amenazas que describe esta referencia. No se importan métricas estimadas ni se presenta una IP geolocalizada como la ubicación exacta de una persona o máquina.
+
 ## 1. Qué aporta la interfaz
 
 ### Grafo animado de relaciones y tráfico
