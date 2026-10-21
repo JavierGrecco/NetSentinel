@@ -78,15 +78,20 @@ def test_every_page_can_switch_between_red_and_forensics():
         assert labels == ["NetSentinel Red", "NetSentinel Forense"]
 
 
-def test_forensics_audit_manifest_export_is_connected_to_the_screen():
-    """La descarga del manifiesto debe estar disponible desde el caso seleccionado."""
+def test_forensics_manifest_exports_are_connected_to_the_screen():
+    """Los dos manifiestos deben estar disponibles desde el caso seleccionado."""
     html = (ROOT / "src/netsentinel/static/forensics.html").read_text(encoding="utf-8")
     script = (ROOT / "src/netsentinel/static/forensics.js").read_text(encoding="utf-8")
 
     assert 'id="exportForensicAuditManifest"' in html
-    assert "installManifestExport();" in script
-    assert "/audit/manifest" in script
-    assert 'link.download = "netsentinel-forensic-audit-manifest.json"' in script
+    assert 'id="exportForensicCaseManifest"' in html
+    assert "function installManifestExport(buttonId, endpointSuffix, filename" in script
+    assert '"exportForensicAuditManifest"' in script
+    assert '"exportForensicCaseManifest"' in script
+    assert '"/audit/manifest"' in script
+    assert '"/manifest"' in script
+    assert '"netsentinel-forensic-audit-manifest.json"' in script
+    assert '"netsentinel-forensic-case-manifest.json"' in script
     assert "digest no es una firma digital" in script
 
     # El callback debe capturar la URL antes de limpiar la variable local.
