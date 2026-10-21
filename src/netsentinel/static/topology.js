@@ -334,11 +334,26 @@
           const value = String(address && address.ip_address || "");
           const number = ipv4ToNumber(value);
           if (number === null) return false;
-          return networks.some(network => {
-            if (network.rangeLimited) return false;
+          const matchingNetworks = networks.filter(network => {
             const subnet = parsePrivateCidr(network.cidr);
             return Boolean(subnet && (((number & subnet.mask) >>> 0) === subnet.networkNumber));
           });
+          if (!matchingNetworks.length) return false;
+
+          // Si la dirección tiene una interfaz de origen, no uses otra interfaz
+          // con el mismo CIDR para declarar completo el alcance del descubrimiento.
+          const addressInterface = String(address.interface || "").trim();
+          if (addressInterface) {
+            return matchingNetworks.some(network =>
+              String(network.interface || "").trim() === addressInterface &&
+              !network.rangeLimited
+            );
+          }
+
+          // Sin interfaz de origen solo es seguro inferir ausencia si el rango
+          // IP coincide con una única red registrada. Si hay redes solapadas,
+          // el origen de la observación no permite decidir cuál fue examinada.
+          return matchingNetworks.length === 1 && !matchingNetworks[0].rangeLimited;
         });
         if (!inCompleteScope) continue;
         observedEntries.push({

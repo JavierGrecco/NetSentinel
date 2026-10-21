@@ -415,6 +415,11 @@ test("la vista histórica no infiere ausencias con IPs cuyo historial no abarca 
         first_seen: "2026-10-16T10:00:00+00:00",
         last_seen: "2026-10-16T10:00:59+00:00"
       }]
+    }),
+    // Un registro sin first_seen/last_seen tampoco demuestra que la IP
+    // estuviera activa durante la captura elegida.
+    device(26, "192.168.1.26", {
+      addresses: [{ ip_address: "192.168.1.26", interface: "en0" }]
     })
   ];
 
@@ -435,26 +440,44 @@ test("inventory devices within a limited range are not marked absent", () => {
     captured_at: currentScan.finished_at,
     evidence_available: true,
     network_scope_available: true,
-    nodes: [{
-      id: "subnet:192.168.1.0%2F24%40en0",
-      kind: "subnet",
-      label: "192.168.1.0/24",
-      network_id: "subnet:192.168.1.0%2F24%40en0",
-      interface: "en0",
-      local_address: "192.168.1.5",
-      range_limited: true
-    }],
+    nodes: [
+      {
+        id: "subnet:192.168.1.0%2F24%40en0",
+        kind: "subnet",
+        label: "192.168.1.0/24",
+        network_id: "subnet:192.168.1.0%2F24%40en0",
+        interface: "en0",
+        local_address: "192.168.1.5",
+        range_limited: true
+      },
+      {
+        id: "subnet:192.168.1.0%2F24%40en1",
+        kind: "subnet",
+        label: "192.168.1.0/24",
+        network_id: "subnet:192.168.1.0%2F24%40en1",
+        interface: "en1",
+        local_address: "192.168.1.6",
+        range_limited: false
+      }
+    ],
     edges: [],
-    stats: { observed_devices: 0, known_subnets: 1, observed_memberships: 0, unlinked_devices: 0 },
-    warnings: ["El alcance de descubrimiento estuvo limitado."]
+    stats: { observed_devices: 0, known_subnets: 2, observed_memberships: 0, unlinked_devices: 0 },
+    warnings: ["El alcance de descubrimiento estuvo limitado en una interfaz."]
   };
-  const inventory = [device(23, "192.168.1.23")];
+  const inventory = [device(23, "192.168.1.23", {
+    addresses: [{
+      ip_address: "192.168.1.23",
+      interface: "en0",
+      first_seen: "2026-10-16T10:00:50+00:00",
+      last_seen: "2026-10-16T10:02:00+00:00"
+    }]
+  })];
   const model = buildTopologyModelFromApi(payload, inventory, [currentScan], "1");
   const graph = buildGraphElements(model, { status: "all" });
 
   assert.deepEqual(model.devices, []);
   assert.equal(model.networkScopeAvailable, true);
-  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 1);
+  assert.equal(graph.elements.filter(item => item.data.type === "network").length, 2);
   assert.equal(graph.elements.filter(item => item.data.type === "device").length, 0);
   assert.equal(graph.elements.filter(item => item.data.type === "observed-subnet-membership").length, 0);
 });

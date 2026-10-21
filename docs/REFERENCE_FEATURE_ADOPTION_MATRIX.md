@@ -47,6 +47,10 @@ La parte de interfaz de esta referencia se construyó para una aplicación de es
 
 La revisión actual de [blacsecurity/netsentinel](https://github.com/blacsecurity/netsentinel/tree/c4924dbe23a2b990a970395a645481c79e687634) vuelve más importante la cautela sobre la reutilización: la raíz publicada contiene `README.md`, `dashboard.png`, `netsentinel.py` y `requirements.txt`; no se encontró un archivo `LICENSE` en la raíz y el README dirige la instalación a `spiderxploit/netsentinel`. Hasta aclarar licencia y procedencia, no copiamos su código. Sí podemos implementar patrones generales de lectura rápida y selección usando nuestros contratos y pruebas.
 
+### Alcance histórico y selección de interfaz
+
+La reconstrucción de una lectura solo puede clasificar un equipo como «no visto» cuando una dirección conocida tiene un intervalo de observación que se solapa con la captura seleccionada y pertenece a una subred cuyo descubrimiento fue completo. Si la dirección apareció después, dejó de observarse antes o carece de fechas fiables, se mantiene fuera de esa conclusión. Si el mismo CIDR figura en varias interfaces, una interfaz completa no compensa el alcance limitado de otra: se exige coincidencia de interfaz cuando el historial de la dirección la identifica; si el origen es ambiguo, se falla de forma conservadora.
+
 ## Reglas que no debemos negociar
 
 1. **La evidencia es la fuente de verdad.** El servidor define las observaciones y las relaciones del modelo. La UI puede agrupar visualmente varias IP del mismo dispositivo dentro de una subred, pero no puede inventar relaciones.
