@@ -82,6 +82,29 @@
     return values;
   }
 
+  function addressOverlapsScan(address, scan, fallbackCapturedAt) {
+    // first_seen/last_seen son fechas de observación, no una concesión DHCP.
+    // Solo inferimos ausencia cuando el historial del rango IP abarca la lectura.
+    if (!address || typeof address !== "object") return false;
+    const firstSeen = timestamp(address.first_seen);
+    const lastSeen = timestamp(address.last_seen);
+    const scanStartedAt = timestamp(scan && scan.started_at);
+    const scanFinishedAt = timestamp(scan && scan.finished_at);
+    const fallbackAt = timestamp(fallbackCapturedAt);
+    const scanStart = scanStartedAt !== null
+      ? scanStartedAt
+      : (scanFinishedAt !== null ? scanFinishedAt : fallbackAt);
+    const scanEnd = scanFinishedAt !== null
+      ? scanFinishedAt
+      : (fallbackAt !== null ? fallbackAt : scanStart);
+
+    if (firstSeen === null || lastSeen === null || scanStart === null || scanEnd === null) {
+      return false;
+    }
+    if (firstSeen > lastSeen || scanStart > scanEnd) return false;
+    return firstSeen <= scanEnd && lastSeen >= scanStart;
+  }
+
   function deviceLabel(device) {
     return String(
       device.display_name || device.observed_ip_address || device.ip_address || device.mac_address || "Dispositivo sin nombre"
@@ -301,18 +324,36 @@
         if (!original || original.id === undefined || original.id === null) continue;
         const id = String(original.id);
         if (observedInventoryIds.has(id)) continue;
-        // Solo afirmar "no visto" si alguna dirección cae dentro de una
-        // subred cuyo descubrimiento no se registró como limitado.
-        // Los equipos fuera de ese alcance no pertenecen a esta comparación.
-        const inCompleteScope = deviceAddresses(original).some(address => {
+        // Solo afirmar "no visto" si una dirección con historial temporal
+        // suficiente cae dentro de una subred cuyo descubrimiento no fue limitado.
+        // Las direcciones de la ficha actual que aparecieron después de esta lectura
+        // no sirven para inferir el alcance de una captura histórica.
+        const knownAddresses = Array.isArray(original.addresses) ? original.addresses : [];
+        const inCompleteScope = knownAddresses.some(address => {
+          if (!addressOverlapsScan(address, selectedScan, payload.captured_at)) return false;
           const value = String(address && address.ip_address || "");
           const number = ipv4ToNumber(value);
           if (number === null) return false;
-          return networks.some(network => {
-            if (network.rangeLimited) return false;
+          const matchingNetworks = networks.filter(network => {
             const subnet = parsePrivateCidr(network.cidr);
             return Boolean(subnet && (((number & subnet.mask) >>> 0) === subnet.networkNumber));
           });
+          if (!matchingNetworks.length) return false;
+
+          // Si la dirección tiene una interfaz de origen, no uses otra interfaz
+          // con el mismo CIDR para declarar completo el alcance del descubrimiento.
+          const addressInterface = String(address.interface || "").trim();
+          if (addressInterface) {
+            return matchingNetworks.some(network =>
+              String(network.interface || "").trim() === addressInterface &&
+              !network.rangeLimited
+            );
+          }
+
+          // Sin interfaz de origen solo es seguro inferir ausencia si el rango
+          // IP coincide con una única red registrada. Si hay redes solapadas,
+          // el origen de la observación no permite decidir cuál fue examinada.
+          return matchingNetworks.length === 1 && !matchingNetworks[0].rangeLimited;
         });
         if (!inCompleteScope) continue;
         observedEntries.push({
