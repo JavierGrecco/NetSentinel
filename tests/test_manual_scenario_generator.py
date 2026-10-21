@@ -190,6 +190,11 @@ def test_generated_zeek_tsv_has_consistent_fields_and_preserves_unknown_values(
     lines = (tmp_path / "zeek-conn.tsv").read_text(encoding="utf-8").splitlines()
     fields_line = next(line for line in lines if line.startswith("#fields "))
     types_line = next(line for line in lines if line.startswith("#types "))
+    open_value = next(line for line in lines if line.startswith("#open ")).split(maxsplit=1)[1]
+    close_value = next(line for line in lines if line.startswith("#close ")).split(maxsplit=1)[1]
+    # El formato de tiempo de las directivas nativas de Zeek no es ISO 8601.
+    datetime.strptime(open_value, "%Y-%m-%d-%H-%M-%S")
+    datetime.strptime(close_value, "%Y-%m-%d-%H-%M-%S")
     fields = fields_line[len("#fields "):].split("\t")
     types = types_line[len("#types "):].split("\t")
     rows = [

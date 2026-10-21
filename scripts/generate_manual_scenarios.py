@@ -198,12 +198,12 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
         "#empty_field (empty)",
         "#unset_field -",
         "#path conn",
-        "#open " + _iso_utc(current),
+        "#open " + current.strftime("%Y-%m-%d-%H-%M-%S"),
         "#fields " + "\t".join(ZEEK_FIELDS),
         "#types time string addr port addr port enum count count count count",
     ]
     tsv_lines.extend("\t".join(row) for row in tsv_records)
-    tsv_lines.append("#close " + _iso_utc(current))
+    tsv_lines.append("#close " + current.strftime("%Y-%m-%d-%H-%M-%S"))
     zeek_tsv = "\n".join(tsv_lines) + "\n"
 
     sensitive_csv = (
