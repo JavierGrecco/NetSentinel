@@ -65,7 +65,27 @@
   </div>
 </header>
 <section class="geo-scope-notice" aria-label="Alcance y privacidad">
-  <strong>Qué muestra el mapa:</strong> ubicaciones aproximadas de IP públicas registradas como destino en los eventos locales guardados. No inicia captura de tráfico ni resuelve dominios antiguos como si fueran IP observadas. Las direcciones privadas y especiales no se geolocalizan. NetSentinel consulta únicamente bases GeoIP instaladas en esta computadora; no envía IP ni dominios a un proveedor externo.
+  <strong>Qué muestra el mapa:</strong> ubicaciones aproximadas de IP públicas registradas como destino en los eventos locales guardados. No inicia captura de tráfico ni resuelve dominios antiguos como si fueran IP observadas. Las direcciones privadas y especiales no se geolocalizan. La geolocalización usa bases GeoIP instaladas en esta computadora, sin API externa. El formulario manual consulta el resolvedor DNS configurado en el sistema, que puede ser remoto.
+</section>
+
+<section class="panel geo-domain-panel" aria-labelledby="geoDomainLookupTitle">
+  <div class="geo-domain-heading">
+    <div>
+      <p class="geo-kicker">CONSULTA MANUAL</p>
+      <h2 id="geoDomainLookupTitle">¿De dónde es la IP de una página?</h2>
+      <p class="small">Ingresá un dominio para consultar su resolución DNS actual y ubicar las IP públicas con la base GeoIP local. Esta consulta no se guarda como evento ni demuestra qué IP se utilizó en visitas anteriores.</p>
+    </div>
+  </div>
+  <form id="geoDomainLookupForm" class="geo-domain-form">
+    <div class="geo-filter geo-domain-input">
+      <label for="geoDomainInput">Dominio, sin protocolo ni ruta</label>
+      <input id="geoDomainInput" name="hostname" type="text" maxlength="253" required autocomplete="off" spellcheck="false" placeholder="Ej.: www.example.com">
+    </div>
+    <button id="geoDomainLookupButton" type="submit" class="primary">Resolver y ubicar</button>
+  </form>
+  <p class="small geo-domain-privacy">Al pulsar el botón, el dominio se consulta al resolvedor DNS del sistema; ese resolvedor puede ser externo. Las coordenadas se obtienen únicamente de la base GeoIP local de NetSentinel.</p>
+  <p id="geoDomainLookupStatus" class="geo-status" role="status" aria-live="polite">No se consultó ningún dominio todavía.</p>
+  <div id="geoDomainLookupResults" class="geo-dns-results" hidden aria-label="Resultados de la resolución DNS actual"></div>
 </section>
 
 <section class="panel geo-map-panel" aria-labelledby="geoMapTitle">
@@ -99,6 +119,10 @@
       <div class="geo-map-frame-heading">
         <strong>Distribución geográfica de destinos</strong>
         <span id="geoMapLegend" class="small">Sin puntos hasta disponer de datos válidos</span>
+      </div>
+      <div class="geo-map-legend-note" aria-label="Leyenda de tipos de marcador">
+        <span class="geo-legend-item"><span class="geo-legend-dot" aria-hidden="true"></span>IP observada en eventos guardados</span>
+        <span class="geo-legend-item"><span class="geo-legend-dot is-current" aria-hidden="true"></span>IP de resolución DNS actual</span>
       </div>
       <div class="geo-map-canvas">
         <svg id="worldMap" viewBox="0 0 1000 500" role="group" aria-label="Mapa mundial interactivo de ubicaciones aproximadas de IP públicas">
