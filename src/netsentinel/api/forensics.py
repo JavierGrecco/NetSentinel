@@ -216,6 +216,7 @@ def export_forensic_audit_manifest(case_id: UUID) -> Response:
         media_type="application/json",
         headers={
             "Content-Disposition": 'attachment; filename="netsentinel-forensic-audit-manifest.json"',
+            "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )
@@ -233,6 +234,7 @@ def export_forensic_case_manifest(case_id: UUID) -> Response:
         media_type="application/json",
         headers={
             "Content-Disposition": 'attachment; filename="netsentinel-forensic-case-manifest.json"',
+            "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )
