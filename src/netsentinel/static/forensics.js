@@ -94,6 +94,7 @@
     $("forensicCaseEmpty").hidden = Boolean(current);
     $("forensicSelectedCase").hidden = !current;
     $("exportForensicAuditManifest").disabled = !current || state.busy;
+    $("exportForensicCaseManifest").disabled = !current || state.busy;
     if (!current) return;
     $("forensicSelectedCaseTitle").textContent = current.title;
     $("forensicSelectedCaseNumber").textContent = current.case_number;
@@ -360,22 +361,27 @@
     buttons.forEach((button) => button.addEventListener("click", () => applyFilter(button.dataset.phaseFilter)));
   }
 
-  function installManifestExport() {
-    const button = $("exportForensicAuditManifest");
+  function installManifestExport(buttonId, endpointSuffix, filename, preparingMessage, errorMessage, successMessage) {
+    const button = $(buttonId);
+    if (!button) return;
     button.addEventListener("click", async () => {
       const caseId = state.selectedCaseId;
       if (!caseId || state.busy) return;
+      const exportButtons = [
+        $("exportForensicAuditManifest"),
+        $("exportForensicCaseManifest")
+      ].filter(Boolean);
       state.busy = true;
-      button.disabled = true;
-      setStatus("Preparando el manifiesto completo de auditoría…");
+      exportButtons.forEach((item) => { item.disabled = true; });
+      setStatus(preparingMessage);
       let objectUrl = null;
       try {
         const response = await fetch(
-          "/api/forensics/cases/" + encodeURIComponent(caseId) + "/audit/manifest",
+          "/api/forensics/cases/" + encodeURIComponent(caseId) + endpointSuffix,
           { cache: "no-store", credentials: "same-origin" }
         );
         if (!response.ok) {
-          let message = "No se pudo descargar el manifiesto de auditoría.";
+          let message = errorMessage;
           try {
             const body = await response.json();
             if (typeof body.detail === "string") message = body.detail;
@@ -386,7 +392,7 @@
         objectUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = objectUrl;
-        link.download = "netsentinel-forensic-audit-manifest.json";
+        link.download = filename;
         link.hidden = true;
         document.body.append(link);
         link.click();
@@ -395,20 +401,16 @@
         const downloadUrl = objectUrl;
         window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
         objectUrl = null;
-        setStatus(
-          "Manifiesto descargado. Guardá su SHA-256 por separado si necesitás comprobar sustituciones; el digest no es una firma digital.",
-          "success"
-        );
+        setStatus(successMessage, "success");
       } catch (error) {
-        setStatus(error.message || "No se pudo descargar el manifiesto.", "error");
+        setStatus(error.message || errorMessage, "error");
       } finally {
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         state.busy = false;
-        button.disabled = !state.selectedCaseId;
+        exportButtons.forEach((item) => { item.disabled = !state.selectedCaseId; });
       }
     });
   }
-
   function installCaseForms() {
     const caseDetails = $("newForensicCaseDetails");
     const evidenceDetails = $("newForensicEvidenceDetails");
@@ -529,7 +531,22 @@
   }
 
   installRoadmapFilters();
-  installManifestExport();
+  installManifestExport(
+    "exportForensicAuditManifest",
+    "/audit/manifest",
+    "netsentinel-forensic-audit-manifest.json",
+    "Preparando el manifiesto de auditoría…",
+    "No se pudo descargar el manifiesto de auditoría.",
+    "Auditoría descargada. Guardá su SHA-256 por separado si necesitás detectar sustituciones; el digest no es una firma digital."
+  );
+  installManifestExport(
+    "exportForensicCaseManifest",
+    "/manifest",
+    "netsentinel-forensic-case-manifest.json",
+    "Preparando el expediente consolidado…",
+    "No se pudo descargar el expediente consolidado.",
+    "Expediente consolidado descargado. Conservá su SHA-256 por separado si necesitás detectar sustituciones; el digest no es una firma digital."
+  );
   installCaseForms();
   loadCases();
 })();
