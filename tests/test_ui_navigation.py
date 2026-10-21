@@ -8,6 +8,7 @@ PAGES = {
     "/monitors": ("src/netsentinel/static/monitors.html", "/monitors"),
     "/tools": ("src/netsentinel/static/tools.html", "/tools"),
     "/activity": ("src/netsentinel/static/activity.html", "/activity"),
+    "/world-map": ("src/netsentinel/static/geolocation.html", "/world-map"),
 }
 NAV_RE = re.compile(
     r'<nav class="primary-nav" aria-label="Navegación principal">(.*?)</nav>',
@@ -17,7 +18,7 @@ LINK_RE = re.compile(
     r'<a class="nav-link"(?P<current> aria-current="page")? '
     r'href="(?P<href>[^"]+)">(?P<label>[^<]+)</a>'
 )
-EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity"]
+EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity", "/world-map"]
 
 
 def test_every_module_has_consistent_primary_navigation():
