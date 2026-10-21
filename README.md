@@ -22,6 +22,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Monitorización](#monitorización)
 - [Copias de seguridad y datos](#copias-de-seguridad-y-datos)
 - [Actividad y privacidad](#historial-y-telemetría-autorizada)
+- [Mapa mundial de IP](docs/WORLD_IP_MAP.md)
 - [Preguntas frecuentes](docs/FAQ.md)
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
@@ -33,6 +34,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
 - Revisar **actividad y telemetría autorizada** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
+- Consultar **Mapa mundial de IP** en `/world-map`: muestra ubicaciones aproximadas de direcciones IP públicas que ya fueron registradas como destino en eventos locales. El detalle depende de una base GeoLite2-City local opcional; sin ella, la tabla sigue mostrando IP sin coordenadas. No captura tráfico en vivo, no resuelve dominios históricos como IP observadas ni usa APIs de geolocalización externas.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
@@ -159,6 +161,7 @@ python -m pytest
 - [Preguntas frecuentes y solución de problemas](docs/FAQ.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Guía de actividad y telemetría autorizada](docs/FAMILY_ACTIVITY.md)
+- [Mapa mundial, base GeoIP y límites de interpretación](docs/WORLD_IP_MAP.md)
 - [Instalación de la extensión para páginas y búsquedas](browser-extension/README.md)
 - [Plan de versiones](docs/ROADMAP.md)
 - [Detalles de monitorización](docs/MONITORING.md)
