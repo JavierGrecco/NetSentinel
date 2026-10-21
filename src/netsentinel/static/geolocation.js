@@ -495,8 +495,8 @@
   }
 
   async function loadMap() {
-    const button = $("refreshWorldMap");
-    button.disabled = true;
+    const refreshButtons = document.querySelectorAll(".js-refresh-world-map");
+    refreshButtons.forEach((button) => { button.disabled = true; });
     $("geoMapStatus").classList.remove("is-error");
     $("geoMapStatus").textContent = "Leyendo eventos locales y cartografía incluida…";
     const jobs = await Promise.allSettled([
@@ -527,11 +527,13 @@
       row.append(cell);
       $("geoDestinationsBody").append(row);
     }
-    button.disabled = false;
+    refreshButtons.forEach((button) => { button.disabled = false; });
   }
 
   installDomainLookup();
-  $("refreshWorldMap").addEventListener("click", loadMap);
+  document.querySelectorAll(".js-refresh-world-map").forEach((button) => {
+    button.addEventListener("click", loadMap);
+  });
   $("geoDestinationFilter").addEventListener("input", renderTable);
   loadMap();
 })();

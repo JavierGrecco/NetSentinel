@@ -49,6 +49,28 @@ def test_theme_options_are_unique_and_have_one_default_selection():
         assert len(checked) == 1 and 'value="dark"' in checked[0]
 
 
+def test_each_page_uses_unique_html_ids():
+    """Los ID duplicados rompen los enlaces entre controles y JavaScript."""
+    for page_name in PAGE_NAMES:
+        html = (STATIC / page_name).read_text(encoding="utf-8")
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        duplicates = sorted({value for value in ids if ids.count(value) > 1})
+        assert not duplicates, f"{page_name} has duplicate HTML IDs: {duplicates}"
+
+
+def test_world_map_refresh_controls_are_both_wired_and_share_loading_state():
+    """Los dos botones de actualización deben responder y deshabilitarse juntos."""
+    html = (STATIC / "geolocation.html").read_text(encoding="utf-8")
+    script = (STATIC / "geolocation.js").read_text(encoding="utf-8")
+
+    assert html.count('class="quiet js-refresh-world-map"') == 2
+    assert 'id="refreshWorldMapTop"' in html
+    assert 'id="refreshWorldMap"' in html
+    assert 'document.querySelectorAll(".js-refresh-world-map").forEach((button) => {' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = true; });' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = false; });' in script
+
+
 def test_shared_theme_defines_one_page_and_control_scale():
     css = (STATIC / "theme.css").read_text(encoding="utf-8")
 
