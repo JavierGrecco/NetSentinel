@@ -231,3 +231,77 @@
 @media (prefers-reduced-motion: reduce) {
   .geo-marker { transition: none; }
 }
+
+
+/* Consulta DNS actual: separada del historial y visualmente distinta en el mapa. */
+.geo-domain-panel { margin: 0 0 var(--ui-section-gap); min-width: 0; }
+.geo-domain-heading h2 { margin-bottom: 6px; }
+.geo-domain-heading .small { margin-top: 0; max-width: 900px; }
+.geo-domain-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+.geo-domain-input { flex: 1 1 280px; width: auto; }
+.geo-domain-form button { flex: 0 0 auto; }
+.geo-domain-privacy { margin: 10px 0 0; }
+.geo-domain-form button:disabled { opacity: .6; cursor: progress; }
+.geo-dns-results {
+  border-top: 1px solid var(--theme-line);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.geo-dns-results h3 { margin: 0 0 6px; font-size: 14px; }
+.geo-dns-results p { margin: 5px 0; }
+.geo-dns-ip-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+.geo-dns-ip-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 10px;
+  background: var(--theme-panel-alt);
+}
+.geo-dns-ip-item > div { display: grid; gap: 3px; min-width: 0; }
+.geo-dns-ip-item code { font-size: 12px; }
+.geo-dns-ip-item .small { margin: 0; }
+.geo-marker-current { fill: var(--theme-good-text); stroke-dasharray: 2 1; }
+.geo-marker-current:hover,
+.geo-marker-current:focus-visible { fill: var(--theme-info-line); }
+.geo-map-legend-note {
+  margin: 0 4px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  color: var(--theme-muted);
+  font-size: 11px;
+}
+.geo-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.geo-legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--theme-accent);
+}
+.geo-legend-dot.is-current { background: var(--theme-good-text); }
+@media (max-width: 620px) {
+  .geo-domain-form { align-items: stretch; flex-direction: column; }
+  .geo-domain-form button { width: 100%; }
+  .geo-dns-ip-list { grid-template-columns: minmax(0, 1fr); }
+  .geo-dns-ip-item { align-items: stretch; }
+  .geo-dns-ip-item button { width: 100%; }
+}
