@@ -94,7 +94,7 @@ La entrega separa casos, metadatos de evidencia, auditoría, servicio, repositor
 - Ejecutar la guía [FORENSIC_MANUAL_TEST.md](https://github.com/JavierGrecco/NetSentinel/blob/feat/reconcile-forensics-main-2026-10/docs/FORENSIC_MANUAL_TEST.md) con archivos sintéticos y registrar fecha, SHA, sistema operativo, navegador y resultado.
 - Probar casos duplicados/cerrados, timestamps con offset, metadatos de evidencia y su fuente, coincidencia/diferencia/fallo de SHA-256 y conservación del valor declarado.
 - Probar traversal, symlinks y nombres no válidos; confirmar que las rutas privadas no se devuelven ni se persisten y que el intento fallido se audita con un marcador genérico.
-- Verificar permisos de directorios, exportación/verificación del manifiesto, navegación Red/Forense, teclado, foco, ventana estrecha y lector de pantalla.
+- Verificar permisos de directorios, exportación/verificación del manifiesto de auditoría y del expediente consolidado, navegación Red/Forense, teclado, foco, ventana estrecha y lector de pantalla.
 - Confirmar la protección efectiva de `main` según el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73); no confundir esta comprobación con los tests sintéticos de Forense.
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
