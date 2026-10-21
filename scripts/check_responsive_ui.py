@@ -489,6 +489,33 @@ def _monitor_history_accessibility_failures(page) -> list[str]:
     return failures
 
 
+def _world_map_empty_state_failures(page) -> list[str]:
+    """Comprueba cartografía local y estado vacío sin IP ni coordenadas inventadas."""
+    failures: list[str] = []
+    try:
+        page.wait_for_function(
+            """() => {
+              const map = document.querySelector("#worldMap");
+              const status = document.querySelector("#geoMapStatus");
+              return map && map.querySelectorAll(".geo-country").length > 50 &&
+                status && status.textContent.includes("No hay eventos guardados con una IP de destino");
+            }""",
+            timeout=15000,
+        )
+    except Exception as exc:
+        return [f"el mapa mundial local no cargó su cartografía o el estado vacío: {exc}"]
+
+    if page.locator("#worldMap .geo-marker").count() != 0:
+        failures.append("el mapa dibujó puntos de IP aunque la base sintética no contiene IP de destino")
+    if page.locator("#geoDestinationsBody tr").count() != 1:
+        failures.append("la tabla de IP no muestra una única fila de estado vacío")
+    elif "Todavía no hay IP públicas registradas" not in page.locator("#geoDestinationsBody").inner_text():
+        failures.append("la fila vacía no explica que faltan IP de destino registradas")
+    if not page.locator("#geoSetup").is_visible():
+        failures.append("el mapa no explica que necesita una base GeoIP local cuando no está instalada")
+    return failures
+
+
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -592,6 +619,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     case_failures.extend(_scan_comparison_failures(page))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
+                            if path == "/world-map" and viewport == Viewport(1440, 900):
+                                case_failures.extend(_world_map_empty_state_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
@@ -656,7 +685,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Revisa las cinco pantallas de NetSentinel en múltiples tamaños. "
+            "Revisa las seis pantallas de NetSentinel en múltiples tamaños. "
             "Por defecto usa un servidor y una base de datos temporales."
         )
     )
