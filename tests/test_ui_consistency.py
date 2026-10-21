@@ -11,6 +11,7 @@ PAGE_NAMES = (
     "monitors.html",
     "tools.html",
     "activity.html",
+    "geolocation.html",
 )
 
 
@@ -23,7 +24,7 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert ".app-header-utilities .theme-option-card" in css
     assert "min-height: 48px" in css
     assert ".app-header-content > .primary-nav" in css
-    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(6, minmax(0, 1fr))" in css
     assert "min-height: 42px" in css
     assert ".app-section-title" in css
     assert "background: #101827" in css
@@ -83,6 +84,7 @@ def test_every_page_keeps_a_fixed_brand_and_a_distinct_section_heading():
         "monitors.html": "Monitorización",
         "tools.html": "Herramientas de red",
         "activity.html": "Actividad y telemetría",
+        "geolocation.html": "Mapa mundial de IP",
     }
 
     for page_name, section_title in expected_titles.items():
@@ -157,7 +159,7 @@ def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens()
 
 
 def test_every_main_page_uses_the_shared_content_shell():
-    """Las cinco secciones comparten el mismo contenedor principal."""
+    """Las secciones principales comparten el mismo contenedor principal."""
     for page_name in PAGE_NAMES:
         html = (STATIC / page_name).read_text(encoding="utf-8")
         assert '<main class="wrap">' in html, (
