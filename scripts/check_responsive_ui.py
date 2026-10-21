@@ -36,6 +36,7 @@ PAGE_CASES = (
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
     ("/activity", "Actividad y telemetría", "actividad"),
+    ("/world-map", "Mapa mundial de IP", "mapa-mundial"),
 )
 
 
