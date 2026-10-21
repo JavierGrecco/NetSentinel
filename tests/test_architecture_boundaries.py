@@ -349,6 +349,7 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "forensics_service.py",
         "forensics_repository.py",
         "forensics_audit_integrity.py",
+        "forensics_case_manifest.py",
     }
     for name in expected:
         source = (package_root / name).read_text(encoding="utf-8")
