@@ -236,6 +236,154 @@
     $("geoTableStatus").textContent = state.filtered.length.toLocaleString("es-AR") + " IP en esta tabla.";
   }
 
+  function updateMapLegend() {
+    const observedCount = state.destinations.filter((item) => item.location_status === "located").length;
+    const currentCount = state.currentDnsLookup
+      ? state.currentDnsLookup.destinations.filter((item) => item.location_status === "located").length
+      : 0;
+    const labels = [];
+    if (observedCount) labels.push(observedCount + " IP de eventos guardados");
+    if (currentCount) labels.push(currentCount + " IP de una resolución DNS actual");
+    $("geoMapLegend").textContent = labels.length
+      ? labels.join(" · ")
+      : "No hay coordenadas disponibles para los datos actuales";
+  }
+
+  function renderDomainLookup(lookup) {
+    const container = $("geoDomainLookupResults");
+    container.replaceChildren();
+    container.hidden = false;
+    container.append(element("h3", "Resolución actual de " + lookup.hostname));
+    container.append(element(
+      "p",
+      lookup.dns_addresses.length + " dirección(es) devuelta(s) por DNS; " +
+        lookup.destinations.length + " IP pública(s) consultada(s) en la base GeoIP local."
+    ));
+    container.append(element(
+      "p",
+      "Esta es una consulta actual. No confirma la IP que se usó en una visita anterior."
+    ));
+    if (!lookup.dns_addresses.length) {
+      container.append(element("p", "El resolvedor no devolvió direcciones A/AAAA."));
+      return;
+    }
+
+    const list = element("ul", undefined, "geo-dns-ip-list");
+    const detailsContext = {
+      kind: "current_dns",
+      hostname: lookup.hostname,
+      queried_at: lookup.queried_at,
+      resolved_count: lookup.dns_addresses.length
+    };
+    lookup.dns_addresses.forEach((addressInfo) => {
+      const address = addressInfo.ip;
+      const item = lookup.destinations.find((entry) => entry.ip === address);
+      const row = element("li", undefined, "geo-dns-ip-item");
+      const info = document.createElement("div");
+      info.append(element("strong", address, "geo-dns-ip-value"));
+      info.append(element("span", addressInfo.family || "IP", "small"));
+      info.append(element(
+        "span",
+        item ? locationLabel(item) : "Omitida: IP privada/especial o dato no geolocalizable",
+        "small"
+      ));
+      if (item && item.country) {
+        info.append(element("span", [item.city, item.country].filter(Boolean).join(", "), "small"));
+      }
+      if (item && item.asn) {
+        info.append(element("span", "AS" + item.asn + (item.asn_organization ? " · " + item.asn_organization : ""), "small"));
+      }
+      row.append(info);
+      if (item) {
+        const button = element("button", "Ver en el mapa", "quiet tiny geo-select-ip");
+        button.type = "button";
+        button.addEventListener("click", () => {
+          updateSelected(item, detailsContext);
+          $("worldMap").scrollIntoView({ block: "center", behavior: "auto" });
+        });
+        row.append(button);
+      }
+      list.append(row);
+    });
+    container.append(list);
+  }
+
+  async function postJson(url, payload) {
+    const response = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    let body = {};
+    try { body = await response.json(); } catch (_) { /* La respuesta puede no ser JSON. */ }
+    if (!response.ok) {
+      throw new Error(typeof body.detail === "string" ? body.detail : "La consulta local no terminó correctamente.");
+    }
+    return body;
+  }
+
+  function installDomainLookup() {
+    const form = $("geoDomainLookupForm");
+    const button = $("geoDomainLookupButton");
+    const input = $("geoDomainInput");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+      const hostname = input.value.trim();
+      if (!hostname) return;
+      button.disabled = true;
+      state.currentDnsLookup = null;
+      drawMarkers();
+      updateMapLegend();
+      $("geoDomainLookupResults").replaceChildren();
+      $("geoDomainLookupResults").hidden = true;
+      $("geoDomainLookupStatus").classList.remove("is-error");
+      $("geoDomainLookupStatus").textContent = "Consultando el resolvedor DNS configurado…";
+      try {
+        const dns = await readJson("/api/tools/dns/lookup?hostname=" + encodeURIComponent(hostname));
+        const addresses = Array.isArray(dns.addresses)
+          ? dns.addresses
+              .map((item) => typeof item === "string" ? { ip: item } : item)
+              .filter((item) => item && typeof item.ip === "string")
+          : [];
+        if (!addresses.length) {
+          $("geoDomainLookupStatus").textContent =
+            "No se encontraron direcciones A/AAAA para " + (dns.hostname || hostname) + ".";
+          return;
+        }
+        const geo = await postJson("/api/geolocation/lookup", {
+          addresses: addresses.map((item) => item.ip).slice(0, 32)
+        });
+        state.currentDnsLookup = {
+          ...geo,
+          hostname: dns.hostname || hostname,
+          dns_addresses: addresses.slice(0, 32).map((item) => ({
+            ip: item.ip,
+            family: item.family || (item.ip.includes(":") ? "IPv6" : "IPv4")
+          })),
+          destinations: Array.isArray(geo.destinations) ? geo.destinations : []
+        };
+        renderDomainLookup(state.currentDnsLookup);
+        drawMarkers();
+        updateMapLegend();
+        const summary = geo.summary || {};
+        $("geoDomainLookupStatus").textContent =
+          "Consulta actual de " + state.currentDnsLookup.hostname + ": " +
+          Number(summary.requested_ip_count || addresses.length) + " dirección(es), " +
+          Number(summary.located_ip_count || 0) + " con coordenadas GeoIP locales. " +
+          "No es evidencia de una IP histórica.";
+      } catch (error) {
+        $("geoDomainLookupStatus").classList.add("is-error");
+        $("geoDomainLookupStatus").textContent =
+          error && error.message ? error.message : "No se pudo consultar el dominio.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
   function render(payload) {
     state.payload = payload;
     state.destinations = Array.isArray(payload.destinations) ? payload.destinations : [];
@@ -319,6 +467,7 @@
     button.disabled = false;
   }
 
+  installDomainLookup();
   $("refreshWorldMap").addEventListener("click", loadMap);
   $("geoDestinationFilter").addEventListener("input", renderTable);
   loadMap();
