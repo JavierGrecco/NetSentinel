@@ -31,14 +31,18 @@ def get_destination_ip_observations(*, limit: int = 250) -> dict[str, Any]:
             ).fetchone()[0]
         )
         rows = db.execute(
-            """SELECT TRIM(destination_ip) AS ip,
+            """SELECT TRIM(e.destination_ip) AS ip,
                       COUNT(*) AS event_count,
-                      MAX(observed_at) AS last_seen,
-                      MIN(NULLIF(TRIM(domain), '')) AS sample_domain
-               FROM activity_events
-               WHERE destination_ip IS NOT NULL AND TRIM(destination_ip) <> ''
-               GROUP BY TRIM(destination_ip)
-               ORDER BY MAX(observed_at) DESC, TRIM(destination_ip) ASC
+                      MAX(e.observed_at) AS last_seen,
+                      (SELECT NULLIF(TRIM(recent.domain), '')
+                       FROM activity_events recent
+                       WHERE TRIM(recent.destination_ip) = TRIM(e.destination_ip)
+                       ORDER BY recent.observed_at DESC, recent.id DESC
+                       LIMIT 1) AS sample_domain
+               FROM activity_events e
+               WHERE e.destination_ip IS NOT NULL AND TRIM(e.destination_ip) <> ''
+               GROUP BY TRIM(e.destination_ip)
+               ORDER BY MAX(e.observed_at) DESC, TRIM(e.destination_ip) ASC
                LIMIT ?""",
             (bounded_limit,),
         ).fetchall()
