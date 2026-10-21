@@ -150,3 +150,55 @@ def test_world_map_never_emits_unbounded_or_invalid_coordinates(monkeypatch, tmp
     assert payload["destinations"][0]["location_status"] == "no_coordinates"
     assert payload["destinations"][0]["latitude"] is None
     assert payload["summary"]["invalid_ip_events_skipped"] == 2
+
+
+def test_current_dns_lookup_uses_local_geoip_without_creating_history(
+    monkeypatch, tmp_path: Path
+):
+    city_path = tmp_path / "GeoLite2-City.mmdb"
+    city_path.touch()
+    reader = _FakeReader({
+        "8.8.8.8": {
+            "country": {"iso_code": "US", "names": {"en": "United States"}},
+            "city": {"names": {"en": "Mountain View"}},
+            "location": {"latitude": 37.4056, "longitude": -122.0775},
+        },
+    })
+    monkeypatch.setattr(service, "_maxminddb", _FakeMaxMind({str(city_path): reader}))
+    monkeypatch.setattr(service, "city_database_path", lambda: city_path)
+    monkeypatch.setattr(service, "asn_database_path", lambda: tmp_path / "missing-asn.mmdb")
+
+    def unexpected_history_read(*_args, **_kwargs):
+        raise AssertionError("Una consulta DNS actual no debe leer ni modificar el historial.")
+
+    monkeypatch.setattr(
+        service.geolocation_repository,
+        "get_destination_ip_observations",
+        unexpected_history_read,
+    )
+
+    payload = service.lookup_public_ips([
+        "8.8.8.8",
+        "192.168.1.1",
+        "not-an-ip",
+        "8.8.8.8",
+    ])
+
+    assert payload["source"] == "current_dns_resolution"
+    assert payload["queried_at"].endswith("Z")
+    assert payload["summary"]["requested_ip_count"] == 4
+    assert payload["summary"]["public_ip_count"] == 1
+    assert payload["summary"]["located_ip_count"] == 1
+    assert payload["summary"]["private_or_special_ip_count_skipped"] == 1
+    assert payload["summary"]["invalid_ip_count_skipped"] == 1
+    item = payload["destinations"][0]
+    assert item["ip"] == "8.8.8.8"
+    assert item["country"] == "United States"
+    assert item["latitude"] == 37.4056
+    assert item["event_count"] == 0
+    assert item["last_seen"] == ""
+    assert any(
+        "no demuestran" in note.lower()
+        for note in payload["notes"]
+    )
+    assert reader.closed is True
