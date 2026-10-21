@@ -1,6 +1,6 @@
 # Matriz de adopción de los proyectos de referencia
 
-**Actualizado:** 19 de octubre de 2026  
+**Actualizado:** 20 de octubre de 2026  
 **Objetivo:** mejorar NetSentinel sin importar afirmaciones de datos que las fuentes no permiten demostrar ni duplicar responsabilidades existentes.
 
 Esta matriz distingue entre patrones que ya están implementados, trabajo pendiente y funciones que descartamos conscientemente. Los proyectos se inspeccionaron de forma estática; las notas sobre ellos no equivalen a una prueba de ejecución en nuestro entorno.
@@ -12,7 +12,7 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 | Separar modelo de topología, proyección del grafo y presentación | Adoptado; el modelo y la API son módulos del servidor, Cytoscape solo presenta | Implementado en `topology_model.py`, `topology_graph.py` y `api/inventory_topology.py`; la UI usa el contrato compartido |
 | Construir un grafo interactivo con zoom, foco, selección y filtros | Adoptado con controles y alternativa textual | Integrado en `/network`; pendiente aprobar CI de la revisión final y la revisión manual de accesibilidad |
 | Mantener contexto al elegir una captura histórica | Adoptado usando observaciones vinculadas al `scan_id` exacto | API `GET /api/scans/{scan_id}/topology`; el servicio no sustituye IP históricas por los últimos valores del inventario |
-| Posiciones y estado de presentación persistentes | Adoptar solo como preferencia de UI validada, separada de las mediciones | La UI guarda posiciones localmente; el verificador responsive ahora prueba recuperación tras JSON corrupto, coordenadas válidas y límite de 1200 entradas. El resultado sigue pendiente de CI; la comprobación manual de arrastrar y recargar sigue siendo necesaria |
+| Posiciones y estado de presentación persistentes | Adoptar solo como preferencia de UI validada, separada de las mediciones | La UI guarda posiciones localmente; el verificador responsive prueba recuperación tras JSON corrupto, coordenadas válidas y límite de 1200 entradas. En la cabeza funcional `2dd378b8` del 20/10/2026, CI, Security y Supply Chain terminaron correctamente; la comprobación manual de arrastrar y recargar sigue siendo necesaria. Cualquier cambio posterior debe validarse en su propio SHA |
 | Comparar capturas y explicar cambios | Adoptar si ambas lecturas y sus alcances son comparables | NetSentinel ya tiene comparación de capturas; no se debe afirmar que un equipo desapareció si la lectura fue incompleta o sus redes no coinciden |
 | Métricas de red y mapa geográfico | No mezclarlas con el grafo LAN actual | La telemetría disponible es principalmente inventario/observaciones locales y monitorización configurada. No se asignará geolocalización pública a direcciones privadas ni se simulará tráfico |
 
@@ -53,12 +53,12 @@ La revisión actual de [blacsecurity/netsentinel](https://github.com/blacsecurit
 2. **La ausencia no es una desconexión.** Solo clasificamos un equipo como “no visto en esta lectura” si alguna IP del inventario pertenece a una subred registrada y el descubrimiento de esa subred no figura como limitado. Los equipos fuera de alcance no se mezclan con esa lectura.
 3. **Cada relación tiene significado explícito.** `observed-subnet-membership` indica que una IP observada cae dentro de una subred registrada; no significa tráfico, conexión física ni un enlace directo.
 4. **Se distingue el dato de la ficha actual de la evidencia histórica.** Nombre, fabricante y confianza del registro de inventario pueden cambiar y no se presentan como si fueran un histórico inmutable.
-5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks se consideran válidos solo para el SHA que ejecutaron. La PR del explorador permanece como borrador hasta pasar CI, seguridad y cadena de suministro en su cabeza final, además de revisión manual responsive y accesible.
+5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks solo valen para el SHA que ejecutaron. En la cabeza funcional `2dd378b8` del 20/10/2026, CI, Security y Supply Chain finalizaron correctamente; cualquier nuevo commit necesita sus propios checks. La PR permanece como borrador hasta completar además la revisión manual responsive, de teclado y de lector de pantalla.
 6. **Los validadores de alcance deben coincidir.** La interfaz y el servidor solo aceptan una subred si el rango completo está dentro de RFC 1918; una dirección privada al comienzo de un CIDR no vuelve privado todo el rango.
 
 ## Próxima secuencia
 
-1. Aprobar CI y analizar los fallos de la revisión más reciente antes de agregar más superficie funcional.
+1. Mantener CI, Security y Supply Chain correctos para la cabeza exacta que se revisa. En la cabeza funcional `2dd378b8` del 20/10/2026, los tres finalizaron correctamente; volver a validarlos después de cualquier cambio.
 2. Probar el explorador en Chromium con lecturas con varias IP, subredes vacías, alcance desconocido, errores de API, filtros, teclado y móvil.
 3. Verificar persistencia de posiciones, preferencias de tema y recuperación tras datos locales inválidos.
 4. Revisar el resultado junto con las responsabilidades actuales para no mantener dos fuentes de verdad.
