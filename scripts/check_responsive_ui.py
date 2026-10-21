@@ -520,6 +520,7 @@ def _monitor_history_accessibility_failures(page) -> list[str]:
 
 def _forensics_hash_failure_refresh_failures(page) -> list[str]:
     """Comprueba que un fallo de lectura aparezca en la ficha y el historial."""
+    failures: list[str] = []
     operator = page.locator("#forensicOperator")
     source_name = page.locator("#forensicEvidenceList .forensic-verify-form input[name='source_name']")
     confirmation = page.locator("#forensicEvidenceList .forensic-verify-form input[name='confirm_working_copy']")
