@@ -135,7 +135,16 @@ test("the explorer adapts the server graph without rebuilding network relations"
 
   const model = buildTopologyModelFromApi(
     payload,
-    [currentDevice, device(10, "192.168.1.30")],
+    [
+      currentDevice,
+      device(10, "192.168.1.30", {
+        addresses: [{
+          ip_address: "192.168.1.30",
+          first_seen: "2026-10-16T10:01:10+00:00",
+          last_seen: "2026-10-16T10:02:00+00:00"
+        }]
+      })
+    ],
     [currentScan],
     "1"
   );
