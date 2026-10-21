@@ -554,7 +554,44 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
 
     if "forensics-working-copies" in page.locator("#forensicAuditList").inner_text():
         return ["el historial forense mostró la ubicación local de las copias de trabajo"]
-    return []
+
+    # Comprueba el recorrido real del nuevo botón y verifica el archivo que descarga.
+    export_button = page.locator("#exportForensicCaseManifest")
+    if export_button.count() != 1:
+        failures.append("falta el botón para exportar el expediente consolidado")
+        return failures
+    if export_button.is_disabled():
+        failures.append("el botón para exportar el expediente no se habilitó para el caso seleccionado")
+        return failures
+
+    try:
+        with page.expect_download(timeout=8000) as download_info:
+            export_button.click()
+        download = download_info.value
+        if download.suggested_filename != "netsentinel-forensic-case-manifest.json":
+            failures.append("la exportación del expediente produjo un nombre de archivo inesperado")
+        download_path = download.path()
+        if not download_path:
+            failures.append("Chromium no proporcionó una descarga local para verificar")
+            return failures
+        manifest = json.loads(Path(download_path).read_text(encoding="utf-8"))
+        from netsentinel.forensics_case_manifest import verify_case_manifest
+
+        if not verify_case_manifest(manifest):
+            failures.append("el expediente descargado no superó la verificación de sus digests")
+        if manifest.get("format") != "netsentinel-forensic-case-manifest":
+            failures.append("la descarga no contiene el formato de expediente esperado")
+        summary = manifest.get("summary", {})
+        if summary.get("audit_chain_status") != "valid":
+            failures.append("la exportación no conserva una cadena de auditoría sintética válida")
+        if summary.get("failed_check_count", 0) < 1:
+            failures.append("el expediente no incluye la comprobación sintética fallida")
+        exported_text = Path(download_path).read_text(encoding="utf-8")
+        if "forensics-working-copies" in exported_text:
+            failures.append("el expediente descargado revela la carpeta de copias de trabajo")
+    except Exception as exc:
+        failures.append(f"no se pudo descargar y verificar el expediente consolidado en Chromium: {exc}")
+    return failures
 
 
 def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
