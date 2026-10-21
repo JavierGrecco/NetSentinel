@@ -433,7 +433,7 @@ test("la vista histórica no infiere ausencias con IPs cuyo historial no abarca 
 });
 
 
-test("inventory devices within a limited range are not marked absent", () => {
+test("limited or ambiguous interface scope does not classify inventory devices as absent", () => {
   const currentScan = scan(1, "192.168.1.0/24");
   const payload = {
     scan_id: "1",
@@ -464,14 +464,25 @@ test("inventory devices within a limited range are not marked absent", () => {
     stats: { observed_devices: 0, known_subnets: 2, observed_memberships: 0, unlinked_devices: 0 },
     warnings: ["El alcance de descubrimiento estuvo limitado en una interfaz."]
   };
-  const inventory = [device(23, "192.168.1.23", {
-    addresses: [{
-      ip_address: "192.168.1.23",
-      interface: "en0",
-      first_seen: "2026-10-16T10:00:50+00:00",
-      last_seen: "2026-10-16T10:02:00+00:00"
-    }]
-  })];
+  const inventory = [
+    device(23, "192.168.1.23", {
+      addresses: [{
+        ip_address: "192.168.1.23",
+        interface: "en0",
+        first_seen: "2026-10-16T10:00:50+00:00",
+        last_seen: "2026-10-16T10:02:00+00:00"
+      }]
+    }),
+    // Si la ficha no identifica la interfaz, dos redes con el mismo CIDR
+    // dejan ambiguo cuál fue cubierta por el descubrimiento completo.
+    device(27, "192.168.1.27", {
+      addresses: [{
+        ip_address: "192.168.1.27",
+        first_seen: "2026-10-16T10:00:50+00:00",
+        last_seen: "2026-10-16T10:02:00+00:00"
+      }]
+    })
+  ];
   const model = buildTopologyModelFromApi(payload, inventory, [currentScan], "1");
   const graph = buildGraphElements(model, { status: "all" });
 
