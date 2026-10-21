@@ -143,8 +143,8 @@ Desde el checkout que contiene este script:
     mkdir -p "$NETSENTINEL_DATA_DIR"
     python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology
 
-Este modo opcional agrega una única lectura, una observación y una subred
-RFC1918 ficticias, etiquetadas como `synthetic-test-fixture`. No ejecuta
+Este modo opcional agrega una lectura y tres observaciones de dispositivos ficticios
+relacionados con una subred RFC1918, etiquetadas como `synthetic-test-fixture`. No ejecuta
 descubrimiento, ping ni comandos del sistema. Para abrir esa base con el
 explorador, iniciá después la copia de NetSentinel de la PR #171 usando el mismo
 `NETSENTINEL_DATA_DIR`, sin ejecutar dos instancias contra la misma base.
@@ -156,11 +156,11 @@ explorador, iniciá después la copia de NetSentinel de la PR #171 usando el mis
 4. La lectura debe indicar que es sintética; no la interpretes como prueba de
    un escaneo real. La base dedicada puede eliminarse al acabar la prueba.
 
-La fixture actual tiene una sola observación: sirve para revisar el recorrido
-básico del grafo, pero no prueba comparaciones entre varias lecturas ni cambios
-de IP históricos. Esos escenarios deben verificarse mediante las regresiones
-automatizadas específicas o ampliando explícitamente la fixture, siempre con
-datos etiquetados como ficticios.
+La fixture tiene una única lectura con tres dispositivos: sirve para revisar
+nodos, pertenencia a subred, selección y detalle, pero no prueba comparaciones
+entre varias lecturas ni cambios de IP históricos. Esos escenarios deben
+verificarse mediante las regresiones automatizadas específicas o ampliando
+explícitamente la fixture, siempre con datos etiquetados como ficticios.
 
 ## Pruebas automatizadas
 
