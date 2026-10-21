@@ -219,3 +219,20 @@ def export_forensic_audit_manifest(case_id: UUID) -> Response:
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@router.get("/api/forensics/cases/{case_id}/manifest")
+def export_forensic_case_manifest(case_id: UUID) -> Response:
+    """Descarga un expediente consolidado con metadatos, checks y auditoría."""
+    manifest = forensics_service.export_case_manifest(case_id=str(case_id))
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="No se encontró el caso solicitado.")
+    body = json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": 'attachment; filename="netsentinel-forensic-case-manifest.json"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
