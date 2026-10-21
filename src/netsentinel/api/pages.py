@@ -39,3 +39,9 @@ def findings_page() -> FileResponse:
 @router.get("/tools", include_in_schema=False)
 def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
+
+
+@router.get("/world-map", include_in_schema=False)
+def world_map_page() -> FileResponse:
+    """Muestra el mapa mundial de IP públicas incluidas en eventos locales."""
+    return FileResponse(_STATIC_DIR / "geolocation.html")
