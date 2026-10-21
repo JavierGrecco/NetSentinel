@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark">
+<title>NetSentinel · Mapa mundial de IP</title><link rel="stylesheet" href="/static/monitors.css">
+<link rel="stylesheet" href="/static/geolocation.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body><main class="wrap">
+<header class="top app-header">
+  <div class="app-header-content">
+    <div class="app-header-brand-row">
+      <div class="app-brand">
+        <div class="logo" aria-hidden="true">⌁</div>
+        <div class="app-brand-copy">
+          <div class="eyebrow">Observabilidad local</div>
+          <div class="app-brand-name">NetSentinel</div>
+        </div>
+      </div>
+      <div class="app-header-utilities">
+        <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+      <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+      <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+        <label class="theme-option">
+          <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="theme-option-label">Oscuro</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Medio</span>
+          </span>
+        </label>
+        <label class="theme-option">
+          <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+          <span class="theme-option-card">
+            <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="theme-option-label">Claro</span>
+          </span>
+        </label>
+      </div>
+    </div>
+      </div>
+    </div>
+    <div class="app-section-heading-row">
+      <div class="app-section-heading">
+        <h1 class="app-section-title">Mapa mundial de IP</h1>
+        <p class="app-section-description">IP públicas observadas · ubicación aproximada · consulta local</p>
+      </div>
+      <div class="actions app-page-actions"><button id="refresh" type="button" class="quiet">↻ Actualizar</button></div>
+    </div>
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a class="nav-link" href="/">Inventario</a>
+      <a class="nav-link" href="/findings">Hallazgos</a>
+      <a class="nav-link" href="/monitors">Monitorización</a>
+      <a class="nav-link" href="/tools">Herramientas</a>
+      <a class="nav-link" href="/activity">Actividad</a>
+      <a class="nav-link" aria-current="page" href="/world-map">Mapa mundial</a>
+    </nav>
+  </div>
+</header>
+<section class="geo-scope-notice" aria-label="Alcance y privacidad">
+  <strong>Qué muestra el mapa:</strong> ubicaciones aproximadas de IP públicas registradas como destino en los eventos locales guardados. No inicia captura de tráfico ni resuelve dominios antiguos como si fueran IP observadas. Las direcciones privadas y especiales no se geolocalizan. La geolocalización usa bases GeoIP instaladas en esta computadora, sin API externa. El formulario manual consulta el resolvedor DNS configurado en el sistema, que puede ser remoto.
+</section>
+
+<section class="panel geo-domain-panel" aria-labelledby="geoDomainLookupTitle">
+  <div class="geo-domain-heading">
+    <div>
+      <p class="geo-kicker">CONSULTA MANUAL</p>
+      <h2 id="geoDomainLookupTitle">¿De dónde es la IP de una página?</h2>
+      <p class="small">Ingresá un dominio para consultar su resolución DNS actual y ubicar las IP públicas con la base GeoIP local. Esta consulta no se guarda como evento ni demuestra qué IP se utilizó en visitas anteriores.</p>
+    </div>
+  </div>
+  <form id="geoDomainLookupForm" class="geo-domain-form">
+    <div class="geo-filter geo-domain-input">
+      <label for="geoDomainInput">Dominio, sin protocolo ni ruta</label>
+      <input id="geoDomainInput" name="hostname" type="text" maxlength="253" required autocomplete="off" spellcheck="false" placeholder="Ej.: www.example.com">
+    </div>
+    <button id="geoDomainLookupButton" type="submit" class="primary">Resolver y ubicar</button>
+  </form>
+  <p class="small geo-domain-privacy">Al pulsar el botón, el dominio se consulta al resolvedor DNS del sistema; ese resolvedor puede ser externo. Las coordenadas se obtienen únicamente de la base GeoIP local de NetSentinel.</p>
+  <p id="geoDomainLookupStatus" class="geo-status" role="status" aria-live="polite">No se consultó ningún dominio todavía.</p>
+  <div id="geoDomainLookupResults" class="geo-dns-results" hidden aria-label="Resultados de la resolución DNS actual"></div>
+</section>
+
+<section class="panel geo-map-panel" aria-labelledby="geoMapTitle">
+  <div class="geo-panel-heading">
+    <div>
+      <p class="geo-kicker">DESTINOS REGISTRADOS</p>
+      <h2 id="geoMapTitle">Mapa mundial de IP observadas</h2>
+      <p class="small">Cada punto representa una ubicación aproximada del registro GeoIP local. No significa que la IP esté alojada exactamente allí ni identifica a una persona.</p>
+    </div>
+    <button id="refreshWorldMap" type="button" class="quiet">↻ Actualizar mapa</button>
+  </div>
+  <p id="geoMapStatus" class="geo-status" role="status" aria-live="polite">Cargando datos locales…</p>
+
+  <div id="geoSetup" class="geo-setup" hidden>
+    <h3>Preparar la base geográfica local</h3>
+    <p id="geoSetupDependency"></p>
+    <p id="geoSetupDatabase"></p>
+    <p>Descargá GeoLite2-City desde tu cuenta de MaxMind y guardá el archivo autorizado en el directorio de datos local de NetSentinel. Por defecto, en macOS/Linux, es <code>~/.netsentinel/GeoLite2-City.mmdb</code>. También podés definir <code>NETSENTINEL_GEOIP_CITY_DB</code> con la ruta de la base. NetSentinel no descarga una copia ni transmite IP por su cuenta.</p>
+    <p id="geoAsnStatus" class="small"></p>
+  </div>
+
+  <div class="geo-summary" aria-label="Resumen de los eventos usados">
+    <div class="geo-stat"><span>Eventos guardados</span><strong id="geoStatEvents">—</strong></div>
+    <div class="geo-stat"><span>IP públicas encontradas</span><strong id="geoStatPublicIps">—</strong></div>
+    <div class="geo-stat"><span>Ubicaciones aproximadas</span><strong id="geoStatMapped">—</strong></div>
+    <div class="geo-stat"><span>Eventos sin IP de destino</span><strong id="geoStatNoIp">—</strong></div>
+  </div>
+
+  <div class="geo-map-layout">
+    <div class="geo-map-frame">
+      <div class="geo-map-frame-heading">
+        <strong>Distribución geográfica de destinos</strong>
+        <span id="geoMapLegend" class="small">Sin puntos hasta disponer de datos válidos</span>
+      </div>
+      <div class="geo-map-legend-note" aria-label="Leyenda de tipos de marcador">
+        <span class="geo-legend-item"><span class="geo-legend-dot" aria-hidden="true"></span>IP observada en eventos guardados</span>
+        <span class="geo-legend-item"><span class="geo-legend-dot is-current" aria-hidden="true"></span>IP de resolución DNS actual</span>
+      </div>
+      <div class="geo-map-canvas">
+        <svg id="worldMap" viewBox="0 0 1000 500" role="group" aria-label="Mapa mundial interactivo de ubicaciones aproximadas de IP públicas">
+          <title>Mapa mundial de destinos IP observados</title>
+        </svg>
+      </div>
+      <p class="geo-map-attribution">Cartografía local: <a href="/static/world-map-attribution.txt" target="_blank" rel="noopener">fuente y licencia</a>. No se cargan mapas ni marcadores desde servicios externos.</p>
+    </div>
+
+    <aside class="geo-detail-panel" aria-labelledby="geoSelectedTitle">
+      <p class="geo-kicker">DETALLE SELECCIONADO</p>
+      <h3 id="geoSelectedTitle">Elegí un punto o una IP</h3>
+      <p id="geoDetailsEmpty" class="small">Seleccioná un marcador del mapa o una fila de la tabla para revisar los metadatos registrados.</p>
+      <dl id="geoSelectedDetails" class="geo-detail-list" hidden></dl>
+    </aside>
+  </div>
+  <p id="geoMapLimitNotice" class="small geo-limit-notice" hidden></p>
+  <p class="small geo-evidence-note">La cantidad de eventos mide registros guardados, no bytes ni paquetes medidos por este mapa. Para una IP asociada a una visita de navegador, se necesita que la fuente haya registrado también la IP destino (por ejemplo, un registro de conexiones autorizado). Si solo hay un dominio, no se deduce retrospectivamente qué IP se usó en ese momento.</p>
+</section>
+
+<section class="panel section-gap" aria-labelledby="geoIpTableTitle">
+  <div class="geo-table-heading">
+    <div>
+      <h2 id="geoIpTableTitle">Destinos públicos registrados</h2>
+      <p class="small">Incluye destinos sin coordenadas cuando no hay cobertura GeoIP local; esos registros no aparecen como puntos inventados.</p>
+    </div>
+    <div class="geo-filter">
+      <label for="geoDestinationFilter">Filtrar por IP, dominio, país o ASN</label>
+      <input id="geoDestinationFilter" type="search" autocomplete="off" placeholder="Ej.: 8.8.8.8 o example.com">
+    </div>
+  </div>
+  <div class="table-wrap geo-table-wrap">
+    <table class="geo-table">
+      <thead><tr><th scope="col">IP de destino</th><th scope="col">País / ciudad</th><th scope="col">ASN / organización</th><th scope="col">Eventos</th><th scope="col">Último evento</th><th scope="col">Dominio asociado</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
+      <tbody id="geoDestinationsBody"><tr><td colspan="8" class="empty">Cargando IP observadas…</td></tr></tbody>
+    </table>
+  </div>
+  <p id="geoTableStatus" class="small" role="status" aria-live="polite"></p>
+</section>
+<footer class="footer">NetSentinel · Geolocalización aproximada desde una base local opcional. No identifica la dirección exacta de una máquina, persona ni responsable de una conexión.</footer>
+</main>
+<script src="/static/geolocation.js" defer></script></body></html>
