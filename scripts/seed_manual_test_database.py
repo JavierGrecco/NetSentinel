@@ -162,6 +162,18 @@ def main() -> int:
                 )
 
             scan_time = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            # La lectura y el historial de direcciones terminan en el mismo instante.
+            # Así el fixture no sugiere que una observación quede fuera del intervalo del activo.
+            for ip_value, candidate_id in device_by_ip.items():
+                db.execute(
+                    "UPDATE devices SET last_seen = ? WHERE id = ?",
+                    (scan_time, candidate_id),
+                )
+                db.execute(
+                    """UPDATE device_addresses SET last_seen = ?
+                       WHERE device_id = ? AND ip_address = ?""",
+                    (scan_time, candidate_id, ip_value),
+                )
             local_address = next(value for value in hosts if value not in device_by_ip)
             discovery = {
                 "networks": [

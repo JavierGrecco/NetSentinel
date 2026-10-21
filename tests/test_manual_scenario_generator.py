@@ -286,7 +286,7 @@ def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path:
             "SELECT ip_address, first_seen, last_seen, source FROM device_addresses ORDER BY ip_address"
         ).fetchall()
         scans = db.execute(
-            "SELECT id, source, devices_found, discovery_json FROM scans"
+            "SELECT id, finished_at, source, devices_found, discovery_json FROM scans"
         ).fetchall()
         observations = db.execute(
             "SELECT scan_id, ip_address, source FROM observations"
@@ -300,6 +300,7 @@ def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path:
     assert all("sintético" in row["display_name"].lower() or "sintético" in row["notes"].lower() for row in devices)
     assert len(addresses) == 3
     assert all(row["first_seen"] < row["last_seen"] for row in addresses)
+    assert all(row["last_seen"] >= scans[0]["finished_at"] for row in addresses)
     assert {row["source"] for row in addresses} == {"synthetic-test-fixture"}
     assert len(scans) == 1
     assert scans[0]["source"] == "synthetic-test-fixture"
