@@ -165,9 +165,13 @@ def test_seed_requires_explicit_isolated_directory(tmp_path: Path) -> None:
     result = run_seed(None)
     assert result.returncode != 0
     assert "NETSENTINEL_DATA_DIR" in result.stderr
-    assert not (Path.home() / ".netsentinel" / "netsentinel.sqlite3").exists() or (
-        "no se modificó" in result.stderr
-    )
+
+
+def test_seed_refuses_the_default_netsentinel_directory(tmp_path: Path) -> None:
+    """La ruta de producción se rechaza antes de importar o abrir SQLite."""
+    result = run_seed(Path.home() / ".netsentinel")
+    assert result.returncode != 0
+    assert "Se rechazó el directorio habitual" in result.stderr
 
 
 def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -> None:
@@ -199,6 +203,16 @@ def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -
     assert scans[0][0] == "synthetic-test-fixture"
     assert scans[0][1] == 1
     assert '"network_scan_performed": false' in scans[0][2]
+
+
+def test_seed_refuses_a_nonempty_directory_without_database(tmp_path: Path) -> None:
+    unrelated = tmp_path / "keep.txt"
+    unrelated.write_text("preserve this file", encoding="utf-8")
+    result = run_seed(tmp_path)
+    assert result.returncode != 0
+    assert "no está vacío" in result.stderr
+    assert unrelated.read_text(encoding="utf-8") == "preserve this file"
+    assert not (tmp_path / "netsentinel.sqlite3").exists()
 
 
 def test_seed_refuses_existing_database_without_modifying_it(tmp_path: Path) -> None:

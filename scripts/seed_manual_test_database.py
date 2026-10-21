@@ -63,9 +63,15 @@ def main() -> int:
     from netsentinel.network_models import Neighbor
 
     db_path = database_path()
-    if db_path.exists():
+    if db_path.exists() or db_path.is_symlink():
         parser.error(
             f"Ya existe una base SQLite en {db_path}. No se modificó; elegí un directorio de prueba nuevo."
+        )
+    if target_dir.exists() and (
+        not target_dir.is_dir() or any(target_dir.iterdir())
+    ):
+        parser.error(
+            "El directorio de datos no está vacío. Elegí una carpeta exclusiva y nueva para la prueba."
         )
 
     database.initialize()
