@@ -443,6 +443,7 @@ def import_log(
 
         has_unique_selected_owner = False
         has_ambiguous_selected_owner = False
+        uniquely_owned_selected_fields: set[str] = set()
         for field in ("source_ip", "destination_ip"):
             ip_value = event.get(field)
             if not ip_value:
@@ -462,6 +463,7 @@ def import_log(
             if device_id in active_owner_ids:
                 if len(active_owner_ids) == 1:
                     has_unique_selected_owner = True
+                    uniquely_owned_selected_fields.add(field)
                 else:
                     has_ambiguous_selected_owner = True
 
@@ -474,6 +476,20 @@ def import_log(
             for address in selected_history
         )
         if has_unique_selected_owner and in_selected_window:
+            # Zeek's orig/resp counters follow the initiator and responder, but
+            # Activity shows sent/received from the selected device's perspective.
+            # Invert counters only when the selected device is the unique responder.
+            if (
+                "destination_ip" in uniquely_owned_selected_fields
+                and "source_ip" not in uniquely_owned_selected_fields
+            ):
+                event = {
+                    **event,
+                    "bytes_sent": event.get("bytes_received"),
+                    "bytes_received": event.get("bytes_sent"),
+                    "packets_sent": event.get("packets_received"),
+                    "packets_received": event.get("packets_sent"),
+                }
             matching.append((event, line_number))
         elif has_ambiguous_selected_owner and in_selected_window:
             skipped_ambiguous += 1

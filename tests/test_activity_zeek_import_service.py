@@ -306,6 +306,41 @@ def test_zeek_import_skips_connections_that_do_not_touch_the_selected_device(mon
     assert result["would_import"] == 1
 
 
+def test_zeek_import_orients_counters_to_selected_device_when_it_is_responder(monkeypatch):
+    calls = {}
+    monkeypatch.setattr(importer.activity_repository, "require_device_exists", lambda _id: None)
+    selected_ip = "198.51.100.53"
+    _mock_selected_ip_history(monkeypatch, 1, selected_ip=selected_ip)
+
+    def fake_import(device_id, events, line_numbers, *, now, preview):
+        calls["device_id"] = device_id
+        calls["events"] = events
+        calls["preview"] = preview
+        return {"imported": 1, "skipped_duplicates": 0, "preview_dispositions": ["new"]}
+
+    monkeypatch.setattr(importer.activity_repository, "import_manual_events", fake_import)
+    result = importer.import_log(
+        1,
+        _jsonl(_record()),
+        normalize_event=lambda event, **kwargs: {**event, "source": kwargs["source_override"]},
+        preview=True,
+    )
+
+    assert result["matching_rows"] == 1
+    assert calls["device_id"] == 1
+    assert calls["preview"] is True
+    event = calls["events"][0]
+    # Keep Zeek's connection endpoints but present counters from this device's side.
+    assert event["source_ip"] == "192.0.2.20"
+    assert event["destination_ip"] == selected_ip
+    assert event["bytes_sent"] == 197
+    assert event["bytes_received"] == 118
+    assert event["packets_sent"] == 3
+    assert event["packets_received"] == 2
+    assert result["preview_rows"][0]["bytes_sent"] == 197
+    assert result["preview_rows"][0]["bytes_received"] == 118
+
+
 def test_zeek_import_does_not_use_ip_outside_its_observed_interval(monkeypatch):
     monkeypatch.setattr(importer.activity_repository, "require_device_exists", lambda _id: None)
     _mock_selected_ip_history(monkeypatch, 1)

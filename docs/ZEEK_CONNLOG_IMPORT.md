@@ -19,8 +19,8 @@ Zeek documenta `conn.log` como un registro de conversaciones de red con campos c
 | `id.orig_h`, `id.orig_p` | IP y puerto de origen | Las IP se validan. El puerto 0 queda desconocido porque el contrato común solo admite puertos del 1 al 65535. |
 | `id.resp_h`, `id.resp_p` | IP y puerto de destino | Mismas reglas que el origen. |
 | `proto` | `protocol` | TCP, UDP, ICMP y QUIC se conservan; los demás valores se agrupan como `other`. |
-| `orig_ip_bytes`, `resp_ip_bytes` | `bytes_sent`, `bytes_received` | Contadores direccionales a nivel IP. No se mezclan con `orig_bytes` o `resp_bytes`, que miden bytes de carga útil. |
-| `orig_pkts`, `resp_pkts` | `packets_sent`, `packets_received` | Contadores direccionales de paquetes. |
+| `orig_ip_bytes`, `resp_ip_bytes` | `bytes_sent`, `bytes_received` | Contadores a nivel IP orientados desde la perspectiva del dispositivo elegido. Si su IP es únicamente el extremo respondedor (`id.resp_h`), se invierten. No se mezclan con `orig_bytes` o `resp_bytes`, que miden bytes de carga útil. |
+| `orig_pkts`, `resp_pkts` | `packets_sent`, `packets_received` | Contadores de paquetes orientados a la perspectiva del dispositivo elegido, con la misma regla de inversión para el extremo respondedor. |
 
 Los campos adicionales del registro Zeek se ignoran; no se guardan automáticamente. Los contadores ausentes, nulos o marcados con `-` permanecen desconocidos (`NULL`). Un cero informado se conserva como cero. Cada evento queda registrado con la fuente común `manual_import`; el prefijo `zeek:` en el identificador permite reconocer el formato de origen sin cambiar el contrato de fuentes de sesiones autorizadas.
 
@@ -59,14 +59,14 @@ La sección Actividad incluye selector de archivo, selección de dispositivo, vi
 
 La sección Actividad incluye selección de archivo, selección explícita del dispositivo, vista previa y confirmación de importación para ambos formatos. La vista previa indica cuántas filas están dentro del alcance temporal, cuántas se omitirían por quedar fuera del intervalo observado y cuántas son ambiguas por intervalos de propiedad de IP solapados.
 
-Las pruebas automáticas usan únicamente registros sintéticos y una base SQLite temporal. Cubren el mapeo direccional, cero frente a desconocido, registros repetidos, vista previa, reimportación idempotente, alcance por IP del dispositivo seleccionado, validación estricta y ausencia de escrituras parciales.
+Las pruebas automáticas usan únicamente registros sintéticos y una base SQLite temporal. Cubren el mapeo direccional, la inversión de contadores cuando el dispositivo elegido es el extremo respondedor, cero frente a desconocido, registros repetidos, vista previa, reimportación idempotente, alcance por IP del dispositivo seleccionado, validación estricta y ausencia de escrituras parciales.
 
 Esto no sustituye la prueba manual con un archivo Zeek real, sanitizado y autorizado. La siguiente revisión debe comprobar que los datos se entiendan correctamente en Actividad, que las fechas respeten la retención y que las conexiones de otros equipos queden omitidas sin atribuirse al dispositivo seleccionado.
 
 ## Comprobación manual antes de salir del borrador
 
 1. Abrí **Actividad → Importar** y elegí un dispositivo que tenga direcciones con historial de observación.
-2. Cargá el `conn.log` TSV predeterminado o un archivo `.jsonl`/`.ndjson` de una red propia o autorizada. Primero usá **Previsualizar registros**. Confirmá que se muestran el origen, destino, protocolo y contadores; los campos ausentes deben indicar que son desconocidos.
+2. Cargá el `conn.log` TSV predeterminado o un archivo `.jsonl`/`.ndjson` de una red propia o autorizada. Primero usá **Previsualizar registros**. Confirmá que se muestran origen, destino y protocolo; los contadores de envío/recepción deben leerse desde la perspectiva del dispositivo elegido, incluso si aparece como destino. Los campos ausentes deben indicar que son desconocidos.
 3. Antes de importar, consultá **Actividad → Eventos**: el evento sintético de prueba no debe aparecer. Volvé a Importar, confirmá la acción y verificá que se guarde una sola fila con identificador `zeek:<uid>`.
 4. Previsualizá e importá de nuevo el mismo archivo. La segunda operación debe señalar duplicados y no crear otra fila.
 5. Probá un archivo con una fila malformada después de una fila válida. La petición debe informar la fila con error y no guardar ninguna parte del lote. Probá también un registro cuya IP cae fuera del intervalo de observación y otro cuya IP tenga propietarios solapados; ambos deben quedar omitidos y contabilizados.
