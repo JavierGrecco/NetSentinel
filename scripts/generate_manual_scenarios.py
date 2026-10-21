@@ -200,7 +200,7 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
         "#path conn",
         "#open " + current.strftime("%Y-%m-%d-%H-%M-%S"),
         "#fields " + "\t".join(ZEEK_FIELDS),
-        "#types " + "\\t".join(["time", "string", "addr", "port", "addr", "port", "enum", "count", "count", "count", "count"]),
+        "#types " + "\t".join(["time", "string", "addr", "port", "addr", "port", "enum", "count", "count", "count", "count"]),
     ]
     tsv_lines.extend("\t".join(row) for row in tsv_records)
     tsv_lines.append("#close " + current.strftime("%Y-%m-%d-%H-%M-%S"))
