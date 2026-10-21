@@ -88,7 +88,7 @@ def main() -> int:
     )
 
     now = datetime.now(timezone.utc).replace(microsecond=0)
-    first_seen = (now - timedelta(hours=1)).isoformat()
+    first_seen = (now - timedelta(days=30)).isoformat()
     last_seen = now.isoformat()
     with database.connect() as db:
         row = db.execute(
@@ -126,7 +126,7 @@ def main() -> int:
     print("Base sintética creada sin descubrir equipos ni abrir conexiones de red.")
     print(f"Base SQLite: {db_path}")
     print(f"Dispositivo de prueba: {args.device_ip} (ID {device_id})")
-    print("El intervalo de observación sintético permite probar atribución temporal de Zeek.")
+    print("El historial de direcciones sintético abarca 30 días y permite probar atribución temporal de Zeek sin red real.")
     print("No apuntes NETSENTINEL_DATA_DIR a tu instalación habitual.")
     return 0
 

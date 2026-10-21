@@ -35,15 +35,17 @@ El auxiliar de prueba se niega a trabajar con la ruta predeterminada
 
 En macOS o Linux, desde la raíz del repositorio con el entorno virtual activado:
 
+    python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-test-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$NETSENTINEL_DATA_DIR"
     python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
-    python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     ./run.sh
 
-El primer comando crea un único activo ficticio en una base nueva; no ejecuta
-un descubrimiento de red. El segundo genera archivos locales. Usá la misma IP
-en ambos comandos. Para otra ejecución, elegí una carpeta de datos distinta.
+El primer comando genera los archivos locales. Después, el auxiliar de base
+crea un único activo ficticio en la base vacía; no ejecuta descubrimiento de red.
+Generá los archivos antes de crear el activo para que las fechas sintéticas queden
+dentro del intervalo histórico. Usá la misma IP en ambos comandos. Para otra
+ejecución, elegí una carpeta de datos distinta.
 Si el archivo SQLite ya existe, el auxiliar se detiene sin modificarlo.
 
 La base de prueba queda separada de la instalación normal. Al cerrar la prueba,
