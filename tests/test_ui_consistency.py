@@ -138,22 +138,29 @@ def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens()
     css = (STATIC / "styles.css").read_text(encoding="utf-8")
 
     assert '<div class="layout inventory-layout">' in html
+    assert '<div class="inventory-column inventory-primary-column">' in html
+    assert '<div class="inventory-column inventory-secondary-column">' in html
+
+    # El orden del documento sigue las dos columnas: Inventario y Diagnóstico,
+    # seguido de Actividad reciente e Historial de lecturas.
     panel_classes = (
         'class="panel inventory-panel"',
-        'class="panel activity-panel"',
         'class="panel diagnostics-panel"',
+        'class="panel activity-panel"',
         'class="panel scans-panel"',
     )
     positions = [html.index(panel_class) for panel_class in panel_classes]
-    assert positions == sorted(positions), "Dashboard panels must keep a useful reading order"
+    assert positions == sorted(positions), "Dashboard panels must keep a useful column reading order"
 
-    assert 'grid-template-areas:\n    "inventory activity"\n    "diagnostics scans";' in css
+    assert "grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);" in css
+    assert ".inventory-column {" in css
+    assert "flex-direction: column;" in css
+    assert "gap: 16px;" in css
     assert '@media (max-width: 1080px)' in css
-    assert 'grid-template-areas:\n      "inventory"\n      "activity"\n      "diagnostics"\n      "scans";' in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
 
     # The table must stay readable by scrolling within its own container.
     assert ".table-wrap{overflow:auto;width:100%}" in css
-
 
 
 def test_every_main_page_uses_the_shared_content_shell():
