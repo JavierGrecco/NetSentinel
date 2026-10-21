@@ -103,7 +103,7 @@
     return new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(date);
   }
 
-  function updateSelected(item) {
+  function updateSelected(item, context) {
     if (!item) {
       state.selectedIp = "";
       $("geoSelectedTitle").textContent = "Elegí un punto o una IP";
@@ -112,13 +112,27 @@
       $("geoSelectedDetails").replaceChildren();
       return;
     }
+
     state.selectedIp = item.ip;
     $("geoSelectedTitle").textContent = item.ip;
     $("geoDetailsEmpty").hidden = true;
     const list = $("geoSelectedDetails");
     list.replaceChildren();
     list.hidden = false;
-    const values = [
+
+    const currentDns = context && context.kind === "current_dns";
+    const values = currentDns ? [
+      ["Origen del dato", "Resolución DNS actual; no es un evento histórico"],
+      ["Dominio consultado", context.hostname],
+      ["Hora de la consulta", when(context.queried_at)],
+      ["Direcciones devueltas por DNS", Number(context.resolved_count || 0).toLocaleString("es-AR")],
+      ["Estado GeoIP", locationLabel(item)],
+      ["País", item.country || item.country_iso || "Sin dato"],
+      ["Ciudad", item.city || "Sin dato"],
+      ["ASN", item.asn ? "AS" + item.asn : "Sin dato"],
+      ["Organización ASN", item.asn_organization || "Sin dato"]
+    ] : [
+      ["Origen del dato", "Evento guardado localmente"],
       ["Ubicación aproximada", locationLabel(item)],
       ["País", item.country || item.country_iso || "Sin dato"],
       ["Ciudad", item.city || "Sin dato"],
@@ -128,6 +142,7 @@
       ["Último evento", when(item.last_seen)],
       ["Dominio asociado", item.sample_domain || "No registrado en el evento"]
     ];
+
     values.forEach(([label, value]) => {
       list.append(element("dt", label));
       list.append(element("dd", value));
@@ -138,18 +153,23 @@
     const root = $("worldMap");
     root.querySelectorAll(".geo-marker-layer").forEach((layer) => layer.remove());
     if (!state.worldReady) return;
+
+    // Primero: IP sacadas de eventos guardados.
     const located = state.destinations.filter((item) =>
       item.location_status === "located" &&
       Number.isFinite(Number(item.latitude)) &&
       Number.isFinite(Number(item.longitude))
     );
     const groups = new Map();
+
     located.forEach((item) => {
-      const key = Number(item.latitude).toFixed(1) + ":" + Number(item.longitude).toFixed(1) + ":" + (item.country_iso || "");
+      const key = Number(item.latitude).toFixed(1) + ":" +
+        Number(item.longitude).toFixed(1) + ":" + (item.country_iso || "");
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
     });
-    const layer = svgElement("g", { class: "geo-marker-layer" });
+
+    const observedLayer = svgElement("g", { class: "geo-marker-layer geo-observed-marker-layer" });
     groups.forEach((items) => {
       const longitude = items.reduce((sum, item) => sum + Number(item.longitude), 0) / items.length;
       const latitude = items.reduce((sum, item) => sum + Number(item.latitude), 0) / items.length;
@@ -159,14 +179,18 @@
         cx: point.x, cy: point.y, r: radius, class: "geo-marker",
         tabindex: 0, role: "button",
         "aria-label": items.length === 1
-          ? "Seleccionar IP " + items[0].ip + ", " + locationLabel(items[0])
-          : "Seleccionar grupo de " + items.length + " IP, " + (items[0].country || "ubicación aproximada"),
+          ? "Seleccionar IP observada " + items[0].ip + ", " + locationLabel(items[0])
+          : "Seleccionar grupo de " + items.length + " IP observadas, " +
+            (items[0].country || "ubicación aproximada")
       });
       const title = svgElement("title", {});
-      title.textContent = items.length + " IP · " + (items[0].country || "País sin dato") +
-        " · " + items.reduce((sum, item) => sum + Number(item.event_count || 0), 0) + " evento(s)";
+      title.textContent = items.length + " IP observada(s) · " +
+        (items[0].country || "País sin dato") + " · " +
+        items.reduce((sum, item) => sum + Number(item.event_count || 0), 0) +
+        " evento(s) guardado(s)";
       marker.append(title);
-      const select = () => updateSelected(items[0]);
+
+      const select = () => updateSelected(items[0], null);
       marker.addEventListener("click", select);
       marker.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -174,9 +198,50 @@
           select();
         }
       });
-      layer.append(marker);
+      observedLayer.append(marker);
     });
-    root.append(layer);
+    root.append(observedLayer);
+
+    // Segundo: IP de una resolución DNS manual actual, con estilo distinto.
+    const lookup = state.currentDnsLookup;
+    if (!lookup) return;
+    const lookupLayer = svgElement("g", { class: "geo-marker-layer geo-current-dns-marker-layer" });
+    const currentContext = {
+      kind: "current_dns",
+      hostname: lookup.hostname,
+      queried_at: lookup.queried_at,
+      resolved_count: lookup.dns_addresses.length
+    };
+
+    lookup.destinations
+      .filter((item) => item.location_status === "located" &&
+        Number.isFinite(Number(item.latitude)) &&
+        Number.isFinite(Number(item.longitude)))
+      .forEach((item) => {
+        const point = project(Number(item.longitude), Number(item.latitude));
+        const marker = svgElement("circle", {
+          cx: point.x, cy: point.y, r: 6,
+          class: "geo-marker geo-marker-current",
+          tabindex: 0, role: "button",
+          "aria-label": "IP " + item.ip + " de la resolución DNS actual de " +
+            lookup.hostname + ", " + locationLabel(item)
+        });
+        const title = svgElement("title", {});
+        title.textContent = item.ip + " · DNS actual de " + lookup.hostname +
+          " · " + locationLabel(item);
+        marker.append(title);
+
+        const select = () => updateSelected(item, currentContext);
+        marker.addEventListener("click", select);
+        marker.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            select();
+          }
+        });
+        lookupLayer.append(marker);
+      });
+    root.append(lookupLayer);
   }
 
   function renderTable() {
@@ -416,10 +481,7 @@
       $("geoMapLimitNotice").hidden = true;
       $("geoMapLimitNotice").textContent = "";
     }
-    const located = Number(summary.mapped_destination_ips || 0);
-    $("geoMapLegend").textContent = located
-      ? located + " IP con coordenadas de una base local"
-      : "No hay coordenadas disponibles para los eventos actuales";
+    updateMapLegend();
     const sourceEvents = Number(summary.events_with_destination_ip || 0);
     $("geoMapStatus").classList.remove("is-error");
     $("geoMapStatus").textContent = sourceEvents
