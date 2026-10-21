@@ -700,3 +700,29 @@
 .forensic-check-summary { display: block; }
 .forensic-verify-panel button:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 2px; }
 .forensic-verify-panel input:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 2px; }
+
+
+/* Los dos formatos de exportación se mantienen juntos y se adaptan a pantallas estrechas. */
+.forensic-manifest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.forensic-manifest-actions button {
+  min-width: 0;
+  white-space: normal;
+}
+@media (max-width: 620px) {
+  .forensic-audit-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .forensic-manifest-actions {
+    width: 100%;
+  }
+  .forensic-manifest-actions button {
+    flex: 1 1 150px;
+  }
+}
