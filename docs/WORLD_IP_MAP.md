@@ -32,12 +32,13 @@ La cartografía mundial se incluye localmente en `src/netsentinel/static/world_1
 - Las direcciones privadas y especiales (por ejemplo, `192.168.x.x`, `10.x.x.x`, loopback y rangos reservados) no se muestran como ubicaciones geográficas públicas.
 - Un punto representa una aproximación de GeoIP para una dirección; no determina una ubicación física exacta, la identidad de una persona ni el origen verdadero de un incidente.
 - El recuento se refiere a **eventos almacenados**, no a paquetes, bytes ni sesiones confirmadas. La pantalla no dibuja conexiones entre países ni trayectorias de ataque.
+- Para poblar el mapa histórico, el CSV de actividad autorizado puede incluir la columna `destination_ip` (y, si la fuente los proporciona, `destination_port` y `protocol`). La importación manual valida el archivo antes de guardar; no agregues una IP que la fuente original no haya registrado.
 - Si un evento contiene solo un dominio y no una `destination_ip`, el mapa histórico no lo resuelve para fingir que conoce la IP que se usó entonces. La pantalla permite una consulta DNS actual, explícita y separada: se consulta el resolvedor configurado en el sistema y luego se geolocalizan localmente las IP públicas devueltas. Eso puede consultar un resolvedor remoto y nunca se presenta como prueba de la IP usada en una visita anterior.
 - No se realizan solicitudes a APIs GeoIP externas: el enriquecimiento lee los archivos MMDB locales. Solo al enviar el formulario manual de dominio se hace una consulta DNS a través del resolvedor configurado en el sistema, que puede estar fuera de la computadora.
 - La respuesta de la API se limita a un máximo de 500 IP únicas por consulta; si la muestra está truncada, se indica en la interfaz.
 
 ## Integraciones todavía pendientes
 
-Esta primera entrega no incluye un colector de paquetes, actividad continua TCP/UDP/ICMP, NetFlow/IPFIX, integración automática con un router, un escaneo WAN/UPnP, threat intelligence ni reputación de IP. La importación Zeek existente en otra rama proporciona registros de conexiones preexistentes cuando se exportan e importan explícitamente; no transforma este mapa en un capturador en vivo.
+Esta primera entrega no incluye un colector de paquetes, actividad continua TCP/UDP/ICMP, NetFlow/IPFIX, integración automática con un router, un escaneo WAN/UPnP, threat intelligence ni reputación de IP. El importador específico de Zeek se mantiene en la [PR #177](https://github.com/JavierGrecco/NetSentinel/pull/177); hasta que se integre, el CSV de actividad ya existente permite importar IP destino que realmente vengan registradas en una fuente autorizada. Ninguna de estas vías convierte el mapa en un capturador en vivo.
 
 Para avanzar, primero hay que validar el mapa con eventos sintéticos conocidos y una base GeoIP de prueba o autorizada, revisar la privacidad/retención y documentar el resultado de la ejecución local. Solo después conviene evaluar fuentes adicionales una por una.
