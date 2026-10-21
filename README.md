@@ -34,7 +34,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
 - Revisar **actividad y telemetría autorizada** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
-- Consultar **Mapa mundial de IP** en `/world-map`: muestra ubicaciones aproximadas de direcciones IP públicas que ya fueron registradas como destino en eventos locales. El detalle depende de una base GeoLite2-City local opcional; sin ella, la tabla sigue mostrando IP sin coordenadas. No captura tráfico en vivo, no resuelve dominios históricos como IP observadas ni usa APIs de geolocalización externas.
+- Consultar **Mapa mundial de IP** en `/world-map`: muestra ubicaciones aproximadas de direcciones IP públicas que ya fueron registradas como destino en eventos locales. El detalle depende de una base GeoLite2-City local opcional; sin ella, la tabla sigue mostrando IP sin coordenadas. No captura tráfico en vivo ni resuelve dominios históricos como IP observadas. También permite consultar un dominio manualmente: usa el DNS actual del sistema, distingue esos puntos del historial y geolocaliza con una base local, sin API GeoIP externa.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
 - Consultar y filtrar incidentes abiertos/resueltos, exportar su historial y las duraciones estimadas a CSV, y revisar tendencias de latencia por hora (24 h) o por bloques de seis horas (7 días), también exportables.
