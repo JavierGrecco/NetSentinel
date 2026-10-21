@@ -206,13 +206,19 @@ def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -
 
 
 def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path: Path) -> None:
-    """El modo optativo crea evidencia de topología etiquetada, sin llamar a la red."""
+    """El modo optativo crea tres activos y una lectura sintética, sin crear hallazgos."""
     result = run_seed(tmp_path, "--device-ip", "192.168.56.20", "--include-topology")
     assert result.returncode == 0, result.stderr
     assert "lectura sintética" in result.stdout
 
     with sqlite3.connect(tmp_path / "netsentinel.sqlite3") as db:
         db.row_factory = sqlite3.Row
+        devices = db.execute(
+            "SELECT mac_address, ip_address, display_name, notes FROM devices ORDER BY ip_address"
+        ).fetchall()
+        addresses = db.execute(
+            "SELECT ip_address, first_seen, last_seen, source FROM device_addresses ORDER BY ip_address"
+        ).fetchall()
         scans = db.execute(
             "SELECT id, source, devices_found, discovery_json FROM scans"
         ).fetchall()
@@ -221,9 +227,17 @@ def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path:
         ).fetchall()
         event_count = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
 
+    assert len(devices) == 3
+    assert {row["mac_address"] for row in devices} == {
+        "02:00:00:00:00:20", "02:00:00:00:00:21", "02:00:00:00:00:22"
+    }
+    assert all("sintético" in row["display_name"].lower() or "sintético" in row["notes"].lower() for row in devices)
+    assert len(addresses) == 3
+    assert all(row["first_seen"] < row["last_seen"] for row in addresses)
+    assert {row["source"] for row in addresses} == {"synthetic-test-fixture"}
     assert len(scans) == 1
     assert scans[0]["source"] == "synthetic-test-fixture"
-    assert scans[0]["devices_found"] == 1
+    assert scans[0]["devices_found"] == 3
     discovery = json.loads(scans[0]["discovery_json"])
     assert discovery["kind"] == "synthetic_fixture"
     assert discovery["network_scan_performed"] is False
@@ -231,12 +245,10 @@ def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path:
     assert discovery["networks"][0]["network"] == "192.168.56.0/24"
     assert discovery["networks"][0]["interface"] == "synthetic-fixture"
     assert discovery["networks"][0]["range_limited"] is False
-    assert len(observations) == 1
-    assert observations[0]["scan_id"] == scans[0]["id"]
-    assert observations[0]["ip_address"] == "192.168.56.20"
-    assert observations[0]["source"] == "synthetic-test-fixture"
+    assert len(observations) == 3
+    assert {row["scan_id"] for row in observations} == {scans[0]["id"]}
+    assert {row["source"] for row in observations} == {"synthetic-test-fixture"}
     assert event_count == 0
-
 
 def test_seed_refuses_a_nonempty_directory_without_database(tmp_path: Path) -> None:
     unrelated = tmp_path / "keep.txt"

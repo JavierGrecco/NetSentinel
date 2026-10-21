@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import json
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,6 +28,11 @@ def _private_ipv4(value: str) -> str:
     if address.version != 4 or not any(address in network for network in private_ranges):
         raise argparse.ArgumentTypeError(
             "La IP del dispositivo sintético debe pertenecer a una red privada RFC 1918."
+        )
+    test_subnet = ipaddress.ip_network(f"{address}/24", strict=False)
+    if address in {test_subnet.network_address, test_subnet.broadcast_address}:
+        raise argparse.ArgumentTypeError(
+            "Usá una dirección de equipo válida, no la dirección de red o difusión de la subred /24."
         )
     return str(address)
 
@@ -117,27 +123,47 @@ def main() -> int:
         )
 
     if args.include_topology:
-        # Este modo optativo crea una lectura explícitamente sintética para
-        # revisar el explorador LAN. No ejecuta comandos ni consulta la red.
-        from netsentinel.network_models import Neighbor
-
+        # Este modo optativo crea tres activos y una lectura claramente sintéticos.
+        # Las filas se insertan directamente para no generar alertas de "dispositivo nuevo"
+        # que puedan confundirse con hallazgos auténticos. No hay descubrimiento de red.
         network = ipaddress.ip_network(f"{args.device_ip}/24", strict=False)
-        local_address = next(
-            str(candidate)
-            for candidate in network.hosts()
-            if str(candidate) != args.device_ip
-        )
-        database.record_scan(
-            [
-                Neighbor(
-                    ip_address=args.device_ip,
-                    mac_address="02:00:00:00:00:20",
-                    interface="synthetic-fixture",
-                    source="synthetic-test-fixture",
+        hosts = [str(candidate) for candidate in network.hosts()]
+        extra_ips = [value for value in hosts if value != args.device_ip][:2]
+        if len(extra_ips) != 2:
+            parser.error("No se pudieron preparar tres direcciones de host dentro de la subred /24.")
+
+        extra_specs = [
+            ("02:00:00:00:00:21", extra_ips[0], "Equipo sintético adicional A"),
+            ("02:00:00:00:00:22", extra_ips[1], "Equipo sintético adicional B"),
+        ]
+        device_by_ip = {args.device_ip: device_id}
+        with database.connect() as db:
+            for mac, ip_value, name in extra_specs:
+                cursor = db.execute(
+                    """INSERT INTO devices
+                       (mac_address, ip_address, interface, first_seen, last_seen,
+                        display_name, notes, mac_locally_administered)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, 1)""",
+                    (
+                        mac, ip_value, "synthetic-fixture", first_seen, last_seen,
+                        name, "Activo de topología ficticio; no representa un equipo real.",
+                    ),
                 )
-            ],
-            errors=[],
-            discovery={
+                extra_device_id = int(cursor.lastrowid)
+                device_by_ip[ip_value] = extra_device_id
+                db.execute(
+                    """INSERT INTO device_addresses
+                       (device_id, ip_address, first_seen, last_seen, interface, source)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (
+                        extra_device_id, ip_value, first_seen, last_seen,
+                        "synthetic-fixture", "synthetic-test-fixture",
+                    ),
+                )
+
+            scan_time = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            local_address = next(value for value in hosts if value not in device_by_ip)
+            discovery = {
                 "networks": [
                     {
                         "network": network.with_prefixlen,
@@ -149,9 +175,27 @@ def main() -> int:
                 "scope": "Solo fixture sintética; no representa una red real.",
                 "kind": "synthetic_fixture",
                 "network_scan_performed": False,
-            },
-        )
-        print("Se añadió una lectura sintética explícita para probar el explorador LAN.")
+            }
+            cursor = db.execute(
+                """INSERT INTO scans
+                   (started_at, finished_at, source, devices_found, errors_json, discovery_json)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    scan_time, scan_time, "synthetic-test-fixture", len(device_by_ip),
+                    "[]", json.dumps(discovery, ensure_ascii=False),
+                ),
+            )
+            scan_id = int(cursor.lastrowid)
+            db.executemany(
+                """INSERT INTO observations
+                   (scan_id, device_id, observed_at, ip_address, source)
+                   VALUES (?, ?, ?, ?, ?)""",
+                [
+                    (scan_id, candidate_id, scan_time, ip_value, "synthetic-test-fixture")
+                    for ip_value, candidate_id in device_by_ip.items()
+                ],
+            )
+        print("Se añadió una lectura sintética con tres activos para probar el explorador LAN.")
     else:
         print("No se crearon lecturas, observaciones ni eventos de descubrimiento.")
 
