@@ -83,6 +83,8 @@ def test_consolidated_case_manifest_includes_evidence_checks_and_audit(
     assert response.headers["content-type"].startswith("application/json")
     assert "attachment;" in response.headers["content-disposition"]
     assert "netsentinel-forensic-case-manifest.json" in response.headers["content-disposition"]
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
 
     manifest = response.json()
     assert verify_case_manifest(manifest) is True
