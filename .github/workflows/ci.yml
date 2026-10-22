@@ -231,6 +231,9 @@ jobs:
               "activity.html": ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js"),
               "findings.html": ("/static/theme.js", "/static/findings.js"),
               "tools.html": ("/static/theme.js", "/static/tools.js"),
+              "geolocation.html": ("/static/theme.js", "/static/geolocation.js"),
+              "forensics.html": ("/static/theme.js", "/static/forensics.js"),
+              "guided-test.html": ("/static/theme.js", "/static/guided-test.js"),
           }
 
           for page_name, expected_scripts in pages.items():
@@ -274,7 +277,7 @@ jobs:
                       f"Missing frontend asset {script_name}."
                   )
 
-          print("All six pages load the expected local scripts without inline JavaScript.")
+          print("All checked local pages load the expected local scripts without inline JavaScript.")
           PY
           for script in src/netsentinel/static/*.js; do
             node --check "$script"
@@ -330,6 +333,19 @@ jobs:
                   "netsentinel/static/tools.html",
                   "netsentinel/static/activity.html",
                   "netsentinel/static/findings.html",
+                  "netsentinel/static/forensics.html",
+                  "netsentinel/static/forensics.css",
+                  "netsentinel/static/forensics.js",
+                  "netsentinel/static/geolocation.html",
+                  "netsentinel/static/geolocation.css",
+                  "netsentinel/static/geolocation.js",
+                  "netsentinel/static/world_110m.geojson",
+                  "netsentinel/static/world-map-attribution.txt",
+                  "netsentinel/static/guided-test.html",
+                  "netsentinel/static/guided-test.css",
+                  "netsentinel/static/guided-test.js",
+                  "netsentinel/static/netsentinel-red.svg",
+                  "netsentinel/static/netsentinel-forense.svg",
                   "netsentinel/static/theme.css",
                   "netsentinel/static/theme.js",
                   "netsentinel/static/section-tabs.js",
