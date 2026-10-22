@@ -109,9 +109,9 @@
     <pre class="guided-command"><code id="setupCommand">python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[test,geoip]"
-export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)-$"
+export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$NETSENTINEL_DATA_DIR"
-export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"
+export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$(dirname "$SCENARIO_DIR")"
 python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
 python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology

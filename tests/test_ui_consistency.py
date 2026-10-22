@@ -209,6 +209,7 @@ def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
     assert 'data-guided-step="zeek-idempotence"' in html
     assert "seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology" in html
     assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
+    assert 'manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"' in html
     assert 'aria-valuemax="24"' in html
     assert len(re.findall(r'<article class="panel guided-scenario" id="scenario-[^"]+">', html)) == 9
     assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 24
