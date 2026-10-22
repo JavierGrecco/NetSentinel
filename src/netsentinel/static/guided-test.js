@@ -706,7 +706,10 @@
     const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
     const edges = Array.isArray(graph.edges) ? graph.edges : [];
     const hasDevice = JSON.stringify(nodes).includes(DEVICE_IP);
-    const ok = graphResponse.ok && graph.evidence_available !== false && nodes.length >= 3 && hasDevice;
+    // En el laboratorio manual la lectura tiene tres activos; la fixture de navegador
+    // puede cargar un único activo observado más la subred conocida.
+    const hasMinimumGraph = nodes.length >= 2;
+    const ok = graphResponse.ok && graph.evidence_available !== false && hasMinimumGraph && hasDevice;
     return {
       ok,
       summary: ok
@@ -714,7 +717,7 @@
         : "La respuesta no contiene toda la evidencia sintética esperada. Revisá la lectura seleccionada antes de marcar el paso.",
       details: [
         { label: "Lectura seleccionada", value: "ID " + scan.id + " · synthetic-test-fixture", ok: true },
-        { label: "Grafo", value: graphResponse.ok ? nodes.length + " nodos · " + edges.length + " enlaces" : "HTTP " + graphResponse.status, ok: graphResponse.ok && nodes.length >= 3 },
+        { label: "Grafo", value: graphResponse.ok ? nodes.length + " nodos · " + edges.length + " enlaces" : "HTTP " + graphResponse.status, ok: graphResponse.ok && hasMinimumGraph },
         { label: "Dispositivo de prueba", value: hasDevice ? DEVICE_IP + " presente en el grafo" : DEVICE_IP + " no aparece en los nodos", ok: hasDevice },
         { label: "Evidencia", value: graph.evidence_available === false ? "La API indica que no hay evidencia disponible" : "Consulta de solo lectura; no se inició un escaneo", ok: graph.evidence_available !== false }
       ]
