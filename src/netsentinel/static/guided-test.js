@@ -94,6 +94,8 @@
       type: "manual",
       phase: "Actividad",
       title: "4. CSV: importar una vez y comprobar duplicados",
+      checkKey: "csv-events",
+      actionDescription: "En la otra pestaña, importá activity.csv y repetí la vista previa. Volvé a esta guía y pulsá «Comprobar ahora» para ver cuántos eventos sintéticos quedaron guardados.",
       lead: "Ahora que revisaste la vista previa, comprobaremos qué ocurre al confirmar la importación y al repetirla.",
       objective: "Validar que los eventos se guarden una vez y que una nueva importación del mismo archivo no cree duplicados.",
       why: "Sin idempotencia, volver a importar un archivo puede inflar contadores y distorsionar el historial de actividad.",
@@ -114,6 +116,8 @@
       type: "manual",
       phase: "Actividad",
       title: "5. CSV: rechazar archivos inválidos",
+      checkKey: "csv-rejections",
+      actionDescription: "Previsualizá y rechazá los dos CSV inválidos en la otra pestaña. Volvé aquí y pulsá «Comprobar ahora»: se revisará que los seis eventos válidos sigan presentes y que el marcador sensible no haya sido guardado.",
       lead: "Esta prueba negativa verifica que los datos problemáticos se rechacen por completo y dejen un mensaje comprensible.",
       objective: "Comprobar el rechazo de cabeceras sensibles y cabeceras duplicadas sin escrituras parciales.",
       why: "Aceptar un archivo inválido o solo una parte puede guardar datos sensibles o cambiar silenciosamente el significado de las columnas.",
@@ -157,6 +161,8 @@
       type: "manual",
       phase: "Actividad",
       title: "7. Zeek: previsualizar e importar conn.log",
+      checkKey: "zeek-events",
+      actionDescription: "Previsualizá e importá zeek-conn.tsv en la otra pestaña. Volvé a esta guía y pulsá «Comprobar ahora» para consultar los UID Zeek que quedaron guardados.",
       lead: "Este escenario usa un archivo exportado y sintético. No arranca Zeek, no captura paquetes y no consulta un sensor.",
       objective: "Verificar la lectura de TSV nativo de Zeek, la atribución por IP y fecha, el tratamiento de contadores ausentes y la deduplicación por UID.",
       why: "Los contadores ausentes no equivalen a cero, y una conexión solo debe atribuirse cuando el dispositivo y el intervalo temporal coinciden con los datos guardados.",
@@ -605,9 +611,9 @@
       $("wizardActionLink").href = step.link;
       $("wizardActionLink").textContent = step.linkLabel || "Abrir módulo en otra pestaña ↗";
       $("wizardActionTitle").textContent = step.actionTitle || "Abrí el módulo que vamos a probar";
-      $("wizardActionDescription").textContent = step.checkKey
+      $("wizardActionDescription").textContent = step.actionDescription || (step.checkKey
         ? "Ejecutá la comprobación de lectura y abrí el módulo. La guía seguirá abierta en esta pestaña."
-        : "Se abrirá en otra pestaña. Seguí los pasos indicados, después volvé acá y registrá el resultado.";
+        : "Se abrirá en otra pestaña. Seguí los pasos indicados, después volvé acá y registrá el resultado.");
     }
 
     renderAutomaticResult(step, record);
@@ -710,6 +716,119 @@
     };
   }
 
+  async function readSyntheticActivity() {
+    const devicesResponse = await getJson("/api/devices?q=" + encodeURIComponent(DEVICE_IP));
+    const devices = Array.isArray(devicesResponse.data) ? devicesResponse.data : [];
+    const device = devices.find((item) => item && item.ip_address === DEVICE_IP);
+    if (!devicesResponse.ok || !device) {
+      return {
+        ok: false,
+        device: null,
+        events: [],
+        detail: devicesResponse.ok ? "No se encontró el activo sintético " + DEVICE_IP : "La API de inventario respondió HTTP " + devicesResponse.status
+      };
+    }
+    const activityResponse = await getJson("/api/activity?device_id=" + encodeURIComponent(device.id) + "&limit=500");
+    const payload = activityResponse.data || {};
+    if (!activityResponse.ok) {
+      return { ok: false, device, events: [], detail: "La API de actividad respondió HTTP " + activityResponse.status };
+    }
+    return {
+      ok: true,
+      device,
+      events: Array.isArray(payload.events) ? payload.events : [],
+      totalEvents: Number(payload.total_events || 0),
+      detail: "Activo sintético ID " + device.id + " · " + Number(payload.total_events || 0) + " evento(s) registrados"
+    };
+  }
+
+  function syntheticCsvEvents(events) {
+    const csvDomains = new Set([
+      "dns-probe.invalid", "web-probe.invalid", "tls-probe.invalid", "policy-probe.invalid"
+    ]);
+    return events.filter((event) =>
+      csvDomains.has(String(event.domain || "").toLowerCase()) ||
+      event.app_name === "Aplicación simulada" ||
+      event.search_terms === "consulta ficticia sin datos personales"
+    );
+  }
+
+  async function checkCsvEvents() {
+    const snapshot = await readSyntheticActivity();
+    if (!snapshot.ok) {
+      return {
+        ok: false,
+        summary: snapshot.detail,
+        details: [{ label: "Actividad local", value: snapshot.detail, ok: false }]
+      };
+    }
+    const csvEvents = syntheticCsvEvents(snapshot.events);
+    const ok = csvEvents.length === 6;
+    return {
+      ok,
+      summary: ok
+        ? "Se encontraron los seis eventos identificables del CSV de prueba en la base local."
+        : "Se esperaban seis eventos sintéticos de activity.csv. Revisá si la importación se confirmó, si se eligió el activo correcto y si la fecha quedó dentro de la retención.",
+      details: [
+        { label: "Dispositivo consultado", value: snapshot.device.display_name + " · " + DEVICE_IP + " · ID " + snapshot.device.id, ok: true },
+        { label: "Eventos sintéticos del CSV", value: csvEvents.length + " de 6 encontrados", ok },
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+      ]
+    };
+  }
+
+  async function checkCsvRejections() {
+    const snapshot = await readSyntheticActivity();
+    if (!snapshot.ok) {
+      return {
+        ok: false,
+        summary: snapshot.detail,
+        details: [{ label: "Actividad local", value: snapshot.detail, ok: false }]
+      };
+    }
+    const validCount = syntheticCsvEvents(snapshot.events).length;
+    const sensitiveMarkerPresent = JSON.stringify(snapshot.events).includes("SYNTHETIC_BODY_MUST_BE_REJECTED");
+    const ok = validCount === 6 && !sensitiveMarkerPresent;
+    return {
+      ok,
+      summary: ok
+        ? "Los seis eventos válidos siguen presentes y no se encontró el marcador del archivo sensible entre los eventos guardados."
+        : "Hay un resultado inesperado: faltan eventos válidos o aparece un marcador que no debería importarse. Revisá la vista previa y el rechazo de los dos archivos inválidos.",
+      details: [
+        { label: "Eventos válidos del CSV", value: validCount + " de 6 encontrados", ok: validCount === 6 },
+        { label: "Marcador de contenido sensible", value: sensitiveMarkerPresent ? "Detectado inesperadamente en los eventos" : "No aparece en los eventos guardados", ok: !sensitiveMarkerPresent },
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+      ]
+    };
+  }
+
+  async function checkZeekEvents() {
+    const snapshot = await readSyntheticActivity();
+    if (!snapshot.ok) {
+      return {
+        ok: false,
+        summary: snapshot.detail,
+        details: [{ label: "Actividad local", value: snapshot.detail, ok: false }]
+      };
+    }
+    const zeekEvents = snapshot.events.filter((event) =>
+      ["zeek:CManualScenario101", "zeek:CManualScenario102"].includes(String(event.source_event_id || ""))
+    );
+    const ok = zeekEvents.length === 2;
+    return {
+      ok,
+      summary: ok
+        ? "La consulta local encontró los dos UID del conn.log sintético. Compará este recuento con la vista previa y la segunda importación."
+        : "No se encontraron los dos UID esperados del conn.log sintético. Confirmá que importaste el archivo correcto para el dispositivo seleccionado y repetí la vista previa.",
+      details: [
+        { label: "Dispositivo consultado", value: snapshot.device.display_name + " · " + DEVICE_IP + " · ID " + snapshot.device.id, ok: true },
+        { label: "UID Zeek esperados", value: zeekEvents.length + " de 2 encontrados", ok },
+        { label: "Identificadores observados", value: zeekEvents.map((event) => event.source_event_id).join(", ") || "Ninguno encontrado", ok },
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+      ]
+    };
+  }
+
   async function checkMap() {
     const [mapResponse, worldResponse] = await Promise.all([
       getJson("/api/geolocation/map?limit=250"),
@@ -751,6 +870,9 @@
       if (step.checkKey === "lab") result = await checkLab();
       else if (step.checkKey === "topology") result = await checkTopology();
       else if (step.checkKey === "map") result = await checkMap();
+      else if (step.checkKey === "csv-events") result = await checkCsvEvents();
+      else if (step.checkKey === "csv-rejections") result = await checkCsvRejections();
+      else if (step.checkKey === "zeek-events") result = await checkZeekEvents();
       else throw new Error("No hay una comprobación asociada a este paso.");
       record.autoChecked = true;
       record.autoResult = {
