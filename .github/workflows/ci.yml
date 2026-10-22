@@ -231,6 +231,7 @@ jobs:
               "findings.html": ("/static/theme.js", "/static/findings.js"),
               "tools.html": ("/static/theme.js", "/static/tools.js"),
               "forensics.html": ("/static/theme.js", "/static/forensics.js"),
+              "guided-test.html": ("/static/theme.js", "/static/guided-test.js"),
           }
 
           for page_name, expected_scripts in pages.items():
