@@ -60,6 +60,7 @@
     </div>
     <nav class="primary-nav" aria-label="Navegación principal">
       <a class="nav-link" aria-current="page" href="/">Inventario</a>
+      <a class="nav-link" href="/network">Mapa de red</a>
       <a class="nav-link" href="/findings">Hallazgos</a>
       <a class="nav-link" href="/monitors">Monitorización</a>
       <a class="nav-link" href="/tools">Herramientas</a>
@@ -89,74 +90,60 @@
       <div class="metric"><div class="metric-label">Pendientes de revisar</div><div class="metric-value" id="unknownMetric">—</div><div class="metric-help">Aún no marcados como confiables</div></div>
       <div class="metric"><div class="metric-label">Eventos sin revisar</div><div class="metric-value" id="eventsMetric">—</div><div class="metric-help" id="lastScanMetric">Última lectura: todavía ninguna</div></div>
     </section>
-    <details class="panel topology-panel section-gap" id="topologyPanel">
-      <summary class="topology-summary">
-        <span class="topology-summary-copy">
-          <span class="panel-title">Mapa de relaciones de red</span>
-          <span class="panel-sub">Vista interactiva de subredes y dispositivos respaldada por la última lectura disponible.</span>
-        </span>
-        <span class="pill info">Vista de contexto</span>
-      </summary>
-      <div class="topology-body">
-        <div class="topology-tools">
-          <label class="topology-search-label" for="topologySearch">Filtrar dispositivos
-            <input id="topologySearch" class="search" type="search" placeholder="Nombre, IP, MAC o fabricante…" autocomplete="off">
-          </label>
-          <button type="button" id="topologyResetSearch" class="quiet tiny">Limpiar filtro</button>
-        </div>
-        <p class="topology-explainer">Cada línea indica que una dirección fue observada dentro del rango de una subred registrada en esa lectura. No representa un cable, puerto de switch ni conexión física confirmada.</p>
-        <div class="topology-legend" role="group" aria-label="Leyenda del mapa de relaciones">
-          <span><i class="topology-legend-symbol subnet" aria-hidden="true"></i>Subred observada</span>
-          <span><i class="topology-legend-symbol trusted" aria-hidden="true"></i>Dispositivo marcado de confianza</span>
-          <span><i class="topology-legend-symbol unobserved" aria-hidden="true"></i>Inventario no observado en esta lectura</span>
-        </div>
-        <div id="topologySummary" class="topology-summary-text" role="status" aria-live="polite">Cargando datos del inventario…</div>
-        <div id="topologyCanvas" class="topology-canvas" aria-label="Grafo de relaciones de red"></div>
-        <div id="topologySelection" class="topology-selection" aria-live="polite">
-          <p class="topology-selection-empty">Seleccioná un dispositivo del mapa para consultar la evidencia y su procedencia.</p>
-        </div>
-        <details class="topology-accessible">
-          <summary>Consultar una alternativa textual del mapa</summary>
-          <div id="topologyAccessibleList"></div>
-        </details>
+    <section class="panel network-explorer-callout section-gap" aria-labelledby="networkExplorerTitle">
+      <div>
+        <h2 id="networkExplorerTitle" class="panel-title">Mapa de red</h2>
+        <p class="panel-sub">Seguí los dispositivos, compará observaciones y revisá los cambios registrados en una vista dedicada.</p>
       </div>
-    </details>
+      <a class="primary network-explorer-link" href="/network">Abrir explorador de red <span aria-hidden="true">→</span></a>
+    </section>
     <div class="layout inventory-layout">
-      <section class="panel inventory-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Inventario de dispositivos</h2><div class="panel-sub">Buscar IP, MAC, fabricante y marcar equipos de confianza</div></div><input id="searchInput" class="search" type="search" placeholder="Buscar IP, MAC, fabricante o nombre…" autocomplete="off" aria-label="Buscar dispositivos"></div>
-        <div class="table-wrap"><table><thead><tr><th>Dispositivo / direcciones</th><th>MAC / fabricante</th><th>Interfaz</th><th>Confianza</th><th>Última detección</th><th>Acción</th></tr></thead><tbody id="devicesBody"><tr><td colspan="6"><div class="empty">Cargando inventario…</div></td></tr></tbody></table></div>
-        <div class="footer"><span id="deviceCount">0 dispositivos</span><span><a href="/api/export/devices.csv" class="export-link">Exportar CSV</a> · <a href="/api/export/data.json" class="export-link">Exportar JSON</a> · <a href="/api/export/backup.sqlite3" class="export-link">Copia SQLite</a></span></div>
-      </section>
-      <section class="panel activity-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Actividad reciente</h2><div class="panel-sub">Nuevos dispositivos y cambios de confianza</div></div></div>
-        <div id="eventsList" class="events"><div class="empty">Todavía no hay eventos.</div></div>
-      </section>
-      <section class="panel diagnostics-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Diagnóstico de conectividad</h2><div class="panel-sub">Se ejecuta únicamente cuando lo solicitás</div></div></div>
-        <div id="diagnosticsBox"><div class="empty"><strong>Sin comprobaciones recientes</strong>Usá “Diagnóstico” para probar gateway, DNS y conectividad IP.</div></div>
-      </section>
-      <section class="panel scans-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Historial de lecturas</h2><div class="panel-sub">Fuentes consultadas, resultados y avisos</div></div></div>
-        <section class="scan-comparison" aria-labelledby="scanComparisonTitle">
-          <h3 id="scanComparisonTitle" class="scan-comparison-title">Comparar capturas</h3>
-          <p class="panel-sub">Contrastá dos lecturas que incluyan al menos una misma subred privada. Los resultados se basan en observaciones guardadas, no en pruebas de conectividad actuales.</p>
-          <div class="scan-comparison-controls">
-            <div class="field">
-              <label for="scanCompareFirst">Primera lectura</label>
-              <select id="scanCompareFirst" aria-label="Primera lectura para comparar"><option value="">Cargando lecturas…</option></select>
-            </div>
-            <div class="field">
-              <label for="scanCompareSecond">Segunda lectura</label>
-              <select id="scanCompareSecond" aria-label="Segunda lectura para comparar"><option value="">Cargando lecturas…</option></select>
-            </div>
-            <button type="button" id="scanCompareButton" class="primary" disabled>Comparar lecturas</button>
-          </div>
-          <div id="scanComparisonResult" class="scan-comparison-result" role="status" aria-live="polite">
-            <p class="scan-comparison-empty">Elegí dos lecturas y pulsá «Comparar lecturas».</p>
-          </div>
+      <div class="inventory-column inventory-primary-column">
+  <section class="panel inventory-panel">
+          <div class="panel-head"><div><h2 class="panel-title">Inventario de dispositivos</h2><div class="panel-sub">Buscar IP, MAC, fabricante y marcar equipos de confianza</div></div><input id="searchInput" class="search" type="search" placeholder="Buscar IP, MAC, fabricante o nombre…" autocomplete="off" aria-label="Buscar dispositivos"></div>
+          <div class="table-wrap"><table><thead><tr><th>Dispositivo / direcciones</th><th>MAC / fabricante</th><th>Interfaz</th><th>Confianza</th><th>Última detección</th><th>Acción</th></tr></thead><tbody id="devicesBody"><tr><td colspan="6"><div class="empty">Cargando inventario…</div></td></tr></tbody></table></div>
+          <div class="footer"><span id="deviceCount">0 dispositivos</span><span><a href="/api/export/devices.csv" class="export-link">Exportar CSV</a> · <a href="/api/export/data.json" class="export-link">Exportar JSON</a> · <a href="/api/export/backup.sqlite3" class="export-link">Copia SQLite</a></span></div>
         </section>
-        <div id="scansList" class="events"><div class="empty">Todavía no hay lecturas registradas.</div></div>
-      </section>
+
+  <section class="panel diagnostics-panel">
+          <div class="panel-head"><div><h2 class="panel-title">Diagnóstico de conectividad</h2><div class="panel-sub">Se ejecuta únicamente cuando lo solicitás</div></div></div>
+          <div id="diagnosticsBox"><div class="empty"><strong>Sin comprobaciones recientes</strong>Usá “Diagnóstico” para probar gateway, DNS y conectividad IP.</div></div>
+        </section>
+      </div>
+      <div class="inventory-column inventory-secondary-column">
+  <section class="panel activity-panel">
+          <div class="panel-head"><div><h2 class="panel-title">Actividad reciente</h2><div class="panel-sub">Nuevos dispositivos y cambios de confianza</div></div></div>
+          <div id="eventsList" class="events"><div class="empty">Todavía no hay eventos.</div></div>
+        </section>
+
+  <section class="panel scans-panel">
+          <div class="panel-head"><div><h2 class="panel-title">Historial de lecturas</h2><div class="panel-sub">Fuentes consultadas, resultados y avisos</div></div></div>
+          <section class="scan-comparison" aria-labelledby="scanComparisonTitle">
+            <h3 id="scanComparisonTitle" class="scan-comparison-title">Comparar capturas</h3>
+            <p class="panel-sub">Contrastá dos lecturas que incluyan al menos una misma subred privada. Los resultados se basan en observaciones guardadas, no en pruebas de conectividad actuales.</p>
+            <div class="scan-comparison-controls">
+              <div class="field">
+                <label for="scanCompareFirst">Primera lectura</label>
+                <select id="scanCompareFirst" aria-label="Primera lectura para comparar"><option value="">Cargando lecturas…</option></select>
+              </div>
+              <div class="field">
+                <label for="scanCompareSecond">Segunda lectura</label>
+                <select id="scanCompareSecond" aria-label="Segunda lectura para comparar"><option value="">Cargando lecturas…</option></select>
+              </div>
+              <button type="button" id="scanCompareButton" class="primary" disabled>Comparar lecturas</button>
+            </div>
+            <div id="scanComparisonResult" class="scan-comparison-result" role="status" aria-live="polite">
+              <p class="scan-comparison-empty">Elegí dos lecturas y pulsá «Comparar lecturas».</p>
+            </div>
+            <p id="scanComparisonEvidenceNote" class="topology-history-note">Las IP y las fuentes se comparan desde cada captura guardada. El nombre visible y la MAC se consultan desde la ficha actual del inventario y pueden haber cambiado desde entonces. Que un dispositivo no aparezca en una captura no demuestra que esté desconectado.</p>
+          </section>
+          <div class="scan-history-pagination">
+              <button type="button" id="loadMoreScansButton" class="quiet" disabled>Cargando capturas…</button>
+              <p id="scanHistoryLoadStatus" class="panel-sub" aria-live="polite">Consultando historial de capturas…</p>
+            </div>
+          <div id="scansList" class="events"><div class="empty">Todavía no hay lecturas registradas.</div></div>
+        </section>
+      </div>
     </div>
     <footer class="footer"><span id="appVersion">NetSentinel · Datos guardados en tu computadora</span><span>Documentación API: <a href="/api/docs" class="export-link">/api/docs</a></span></footer>
   </main>
@@ -179,7 +166,6 @@
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-<script src="/static/topology.js" defer></script>
 <script src="/static/scan-comparison.js" defer></script>
 <script src="/static/index.js" defer></script>
 </body>

@@ -4,6 +4,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = {
     "/": ("src/netsentinel/static/index.html", "/"),
+    "/network": ("src/netsentinel/static/network.html", "/network"),
     "/findings": ("src/netsentinel/static/findings.html", "/findings"),
     "/monitors": ("src/netsentinel/static/monitors.html", "/monitors"),
     "/tools": ("src/netsentinel/static/tools.html", "/tools"),
@@ -17,7 +18,7 @@ LINK_RE = re.compile(
     r'<a class="nav-link"(?P<current> aria-current="page")? '
     r'href="(?P<href>[^"]+)">(?P<label>[^<]+)</a>'
 )
-EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity"]
+EXPECTED_HREFS = ["/", "/network", "/findings", "/monitors", "/tools", "/activity"]
 
 
 def test_every_module_has_consistent_primary_navigation():
@@ -35,3 +36,31 @@ def test_every_module_has_consistent_primary_navigation():
             f"{relative_path} must mark only {current_route!r} as the current page"
         )
         assert all(link.group("label").strip() for link in links)
+
+
+def test_historical_selectors_offer_more_readings_without_expanding_recent_activity():
+    """Los selectores consultan más historial y la lista principal sigue acotada."""
+    dashboard_js = (ROOT / "src/netsentinel/static/index.js").read_text(encoding="utf-8")
+    network_js = (ROOT / "src/netsentinel/static/network.js").read_text(encoding="utf-8")
+    inventory_html = (ROOT / "src/netsentinel/static/index.html").read_text(encoding="utf-8")
+    network_html = (ROOT / "src/netsentinel/static/network.html").read_text(encoding="utf-8")
+
+    assert "api('/api/scans?limit=100')" in dashboard_js
+    assert "const recentScans = state.scans.slice(0, 12);" in dashboard_js
+    assert "recentScans.map(scan=>" in dashboard_js
+    assert 'api("/api/scans?limit=100")' in network_js
+    assert "hasta las 100 lecturas más recientes" not in inventory_html
+    assert "hasta las 100 lecturas más recientes" not in network_html
+    assert "id=\"loadMoreScansButton\"" in inventory_html
+    assert "id=\"loadMoreScansButton\"" in network_html
+    assert "id=\"scanHistoryLoadStatus\"" in inventory_html
+    assert "id=\"scanHistoryLoadStatus\"" in network_html
+    shared_css = (ROOT / "src/netsentinel/static/styles.css").read_text(encoding="utf-8")
+    assert ".scan-history-pagination{display:flex" in shared_css
+    assert "@media(max-width:560px){.scan-history-pagination" in shared_css
+    assert "before_started_at: cursor.started_at" in dashboard_js
+    assert "before_started_at: cursor.started_at" in network_js
+    assert "state.scansCursor = scans.length ? scans[scans.length - 1] : null;" in dashboard_js
+    assert "state.scansCursor = scans.length ? scans[scans.length - 1] : null;" in network_js
+    assert "if (page.length) state.scansCursor = page[page.length - 1];" in dashboard_js
+    assert "if (page.length) state.scansCursor = page[page.length - 1];" in network_js

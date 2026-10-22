@@ -19,6 +19,7 @@ from netsentinel.api import (
     inventory_assets,
     inventory_discovery,
     inventory_exports,
+    inventory_topology,
     monitoring,
     monitoring_monitors,
     monitoring_reports,
@@ -514,6 +515,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         inventory_assets.router.routes,
         inventory_discovery.router.routes,
         inventory_exports.router.routes,
+        inventory_topology.router.routes,
     )
     paths = {route.path for routes in route_groups for route in routes}
     assert {
@@ -524,6 +526,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/scans",
         "/api/scans/compare",
         "/api/scans/{scan_id}/observations",
+        "/api/scans/{scan_id}/topology",
         "/api/devices/{device_id}/history",
         "/api/devices/{device_id}/addresses",
         "/api/scan",
@@ -534,8 +537,8 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert sum(len(routes) for routes in route_groups) == 16
-    assert len(paths) == 16
+    assert sum(len(routes) for routes in route_groups) == 17
+    assert len(paths) == 17
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
@@ -545,6 +548,11 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
         "netsentinel.api.inventory_assets",
         "netsentinel.api.inventory_discovery",
         "netsentinel.api.inventory_exports",
+        "netsentinel.api.inventory_topology",
+    }
+    assert graph["netsentinel.api.inventory_topology"] == {
+        "netsentinel.topology_graph",
+        "netsentinel.topology_service",
     }
     assert graph["netsentinel.api.inventory_assets"] == {
         "netsentinel.database",
@@ -658,9 +666,9 @@ def test_monitoring_repository_facade_reexports_historical_functions() -> None:
 
 
 def test_html_pages_belong_to_pages_router() -> None:
-    """Las cinco páginas HTML se sirven desde su router dedicado."""
+    """Las páginas HTML se sirven desde su router dedicado."""
     paths = {route.path for route in pages.router.routes}
-    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools"}
+    assert paths == {"/", "/network", "/monitors", "/activity", "/findings", "/tools"}
     assert all(not route.include_in_schema for route in pages.router.routes)
 
 

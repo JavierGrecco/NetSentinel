@@ -622,6 +622,82 @@ def test_activity_csv_export_respects_filters_and_neutralizes_formulas(client):
     assert missing.status_code == 404
 
 
+def test_activity_csv_round_trips_network_event_evidence_and_deduplicates_source_id(client):
+    """La API, el CSV y la deduplicación conservan la evidencia del registro origen."""
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    headers = (
+        "observed_at,event_type,domain,source_ip,source_port,destination_ip,"
+        "destination_port,protocol,bytes_sent,bytes_received,packets_sent,"
+        "packets_received,network_interface,source_event_id"
+    )
+    original_row = (
+        f"{stamp},connection,,192.0.2.10,51514,198.51.100.10,443,tcp,"
+        "1200,3400,2,3,wan0,router-row-001"
+    )
+    original_csv = headers + "\n" + original_row + "\n"
+
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": original_csv},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 1
+
+    activity = client.get("/api/activity", params={"device_id": selected})
+    assert activity.status_code == 200, activity.text
+    events = [event for event in activity.json()["events"] if event["source_event_id"] == "router-row-001"]
+    assert len(events) == 1
+    assert events[0]["source_ip"] == "192.0.2.10"
+    assert events[0]["source_port"] == 51514
+    assert events[0]["destination_ip"] == "198.51.100.10"
+    assert events[0]["destination_port"] == 443
+    assert events[0]["bytes_sent"] == 1200
+    assert events[0]["bytes_received"] == 3400
+    assert events[0]["packets_sent"] == 2
+    assert events[0]["packets_received"] == 3
+    assert events[0]["network_interface"] == "wan0"
+
+    exported = client.get("/api/activity/export.csv", params={"device_id": selected})
+    assert exported.status_code == 200, exported.text
+    rows = list(csv.DictReader(io.StringIO(exported.text.lstrip("\ufeff"))))
+    row = next(item for item in rows if item["source_event_id"] == "router-row-001")
+    assert row["source_ip"] == "192.0.2.10"
+    assert row["source_port"] == "51514"
+    assert row["destination_ip"] == "198.51.100.10"
+    assert row["destination_port"] == "443"
+    assert row["bytes_sent"] == "1200"
+    assert row["bytes_received"] == "3400"
+    assert row["packets_sent"] == "2"
+    assert row["packets_received"] == "3"
+    assert row["network_interface"] == "wan0"
+
+    # El mismo identificador de origen no debe crear otra fila cuando se completa
+    # o modifica un metadato en una exportación posterior.
+    enriched_csv = headers + "\n" + (
+        f"{stamp},connection,enriched.example,192.0.2.10,51514,198.51.100.10,443,tcp,"
+        "1500,3400,2,3,wan0,router-row-001\n"
+    )
+    preview = client.post(
+        "/api/activity/import/preview",
+        json={"device_id": selected, "csv_data": enriched_csv},
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["would_import"] == 0
+    assert preview.json()["skipped_duplicates"] == 1
+    assert preview.json()["preview_rows"][0]["disposition"] == "duplicate"
+
+    duplicate = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": enriched_csv},
+    )
+    assert duplicate.status_code == 200, duplicate.text
+    assert duplicate.json()["imported"] == 0
+    assert duplicate.json()["skipped_duplicates"] == 1
+    final_events = client.get("/api/activity", params={"device_id": selected}).json()["events"]
+    assert len([event for event in final_events if event["source_event_id"] == "router-row-001"]) == 1
+
+
 def test_activity_delete_preview_is_read_only_and_delete_requires_exact_count(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()

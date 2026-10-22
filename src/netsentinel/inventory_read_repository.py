@@ -109,12 +109,31 @@ def get_device_history(device_id: int, limit: int = 100, path: Path | None = Non
     }
 
 
-def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]:
+def get_scans(
+    path: Path | None = None,
+    limit: int = 30,
+    before_started_at: str | None = None,
+    before_id: int | None = None,
+) -> list[dict[str, Any]]:
+    """Devuelve capturas por páginas sin repetir las más recientes al cargar anteriores."""
+    bounded_limit = max(1, min(limit, 100))
+    if (before_started_at is None) != (before_id is None):
+        raise ValueError("La fecha y el identificador de referencia deben enviarse juntos.")
+
     with connect(path) as db:
-        rows = db.execute(
-            "SELECT * FROM scans ORDER BY started_at DESC, id DESC LIMIT ?",
-            (max(1, min(limit, 100)),),
-        ).fetchall()
+        if before_started_at is None:
+            rows = db.execute(
+                "SELECT * FROM scans ORDER BY started_at DESC, id DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                """SELECT * FROM scans
+                   WHERE started_at < ? OR (started_at = ? AND id < ?)
+                   ORDER BY started_at DESC, id DESC
+                   LIMIT ?""",
+                (before_started_at, before_started_at, max(1, int(before_id)), bounded_limit),
+            ).fetchall()
     items: list[dict[str, Any]] = []
     for row in rows:
         item = dict(row)
@@ -131,6 +150,42 @@ def get_scans(path: Path | None = None, limit: int = 30) -> list[dict[str, Any]]
             item.pop("discovery_json", None)
         items.append(item)
     return items
+
+
+def get_scan_by_id(scan_id: int, path: Path | None = None) -> dict[str, Any] | None:
+    """Devuelve una lectura concreta sin depender del límite del listado reciente.
+
+    Los indicadores de decodificación permiten distinguir un informe ausente o
+    corrupto de una lectura válida sin subredes registradas.
+    """
+    if isinstance(scan_id, bool) or not isinstance(scan_id, int) or scan_id < 1:
+        return None
+
+    with connect(path) as db:
+        row = db.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+    if row is None:
+        return None
+
+    item = dict(row)
+    try:
+        errors = json.loads(item.pop("errors_json"))
+        item["errors_available"] = isinstance(errors, list)
+        item["errors"] = errors if isinstance(errors, list) else []
+    except (TypeError, json.JSONDecodeError):
+        item.pop("errors_json", None)
+        item["errors_available"] = False
+        item["errors"] = []
+
+    try:
+        discovery = json.loads(item.pop("discovery_json"))
+        item["discovery_available"] = isinstance(discovery, dict)
+        item["discovery"] = discovery if isinstance(discovery, dict) else {}
+    except (TypeError, json.JSONDecodeError):
+        item.pop("discovery_json", None)
+        item["discovery_available"] = False
+        item["discovery"] = {}
+
+    return item
 
 
 _PRIVATE_IPV4_NETWORKS = (
@@ -276,7 +331,7 @@ def compare_scans(
             ipaddress.ip_network(network) for network in common_networks
         )
         observation_rows = db.execute(
-            """SELECT o.scan_id, o.device_id, o.ip_address, o.source,
+            """SELECT o.scan_id, o.device_id, o.ip_address, o.observed_at, o.source,
                       d.mac_address, d.display_name
                FROM observations o
                LEFT JOIN devices d ON d.id = o.device_id
@@ -314,11 +369,18 @@ def compare_scans(
             "mac_address": str(row["mac_address"] or ""),
             "display_name": str(row["display_name"] or ""),
             "address_sources": {},
+            "evidence": [],
         })
-        sources = device["address_sources"].setdefault(address, set())
         source = str(row["source"] or "").strip()
+        sources = device["address_sources"].setdefault(address, set())
         if source:
             sources.add(source)
+        device["evidence"].append({
+            "scan_id": scan_id,
+            "ip_address": address,
+            "observed_at": str(row["observed_at"] or ""),
+            "source": source,
+        })
 
     baseline_devices = snapshots[baseline["id"]]
     comparison_devices = snapshots[comparison["id"]]
@@ -361,6 +423,14 @@ def compare_scans(
             "status": status,
             "baseline_addresses": previous_addresses,
             "comparison_addresses": current_addresses,
+            "baseline_evidence": sorted(
+                (previous or {}).get("evidence", []),
+                key=lambda item: (item["observed_at"], item["ip_address"], item["source"]),
+            ),
+            "comparison_evidence": sorted(
+                (current or {}).get("evidence", []),
+                key=lambda item: (item["observed_at"], item["ip_address"], item["source"]),
+            ),
             "baseline_sources": sorted({
                 source
                 for values in (previous or {}).get("address_sources", {}).values()

@@ -32,6 +32,7 @@ DEFAULT_VIEWPORTS_TEXT = (
 )
 PAGE_CASES = (
     ("/", "Inventario de red", "inventario"),
+    ("/network", "Explorador de red", "mapa-de-red"),
     ("/findings", "Hallazgos con evidencia", "hallazgos"),
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
@@ -104,12 +105,20 @@ def _seed_topology_fixture(data_dir: Path) -> None:
     try:
         database.initialize(database_file)
         database.record_scan(
-            [Neighbor(
-                "192.168.56.20",
-                "02:00:00:00:00:20",
-                "fixture0",
-                "responsive-ui-fixture",
-            )],
+            [
+                Neighbor(
+                    "192.168.56.20",
+                    "02:00:00:00:00:20",
+                    "fixture0",
+                    "responsive-ui-fixture",
+                ),
+                Neighbor(
+                    "192.168.56.21",
+                    "02:00:00:00:00:20",
+                    "fixture0",
+                    "responsive-ui-fixture",
+                ),
+            ],
             path=database_file,
             discovery={
                 "networks": [{
@@ -301,14 +310,25 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
         if abs(activity["left"] - scans["left"]) > tolerance:
             failures.append("Historial no queda debajo de Actividad reciente")
         if diagnostics["top"] < inventory["bottom"] - tolerance:
-            failures.append("la segunda fila invade verticalmente la primera")
+            failures.append("Diagnóstico invade verticalmente el Inventario")
+        if scans["top"] < activity["bottom"] - tolerance:
+            failures.append("Historial invade verticalmente Actividad reciente")
+        for upper, lower, label in (
+            (inventory, diagnostics, "Inventario y Diagnóstico"),
+            (activity, scans, "Actividad reciente e Historial"),
+        ):
+            gap = lower["top"] - upper["bottom"]
+            if gap > 36:
+                failures.append(f"{label} dejan un hueco vertical innecesario ({gap:.0f}px)")
     else:
-        ordered = [inventory, activity, diagnostics, scans]
+        # En móvil se sigue el orden de lectura por columnas: Inventario,
+        # Diagnóstico y luego Actividad reciente e Historial.
+        ordered = [inventory, diagnostics, activity, scans]
         if any(
             ordered[index + 1]["top"] < ordered[index]["bottom"] - tolerance
             for index in range(len(ordered) - 1)
         ):
-            failures.append("los paneles no se apilan en orden en una ventana estrecha")
+            failures.append("los paneles no se apilan en el orden de columnas en una ventana estrecha")
         if any(abs(box["left"] - inventory["left"]) > tolerance for box in ordered):
             failures.append("los paneles estrechos no comparten el mismo margen izquierdo")
 
@@ -317,68 +337,177 @@ def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
 
 
 
-def _topology_panel_failures(page) -> list[str]:
-    """Comprueba el grafo real con una fixture local, selección y filtro."""
+def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list[str]:
+    """Comprueba el explorador de red con una fixture sintética y controles reales."""
     failures: list[str] = []
     panel = page.locator("#topologyPanel")
     if panel.count() != 1:
-        return ["no aparece un único panel del mapa de relaciones"]
-
-    summary_button = panel.locator(":scope > summary")
-    if summary_button.count() != 1:
-        return ["el mapa no tiene un control claro para abrir o cerrar la vista"]
+        return ["no aparece un único explorador de topología"]
 
     try:
-        if panel.get_attribute("open") is None:
-            summary_button.click()
         page.wait_for_function(
             """() => {
-              const svg = document.querySelector("#topologyCanvas svg.topology-svg");
-              return svg && svg.querySelectorAll(".topology-device-node").length > 0;
+              const canvas = document.querySelector("#topologyCanvas canvas");
+              const graph = window.NetSentinelTopology;
+              const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null;
+              return canvas && stats && stats.deviceCount > 0;
             }""",
             timeout=5000,
         )
     except Exception as exc:
         return [f"el mapa no terminó de dibujar la fixture de prueba: {exc}"]
 
+    if page.locator("#networkObservedMetric").inner_text().strip() != "1":
+        failures.append("el resumen no cuenta el dispositivo observado en la lectura sintética")
+    if page.locator("#networkSubnetMetric").inner_text().strip() != "1":
+        failures.append("el resumen no cuenta la subred registrada en la lectura sintética")
+
     accessible_details = panel.locator("details.topology-accessible")
     if accessible_details.count() != 1:
-        failures.append("falta el acceso a la alternativa textual")
+        failures.append("falta la alternativa textual del mapa")
     elif accessible_details.get_attribute("open") is None:
         accessible_details.locator("summary").click()
 
     for selector, description in (
+        ("#topologyScanSelect", "el selector de lectura del mapa"),
         ("#topologySearch", "el filtro de dispositivos"),
-        ("#topologyResetSearch", "el botón para limpiar el filtro"),
+        ("#topologyStatusFilter", "el filtro de estado"),
+        ("#topologyResetSearch", "el botón para limpiar filtros"),
+        ("#topologyZoomIn", "el botón para acercar"),
+        ("#topologyZoomOut", "el botón para alejar"),
+        ("#topologyFit", "el botón para ajustar el mapa"),
+        ("#topologyRelayout", "el botón para reorganizar el mapa"),
         ("#topologyCanvas", "el área del grafo"),
         ("#topologySelection", "el panel de detalle"),
+        ("#topologyHistory", "el historial de observaciones"),
+        ("#topologyEvents", "los cambios registrados"),
         ("#topologyAccessibleList", "la alternativa textual"),
     ):
         element = panel.locator(selector)
         if element.count() != 1:
             failures.append(f"falta {description}")
         elif not element.is_visible():
-            failures.append(f"no está visible {description} al abrir el mapa")
+            failures.append(f"no está visible {description}")
 
     try:
-        node = panel.locator("#topologyCanvas .topology-device-node").first
-        node.click()
+        node = panel.locator("#topologyAccessibleList .topology-accessible-node").first
+        keyboard_device_id = node.get_attribute("data-device-id")
+        node.focus()
+        node.press("Enter")
+        try:
+            page.wait_for_function(
+                """(deviceId) => {
+                  const focused = document.activeElement;
+                  return focused && focused.matches("button.topology-accessible-node") &&
+                    focused.dataset.deviceId === deviceId &&
+                    focused.getAttribute("aria-pressed") === "true";
+                }""",
+                arg=keyboard_device_id,
+                timeout=2500,
+            )
+        except Exception:
+            failures.append("la selección por teclado perdió el foco del dispositivo después de actualizar aria-pressed")
+        # Space también debe activar la selección sin sacar el foco de la lista.
+        node.press("Space")
+        try:
+            page.wait_for_function(
+                """(deviceId) => {
+                  const focused = document.activeElement;
+                  return focused && focused.matches("button.topology-accessible-node") &&
+                    focused.dataset.deviceId === deviceId &&
+                    focused.getAttribute("aria-pressed") === "true";
+                }""",
+                arg=keyboard_device_id,
+                timeout=2500,
+            )
+        except Exception:
+            failures.append("la selección con Espacio no conservó el foco del dispositivo")
         detail = panel.locator("#topologySelection")
-        if "Evidencia de la lectura #" not in detail.inner_text():
-            failures.append("seleccionar un nodo no muestra la evidencia de la lectura")
+        page.wait_for_function(
+            "() => document.querySelector('#topologySelection')?.textContent.toLocaleLowerCase().includes('lectura #')",
+            timeout=4000,
+        )
         if "192.168.56.20" not in detail.inner_text():
             failures.append("el detalle no muestra la dirección observada en la fixture")
+        if "Historial de observaciones" not in panel.inner_text():
+            failures.append("el panel no explica que la línea temporal es de observaciones")
+        if "Cambios registrados" not in panel.inner_text():
+            failures.append("falta la sección que explica los eventos de inventario")
+        phase = "cargar eventos del dispositivo seleccionado"
+        page.wait_for_function(
+            "() => document.querySelectorAll('#topologyEvents .topology-history-entry').length > 0",
+            timeout=7000,
+        )
+        if "Dispositivo detectado por primera vez" not in panel.locator("#topologyEvents").inner_text():
+            failures.append("el detalle no muestra un evento del inventario asociado al dispositivo seleccionado")
+        if check_missing_evidence:
+            try:
+                device_id = node.get_attribute("data-device-id")
+                update = page.evaluate(
+                    """async (id) => {
+                      const response = await fetch('/api/devices/' + encodeURIComponent(id), {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({trusted: true})
+                      });
+                      return {status: response.status, body: await response.json()};
+                    }""",
+                    device_id,
+                )
+                if update["status"] != 200:
+                    failures.append("no se pudo generar el cambio sintético de confianza para probar la actualización")
+                else:
+                    page.locator("#refreshBtn").click()
+                    page.wait_for_function(
+                        "() => document.querySelector('#topologyEvents')?.textContent.includes('Cambio en el estado de confianza')",
+                        timeout=4000,
+                    )
+            except Exception as exc:
+                failures.append(f"el botón de actualización no refrescó el contexto del equipo seleccionado: {exc}")
 
+
+        if check_missing_evidence:
+            scan_select = page.locator("#topologyScanSelect")
+            options = scan_select.locator("option").evaluate_all("(items) => items.map(item => item.value).filter(Boolean)")
+            if len(options) < 2:
+                failures.append("la fixture no ofrece dos lecturas para seleccionar")
+            else:
+                latest_id = scan_select.input_value()
+                previous_id = next((value for value in options if value != latest_id), None)
+                if previous_id is None:
+                    failures.append("no se encontró una captura anterior diferente")
+                else:
+                    scan_select.select_option(value=previous_id)
+                    page.wait_for_function(
+                        "() => document.querySelector('#topologySummary')?.textContent.includes('Vista histórica elegida')",
+                        timeout=4000,
+                    )
+                    if scan_select.input_value() != previous_id:
+                        failures.append("el explorador no conservó la captura histórica elegida")
+                    scan_select.select_option(value=latest_id)
+                    page.wait_for_function(
+                        "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                        timeout=4000,
+                    )
+
+        page.locator("#topologyZoomIn").click()
+        page.locator("#topologyFit").click()
         search = panel.locator("#topologySearch")
         reset = panel.locator("#topologyResetSearch")
+        phase = "aplicar un filtro sin coincidencias"
         search.fill("filtro-sin-coincidencias")
-        if panel.locator("#topologyCanvas .topology-device-node").count() != 0:
-            failures.append("el filtro del grafo no oculta nodos que no coinciden")
+        page.wait_for_function(
+            "() => window.NetSentinelTopology.getGraphStats().deviceCount === 0",
+            timeout=5000,
+        )
+        phase = "restablecer los filtros y recuperar los nodos"
         reset.click()
-        if panel.locator("#topologyCanvas .topology-device-node").count() == 0:
-            failures.append("Limpiar filtro no restablece los nodos del mapa")
+        page.wait_for_function(
+            "() => window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+            timeout=5000,
+        )
     except Exception as exc:
-        failures.append(f"no se pudo seleccionar o filtrar un nodo del mapa: {exc}")
+        failures.append(f"no se pudo {locals().get('phase', 'seleccionar o filtrar un nodo del mapa')}: {exc}")
 
     metrics = _page_metrics(page)
     if metrics["documentWidth"] > metrics["viewportWidth"] + 1:
@@ -386,8 +515,208 @@ def _topology_panel_failures(page) -> list[str]:
             "el mapa abierto produce desplazamiento horizontal global "
             f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px)"
         )
-    return failures
+    if check_missing_evidence:
+        # Cambiar tema debe actualizar los estilos del mapa sin romper la vista.
+        theme_group = page.locator('input[name="themeSelect"]')
+        if theme_group.count() != 3:
+            failures.append("el selector no ofrece exactamente los tres temas documentados")
+        selected_theme = page.locator('input[name="themeSelect"]:checked').input_value()
+        for theme in ("dark", "medium", "light"):
+            # Los radios están visualmente ocultos para mantener el diseño accesible.
+            # Hacer clic en la tarjeta visible activa el control asociado de forma real.
+            page.locator(f'input[name="themeSelect"][value="{theme}"] + .theme-option-card').click()
+            try:
+                page.wait_for_function(
+                    "(expected) => document.documentElement.dataset.theme === expected",
+                    arg=theme,
+                    timeout=2500,
+                )
+                theme_tokens = page.evaluate(
+                    "() => getComputedStyle(document.documentElement).getPropertyValue('--theme-text').trim()"
+                )
+                if not theme_tokens:
+                    failures.append(f"el tema {theme!r} no proporciona el color de texto del mapa")
+            except Exception as exc:
+                failures.append(f"no se pudo aplicar el tema {theme!r} al explorador: {exc}")
+        page.locator(f'input[name="themeSelect"][value="{selected_theme}"] + .theme-option-card').click()
 
+        # Comprueba que el mapa se recupera de preferencias locales corruptas,
+        # vuelve a guardar posiciones válidas y mantiene el límite de entradas.
+        position_key = "netsentinel-topology-positions-v1"
+        previous_positions = page.evaluate("(key) => localStorage.getItem(key)", position_key)
+        try:
+            page.evaluate("(key) => localStorage.setItem(key, '{malformed')", position_key)
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                timeout=5000,
+            )
+            # El grafo guarda posiciones cuando el layout termina; no leer
+            # localStorage inmediatamente después del primer nodo visible.
+            page.wait_for_function(
+                """(key) => {
+                  try {
+                    const value = JSON.parse(localStorage.getItem(key) || "null");
+                    return value && typeof value === "object" && !Array.isArray(value) &&
+                      Object.entries(value).length > 0;
+                  } catch (_) {
+                    return false;
+                  }
+                }""",
+                arg=position_key,
+                timeout=5000,
+            )
+            position_report = page.evaluate(
+                """(key) => {
+                  try {
+                    const raw = localStorage.getItem(key);
+                    const value = JSON.parse(raw || "null");
+                    if (!value || typeof value !== "object" || Array.isArray(value)) {
+                      return {valid: false, count: 0, positionsValid: false};
+                    }
+                    const entries = Object.entries(value);
+                    return {
+                      valid: true,
+                      count: entries.length,
+                      positionsValid: entries.every(([, position]) =>
+                        position && Number.isFinite(Number(position.x)) &&
+                        Number.isFinite(Number(position.y)) &&
+                        Math.abs(Number(position.x)) < 1000000 &&
+                        Math.abs(Number(position.y)) < 1000000
+                      )
+                    };
+                  } catch (_) {
+                    return {valid: false, count: 0, positionsValid: false};
+                  }
+                }""",
+                position_key,
+            )
+            if not position_report.get("valid") or position_report.get("count", 0) == 0:
+                failures.append("el mapa no recupera ni vuelve a guardar posiciones después de preferencias corruptas")
+            if position_report.get("count", 0) > 1200:
+                failures.append("las posiciones guardadas superan el límite de 1200 nodos")
+            if not position_report.get("positionsValid"):
+                failures.append("el mapa guardó coordenadas de nodos inválidas o fuera de rango")
+        except Exception as exc:
+            failures.append(f"no se pudo verificar la recuperación de las posiciones guardadas: {exc}")
+        finally:
+            try:
+                if previous_positions is None:
+                    page.evaluate("(key) => localStorage.removeItem(key)", position_key)
+                else:
+                    page.evaluate("(args) => localStorage.setItem(args.key, args.value)", {
+                        "key": position_key,
+                        "value": previous_positions,
+                    })
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar la preferencia de posiciones tras la prueba: {exc}")
+
+    if check_missing_evidence:
+        pattern = "**/api/scans/*/topology"
+        try:
+            # Comprueba el caso de una lectura válida con subred registrada y
+            # sin dispositivos observados. El mapa debe dibujar solo la subred.
+            selected_scan_id = page.locator("#topologyScanSelect").input_value()
+            subnet_only_payload = {
+                "scan_id": selected_scan_id,
+                "captured_at": "2026-10-19T10:00:00+00:00",
+                "evidence_available": True,
+                "network_scope_available": True,
+                "nodes": [{
+                    "id": "subnet:fixture-empty@fixture0",
+                    "kind": "subnet",
+                    "label": "192.168.56.0/24",
+                    "network_id": "subnet:fixture-empty@fixture0",
+                    "interface": "fixture0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                    "detail": "Interfaz fixture0",
+                }],
+                "edges": [],
+                "stats": {
+                    "observed_devices": 0,
+                    "known_subnets": 1,
+                    "observed_memberships": 0,
+                    "unlinked_devices": 0,
+                },
+                "warnings": [],
+            }
+            def _serve_subnet_only_topology(route):
+                requested_scan_id = urlsplit(route.request.url).path.rstrip("/").rsplit("/", 2)[-2]
+                payload = {**subnet_only_payload, "scan_id": requested_scan_id}
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(payload),
+                )
+
+            page.route(pattern, _serve_subnet_only_topology)
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => { const graph = window.NetSentinelTopology; const stats = graph && graph.getGraphStats ? graph.getGraphStats() : null; return stats && stats.nodeCount >= 1 && stats.edgeCount === 0; }",
+                timeout=5000,
+            )
+            if page.locator("#networkSubnetMetric").inner_text().strip() != "1":
+                failures.append("la lectura sin equipos no conserva el recuento de la subred registrada")
+        except Exception as exc:
+            failures.append(f"la lectura válida sin dispositivos no conserva su nodo de subred: {exc}")
+        finally:
+            try:
+                page.unroute(pattern)
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar el mapa con dispositivos después de la prueba de subred vacía: {exc}")
+
+    if check_missing_evidence:
+        pattern = "**/api/scans/*/topology"
+        try:
+            # Simula que la API del grafo no puede recuperar una lectura. La vista
+            # no debe inventar líneas ni traducir la falta de datos en un cero confirmado.
+            page.route(
+                pattern,
+                lambda route: route.fulfill(
+                    status=503,
+                    content_type="application/json",
+                    body='{"detail":"Fallo sintético de lectura histórica"}',
+                ),
+            )
+            page.reload(wait_until="load", timeout=20000)
+            page.wait_for_function(
+                "() => document.querySelector('#topologySummary')?.textContent.includes('No se pudo recuperar la evidencia exacta')",
+                timeout=5000,
+            )
+            if page.locator("#networkObservedMetric").inner_text().strip() != "—":
+                failures.append("la falta de evidencia se muestra como un cero confirmado en lugar de dato desconocido")
+            graph_stats = page.evaluate(
+                "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats()"
+            )
+            if graph_stats and graph_stats.get("edgeCount") != 0:
+                failures.append("el explorador dibuja relaciones cuando no se recuperó la evidencia histórica")
+            if graph_stats and graph_stats.get("deviceCount") != 0:
+                failures.append("el explorador muestra equipos como confirmados cuando la lectura no se recuperó")
+        except Exception as exc:
+            failures.append(f"no se pudo comprobar el estado de evidencia no disponible: {exc}")
+        finally:
+            try:
+                page.unroute(pattern)
+                page.reload(wait_until="load", timeout=20000)
+                page.wait_for_function(
+                    "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
+                    timeout=5000,
+                )
+            except Exception as exc:
+                failures.append(f"no se pudo restaurar la vista con evidencia tras la prueba: {exc}")
+
+    return failures
 
 
 def _scan_comparison_failures(page) -> list[str]:
@@ -399,6 +728,19 @@ def _scan_comparison_failures(page) -> list[str]:
     result = page.locator("#scanComparisonResult")
     if first.count() != 1 or second.count() != 1 or button.count() != 1 or result.count() != 1:
         return ["falta uno de los controles de comparación de lecturas"]
+
+    # La navegación histórica debe poder encontrarse y leerse en ambas páginas.
+    history_button = page.locator("#loadMoreScansButton")
+    history_status = page.locator("#scanHistoryLoadStatus")
+    if history_button.count() != 1 or history_status.count() != 1:
+        failures.append("falta el control accesible para continuar el historial de capturas")
+    else:
+        if not history_button.is_visible():
+            failures.append("el control para cargar capturas anteriores no está visible")
+        if not history_status.is_visible() or not history_status.inner_text().strip():
+            failures.append("el estado de carga del historial no está visible o no tiene texto")
+        if not history_button.inner_text().strip():
+            failures.append("el control para cargar capturas anteriores no tiene una etiqueta")
 
     try:
         page.wait_for_function(
@@ -415,7 +757,9 @@ def _scan_comparison_failures(page) -> list[str]:
         page.wait_for_function(
             """() => {
               const result = document.querySelector("#scanComparisonResult");
-              return result && result.textContent.includes("No se detectaron diferencias") &&
+              return result && result.textContent.includes("Cambió el conjunto de direcciones observadas") &&
+                result.textContent.includes("192.168.56.21") &&
+                result.textContent.includes("responsive-ui-fixture") &&
                 result.textContent.includes("No demuestra");
             }""",
             timeout=5000,
@@ -424,10 +768,54 @@ def _scan_comparison_failures(page) -> list[str]:
         return [f"la comparación entre capturas sintéticas no terminó correctamente: {exc}"]
 
     rendered = result.inner_text()
+    evidence_note = page.locator("#scanComparisonEvidenceNote")
+    if evidence_note.count() != 1:
+        failures.append("falta la nota que distingue la identidad actual de la evidencia histórica")
+    else:
+        note_text = evidence_note.inner_text()
+        if "ficha actual del inventario" not in note_text or "captura guardada" not in note_text:
+            failures.append("la comparación no aclara qué datos son históricos y cuáles vienen del inventario actual")
     if "192.168.56.0/24" not in rendered:
         failures.append("la comparación no informa la subred compartida")
+    if "192.168.56.21" not in rendered or "responsive-ui-fixture" not in rendered:
+        failures.append("la comparación no vincula las IP modificadas con su fuente histórica")
+    evidence_rows = page.locator(".scan-compare-evidence .scan-compare-item-meta")
+    if evidence_rows.count() < 3:
+        failures.append("la comparación no muestra hora, dirección y fuente para cada evidencia")
+    elif any("Fuente: responsive-ui-fixture" not in value for value in evidence_rows.all_inner_texts()):
+        failures.append("alguna observación del cambio perdió su fuente original")
     if "No demuestra que esté desconectado" not in rendered:
         failures.append("la comparación no explica el límite de interpretar ausencias")
+
+    scan_select = page.locator("#topologyScanSelect")
+    if scan_select.count() == 1:
+        baseline_id = first.input_value()
+        change = result.locator(".scan-compare-item").first
+        device_id = change.get_attribute("data-device-id")
+        action = page.get_by_role(
+            "button",
+            name=f"Ver equipo #{device_id} en la captura anterior #{baseline_id} en el mapa",
+        )
+        if action.count() != 1:
+            failures.append("la diferencia no ofrece una acción accesible para abrir y seleccionar el equipo")
+        else:
+            try:
+                action.click()
+                page.wait_for_function(
+                    """(expected) => {
+                      const scanSelect = document.querySelector('#topologyScanSelect');
+                      const selected = document.querySelector('#topologyAccessibleList .topology-accessible-node[aria-pressed=' + JSON.stringify('true') + ']');
+                      return scanSelect?.value === expected.scanId &&
+                        selected?.dataset.deviceId === expected.deviceId;
+                    }""",
+                    arg={"scanId": baseline_id, "deviceId": device_id},
+                    timeout=7000,
+                )
+                selected_text = page.locator("#topologySelection").inner_text()
+                if "192.168.56.21" not in selected_text:
+                    failures.append("el detalle del dispositivo no muestra la IP histórica que motivó la diferencia")
+            except Exception as exc:
+                failures.append(f"no se pudo abrir la captura y seleccionar el equipo que sustenta la diferencia: {exc}")
     return failures
 
 
@@ -586,9 +974,13 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
-                                case_failures.extend(_topology_panel_failures(page))
-                                if viewport == Viewport(1440, 900):
-                                    case_failures.extend(_scan_comparison_failures(page))
+                            if path in {"/", "/network"} and viewport == Viewport(1440, 900):
+                                case_failures.extend(_scan_comparison_failures(page))
+                            if path == "/network":
+                                case_failures.extend(_topology_panel_failures(
+                                    page,
+                                    check_missing_evidence=(viewport == Viewport(1440, 900)),
+                                ))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
 
@@ -598,7 +990,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 )
 
                             should_capture = screenshots and (
-                                path == "/" or viewport == Viewport(1440, 900)
+                                path in {"/", "/network"} or viewport == Viewport(1440, 900)
                             )
                             if should_capture:
                                 capture_path = output_dir / (

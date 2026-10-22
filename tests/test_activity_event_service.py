@@ -57,6 +57,59 @@ def test_event_normalization_rejects_future_and_invalid_timestamps():
         })
 
 
+def test_network_event_contract_preserves_provided_fields():
+    event = normalize_event({
+        "event_type": "connection", "source": "router_flow",
+        "observed_at": "2026-10-20T10:15:00Z",
+        "source_ip": "2001:0db8::1", "source_port": "51514",
+        "destination_ip": "192.0.2.25", "destination_port": "443", "protocol": "TCP",
+        "bytes_sent": "1200", "bytes_received": 0, "packets_sent": 4, "packets_received": 0,
+        "network_interface": "  wan0 ", "source_event_id": " flow-00042 ",
+    })
+    assert event["source_ip"] == "2001:db8::1"
+    assert event["source_port"] == 51514
+    assert event["destination_ip"] == "192.0.2.25"
+    assert event["destination_port"] == 443
+    assert event["protocol"] == "tcp"
+    assert event["bytes_sent"] == 1200
+    assert event["bytes_received"] == 0
+    assert event["packets_sent"] == 4
+    assert event["packets_received"] == 0
+    assert event["network_interface"] == "wan0"
+    assert event["source_event_id"] == "flow-00042"
+
+
+def test_unknown_network_evidence_stays_null_instead_of_becoming_zero():
+    event = normalize_event({"event_type": "connection", "source": "router_flow", "destination_ip": "192.0.2.25"})
+    assert event["source_ip"] is None
+    assert event["source_port"] is None
+    assert event["bytes_sent"] is None
+    assert event["bytes_received"] is None
+    assert event["packets_sent"] is None
+    assert event["packets_received"] is None
+    assert event["network_interface"] is None
+    assert event["source_event_id"] is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("source_ip", "not-an-ip", "source_ip"), ("source_port", True, "source_port"),
+        ("source_port", 0, "source_port"), ("bytes_sent", True, "bytes_sent"),
+        ("bytes_received", -1, "bytes_received"), ("packets_sent", 1.5, "packets_sent"),
+        ("packets_received", 9_223_372_036_854_775_808, "packets_received"),
+        ("network_interface", "wan0\ninvalid", "network_interface"),
+        ("source_event_id", "x" * 161, "source_event_id"),
+    ],
+)
+def test_network_event_contract_rejects_invalid_optional_fields(field, value, message):
+    with pytest.raises(ValueError, match=message):
+        normalize_event({
+            "event_type": "connection", "source": "router_flow",
+            "destination_ip": "192.0.2.25", field: value,
+        })
+
+
 def test_email_metadata_requires_explicit_manual_import_and_addresses():
     payload = {
         "event_type": "email_metadata",

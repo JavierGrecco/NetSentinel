@@ -24,6 +24,7 @@ def get_events(
     limit: int = 50,
     acknowledged: bool | None = None,
     exclude_event_types: tuple[str, ...] = (),
+    device_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """Lista eventos con filtros aplicados en SQL antes del límite de resultados."""
     conditions: list[str] = []
@@ -31,6 +32,9 @@ def get_events(
     if acknowledged is not None:
         conditions.append("e.acknowledged = ?")
         params.append(int(acknowledged))
+    if device_id is not None:
+        conditions.append("e.device_id = ?")
+        params.append(int(device_id))
     excluded = tuple(dict.fromkeys(item for item in exclude_event_types if item))
     if excluded:
         placeholders = ", ".join("?" for _ in excluded)

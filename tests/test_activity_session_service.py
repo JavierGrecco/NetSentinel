@@ -53,10 +53,22 @@ def test_session_service_stores_only_token_hash_and_accepts_valid_event(
             "event_type": "dns_query",
             "source": "router_dns",
             "domain": "example.test",
+            "source_ip": "192.0.2.44", "source_port": 5353,
+            "bytes_sent": 120, "bytes_received": 300,
+            "packets_sent": 2, "packets_received": 3,
+            "network_interface": "lan0", "source_event_id": "router-record-42",
         },
     )
     assert event["event_type"] == "dns_query"
     assert event["domain"] == "example.test"
+    assert event["source_ip"] == "192.0.2.44"
+    assert event["source_port"] == 5353
+    assert event["bytes_sent"] == 120
+    assert event["bytes_received"] == 300
+    assert event["packets_sent"] == 2
+    assert event["packets_received"] == 3
+    assert event["network_interface"] == "lan0"
+    assert event["source_event_id"] == "router-record-42"
 
     with pytest.raises(InvalidCollectorToken, match="token de recopilación"):
         activity_session_service.ingest_event(

@@ -371,3 +371,49 @@ def test_activity_read_repository_validates_filters_and_preserves_summary_scope(
             device_id=device_id,
             limit=100,
         )
+
+def test_manual_import_deduplicates_by_source_event_id_when_metadata_changes(
+    monkeypatch, tmp_path
+):
+    """Un identificador estable de origen evita duplicados con campos enriquecidos."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+
+    first_event = _manual_event(now, "dns.example")
+    first_event.update(source_event_id="router-row-42", bytes_sent=120)
+    first = activity_repository.import_manual_events(
+        device_id, [first_event], [2], now=now, preview=False
+    )
+    assert first["imported"] == 1
+
+    # The same provider record is exported again with a more complete domain/counter.
+    enriched_event = {
+        **first_event,
+        "domain": "dns-enriched.example",
+        "bytes_sent": 240,
+    }
+    preview = activity_repository.import_manual_events(
+        device_id, [enriched_event], [2], now=now, preview=True
+    )
+    assert preview["imported"] == 0
+    assert preview["skipped_duplicates"] == 1
+    assert preview["preview_dispositions"] == ["duplicate"]
+
+    duplicate = activity_repository.import_manual_events(
+        device_id, [enriched_event], [2], now=now, preview=False
+    )
+    assert duplicate["imported"] == 0
+    assert duplicate["skipped_duplicates"] == 1
+    with database.connect() as db:
+        rows = db.execute(
+            "SELECT source_event_id, domain, bytes_sent FROM activity_events WHERE device_id = ?",
+            (device_id,),
+        ).fetchall()
+    assert [dict(row) for row in rows] == [{
+        "source_event_id": "router-row-42",
+        "domain": "dns.example",
+        "bytes_sent": 120,
+    }]
