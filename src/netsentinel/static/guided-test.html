@@ -121,7 +121,7 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
 ./run.sh</code></pre>
     <p id="copyCommandStatus" class="guided-inline-status" role="status" aria-live="polite"></p>
     <div class="guided-note"><strong>Importante:</strong> no ejecutes este bloque contra tu instalación habitual. Después de preparar la base, mantené esta terminal abierta y seguí los escenarios desde el navegador. Si ya preparaste esta base y el servidor está en marcha, no vuelvas a sembrarla.</div>
-    <label class="guided-check"><input type="checkbox" data-guided-step="setup"><span>Preparé una base de laboratorio separada y arranqué NetSentinel con esa base.</span></label>
+    <label class="guided-check"><input type="checkbox" data-guided-step="setup"><span>Preparé una base de laboratorio separada y arranqué NetSentinel con esa base.<span class="guided-step-help"><strong>Qué mirar:</strong> las rutas impresas deben apuntar a carpetas de laboratorio únicas y el servidor debe responder en localhost. <strong>Por qué importa:</strong> una base independiente evita mezclar los datos sintéticos con el inventario habitual.</span></span></label>
   </section>
 
   <section class="guided-scenario-list" aria-label="Escenarios guiados">
@@ -132,9 +132,9 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       </div>
       <p>Validá que la vista previa no escriba eventos y que repetir una importación no duplique los registros.</p>
       <ol class="guided-instructions">
-        <li>Abrí <code>Actividad</code> y seleccioná el dispositivo <strong>Dispositivo sintético de prueba</strong>.</li>
-        <li>En la carpeta indicada por <code>SCENARIO_DIR</code> al final de la preparación, elegí <code>activity.csv</code> y ejecutá la vista previa.</li>
-        <li>Confirmá la importación y después previsualizá el mismo archivo otra vez.</li>
+        <li>Abrí <code>Actividad</code> y seleccioná el dispositivo <strong>Dispositivo sintético de prueba</strong>.<p class="guided-step-help"><strong>Qué mirar:</strong> Revisá que el selector corresponda al dispositivo sintético `192.168.56.20`. Importar sobre otro activo mezclaría el ensayo con observaciones ajenas. <strong>Por qué importa:</strong> El aislamiento mantiene reproducibles los resultados y evita contaminar datos de otro dispositivo.</p></li>
+        <li>En la carpeta indicada por <code>SCENARIO_DIR</code> al final de la preparación, elegí <code>activity.csv</code> y ejecutá la vista previa.<p class="guided-step-help"><strong>Qué mirar:</strong> En la vista previa, verificá seis filas aceptadas, los campos interpretados y que el total guardado no cambie todavía. <strong>Por qué importa:</strong> Separar previsualización y escritura permite revisar los datos antes de persistirlos.</p></li>
+        <li>Confirmá la importación y después previsualizá el mismo archivo otra vez.<p class="guided-step-help"><strong>Qué mirar:</strong> Después de importar una vez, repetí la vista previa y compará el resumen de duplicados con el primer resultado. <strong>Por qué importa:</strong> La idempotencia evita que volver a cargar un mismo archivo distorsione el historial de actividad.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La vista previa muestra seis filas válidas; después de confirmar, la repetición identifica duplicados en lugar de crear una segunda copia.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="csv-preview"><span>La vista previa mostró seis filas y no guardó eventos.</span></label>
@@ -150,9 +150,9 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       </div>
       <p>Comprobá que la importación falle de forma completa si detecta cabeceras sensibles o ambiguas.</p>
       <ol class="guided-instructions">
-        <li>Previsualizá <code>activity-invalid-sensitive.csv</code>.</li>
-        <li>Previsualizá <code>activity-invalid-duplicate-header.csv</code>.</li>
-        <li>Volvé a la lista de actividad y comprobá que ningún fragmento del lote rechazado quedó guardado.</li>
+        <li>Previsualizá <code>activity-invalid-sensitive.csv</code>.<p class="guided-step-help"><strong>Qué mirar:</strong> Buscá un mensaje claro que rechace las cabeceras sensibles y confirmá que no se ofrezca una importación parcial. <strong>Por qué importa:</strong> Los datos sensibles no deben entrar al registro de actividad por una importación accidental.</p></li>
+        <li>Previsualizá <code>activity-invalid-duplicate-header.csv</code>.<p class="guided-step-help"><strong>Qué mirar:</strong> Verificá que el archivo con cabeceras duplicadas se rechace por ambigüedad, no que una columna sobrescriba a otra. <strong>Por qué importa:</strong> Las cabeceras ambiguas pueden cambiar silenciosamente el significado de cada valor.</p></li>
+        <li>Volvé a la lista de actividad y comprobá que ningún fragmento del lote rechazado quedó guardado.<p class="guided-step-help"><strong>Qué mirar:</strong> Volvé a la lista y compará los registros antes y después del rechazo; no debe aparecer ninguna fila del lote inválido. <strong>Por qué importa:</strong> El rechazo atómico impide que quede una importación a medias difícil de detectar.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>Ambos archivos se rechazan; no hay importación parcial ni se guardan campos sensibles.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="csv-sensitive"><span>El archivo con cabeceras sensibles fue rechazado.</span></label>
@@ -167,9 +167,9 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       </div>
       <p>Después de importar <code>activity.csv</code>, comprobá que el mapa usa las IP destino guardadas y no inventa posiciones.</p>
       <ol class="guided-instructions">
-        <li>Abrí el mapa y revisá el resumen, la tabla y el filtro.</li>
-        <li>Pulsá <strong>Comprobar API</strong> para verificar que la app puede leer el resumen local.</li>
-        <li>Si la base GeoLite2-City falta, revisá que la interfaz lo comunique y no dibuje coordenadas inventadas. Para marcadores reales se necesita una base autorizada instalada localmente.</li>
+        <li>Abrí el mapa y revisá el resumen, la tabla y el filtro.<p class="guided-step-help"><strong>Qué mirar:</strong> Revisá el contador, las IP de destino en la tabla, el filtro y el estado vacío cuando no hay coincidencias. <strong>Por qué importa:</strong> La tabla conserva información útil aunque una dirección no tenga coordenadas geográficas.</p></li>
+        <li>Pulsá <strong>Comprobar API</strong> para verificar que la app puede leer el resumen local.<p class="guided-step-help"><strong>Qué mirar:</strong> Comprobá que la llamada termina con éxito y que el resumen de la respuesta coincide con la información que presenta la página. <strong>Por qué importa:</strong> Esto verifica que la interfaz está conectada con la API local, y no solo que el mapa base se dibuja.</p></li>
+        <li>Si la base GeoLite2-City falta, revisá que la interfaz lo comunique y no dibuje coordenadas inventadas. Para marcadores reales se necesita una base autorizada instalada localmente.<p class="guided-step-help"><strong>Qué mirar:</strong> Si la base GeoIP no está disponible, comprobá el mensaje de cobertura y que no aparezcan marcadores de ubicación inventados. <strong>Por qué importa:</strong> La ubicación IP es aproximada y solo debe mostrarse cuando existe una respuesta GeoIP válida.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La cartografía y la tabla cargan; los destinos sin coordenadas siguen visibles en la tabla, pero no se dibujan como puntos.</span></div>
       <p>Prueba opcional si tenés conexión DNS: en la consulta manual de dominio probá <code>example.com</code>. La pantalla debe aclarar que es una resolución actual y no registrar esa IP como si fuera un evento histórico. Si no tenés conexión, omití ese paso.</p>
@@ -183,9 +183,9 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       <div class="guided-scenario-title"><span class="guided-number">04</span><div><p class="guided-kicker">TOPOLOGÍA LAN HISTÓRICA</p><h2>Explorador de red: lectura sintética y evidencia</h2></div></div>
       <p>La preparación crea una lectura etiquetada como <code>synthetic-test-fixture</code>. No ejecuta descubrimiento, ping ni escaneo de red: permite comprobar que el grafo usa observaciones guardadas.</p>
       <ol class="guided-instructions">
-        <li>Pulsá <strong>Comprobar API</strong> para encontrar la lectura sintética y consultar su topología en modo de solo lectura.</li>
-        <li>Abrí <strong>Mapa de red</strong>, elegí esa lectura y seleccioná nodos. Deben aparecer los dispositivos ficticios, la subred <code>192.168.56.0/24</code> y la interfaz <code>synthetic-fixture</code> cuando la fuente lo permite.</li>
-        <li>Probá búsqueda, filtros, zoom y el detalle textual. Una línea no demuestra tráfico en vivo ni la ausencia de un equipo demuestra desconexión.</li>
+        <li>Pulsá <strong>Comprobar API</strong> para encontrar la lectura sintética y consultar su topología en modo de solo lectura.<p class="guided-step-help"><strong>Qué mirar:</strong> La comprobación debe encontrar una lectura cuyo origen sea `synthetic-test-fixture` y mostrar su identificador. <strong>Por qué importa:</strong> La procedencia permite distinguir datos de demostración de una captura legítima del entorno.</p></li>
+        <li>Abrí <strong>Mapa de red</strong>, elegí esa lectura y seleccioná nodos. Deben aparecer los dispositivos ficticios, la subred <code>192.168.56.0/24</code> y la interfaz <code>synthetic-fixture</code> cuando la fuente lo permite.<p class="guided-step-help"><strong>Qué mirar:</strong> En `/network`, elegí esa lectura y revisá sus nodos, subred y detalles; no uses la vista de un escaneo nuevo. <strong>Por qué importa:</strong> El grafo reconstruye observaciones históricas y debe conservar el contexto de la lectura seleccionada.</p></li>
+        <li>Probá búsqueda, filtros, zoom y el detalle textual. Una línea no demuestra tráfico en vivo ni la ausencia de un equipo demuestra desconexión.<p class="guided-step-help"><strong>Qué mirar:</strong> Probá búsqueda, filtros, zoom, selección y el detalle textual; comprobá que la selección sea usable sin depender únicamente del ratón. <strong>Por qué importa:</strong> La interacción y el detalle accesible hacen que el grafo sea verificable; las líneas no prueban tráfico ni conexiones físicas.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La API devuelve la lectura guardada, nodos, relaciones y procedencia, sin ejecutar un escaneo ni sustituir evidencia histórica por datos actuales.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="topology-api"><span>La API encontró la lectura sintética y devolvió el grafo.</span></label>
@@ -198,9 +198,9 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       <div class="guided-scenario-title"><span class="guided-number">05</span><div><p class="guided-kicker">INGESTA AUTORIZADA</p><h2>Zeek conn.log: previsualizar, importar y deduplicar</h2></div></div>
       <p>El archivo <code>zeek-conn.tsv</code> se genera localmente. No inicia Zeek, no captura paquetes ni se conecta a otro equipo. Usalo solamente contra esta base sintética aislada.</p>
       <ol class="guided-instructions">
-        <li>Abrí <strong>Actividad</strong>, seleccioná el dispositivo <code>192.168.56.20</code> y cargá el archivo <code>zeek-conn.tsv</code> de la carpeta de escenarios que imprimió la preparación.</li>
-        <li>Pulsá <strong>Previsualizar registros</strong> y revisá validez, atribución por IP y fecha, bytes IP enviados/recibidos y filas omitidas. La vista previa no escribe eventos.</li>
-        <li>Después de revisar, pulsá <strong>Importar conexiones</strong> y previsualizá de nuevo el mismo archivo. Los UID ya importados deben reconocerse como duplicados.</li>
+        <li>Abrí <strong>Actividad</strong>, seleccioná el dispositivo <code>192.168.56.20</code> y cargá el archivo <code>zeek-conn.tsv</code> de la carpeta de escenarios que imprimió la preparación.<p class="guided-step-help"><strong>Qué mirar:</strong> Seleccioná el activo ficticio correcto y el archivo `zeek-conn.tsv` generado en la ruta impresa por la preparación. <strong>Por qué importa:</strong> La atribución depende de la IP y del intervalo temporal; un objetivo incorrecto falsearía el resultado.</p></li>
+        <li>Pulsá <strong>Previsualizar registros</strong> y revisá validez, atribución por IP y fecha, bytes IP enviados/recibidos y filas omitidas. La vista previa no escribe eventos.<p class="guided-step-help"><strong>Qué mirar:</strong> En la previsualización, leé filas aceptadas u omitidas, motivo, UID, hora y bytes IP; los contadores ausentes deben seguir como desconocidos. <strong>Por qué importa:</strong> Una ausencia de medición no equivale a cero tráfico y la previsualización debe ser de solo lectura.</p></li>
+        <li>Después de revisar, pulsá <strong>Importar conexiones</strong> y previsualizá de nuevo el mismo archivo. Los UID ya importados deben reconocerse como duplicados.<p class="guided-step-help"><strong>Qué mirar:</strong> Importá y luego volvé a previsualizar el mismo archivo; localizá los UID repetidos y el resumen de duplicados. <strong>Por qué importa:</strong> La deduplicación por UID evita duplicar eventos al reejecutar una importación.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>Los contadores ausentes permanecen desconocidos; las filas fuera de intervalo o ambiguas se omiten y la segunda importación no duplica UID <code>zeek:</code>.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="zeek-preview"><span>La vista previa validó Zeek y mostró la atribución antes de escribir.</span></label>
@@ -216,10 +216,10 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       </div>
       <p>Usá exclusivamente la copia sintética preparada en <code>forensics-working-copies</code>. No registres evidencia real en esta prueba.</p>
       <ol class="guided-instructions">
-        <li>En el campo de operador, escribí <code>Operador sintético de prueba</code>. Abrí Forense y creá un caso usando los valores de la tarjeta inferior.</li>
-        <li>En ese caso, registrá <code>netsentinel-forensic-sample.bin</code> como una copia de archivo. Usá el SHA-256 que imprimió la preparación como dato informado por la fuente y completá su origen.</li>
-        <li>En la ficha recién registrada, abrí <strong>Comparar con una copia de trabajo</strong>, ingresá solo <code>netsentinel-forensic-sample.bin</code> y marcá la confirmación de que es una copia autorizada. Primero debe coincidir.</li>
-        <li>Desde otra terminal, exportá el mismo <code>NETSENTINEL_DATA_DIR</code> que imprimió la preparación y ejecutá el comando de abajo. Después repetí la comparación en Forense.</li>
+        <li>En el campo de operador, escribí <code>Operador sintético de prueba</code>. Abrí Forense y creá un caso usando los valores de la tarjeta inferior.<p class="guided-step-help"><strong>Qué mirar:</strong> Creá el caso solo con el identificador y los datos ficticios propuestos; confirmá el alcance restringido y el operador de prueba. <strong>Por qué importa:</strong> La autorización y el alcance delimitan qué se examina y quién declara haber realizado la tarea.</p></li>
+        <li>En ese caso, registrá <code>netsentinel-forensic-sample.bin</code> como una copia de archivo. Usá el SHA-256 que imprimió la preparación como dato informado por la fuente y completá su origen.<p class="guided-step-help"><strong>Qué mirar:</strong> Al registrar la evidencia, compará el nombre, el origen declarado y el SHA-256 que imprimió el generador. <strong>Por qué importa:</strong> La referencia queda registrada por separado del hash recalculado posteriormente, lo que permite detectar discrepancias.</p></li>
+        <li>En la ficha recién registrada, abrí <strong>Comparar con una copia de trabajo</strong>, ingresá solo <code>netsentinel-forensic-sample.bin</code> y marcá la confirmación de que es una copia autorizada. Primero debe coincidir.<p class="guided-step-help"><strong>Qué mirar:</strong> Comprobá que la copia inicial de trabajo coincida con el SHA-256 declarado y que el resultado indique una coincidencia. <strong>Por qué importa:</strong> Esta comprobación valida la igualdad del contenido en ese momento; no acredita por sí sola quién lo creó.</p></li>
+        <li>Desde otra terminal, exportá el mismo <code>NETSENTINEL_DATA_DIR</code> que imprimió la preparación y ejecutá el comando de abajo. Después repetí la comparación en Forense.<p class="guided-step-help"><strong>Qué mirar:</strong> Modificá únicamente la copia sintética indicada y repetí la comparación; debe aparecer una discrepancia respecto de la referencia original. <strong>Por qué importa:</strong> Detectar cambios es esencial para verificar integridad, sin confundirlo con autenticar al operador o certificar una cadena de custodia.</p></li>
       </ol>
       <div class="guided-expected guided-values" aria-label="Valores exactos para el caso de prueba"><strong>Valores para completar en el formulario</strong><dl><dt>Identificador</dt><dd><code>LAB-SINTETICO-001</code></dd><dt>Nombre breve</dt><dd><code>Verificación de archivo sintético</code></dd><dt>Autorización</dt><dd><code>AUTORIZACION-DE-PRUEBA</code></dd><dt>Objetivo</dt><dd><code>Probar coincidencia y discrepancia SHA-256 de una muestra sintética.</code></dd><dt>Alcance</dt><dd><code>Solo netsentinel-forensic-sample.bin en forensics-working-copies; sin evidencia real.</code></dd><dt>Examinador</dt><dd><code>Examinador sintético</code></dd><dt>Operador</dt><dd><code>Operador sintético de prueba</code></dd><dt>Descripción breve</dt><dd><code>Muestra sintética de integridad</code></dd><dt>Tipo de fuente</dt><dd><code>Copia de archivo</code></dd><dt>Nombre original</dt><dd><code>netsentinel-forensic-sample.bin</code></dd><dt>Descripción de evidencia</dt><dd><code>Archivo artificial para validar el control de integridad; no es evidencia real.</code></dd><dt>Entregado por</dt><dd><code>Generador local de pruebas</code></dd><dt>Recibido por</dt><dd><code>Examinador sintético</code></dd><dt>Origen del hash</dt><dd><code>SHA-256 calculado por el generador local al crear la muestra</code></dd></dl><p class="small">La hora y zona horaria del formulario se completan automáticamente. El tamaño es opcional. Pegá el hash exacto que imprimió la preparación.</p></div>
       <div class="guided-section-heading"><div><p class="guided-kicker">SEGUNDA COMPROBACIÓN</p><p>Reemplazá el valor de la variable por la ruta exacta que imprimió la preparación, sin cambiar el resto del comando.</p></div><button type="button" id="copyEvidenceChangeCommand" class="quiet">Copiar comando de cambio</button></div>
@@ -242,9 +242,9 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       </div>
       <p>Este escenario verifica que la interfaz solo acceda por nombre a una copia de trabajo dentro de la carpeta restringida y no exponga rutas locales.</p>
       <ol class="guided-instructions">
-        <li>En la evidencia sintética, volvé a abrir <strong>Comparar con una copia de trabajo</strong>. Probá el nombre <code>missing-sample.bin</code> y confirmá que es una copia de trabajo autorizada.</li>
-        <li>Repetí con <code>../fuera.bin</code>. No crees ese archivo ni uses una ruta real.</li>
-        <li>Revisá el mensaje de la pantalla y la auditoría del caso.</li>
+        <li>En la evidencia sintética, volvé a abrir <strong>Comparar con una copia de trabajo</strong>. Probá el nombre <code>missing-sample.bin</code> y confirmá que es una copia de trabajo autorizada.<p class="guided-step-help"><strong>Qué mirar:</strong> Usá el nombre inexistente `missing-sample.bin` y revisá que el error sea controlado, sin mostrar una ruta local completa. <strong>Por qué importa:</strong> Los errores previsibles deben ser comprensibles y no revelar información del sistema de archivos.</p></li>
+        <li>Repetí con <code>../fuera.bin</code>. No crees ese archivo ni uses una ruta real.<p class="guided-step-help"><strong>Qué mirar:</strong> Probá literalmente `../fuera.bin`, sin crear el archivo ni reemplazarlo por una ruta real. <strong>Por qué importa:</strong> Esto comprueba que la ruta queda dentro del directorio de trabajo permitido y bloquea intentos de salir de él.</p></li>
+        <li>Revisá el mensaje de la pantalla y la auditoría del caso.<p class="guided-step-help"><strong>Qué mirar:</strong> Revisá el resultado visible y el historial de auditoría; buscá un evento saneado que no exponga detalles de rutas. <strong>Por qué importa:</strong> La trazabilidad debe permitir investigar un rechazo sin filtrar información local sensible.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La aplicación rechaza ambos intentos, no lee archivos fuera de la carpeta permitida y no muestra ni conserva una ruta completa en el historial. El error de lectura queda trazado sin revelar información local.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-missing"><span>El archivo inexistente fue rechazado sin revelar rutas.</span></label>
@@ -259,11 +259,11 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       </div>
       <p>Después de registrar y comparar la copia sintética, comprobá que el caso conserve el historial de operaciones.</p>
       <ol class="guided-instructions">
-        <li>En la tarjeta de evidencia, registrá el traspaso sintético desde <code>Examinador sintético</code> hacia <code>Custodio sintético receptor</code>, con un motivo y método explícitos. Usá esa misma persona como origen si así aparece en el registro; no inventes un traspaso real.</li>
-        <li>Confirmá que el nuevo evento aparece en el historial y que su integridad figura como válida.</li>
-        <li>Seleccioná el caso de prueba y descargá el <strong>manifiesto de auditoría</strong>.</li>
-        <li>Descargá el <strong>expediente consolidado del caso</strong>.</li>
-        <li>Abrí los dos JSON descargados. Comprobá que correspondan al caso sintético y que el historial incluya el registro de evidencia y las comprobaciones realizadas.</li>
+        <li>En la tarjeta de evidencia, registrá el traspaso sintético desde <code>Examinador sintético</code> hacia <code>Custodio sintético receptor</code>, con un motivo y método explícitos. Usá esa misma persona como origen si así aparece en el registro; no inventes un traspaso real.<p class="guided-step-help"><strong>Qué mirar:</strong> Registrá el traspaso entre las identidades sintéticas, con motivo y método específicos. <strong>Por qué importa:</strong> Un registro de transferencia documenta quién declara entregar o recibir y por qué, sin transformar una simulación en custodia real.</p></li>
+        <li>Confirmá que el nuevo evento aparece en el historial y que su integridad figura como válida.<p class="guided-step-help"><strong>Qué mirar:</strong> Comprobá que el evento de traspaso aparezca en la secuencia de auditoría y que la comprobación de integridad figure como válida. <strong>Por qué importa:</strong> La consistencia del historial ayuda a detectar modificaciones, pero no demuestra por sí sola la identidad real de sus autores.</p></li>
+        <li>Seleccioná el caso de prueba y descargá el <strong>manifiesto de auditoría</strong>.<p class="guided-step-help"><strong>Qué mirar:</strong> Descargá el manifiesto de auditoría del caso sintético y comprobá que el archivo realmente se haya generado. <strong>Por qué importa:</strong> La exportación permite revisar y conservar el registro fuera de la interfaz.</p></li>
+        <li>Descargá el <strong>expediente consolidado del caso</strong>.<p class="guided-step-help"><strong>Qué mirar:</strong> Descargá el expediente consolidado del mismo caso y confirmá que el identificador coincide. <strong>Por qué importa:</strong> El expediente reúne metadatos y eventos para que la revisión no dependa solo de la página abierta.</p></li>
+        <li>Abrí los dos JSON descargados. Comprobá que correspondan al caso sintético y que el historial incluya el registro de evidencia y las comprobaciones realizadas.<p class="guided-step-help"><strong>Qué mirar:</strong> Abrí ambos JSON y localizá el caso, la evidencia y los eventos recientes; verificá los digest cuando corresponda. <strong>Por qué importa:</strong> La revisión detecta omisiones obvias o cambios posteriores; un digest sin firma no prueba autenticidad independiente.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>Los dos archivos JSON se descargan y contienen metadatos del caso y la auditoría relevantes. Un hash o digest del manifiesto ayuda a detectar cambios, pero no es una firma digital ni acredita por sí solo la autenticidad.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-custody-transfer"><span>Registré el traspaso sintético y aparece en la auditoría.</span></label>
@@ -271,7 +271,6 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case-manifest"><span>Descargué y revisé el expediente consolidado.</span></label>
       <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
     </article>
-  </section>
 
     <article class="panel guided-scenario" id="scenario-forensics-report">
       <div class="guided-scenario-title">
@@ -300,27 +299,38 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
         </dl>
       </details>
       <ol class="guided-instructions">
-        <li>En <strong>Informe de examen</strong>, completá los datos con las propuestas de arriba o con valores equivalentes igualmente sintéticos.</li>
-        <li>Guardá el primer borrador. Comprobá que la tarjeta indique versión 1 y estado <strong>Borrador sin firma</strong>.</li>
-        <li>Descargá el JSON y el Markdown. La descarga JSON debe contener un digest del informe y una captura del expediente con su propia huella.</li>
-        <li>Verificá el JSON desde el entorno instalado con <code>python -m netsentinel.forensics_report ruta/al/informe.json</code>. No cambies el archivo original exportado para hacer la prueba negativa; usá una copia separada.</li>
+        <li>En <strong>Informe de examen</strong>, completá los datos con las propuestas de arriba o con valores equivalentes igualmente sintéticos.<p class="guided-step-help"><strong>Qué mirar:</strong> Completá los campos con valores ficticios coherentes y límites explícitos; no redactes conclusiones sobre evidencia real. <strong>Por qué importa:</strong> Un informe técnico debe declarar propósito, procedimientos, resultados, limitaciones y disposición del material.</p></li>
+        <li>Guardá el primer borrador. Comprobá que la tarjeta indique versión 1 y estado <strong>Borrador sin firma</strong>.<p class="guided-step-help"><strong>Qué mirar:</strong> Guardá el borrador y confirmá versión 1 y estado sin firma. <strong>Por qué importa:</strong> La versión y el estado evitan confundir un borrador con un informe firmado o aprobado.</p></li>
+        <li>Descargá el JSON y el Markdown. La descarga JSON debe contener un digest del informe y una captura del expediente con su propia huella.<p class="guided-step-help"><strong>Qué mirar:</strong> Descargá JSON y Markdown y compará título, caso relacionado y digest en el JSON. <strong>Por qué importa:</strong> JSON permite verificación automática y Markdown una lectura humana; el digest ayuda a detectar cambios, no es una firma.</p></li>
+        <li>Verificá el JSON desde el entorno instalado con <code>python -m netsentinel.forensics_report ruta/al/informe.json</code>. No cambies el archivo original exportado para hacer la prueba negativa; usá una copia separada.<p class="guided-step-help"><strong>Qué mirar:</strong> Ejecutá el verificador sobre el JSON original y conservá ese archivo intacto; para probar manipulación, trabajá sobre una copia separada. <strong>Por qué importa:</strong> Validar el artefacto sin sobrescribir la referencia hace reproducible la comprobación y facilita detectar alteraciones.</p></li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>El informe y su expediente base superan la verificación; se conservan métodos, resultados, limitaciones, disposición y referencia de la auditoría. Si después corregís el contenido, debe crearse la versión 2 con motivo explícito, sin sobrescribir la versión 1. Un digest no es firma digital ni prueba de identidad.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-created"><span>Guardé el borrador V1 y revisé sus campos obligatorios.</span></label>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-export"><span>Descargué JSON y Markdown y verifiqué el JSON original.</span></label>
       <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
     </article>
+  </section>
 
   <section class="panel guided-final" aria-labelledby="guidedFinalTitle">
     <h2 id="guidedFinalTitle">Cierre de la prueba</h2>
     <p>Si un paso no coincide con el resultado esperado, no lo marques como aprobado. Anotá la pantalla, la acción realizada y el mensaje observado para poder corregir el fallo con precisión.</p>
-    <label class="guided-check"><input type="checkbox" data-guided-step="review-results"><span>Revisé los resultados y dejé sin marcar los pasos que no pude verificar.</span></label>
+    <label class="guided-check"><input type="checkbox" data-guided-step="review-results"><span>Revisé los resultados y dejé sin marcar los pasos que no pude verificar.<span class="guided-step-help"><strong>Qué mirar:</strong> comprobá el recorrido completo y que cada casilla marcada tenga un resultado observado. <strong>Por qué importa:</strong> este cierre es una declaración de quien prueba; no transforma las comprobaciones manuales en un veredicto automático.</span></span></label>
     <p id="guidedFinalStatus" class="guided-final-status" role="status" aria-live="polite">La prueba queda pendiente hasta que completes los pasos que correspondan.</p>
+    <section id="guidedCompletionPanel" class="guided-completion" aria-labelledby="guidedCompletionTitle" hidden>
+      <h3 id="guidedCompletionTitle">¡Prueba guiada finalizada!</h3>
+      <p>Completaste todos los controles y declaraste haber revisado los resultados. Este cierre queda visible y se conserva en este navegador.</p>
+      <p><strong>Antes de informar que NetSentinel está aprobado:</strong> revisá los pasos que quedaron sin validar, adjuntá evidencias no sensibles y registrá cualquier desviación. Completar la guía no sustituye la aceptación técnica ni la aprobación de seguridad.</p>
+      <p id="guidedCompletionTimestamp" class="small"></p>
+      <div class="guided-actions">
+        <button type="button" id="copyGuidedResults" class="quiet">Copiar resumen de resultados</button>
+        <span id="guidedCompletionCopyStatus" class="small" role="status" aria-live="polite"></span>
+      </div>
+    </section>
   </section>
 
   <footer class="footer">
     <span>NetSentinel · Laboratorio de validación, datos locales</span>
-    <span><a href="https://github.com/JavierGrecco/NetSentinel/blob/qa/integrated-map-forensics-scenarios-2026-10/docs/MANUAL_TEST_SCENARIOS.md">Guía escrita completa</a></span>
+    <span><a href="https://github.com/JavierGrecco/NetSentinel/blob/qa/expert-acceptance-consolidated-2026-10/docs/EXPERT_ACCEPTANCE_LAB.md">Guía escrita completa</a></span>
   </footer>
 </main>
 <script src="/static/guided-test.js" defer></script>
