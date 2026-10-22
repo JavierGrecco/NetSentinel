@@ -1893,8 +1893,11 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             if not page.locator("#wizardActionLink").is_visible():
                 failures.append(f"el paso «{title}» no indica qué módulo abrir")
                 break
-            if page.locator("#wizardRunCheck").is_visible():
-                page.locator("#wizardRunCheck").click()
+            # CSV/Zeek posteriores a una acción deshabilitan esta comprobación hasta
+            # que el usuario abre el módulo y termina la importación indicada.
+            check_button = page.locator("#wizardRunCheck")
+            if check_button.is_visible() and check_button.is_enabled():
+                check_button.click()
                 page.wait_for_function(
                     """() => {
                       const panel = document.querySelector("#wizardAutomaticPanel");
