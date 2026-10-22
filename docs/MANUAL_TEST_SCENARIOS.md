@@ -14,12 +14,12 @@ Desde la raíz del repositorio, en la rama que contiene este documento:
     python scripts/generate_manual_scenarios.py
 
 Los archivos se guardan por defecto en
-.netsentinel-test-artifacts/manual-scenarios, un directorio excluido por
+netsentinel-test-artifacts/manual-scenarios, un directorio excluido por
 .gitignore. Para usar una dirección del dispositivo que elegiste en el
 inventario y relacionarla con los registros Zeek:
 
     python scripts/generate_manual_scenarios.py \
-      --output-dir "$HOME/.netsentinel-test-artifacts/manual-scenarios" \
+      --output-dir "$HOME/netsentinel-test-artifacts/manual-scenarios" \
       --device-ip 192.168.1.25
 
 Reemplazá 192.168.1.25 por una IP literal registrada para el dispositivo de
@@ -61,7 +61,7 @@ copia y mantené el mismo NETSENTINEL_DATA_DIR para que use la base de prueba.
 La base de prueba queda separada de la instalación normal. Al cerrar la prueba,
 guardá el resultado que necesitás y eliminá esa carpeta solamente cuando estés
 seguro de que no contiene información que quieras conservar. El generador deja
-sus archivos fuera de Git, en .netsentinel-test-artifacts/manual-scenarios.
+sus archivos fuera de Git, en netsentinel-test-artifacts/manual-scenarios.
 
 ## Prueba A: importación CSV en Actividad
 
