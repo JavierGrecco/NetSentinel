@@ -1647,13 +1647,23 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if page.evaluate("document.activeElement && document.activeElement.id") != "wizardStepTitle":
             failures.append("el foco no anunció el título del paso nuevo después de empezar")
 
-        # Un prerrequisito ausente debe detener la prueba, no crear una cascada de fallos.
-        page.route(
-            "**/api/health",
-            lambda route: route.fulfill(
-                status=503, content_type="application/json", body='{"detail":"fallo temporal sintético"}'
-            ),
-        )
+        # Forzamos un solo fallo sintético y dejamos pasar la consulta siguiente.
+        # Mantener el mismo handler evita depender de una retirada de rutas que pueda
+        # dejar interceptada la recuperación bajo Chromium.
+        health_mock = {"remaining": 1}
+
+        def _fail_health_once(route) -> None:
+            if health_mock["remaining"]:
+                health_mock["remaining"] -= 1
+                route.fulfill(
+                    status=503,
+                    content_type="application/json",
+                    body='{"detail":"fallo temporal sintético"}',
+                )
+            else:
+                route.continue_()
+
+        page.route("**/api/health", _fail_health_once)
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             "() => document.querySelector('#wizardAutomaticBadge')?.textContent.includes('Revisar')",
@@ -1663,7 +1673,6 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             failures.append("la guía permitió avanzar aunque falló la comprobación de prerrequisitos")
         if not page.locator("#wizardRecoveryDetails").evaluate("(element) => element.open"):
             failures.append("la guía no abrió la ayuda de recuperación al fallar la preparación")
-        page.unroute("**/api/health")
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
@@ -1674,6 +1683,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             }""",
             timeout=8000,
         )
+        page.unroute("**/api/health", _fail_health_once)
         if "Comprobación correcta" not in page.locator("#wizardAutomaticBadge").inner_text():
             failures.append(
                 "la comprobación inicial del asistente no confirmó la fixture: "
