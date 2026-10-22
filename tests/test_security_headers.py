@@ -150,6 +150,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
         ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
         ("/world-map", "NetSentinel · Mapa mundial de IP", ("/static/theme.js", "/static/geolocation.js")),
+        ("/guided-test", "NetSentinel · Prueba guiada", ("/static/theme.js", "/static/guided-test.js")),
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(
