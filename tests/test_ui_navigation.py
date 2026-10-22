@@ -181,13 +181,13 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     """La guía se ve dentro de la app y ofrece escenarios concretos y comprobables."""
     html = (ROOT / "src/netsentinel/static/guided-test.html").read_text(encoding="utf-8")
     script = (ROOT / "src/netsentinel/static/guided-test.js").read_text(encoding="utf-8")
-    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests", "scenario-forensics-report"):
+    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-topology", "scenario-zeek", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests", "scenario-forensics-report"):
         assert f'id="{scenario_id}"' in html
-    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 19
+    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 24
     assert 'id="copySetupCommand"' in html
     assert "--force" not in html
     assert 'id="guidedProgressBar"' in html
-    assert 'aria-valuemax="19"' in html
+    assert 'aria-valuemax="24"' in html
     assert 'data-guided-step="forensics-custody-transfer"' in html
     assert 'id="checkMapApi"' in html
     assert 'id="checkForensicsApi"' in html
