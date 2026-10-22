@@ -6,7 +6,7 @@
 
 ## Preparación
 
-1. Usá una copia de trabajo del repositorio en la rama `feat/reconcile-forensics-main-2026-10`. Para esta prueba, utilizá un directorio de datos separado del que usás habitualmente.
+1. Usá la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`; no cambies a otra rama para esta prueba. Configurá `NETSENTINEL_DATA_DIR` para que apunte al directorio de laboratorio ya preparado y separado de tu instalación habitual.
 2. En una terminal, desde la raíz del repositorio, configurá ese directorio. El ejemplo también crea la carpeta en la que la aplicación buscará las copias.
 
 **Windows (PowerShell):**
@@ -33,7 +33,7 @@ mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
 ```
 
 3. Guardá el SHA-256 que imprime la terminal. La aplicación permanece abierta en esa terminal. En el navegador, abrí `http://127.0.0.1:8765/forensics`.
-4. La aplicación solo buscará el archivo por su nombre dentro de `forensics-working-copies`, bajo el directorio definido por `NETSENTINEL_DATA_DIR`. No admite rutas completas ni enlaces simbólicos. En macOS/Linux, antes de leer una copia restringirá la carpeta a permisos `0700`; si no puede hacerlo, bloqueará la lectura y registrará un error. En Windows se respetan las ACL nativas. En esta prueba se usa exclusivamente el archivo sintético.
+4. En el laboratorio integrado, conservá la misma `NETSENTINEL_DATA_DIR` que usaste para los datos sintéticos de Red; así ambas áreas trabajan sobre la misma base aislada. La aplicación solo buscará el archivo por su nombre dentro de `forensics-working-copies`, bajo ese directorio. No admite rutas completas ni enlaces simbólicos. En macOS/Linux, antes de leer una copia restringirá la carpeta a permisos `0700`; si no puede hacerlo, bloqueará la lectura y registrará un error. En Windows se respetan las ACL nativas. En esta prueba se usa exclusivamente el archivo sintético.
 
 ## Recorrido
 
