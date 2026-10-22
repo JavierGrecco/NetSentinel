@@ -1594,73 +1594,183 @@ def _world_map_render_failures(page, base_url: str) -> list[str]:
 
 
 def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
-    """Comprueba el progreso persistente y las dos comprobaciones de API de la guía."""
+    """Valida el asistente secuencial, sus resultados, la persistencia y la ausencia de escaneos."""
     failures: list[str] = []
+    scan_posts: list[str] = []
+    popups = []
+
+    def track_request(request) -> None:
+        if request.method == "POST" and request.url.split("?", 1)[0].rstrip("/").endswith("/api/scan"):
+            scan_posts.append(request.url)
+
+    def track_popup(popup) -> None:
+        popups.append(popup)
+        popup.on("request", track_request)
+
+    page.on("request", track_request)
+    page.on("popup", track_popup)
     try:
-        steps = page.locator("[data-guided-step]")
-        if steps.count() != 24:
-            return [f"la guía mostró {steps.count()} pasos en lugar de 24"]
-        setup_step = page.locator('[data-guided-step="setup"]')
-        if setup_step.count() != 1:
-            return ["falta la casilla para confirmar la preparación del laboratorio"]
+        page.goto(f"{base_url}/guided-test", wait_until="load")
+        if page.locator("#wizardStepTitle").inner_text() != "Vamos a validar NetSentinel juntos":
+            return ["la guía no muestra la pantalla inicial del asistente"]
+        if page.locator("[data-guided-step]").count():
+            failures.append("la nueva guía conserva la lista antigua de casillas dispersas")
+        if "no llama a" not in page.locator(".wizard-safety").inner_text().lower():
+            failures.append("la guía no explica que sus comprobaciones no inician escaneos")
 
-        page.locator("#resetGuidedProgress").click()
-        setup_step.check()
-        if page.locator("#guidedProgressCount").inner_text() != "1 de 24 pasos":
-            failures.append("el contador de progreso no actualizó el primer paso")
-        page.reload(wait_until="load")
-        if not page.locator('[data-guided-step="setup"]').is_checked():
-            failures.append("el progreso de la guía no persistió al recargar la página")
+        page.locator("#wizardStart").click()
+        if "Comprobar que el laboratorio está preparado" not in page.locator("#wizardStepTitle").inner_text():
+            failures.append("el botón Empezar no condujo al primer paso")
+            return failures
 
-        page.locator("#checkMapApi").click()
-        page.wait_for_function(
-            """() => document.querySelector("#mapApiStatus")?.classList.contains("is-success")""",
-            timeout=8000,
-        )
-        if "API del mapa: disponible" not in page.locator("#mapApiStatus").inner_text():
-            failures.append("la guía no confirmó correctamente la API del mapa")
-
-        page.locator("#checkForensicsApi").click()
-        page.wait_for_function(
-            """() => document.querySelector("#forensicsApiStatus")?.classList.contains("is-success")""",
-            timeout=8000,
-        )
-        if "API de Forense: disponible" not in page.locator("#forensicsApiStatus").inner_text():
-            failures.append("la guía no confirmó correctamente la API de Forense")
-
-        # Complete all manual confirmations to verify the explicit finish notice.
-        for index in range(steps.count()):
-            steps.nth(index).check()
+        page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
-              const panel = document.querySelector("#guidedCompletionPanel");
-              const status = document.querySelector("#guidedFinalStatus");
-              return panel && !panel.hidden && status &&
-                status.textContent.includes("PRUEBA GUIADA FINALIZADA");
+              const badge = document.querySelector("#wizardAutomaticBadge");
+              const rows = document.querySelectorAll("#wizardAutomaticDetails .wizard-check-result");
+              return badge && badge.textContent && rows.length >= 3;
             }""",
-            timeout=5000,
+            timeout=8000,
         )
-        if "24 de 24" not in page.locator("#guidedFinalStatus").inner_text():
-            failures.append("el cierre no informó que se completaron los 24 pasos")
-        page.reload(wait_until="load")
-        if page.locator("#guidedCompletionPanel").is_hidden():
-            failures.append("el estado final de la guía no persistió tras recargar")
-        if "PRUEBA GUIADA FINALIZADA" not in page.locator("#guidedFinalStatus").inner_text():
-            failures.append("el aviso final no informó que la prueba guiada terminó")
+        if "Comprobación correcta" not in page.locator("#wizardAutomaticBadge").inner_text():
+            failures.append(
+                "la comprobación inicial del asistente no confirmó la fixture: "
+                + page.locator("#wizardAutomaticSummary").inner_text()
+            )
+            return failures
+        if page.locator("#wizardNext").is_disabled():
+            failures.append("el primer paso correcto no habilitó Siguiente")
+            return failures
 
-        page.locator("#resetGuidedProgress").click()
-        if page.locator("[data-guided-step]:checked").count() != 0:
-            failures.append("el botón de reinicio no limpió las casillas de la guía")
-        if page.locator("#guidedProgressCount").inner_text() != "0 de 24 pasos":
-            failures.append("el reinicio no devolvió el contador de la guía a cero")
-        if not page.locator("#guidedCompletionPanel").is_hidden():
-            failures.append("el reinicio no ocultó el aviso de finalización")
+        page.locator("#wizardNext").click()
+        if "topología guardada" not in page.locator("#wizardStepTitle").inner_text().lower():
+            failures.append("el asistente no avanzó a la comprobación de topología")
+            return failures
+
+        page.locator("#wizardRunCheck").click()
+        page.wait_for_function(
+            """() => {
+              const badge = document.querySelector("#wizardAutomaticBadge");
+              return badge && badge.textContent.includes("Comprobación correcta");
+            }""",
+            timeout=8000,
+        )
+
+        def open_module_and_record(outcome: str = "passed") -> str:
+            title = page.locator("#wizardStepTitle").inner_text()
+            link = page.locator("#wizardActionLink")
+            if link.count() != 1 or not link.is_visible():
+                failures.append(f"el paso «{title}» no muestra el enlace a su módulo")
+                return title
+            with page.expect_popup(timeout=8000) as popup_info:
+                link.click()
+            popup = popup_info.value
+            popup.wait_for_load_state("load", timeout=10000)
+            expected_path = link.get_attribute("href")
+            if expected_path and not popup.url.endswith(expected_path):
+                failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
+            popup.close()
+            if title != "Ver la topología guardada":
+                if page.locator("#wizardRunCheck").is_visible():
+                    page.locator("#wizardRunCheck").click()
+                    page.wait_for_function(
+                        """() => {
+                          const panel = document.querySelector("#wizardAutomaticPanel");
+                          const badge = document.querySelector("#wizardAutomaticBadge");
+                          return panel && !panel.hidden && badge && badge.textContent;
+                        }""",
+                        timeout=8000,
+                    )
+            if page.locator("#wizardManualResultPanel").is_hidden():
+                failures.append(f"el paso «{title}» no mostró las opciones de resultado al volver de la pestaña")
+                return title
+            button = page.locator(f'[data-wizard-outcome="{outcome}"]')
+            if button.is_disabled():
+                failures.append(f"el resultado {outcome!r} quedó deshabilitado en el paso «{title}»")
+                return title
+            button.click()
+            if page.locator("#wizardNext").is_disabled():
+                failures.append(f"registrar el resultado no habilitó Siguiente en «{title}»")
+            return title
+
+        # Topology combines an API response with a visual check in a separate tab.
+        title = open_module_and_record("passed")
+        if "topología guardada" not in title.lower():
+            failures.append("se perdió el contexto del paso de topología")
+
+        # Exercise all remaining manual steps, including map diagnostics and result classifications.
+        for index in range(10):
+            if page.locator("#wizardNext").is_hidden():
+                failures.append("el asistente ocultó Siguiente antes de completar todos los pasos")
+                break
+            page.locator("#wizardNext").click()
+            title = page.locator("#wizardStepTitle").inner_text()
+            outcome = "passed"
+            if "rutas inseguras" in title.lower():
+                outcome = "failed"
+            elif "generar y verificar el informe" in title.lower():
+                outcome = "blocked"
+            if not page.locator("#wizardActionLink").is_visible():
+                failures.append(f"el paso «{title}» no indica qué módulo abrir")
+                break
+            if page.locator("#wizardRunCheck").is_visible():
+                page.locator("#wizardRunCheck").click()
+                page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector("#wizardAutomaticPanel");
+                      const badge = document.querySelector("#wizardAutomaticBadge");
+                      return panel && !panel.hidden && badge && badge.textContent;
+                    }""",
+                    timeout=8000,
+                )
+            open_module_and_record(outcome)
+            if page.locator("#wizardNext").is_disabled():
+                break
+
+        if page.locator("#wizardNext").is_visible() and not page.locator("#wizardNext").is_disabled():
+            page.locator("#wizardNext").click()
+
+        if page.locator("#wizardSummaryPanel").is_hidden():
+            failures.append("no apareció el panel de resumen al finalizar el recorrido")
+        else:
+            if page.locator(".wizard-summary-row").count() != 12:
+                failures.append(
+                    f"el informe mostró {page.locator('.wizard-summary-row').count()} resultados en vez de 12"
+                )
+            summary = page.locator("#wizardCompletionMessage").inner_text()
+            if "fallo" not in summary.lower() or "sin comprobar" not in summary.lower():
+                failures.append("el resumen no distinguió fallos de pasos no comprobados")
+            if page.locator("#wizardCopyReport").is_hidden() or page.locator("#wizardDownloadReport").is_hidden():
+                failures.append("el cierre no ofrece copiar o descargar el informe")
+
+        page.reload(wait_until="load")
+        if page.locator("#wizardSummaryPanel").is_hidden():
+            failures.append("el asistente no conservó el cierre y el resumen al recargar")
+        if "Recorrido finalizado" not in page.locator("#wizardStepTitle").inner_text():
+            failures.append("el título de cierre no quedó visible tras recargar")
+
+        if scan_posts:
+            failures.append(
+                "el asistente de pruebas envió POST /api/scan, pero este flujo debe ser estrictamente de solo lectura: "
+                + ", ".join(scan_posts)
+            )
+
+        page.on("dialog", lambda dialog: dialog.accept())
+        page.locator("#wizardRestart").click()
+        if page.locator("#wizardStepTitle").inner_text() != "Vamos a validar NetSentinel juntos":
+            failures.append("Reiniciar el recorrido no volvió a la introducción")
+        if page.locator("#wizardProgressCount").inner_text() != "0%":
+            failures.append("reiniciar no limpió el progreso del asistente")
     except Exception as exc:
-        failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")
+        failures.append(f"la interacción del asistente de pruebas falló en Chromium: {exc}")
     finally:
         try:
+            for popup in popups:
+                if not popup.is_closed():
+                    popup.close()
             page.goto(f"{base_url}/guided-test", wait_until="load", timeout=10000)
-            page.locator("#resetGuidedProgress").click()
+            page.evaluate("window.localStorage.removeItem('netsentinel.acceptance-wizard.v2')")
+            page.reload(wait_until="load")
         except Exception:
             pass
     return failures
