@@ -151,7 +151,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
         ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
         ("/world-map", "NetSentinel · Mapa mundial de IP", ("/static/theme.js", "/static/geolocation.js")),
-        ("/guided-test", "NetSentinel · Prueba guiada", ("/static/theme.js", "/static/guided-test.js")),
+        ("/guided-test", "NetSentinel · Asistente de pruebas", ("/static/theme.js", "/static/guided-test.js")),
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(
@@ -227,5 +227,5 @@ def test_guided_test_stylesheet_is_served_with_defensive_headers(client):
     response = client.get("/static/guided-test.css")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/css")
-    assert ".guided-scenario-list" in response.text
+    assert ".wizard-layout" in response.text and ".wizard-card" in response.text
     assert_defensive_headers(response)
