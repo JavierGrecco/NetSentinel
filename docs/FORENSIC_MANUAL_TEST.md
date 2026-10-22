@@ -6,38 +6,25 @@
 
 ## Preparación
 
-1. Usá la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`; no cambies a otra rama para esta prueba. Configurá `NETSENTINEL_DATA_DIR` para que apunte al directorio de laboratorio ya preparado y separado de tu instalación habitual.
-2. En una terminal, desde la raíz del repositorio, configurá ese directorio. El ejemplo también crea la carpeta en la que la aplicación buscará las copias.
+Esta guía complementa la pantalla `/guided-test`. Si ya seguiste allí la preparación, **no vuelvas a sembrar la base, no cambies de `NETSENTINEL_DATA_DIR` y no arranques una segunda instancia de NetSentinel**.
 
-**Windows (PowerShell):**
+1. Usá la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`. La preparación de la prueba guiada imprime el valor exacto de `NETSENTINEL_DATA_DIR`, crea `forensics-working-copies/netsentinel-forensic-sample.bin` con el contenido sintético `NetSentinel synthetic evidence v1` y muestra su SHA-256.
+2. Mantené abierta la terminal en la que ya se está ejecutando NetSentinel. En el navegador, abrí `http://127.0.0.1:8765/forensics`.
+3. Si el archivo sintético no existe, abrí una **segunda terminal** y usá la misma ruta que imprimió la preparación. En macOS o Linux:
 
-```powershell
-$env:NETSENTINEL_DATA_DIR = Join-Path $HOME ".netsentinel-forensics-manual"
-New-Item -ItemType Directory -Force -Path (Join-Path $env:NETSENTINEL_DATA_DIR "forensics-working-copies") | Out-Null
-Push-Location (Join-Path $env:NETSENTINEL_DATA_DIR "forensics-working-copies")
-py -c "from pathlib import Path; import hashlib; p=Path('netsentinel-forensic-sample.bin'); p.write_bytes(b'NetSentinel synthetic evidence v1'); print(hashlib.sha256(p.read_bytes()).hexdigest())"
-Pop-Location
-.\run-windows.bat
-```
+   ```bash
+   export NETSENTINEL_DATA_DIR="PEGAR_AQUI_LA_RUTA_IMPRESA"
+   mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
+   test -e "$NETSENTINEL_DATA_DIR/forensics-working-copies/netsentinel-forensic-sample.bin" || \
+     python3 -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
+   ```
 
-**macOS o Linux:**
-
-```bash
-export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-forensics-manual"
-mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
-(
-  cd "$NETSENTINEL_DATA_DIR/forensics-working-copies"
-  python3 -c 'from pathlib import Path; import hashlib; p=Path("netsentinel-forensic-sample.bin"); p.write_bytes(b"NetSentinel synthetic evidence v1"); print(hashlib.sha256(p.read_bytes()).hexdigest())'
-)
-./run.sh
-```
-
-3. Guardá el SHA-256 que imprime la terminal. La aplicación permanece abierta en esa terminal. En el navegador, abrí `http://127.0.0.1:8765/forensics`.
-4. En el laboratorio integrado, conservá la misma `NETSENTINEL_DATA_DIR` que usaste para los datos sintéticos de Red; así ambas áreas trabajan sobre la misma base aislada. La aplicación solo buscará el archivo por su nombre dentro de `forensics-working-copies`, bajo ese directorio. No admite rutas completas ni enlaces simbólicos. En macOS/Linux, antes de leer una copia restringirá la carpeta a permisos `0700`; si no puede hacerlo, bloqueará la lectura y registrará un error. En Windows se respetan las ACL nativas. En esta prueba se usa exclusivamente el archivo sintético.
+   Reemplazá `PEGAR_AQUI_LA_RUTA_IMPRESA` por la ruta exacta. No ejecutes `./run.sh` desde esa segunda terminal. Si el archivo ya existe, no lo recrees: usá el SHA-256 que imprimió la preparación original.
+4. La aplicación solo consulta el archivo por nombre dentro de `forensics-working-copies`, bajo el directorio de datos. No admite rutas completas ni enlaces simbólicos. En macOS/Linux, antes de leer una copia restringe la carpeta a permisos `0700`; si no puede hacerlo, bloquea la lectura y registra un error. En Windows se respetan las ACL nativas. Esta prueba utiliza exclusivamente el archivo sintético.
 
 ## Recorrido
 
-1. **Abrir un caso.** Usá un identificador como `MANUAL-2026-001`, una referencia sintética como `AUTORIZACION-DE-PRUEBA`, y escribí claramente que solo cubre el archivo sintético. Elegí un operador de prueba.
+1. **Abrir un caso.** Usá `LAB-SINTETICO-001`, el título `Verificación de archivo sintético`, la referencia `AUTORIZACION-DE-PRUEBA`, el objetivo `Probar coincidencia y discrepancia SHA-256 de una muestra sintética.` y el alcance `Solo netsentinel-forensic-sample.bin en forensics-working-copies; sin evidencia real.` Indicá `Examinador sintético` como examinador y `Operador sintético de prueba` como persona que realiza la operación.
 2. **Registrar el elemento.** Seleccioná “Copia de archivo”, usá el nombre `netsentinel-forensic-sample.bin`, indicá una descripción sintética, quién lo entrega, fecha/hora original en formato ISO-8601 con offset (por ejemplo `2026-10-15T09:30:00-03:00`), la zona horaria declarada y el tamaño si lo conocés. No ingreses una hora sin offset: el sistema no debe adivinarlo. Pegá el SHA-256 generado y anotá que su origen es el cálculo de la muestra de prueba.
 3. **Comprobar coincidencia.** Abrí “Comparar con una copia de trabajo”, escribí solo el nombre `netsentinel-forensic-sample.bin`, sin ruta y marcá la confirmación de que es una copia autorizada, no el soporte original. La aplicación debería devolver **coincide**, mostrar tamaño y SHA-256 calculado y dejar una nueva entrada de auditoría.
 4. **Comprobar diferencia.** En otra terminal, entrá en la misma carpeta `forensics-working-copies` y volvé a escribir el archivo con el texto `NetSentinel synthetic evidence v2`. Repetí la comprobación. Debería indicar que el hash no coincide, sin cambiar el valor declarado por la fuente.
