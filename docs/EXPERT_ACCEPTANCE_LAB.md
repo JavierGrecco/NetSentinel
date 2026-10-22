@@ -20,12 +20,15 @@ Este laboratorio reúne en una sola copia ejecutable los módulos que antes esta
 
 ## Preparación en macOS o Linux
 
-Hacé la prueba en un checkout de esta rama. Si todavía no la tenés:
+Para no pisar tu rama actual ni ningún cambio local, creá una copia de trabajo separada. Desde tu checkout actual del repositorio:
 
 ```bash
 git fetch origin qa/expert-acceptance-consolidated-2026-10
-git switch --track origin/qa/expert-acceptance-consolidated-2026-10
+git worktree add --detach ../NetSentinel-acceptance-lab origin/qa/expert-acceptance-consolidated-2026-10
+cd ../NetSentinel-acceptance-lab
 ```
+
+Este modo deja intacta tu rama y tu directorio de trabajo actual. Si ya existe una carpeta `../NetSentinel-acceptance-lab`, elegí otro nombre de carpeta antes de ejecutar `git worktree add`.
 
 Prepará un entorno virtual y las dependencias:
 

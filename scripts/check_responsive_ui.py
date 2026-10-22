@@ -1598,15 +1598,15 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
     failures: list[str] = []
     try:
         steps = page.locator("[data-guided-step]")
-        if steps.count() != 19:
-            return [f"la guía mostró {steps.count()} pasos en lugar de 19"]
+        if steps.count() != 24:
+            return [f"la guía mostró {steps.count()} pasos en lugar de 24"]
         setup_step = page.locator('[data-guided-step="setup"]')
         if setup_step.count() != 1:
             return ["falta la casilla para confirmar la preparación del laboratorio"]
 
         page.locator("#resetGuidedProgress").click()
         setup_step.check()
-        if page.locator("#guidedProgressCount").inner_text() != "1 de 19 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "1 de 24 pasos":
             failures.append("el contador de progreso no actualizó el primer paso")
         page.reload(wait_until="load")
         if not page.locator('[data-guided-step="setup"]').is_checked():
@@ -1631,7 +1631,7 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
         page.locator("#resetGuidedProgress").click()
         if page.locator("[data-guided-step]:checked").count() != 0:
             failures.append("el botón de reinicio no limpió las casillas de la guía")
-        if page.locator("#guidedProgressCount").inner_text() != "0 de 19 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "0 de 24 pasos":
             failures.append("el reinicio no devolvió el contador de la guía a cero")
     except Exception as exc:
         failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")
