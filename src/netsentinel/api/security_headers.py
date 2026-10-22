@@ -25,7 +25,7 @@ _APP_HTML_PATHS = {
     "/activity": _ACTIVITY_STATIC,
     "/tools": _STATIC_DIR / "tools.html",
     "/findings": _STATIC_DIR / "findings.html",
-    "/world-map": _STATIC_DIR / "geolocation.html",
+    "/forensics": _STATIC_DIR / "forensics.html",
     "/world-map": _STATIC_DIR / "geolocation.html",
 }
 _INLINE_SCRIPT_PATTERN = re.compile(r"<script(?:\s[^>]*)?>(.*?)</script\b[^>]*>", re.IGNORECASE | re.DOTALL)
