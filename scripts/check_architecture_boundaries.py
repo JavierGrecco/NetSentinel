@@ -192,6 +192,7 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.forensics_errors",
         "netsentinel.forensics_integrity",
         "netsentinel.forensics_repository",
+        "netsentinel.forensics_report",
     },
     "netsentinel.data_export_service": {
         "netsentinel.config",

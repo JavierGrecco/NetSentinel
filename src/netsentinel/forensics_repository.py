@@ -6,6 +6,7 @@ El historial de auditoría solo admite nuevas filas; las operaciones no borran e
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections import deque
 import uuid
@@ -15,7 +16,6 @@ from .database_storage import connect, utc_now
 from .forensics_audit_integrity import audit_event_hash
 from .forensics_audit_manifest import build_audit_manifest
 from .forensics_errors import ForensicConflictError
-from .forensics_report import build_examination_report, verify_examination_report
 
 
 def _append_audit(
@@ -675,7 +675,7 @@ def list_examination_reports(*, case_id: str) -> list[dict[str, Any]] | None:
                WHERE case_id = ? ORDER BY report_version DESC""",
             (case_id,),
         ).fetchall()
-    return [_report_dict(row) for row in rows]
+    return [_report_dict(row, include_payload=True) for row in rows]
 
 
 def get_examination_report(*, case_id: str, report_id: str) -> dict[str, Any] | None:

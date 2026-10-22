@@ -11,7 +11,6 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import forensics_service
-from ..forensics_report import render_examination_report_markdown
 
 router = APIRouter(tags=["forensics"])
 
@@ -394,7 +393,7 @@ def export_forensic_examination_report_markdown(case_id: UUID, report_id: UUID) 
     if not report.get("integrity_valid"):
         raise HTTPException(status_code=409, detail="El informe guardado no superó la verificación de integridad.")
     try:
-        body = render_examination_report_markdown(report["report"])
+        body = forensics_service.render_examination_report_markdown(report["report"])
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     version = int(report["version"])

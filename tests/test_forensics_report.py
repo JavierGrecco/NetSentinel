@@ -61,11 +61,11 @@ def _report_payload(**overrides):
     return payload
 
 
-def _register_evidence(client, case_id):
+def _register_evidence(client, case_id, *, label="Muestra sintética"):
     response = client.post(
         f"/api/forensics/cases/{case_id}/evidence",
         json={
-            "label": "Muestra sintética",
+            "label": label,
             "source_type": "file_copy",
             "original_name": "report-sample.bin",
             "source_description": "Contenido artificial para pruebas automatizadas.",
@@ -242,6 +242,42 @@ def test_report_amendment_creates_immutable_next_version(monkeypatch, tmp_path):
             )
         with pytest.raises(sqlite3.IntegrityError, match="append-only"):
             db.execute("DELETE FROM forensic_reports WHERE id = ?", (first["id"],))
+
+
+def test_markdown_export_escapes_html_and_keeps_evidence_inside_its_table(
+    monkeypatch, tmp_path
+):
+    """Texto declarado no puede inyectar HTML ni nuevas filas en el informe legible."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _register_evidence(
+            client,
+            case["id"],
+            label="<img src=x>\n| fila fabricada",
+        )
+        created = client.post(
+            f"/api/forensics/cases/{case['id']}/reports",
+            json=_report_payload(results="<script>alert(1)</script>\n# título inyectado"),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        assert created.status_code == 201, created.text
+        report = created.json()
+        markdown = client.get(
+            f"/api/forensics/cases/{case['id']}/reports/{report['id']}/markdown"
+        )
+
+    assert markdown.status_code == 200
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in markdown.text
+    assert "<script>alert(1)</script>" not in markdown.text
+    assert "&lt;img src=x&gt;" in markdown.text
+    assert "<img src=x>" not in markdown.text
+    assert "&lt;img src=x&gt;<br>\\| fila fabricada" in markdown.text
+    assert report["report"]["source_case_manifest"]["evidence"][0]["label"] == "<img src=x>\n| fila fabricada"
+    assert evidence["id"] == report["report"]["source_case_manifest"]["evidence"][0]["id"]
 
 
 def test_corrupted_report_is_not_exported(monkeypatch, tmp_path):

@@ -6,12 +6,13 @@ designadas para calcular su hash; no copia ni altera intencionalmente su conteni
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import os
 import re
 from pathlib import Path
 import stat
 import unicodedata
+import uuid
 from typing import Any
 
 from . import __version__, forensics_repository
@@ -20,6 +21,11 @@ from .forensics_integrity import ForensicIntegrityError, calculate_sha256
 from .forensics_errors import ForensicConflictError
 from .forensics_audit_manifest import build_audit_manifest
 from .forensics_case_manifest import build_case_manifest
+from .forensics_report import (
+    build_examination_report,
+    render_examination_report_markdown as _render_examination_report_markdown,
+    verify_examination_report,
+)
 
 
 _ALLOWED_SOURCE_TYPES = frozenset({
@@ -428,17 +434,51 @@ def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
 
 
 
+def _verified_examination_report(record: dict[str, Any]) -> dict[str, Any]:
+    """Marca una versión válida solo tras revisar digest y metadatos persistidos."""
+    report = record.get("report")
+    meta = report.get("report", {}) if isinstance(report, dict) else {}
+    record["integrity_valid"] = bool(
+        isinstance(report, dict)
+        and verify_examination_report(report)
+        and report.get("report_sha256") == record.get("report_sha256")
+        and meta.get("id") == record.get("id")
+        and meta.get("version") == record.get("version")
+        and meta.get("title") == record.get("title")
+        and meta.get("status") == record.get("status")
+        and meta.get("created_at") == record.get("created_at")
+        and meta.get("created_by") == record.get("created_by")
+        and meta.get("amends_report_id") == record.get("amends_report_id")
+        and report.get("case", {}).get("id") == record.get("case_id")
+    )
+    return record
+
+
 def list_examination_reports(case_id: str) -> list[dict[str, Any]] | None:
-    """Lista las versiones inmutables de informe de un caso."""
-    return forensics_repository.list_examination_reports(case_id=case_id)
+    """Lista las versiones inmutables, comprobando cada documento guardado."""
+    records = forensics_repository.list_examination_reports(case_id=case_id)
+    if records is None:
+        return None
+    results = []
+    for record in records:
+        _verified_examination_report(record)
+        record.pop("report", None)
+        results.append(record)
+    return results
 
 
 def get_examination_report(*, case_id: str, report_id: str) -> dict[str, Any] | None:
-    """Busca un informe sin permitir que un ID de otro caso se use aquí."""
-    return forensics_repository.get_examination_report(
+    """Busca un informe dentro de su caso y verifica su digest antes de exportar."""
+    record = forensics_repository.get_examination_report(
         case_id=case_id,
         report_id=report_id,
     )
+    return _verified_examination_report(record) if record is not None else None
+
+
+def render_examination_report_markdown(report: dict[str, Any]) -> str:
+    """Mantiene el formato de salida fuera de la capa HTTP."""
+    return _render_examination_report_markdown(report)
 
 
 def create_examination_report(
@@ -448,7 +488,7 @@ def create_examination_report(
     amends_report_id: str | None,
     fields: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Valida la narración del examinador y guarda un borrador reproducible."""
+    """Valida la narración y guarda una versión reproducible del borrador."""
     clean: dict[str, Any] = {
         "title": _required_text(fields.get("title"), "título del informe", 160),
         "examining_organization": _required_text(
@@ -488,28 +528,71 @@ def create_examination_report(
             fields.get("amendment_reason"), "motivo de enmienda", 1000
         ),
     }
-    request_date = clean["request_date"]
     try:
-        parsed_date = date.fromisoformat(request_date)
+        parsed_date = date.fromisoformat(clean["request_date"])
     except ValueError as exc:
         raise ValueError("La fecha de solicitud debe tener formato AAAA-MM-DD.") from exc
-    if parsed_date.isoformat() != request_date:
+    if parsed_date.isoformat() != clean["request_date"]:
         raise ValueError("La fecha de solicitud debe tener formato AAAA-MM-DD.")
     if clean["conclusions"] and not clean["conclusion_basis"]:
         raise ValueError(
             "Si incluís conclusiones, documentá también los datos que las sustentan."
         )
     clean_actor = _required_text(actor, "operador que registra el informe", 120)
-    source_manifest = export_case_manifest(case_id=case_id)
-    if source_manifest is None:
+
+    previous = forensics_repository.list_examination_reports(case_id=case_id)
+    if previous is None:
         return None
-    return forensics_repository.create_examination_report(
+    latest = previous[0] if previous else None
+    latest_id = str(latest["id"]) if latest else None
+    if latest:
+        # No permitas enmendar ni continuar una cadena cuyo documento más reciente no
+        # pueda verificarse. Reemplazarlo ocultaría una posible alteración.
+        current = forensics_repository.get_examination_report(
+            case_id=case_id, report_id=latest_id
+        )
+        if current is None or not _verified_examination_report(current)["integrity_valid"]:
+            raise ForensicConflictError(
+                "El informe más reciente no superó la verificación. Revisá la integridad antes de crear otra versión."
+            )
+        if not amends_report_id:
+            raise ForensicConflictError(
+                "Ya hay un informe. Para crear otra versión, seleccioná la última versión "
+                "e indicá el motivo de la enmienda."
+            )
+        if amends_report_id != latest_id:
+            raise ForensicConflictError("La nueva versión debe enmendar el informe más reciente del caso.")
+        if not clean["amendment_reason"]:
+            raise ValueError("Indicá el motivo por el que se corrige el informe anterior.")
+        version = int(latest["version"]) + 1
+    else:
+        if amends_report_id:
+            raise ForensicConflictError("No existe una versión previa que pueda ser enmendada.")
+        if clean["amendment_reason"]:
+            raise ValueError("El motivo de enmienda solo se usa al corregir un informe anterior.")
+        version = 1
+
+    case_manifest = export_case_manifest(case_id=case_id)
+    if case_manifest is None:
+        return None
+    report_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    report = build_examination_report(
+        report_id=report_id,
+        version=version,
+        fields=clean,
+        case_manifest=case_manifest,
+        created_at=created_at,
+        actor=clean_actor,
+        amends_report_id=latest_id,
+    )
+    stored = forensics_repository.create_examination_report(
         case_id=case_id,
         actor=clean_actor,
-        fields=clean,
-        case_manifest=source_manifest,
-        amends_report_id=amends_report_id,
+        report=report,
+        expected_latest_report_id=latest_id,
     )
+    return _verified_examination_report(stored) if stored is not None else None
 
 
 def export_case_manifest(*, case_id: str) -> dict[str, Any] | None:
