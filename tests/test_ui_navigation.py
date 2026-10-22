@@ -9,6 +9,7 @@ PAGES = {
     "/tools": ("src/netsentinel/static/tools.html", "/tools"),
     "/activity": ("src/netsentinel/static/activity.html", "/activity"),
     "/world-map": ("src/netsentinel/static/geolocation.html", "/world-map"),
+    "/guided-test": ("src/netsentinel/static/guided-test.html", "/guided-test"),
 }
 NAV_RE = re.compile(
     r'<nav class="primary-nav" aria-label="Navegación principal">(.*?)</nav>',
@@ -18,7 +19,7 @@ LINK_RE = re.compile(
     r'<a class="nav-link"(?P<current> aria-current="page")? '
     r'href="(?P<href>[^"]+)">(?P<label>[^<]+)</a>'
 )
-EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity", "/world-map"]
+EXPECTED_HREFS = ["/", "/findings", "/monitors", "/tools", "/activity", "/world-map", "/guided-test"]
 
 
 def test_every_module_has_consistent_primary_navigation():
@@ -46,6 +47,7 @@ MODULE_PAGES = {
     "/tools": "src/netsentinel/static/tools.html",
     "/activity": "src/netsentinel/static/activity.html",
     "/world-map": "src/netsentinel/static/geolocation.html",
+    "/guided-test": "src/netsentinel/static/guided-test.html",
     "/forensics": "src/netsentinel/static/forensics.html",
 }
 MODULE_SWITCHER_RE = re.compile(
@@ -101,3 +103,25 @@ def test_forensics_manifest_exports_are_connected_to_the_screen():
     assert "const downloadUrl = objectUrl;" in script
     assert "window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);" in script
     assert "window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);" not in script
+
+
+def test_forensics_workspace_does_not_link_to_world_map() -> None:
+    """El mapa de IP pertenece a Red y no debe aparecer como atajo de Forense."""
+    html = (ROOT / "src/netsentinel/static/forensics.html").read_text(encoding="utf-8")
+    assert 'href="/world-map"' not in html
+    assert 'href="/"' in html
+
+
+def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
+    """La guía se ve dentro de la app y ofrece escenarios concretos y comprobables."""
+    html = (ROOT / "src/netsentinel/static/guided-test.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/netsentinel/static/guided-test.js").read_text(encoding="utf-8")
+    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-forensics"):
+        assert f'id="{scenario_id}"' in html
+    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 12
+    assert 'id="copySetupCommand"' in html
+    assert 'id="checkMapApi"' in html
+    assert 'id="checkForensicsApi"' in html
+    assert "netsentinel.guided-test.progress.v1" in script
+    assert 'fetch("/api/geolocation/map?limit=1"' in script
+    assert 'fetch("/api/forensics/cases?limit=1"' in script
