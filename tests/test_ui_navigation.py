@@ -9,6 +9,7 @@ PAGES = {
     "/monitors": ("src/netsentinel/static/monitors.html", "/monitors"),
     "/tools": ("src/netsentinel/static/tools.html", "/tools"),
     "/activity": ("src/netsentinel/static/activity.html", "/activity"),
+    "/world-map": ("src/netsentinel/static/geolocation.html", "/world-map"),
 }
 NAV_RE = re.compile(
     r'<nav class="primary-nav" aria-label="Navegación principal">(.*?)</nav>',

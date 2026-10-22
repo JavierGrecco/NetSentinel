@@ -11,6 +11,7 @@ PAGE_NAMES = (
     "monitors.html",
     "tools.html",
     "activity.html",
+    "geolocation.html",
 )
 
 
@@ -23,7 +24,7 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert ".app-header-utilities .theme-option-card" in css
     assert "min-height: 48px" in css
     assert ".app-header-content > .primary-nav" in css
-    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(6, minmax(0, 1fr))" in css
     assert "min-height: 42px" in css
     assert ".app-section-title" in css
     assert "background: #101827" in css
@@ -46,6 +47,28 @@ def test_theme_options_are_unique_and_have_one_default_selection():
         assert len(ids) == len(set(ids)), f"{page_name} has duplicate theme control IDs"
         assert set(values) == {"dark", "medium", "light"}
         assert len(checked) == 1 and 'value="dark"' in checked[0]
+
+
+def test_each_page_uses_unique_html_ids():
+    """Los ID duplicados rompen los enlaces entre controles y JavaScript."""
+    for page_name in PAGE_NAMES:
+        html = (STATIC / page_name).read_text(encoding="utf-8")
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        duplicates = sorted({value for value in ids if ids.count(value) > 1})
+        assert not duplicates, f"{page_name} has duplicate HTML IDs: {duplicates}"
+
+
+def test_world_map_refresh_controls_are_both_wired_and_share_loading_state():
+    """Los dos botones de actualización deben responder y deshabilitarse juntos."""
+    html = (STATIC / "geolocation.html").read_text(encoding="utf-8")
+    script = (STATIC / "geolocation.js").read_text(encoding="utf-8")
+
+    assert html.count('class="quiet js-refresh-world-map"') == 2
+    assert 'id="refreshWorldMapTop"' in html
+    assert 'id="refreshWorldMap"' in html
+    assert 'document.querySelectorAll(".js-refresh-world-map").forEach((button) => {' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = true; });' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = false; });' in script
 
 
 def test_shared_theme_defines_one_page_and_control_scale():
@@ -83,6 +106,7 @@ def test_every_page_keeps_a_fixed_brand_and_a_distinct_section_heading():
         "monitors.html": "Monitorización",
         "tools.html": "Herramientas de red",
         "activity.html": "Actividad y telemetría",
+        "geolocation.html": "Mapa mundial de IP",
     }
 
     for page_name, section_title in expected_titles.items():
@@ -164,7 +188,7 @@ def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens()
 
 
 def test_every_main_page_uses_the_shared_content_shell():
-    """Las cinco secciones comparten el mismo contenedor principal."""
+    """Las secciones principales comparten el mismo contenedor principal."""
     for page_name in PAGE_NAMES:
         html = (STATIC / page_name).read_text(encoding="utf-8")
         assert '<main class="wrap">' in html, (
