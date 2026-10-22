@@ -23,12 +23,16 @@ Este laboratorio reúne en una sola copia ejecutable los módulos que antes esta
 Para no pisar tu rama actual ni ningún cambio local, creá una copia de trabajo separada. Desde tu checkout actual del repositorio:
 
 ```bash
-git fetch origin qa/expert-acceptance-consolidated-2026-10
-git worktree add --detach ../NetSentinel-acceptance-lab origin/qa/expert-acceptance-consolidated-2026-10
+git fetch origin "refs/heads/qa/expert-acceptance-consolidated-2026-10:refs/remotes/origin/qa/expert-acceptance-consolidated-2026-10"
+git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/qa/expert-acceptance-consolidated-2026-10
 cd ../NetSentinel-acceptance-lab
 ```
 
 Este modo deja intacta tu rama y tu directorio de trabajo actual. Si ya existe una carpeta `../NetSentinel-acceptance-lab`, elegí otro nombre de carpeta antes de ejecutar `git worktree add`.
+
+**Por qué se usa este `fetch`:** al indicar solo el nombre de la rama, Git puede dejar el commit en `FETCH_HEAD` sin crear la referencia local `origin/qa/...`. El refspec explícito crea o actualiza esa referencia remota y evita el error `fatal: invalid reference`.
+
+Si ya apareció ese error, el comando terminó; no hay un proceso bloqueado que necesite `Ctrl+C`. Volvé a ejecutar el bloque corregido desde la raíz del repositorio. Si Git informa que la carpeta de destino ya existe, revisá `git worktree list` o elegí otro nombre de carpeta; no borres una carpeta a ciegas.
 
 Prepará un entorno virtual y las dependencias:
 
