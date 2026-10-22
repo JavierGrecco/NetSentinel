@@ -193,3 +193,46 @@
   .guided-values dl { grid-template-columns: 1fr; gap: 3px; }
   .guided-values dd { margin-bottom: 8px; }
 }
+
+
+/* Explicaciones cercanas a cada acción: qué observar y por qué importa. */
+.guided-step-help {
+  display: block;
+  margin: 7px 0 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--theme-line);
+  border-radius: 0 7px 7px 0;
+  background: var(--theme-panel-alt);
+  color: var(--theme-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: 400;
+}
+.guided-step-help strong {
+  color: var(--theme-text);
+  font-weight: 700;
+}
+.guided-completion {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--theme-line);
+  border-radius: 10px;
+  background: var(--theme-panel-alt);
+}
+.guided-completion[hidden] { display: none; }
+.guided-completion h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.guided-completion p {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.guided-completion .small { color: var(--theme-muted); }
+.guided-completion .guided-actions { align-items: center; }
+@media (max-width: 620px) {
+  .guided-step-help { padding: 7px 8px; font-size: 12px; }
+  .guided-completion { padding: 12px; }
+}
