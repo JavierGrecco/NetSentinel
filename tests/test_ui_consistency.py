@@ -198,18 +198,24 @@ def test_every_main_page_uses_the_shared_content_shell():
         )
 
 def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
-    """El recorrido local incluye los módulos integrados y prepara datos ficticios."""
+    """El asistente conserva pruebas sintéticas, lectura de topología, Zeek y Forense."""
     html = (STATIC / "guided-test.html").read_text(encoding="utf-8")
-    assert 'id="scenario-topology"' in html
-    assert 'id="scenario-zeek"' in html
-    assert 'id="checkTopologyApi"' in html
-    assert 'id="topologyApiStatus"' in html
-    assert 'data-guided-step="topology-api"' in html
-    assert 'data-guided-step="zeek-preview"' in html
-    assert 'data-guided-step="zeek-idempotence"' in html
+    script = (STATIC / "guided-test.js").read_text(encoding="utf-8")
+    assert 'id="wizardStepTitle"' in html
+    assert 'id="wizardRecoveryDetails"' in html
+    assert 'id="wizardSummaryPanel"' in html
+    assert 'id: "topology"' in script
+    assert 'id: "zeek"' in script
+    assert 'id: "forensics-case"' in script
+    assert 'id: "forensics-hash"' in script
+    assert 'id: "forensics-safety"' in script
+    assert 'id: "forensics-manifests"' in script
+    assert 'id: "forensics-report"' in script
     assert "seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology" in html
     assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
-    assert 'manual-scenarios-$(date +%Y%m%d-%H%M%S)-$$"' in html
-    assert 'aria-valuemax="24"' in html
-    assert len(re.findall(r'<article class="panel guided-scenario" id="scenario-[^"]+">', html)) == 9
-    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 24
+    assert 'id: "lab"' in script
+    assert 'id: "summary"' in script
+    assert "No se inició un escaneo" in script
+    assert "wizardCopyReport" in script
+
+
