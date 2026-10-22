@@ -94,6 +94,15 @@
     }
   });
 
+  $("copyEvidenceChangeCommand").addEventListener("click", async () => {
+    try {
+      await copyText($("evidenceChangeCommand").textContent);
+      announce($("evidenceChangeStatus"), "Comando copiado. Ejecutalo en una segunda terminal que comparta NETSENTINEL_DATA_DIR con la app en marcha.", "is-success");
+    } catch (error) {
+      announce($("evidenceChangeStatus"), error && error.message ? error.message : "No se pudo copiar el comando.", "is-error");
+    }
+  });
+
   $("checkMapApi").addEventListener("click", () => {
     checkApi("/api/geolocation/map?limit=1", $("mapApiStatus"), "API del mapa", (payload) => {
       const summary = payload && payload.summary ? payload.summary : {};
@@ -106,7 +115,7 @@
 
   $("checkForensicsApi").addEventListener("click", () => {
     checkApi("/api/forensics/cases?limit=1", $("forensicsApiStatus"), "API de Forense", (payload) => {
-      const cases = Array.isArray(payload && payload.cases) ? payload.cases.length : 0;
+      const cases = Array.isArray(payload && payload.items) ? payload.items.length : 0;
       return "consulta de casos completada; " + cases + " caso(s) devuelto(s) en esta muestra.";
     });
   });
