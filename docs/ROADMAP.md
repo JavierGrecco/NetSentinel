@@ -9,8 +9,7 @@
 - **Último cambio de código de aplicación:** [`b4ef762`](https://github.com/JavierGrecco/NetSentinel/commit/b4ef762c60871c2f00dd45bc02608292fc6fec7f). Después se integraron y validaron por separado Playwright 1.64 (#174), psutil 7.2.2 (#173), FastAPI 0.143.3 (#175) y CodeQL v4.39.0 (#176). La cabeza actual es [`78bd392`](https://github.com/JavierGrecco/NetSentinel/commit/78bd392aa48e4ffdcb8422cd4ffa5f9a55f40718); CI [18/18](https://github.com/JavierGrecco/NetSentinel/actions/runs/39506529594), Security [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39506529701) y Supply Chain [correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39506529692).
 - **PR #171 — explorador de red:** cabeza `eb38815`, alineada con `main`; CI 18/18, Security y Supply Chain correctos. Mantener en borrador hasta revisar visualmente el grafo, responsive, teclado y lector de pantalla. [Ver PR](https://github.com/JavierGrecco/NetSentinel/pull/171).
 - **PR #177 — importador Zeek:** cabeza `f596475`, apilada sobre #171; CI 18/18 correcto. Security y Supply Chain se deben exigir cuando se dirija a `main`. Falta una prueba manual con archivo autorizado y sanitizado. [Ver PR](https://github.com/JavierGrecco/NetSentinel/pull/177).
-- **Mapa mundial de IP:** implementación inicial en la rama `feat/ip-world-map-geoip-2026-10`, todavía fuera de `main`, con [PR #182](https://github.com/JavierGrecco/NetSentinel/pull/182). La cabeza validada es `8b0b4f7`; [CI 23 aprobadas y una omisión esperada](https://github.com/JavierGrecco/NetSentinel/actions/runs/39595504466), [Security correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39595504442) y [Supply Chain correcto](https://github.com/JavierGrecco/NetSentinel/actions/runs/39595504448). Sigue pendiente la prueba manual en macOS y la revisión visual, de teclado y lector de pantalla. El mapa no captura tráfico en vivo.
-- **PR #157 — NetSentinel Forense:** cabeza `122366d`, alineada con `main`; CI 18/18, Security y Supply Chain correctos. Falta ejecutar la guía manual con archivos sintéticos y revisar teclado/accesibilidad antes de salir del borrador. [Ver PR](https://github.com/JavierGrecco/NetSentinel/pull/157).
+- **PR #157 — NetSentinel Forense:** la rama incorpora la exportación consolidada del expediente como siguiente incremento de la primera entrega. Mantener en borrador hasta que la nueva cabeza pase CI, Security y Supply Chain, se ejecute la guía con datos sintéticos y se complete la revisión de teclado/accesibilidad. [Ver PR](https://github.com/JavierGrecco/NetSentinel/pull/157).
 - **Validación manual de release:** la [matriz](VALIDATION_MATRIX.md) conserva 54 tareas sin marcar y ninguna completada. La [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75) coordina estos recorridos. La prueba de CI no se toma como evidencia de instalación o uso manual.
 - **Protección de `main`:** pendiente de configuración y prueba por una persona con permisos de administración. El detalle se mantiene en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 
@@ -84,6 +83,19 @@ Quedan por cerrar:
 
 La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tengan una excepción documentada, aprobada y de riesgo bajo; la ejecución vigente de CI, Security y Supply Chain esté verde sobre el commit candidato; no haya vulnerabilidades críticas/altas sin tratar en el alcance publicado; los artefactos se instalen desde cero; y no haya fallos bloqueantes conocidos en los recorridos principales. Toda excepción debe indicar responsable, motivo, impacto y plan de resolución.
 
+## Trabajo en paralelo — NetSentinel Forense
+
+**Estado:** desarrollo aislado en la [PR #157](https://github.com/JavierGrecco/NetSentinel/pull/157). No forma parte de `main` ni de la versión estable 0.10.0. Los workflows automáticos pasaron tras sincronizarse con la última base; si la cabeza cambia, hay que consultar de nuevo sus checks. No sacar del borrador hasta realizar y registrar las pruebas manuales.
+
+La entrega separa casos, metadatos de evidencia, auditoría, servicio, repositorios y pantalla. Permite comparar SHA-256 sobre una copia de trabajo autorizada y exportar un manifiesto JSON con verificador local. La comparación de hashes detecta diferencias respecto de un valor conservado, pero no es una firma digital ni certifica por sí sola una cadena de custodia; la aplicación tampoco autentica la identidad del operador.
+
+### Pruebas manuales antes de salir del borrador
+
+- Ejecutar la guía [FORENSIC_MANUAL_TEST.md](https://github.com/JavierGrecco/NetSentinel/blob/feat/reconcile-forensics-main-2026-10/docs/FORENSIC_MANUAL_TEST.md) con archivos sintéticos y registrar fecha, SHA, sistema operativo, navegador y resultado.
+- Probar casos duplicados/cerrados, timestamps con offset, metadatos de evidencia y su fuente, coincidencia/diferencia/fallo de SHA-256 y conservación del valor declarado.
+- Probar traversal, symlinks y nombres no válidos; confirmar que las rutas privadas no se devuelven ni se persisten y que el intento fallido se audita con un marcador genérico.
+- Verificar permisos de directorios, exportación/verificación del manifiesto de auditoría y del expediente consolidado, navegación Red/Forense, teclado, foco, ventana estrecha y lector de pantalla.
+- Confirmar la protección efectiva de `main` según el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73); no confundir esta comprobación con los tests sintéticos de Forense.
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
 **Objetivo:** evolucionar desde una lista de observaciones hacia un flujo de triaje útil, sin exagerar lo que una señal demuestra.
@@ -176,3 +188,8 @@ Una tarea se marca completa cuando aplican y se cumplen todos estos puntos:
 8. Evidencia enlazada desde esta tarea: PR/commit, ejecución CI, fila de VALIDATION_MATRIX.md y/o issue de seguimiento.
 
 No se considera terminado por existir código, por una captura de pantalla aislada ni por la cantidad de líneas implementadas.
+
+
+### Laboratorio integrado (rama QA)
+
+El mapa mundial, el módulo NetSentinel Forense y los escenarios sintéticos se validan juntos en la rama `qa/integrated-map-forensics-scenarios-2026-10`. La rama no equivale a una publicación estable; primero deben terminar las comprobaciones automatizadas y la validación visual local.
