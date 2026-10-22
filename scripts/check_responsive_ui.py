@@ -8,6 +8,7 @@ No inicia descubrimientos ni ejecuta diagnósticos de red.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 import json
@@ -36,7 +37,8 @@ PAGE_CASES = (
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
     ("/activity", "Actividad y telemetría", "actividad"),
-    ("/world-map", "Mapa mundial de IP", "mapa-mundial"),
+    ("/forensics", "Área de análisis forense", "forensics"),
+    ("/world-map", "Mapa mundial de IP", "geolocation"),
 )
 
 
@@ -182,6 +184,34 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "UPDATE monitor_checks SET checked_at = ? WHERE id = ?",
                 ((now - timedelta(hours=2)).isoformat(), check_ids[1]),
             )
+
+        # Caso forense sintético para probar el registro visible de un intento fallido.
+        # El archivo NO se crea: Chromium debe ver el error y el historial actualizado.
+        from netsentinel import forensics_service
+
+        forensic_case = forensics_service.create_case(
+            case_number="UI-FORENSICS-001",
+            title="Caso sintético de navegador",
+            authority_reference="AUTORIZACION-SINTETICA-001",
+            objective="Comprobar el registro visible de errores de lectura.",
+            scope="Solo datos sintéticos de la prueba Chromium.",
+            examiner="Examinador sintético",
+            actor="Prueba automatizada",
+        )
+        forensics_service.add_evidence(
+            case_id=forensic_case["id"],
+            label="Archivo sintético no creado",
+            source_type="file_copy",
+            original_name="missing-synthetic-evidence.bin",
+            source_description="Elemento sintético para probar un error de lectura.",
+            received_from="Fuente sintética",
+            received_at_original=datetime.now(timezone.utc).isoformat(),
+            received_timezone="UTC",
+            size_bytes=None,
+            reported_sha256=hashlib.sha256(b"synthetic evidence reference").hexdigest(),
+            hash_source="Fixture automática de Chromium",
+            actor="Prueba automatizada",
+        )
     finally:
         if previous_data_dir is None:
             os.environ.pop("NETSENTINEL_DATA_DIR", None)
@@ -489,125 +519,80 @@ def _monitor_history_accessibility_failures(page) -> list[str]:
     return failures
 
 
-def _world_map_empty_state_failures(page) -> list[str]:
-    """Comprueba cartografía local y estado vacío sin IP ni coordenadas inventadas."""
+def _forensics_hash_failure_refresh_failures(page) -> list[str]:
+    """Comprueba que un fallo de lectura aparezca en la ficha y el historial."""
     failures: list[str] = []
-    try:
-        page.wait_for_function(
-            """() => {
-              const map = document.querySelector("#worldMap");
-              const status = document.querySelector("#geoMapStatus");
-              return map && map.querySelectorAll(".geo-country").length > 50 &&
-                status && status.textContent.includes("No hay eventos guardados con una IP de destino");
-            }""",
-            timeout=15000,
-        )
-    except Exception as exc:
-        return [f"el mapa mundial local no cargó su cartografía o el estado vacío: {exc}"]
-
-    if page.locator("#worldMap .geo-marker").count() != 0:
-        failures.append("el mapa dibujó puntos de IP aunque la base sintética no contiene IP de destino")
-    if page.locator("#geoDestinationsBody tr").count() != 1:
-        failures.append("la tabla de IP no muestra una única fila de estado vacío")
-    elif "Todavía no hay IP públicas registradas" not in page.locator("#geoDestinationsBody").inner_text():
-        failures.append("la fila vacía no explica que faltan IP de destino registradas")
-    if not page.locator("#geoSetup").is_visible():
-        failures.append("el mapa no explica que necesita una base GeoIP local cuando no está instalada")
-
-    # La resolución DNS y la geolocalización se simulan: CI no hace consultas DNS reales.
-    import json
-
-    dns_payload = {
-        "hostname": "example.test",
-        "addresses": [
-            {"ip": "8.8.8.8", "family": "IPv4"},
-            {"ip": "192.168.1.22", "family": "IPv4"},
-        ],
-        "count": 2,
-        "source": "synthetic-system-resolver",
-        "timeout_seconds": 3.0,
-        "note": "Fixture sintética",
-    }
-    geo_payload = {
-        "source": "current_dns_resolution",
-        "queried_at": "2026-10-20T12:00:00Z",
-        "summary": {
-            "requested_ip_count": 2,
-            "public_ip_count": 1,
-            "located_ip_count": 1,
-            "unlocated_ip_count": 0,
-            "private_or_special_ip_count_skipped": 1,
-            "invalid_ip_count_skipped": 0,
-        },
-        "databases": {
-            "geoip_library_available": True,
-            "city_status": "available",
-            "asn_status": "database_missing",
-            "city_configured": True,
-            "asn_configured": False,
-        },
-        "destinations": [{
-            "ip": "8.8.8.8",
-            "event_count": 0,
-            "last_seen": "",
-            "sample_domain": "",
-            "country": "United States",
-            "country_iso": "US",
-            "city": "Mountain View",
-            "latitude": 37.4056,
-            "longitude": -122.0775,
-            "asn": 15169,
-            "asn_organization": "Google LLC",
-            "location_status": "located",
-        }],
-        "notes": [
-            "La resolución DNS actual no demuestra qué IP se usó en una visita anterior."
-        ],
-    }
+    operator = page.locator("#forensicOperator")
+    source_name = page.locator("#forensicEvidenceList .forensic-verify-form input[name='source_name']")
+    confirmation = page.locator("#forensicEvidenceList .forensic-verify-form input[name='confirm_working_copy']")
+    submit = page.locator("#forensicEvidenceList .forensic-verify-form button[type='submit']")
+    if any(locator.count() != 1 for locator in (operator, source_name, confirmation, submit)):
+        return ["no se preparó el formulario forense sintético para la prueba de error"]
 
     try:
-        def mock_dns(route):
-            if "hostname=example.test" in route.request.url:
-                route.fulfill(status=200, content_type="application/json", body=json.dumps(dns_payload))
-            else:
-                route.continue_()
+        verify_panel = page.locator("#forensicEvidenceList details.forensic-verify-panel")
+        if verify_panel.count() != 1:
+            return ["no se encontró el panel de comparación de hash sintético"]
+        if verify_panel.get_attribute("open") is None:
+            verify_panel.locator("summary").click()
 
-        page.route("**/api/tools/dns/lookup*", mock_dns)
-        page.route(
-            "**/api/geolocation/lookup",
-            lambda route: route.fulfill(
-                status=200, content_type="application/json", body=json.dumps(geo_payload)
-            ),
-        )
-        page.locator("#geoDomainInput").fill("example.test")
-        page.locator("#geoDomainLookupButton").click()
+        operator.fill("Operador sintético")
+        source_name.fill("missing-synthetic-evidence.bin")
+        confirmation.check()
+        submit.click()
         page.wait_for_function(
             """() => {
-              const status = document.querySelector("#geoDomainLookupStatus");
-              const results = document.querySelector("#geoDomainLookupResults");
-              return status && status.textContent.includes("No es evidencia de una IP histórica") &&
-                results && results.textContent.includes("8.8.8.8");
+              const status = document.querySelector("#forensicWorkspaceStatus");
+              const evidence = document.querySelector("#forensicEvidenceList");
+              const audit = document.querySelector("#forensicAuditList");
+              return status && status.textContent.includes("NS-FORENSIC-INT-002") &&
+                evidence && evidence.textContent.includes("Última comprobación: no se pudo leer") &&
+                audit && audit.textContent.includes("Falló la comparación del hash");
             }""",
             timeout=8000,
         )
-        if page.locator("#worldMap .geo-marker-current").count() != 1:
-            failures.append("la resolución DNS actual no dibujó un marcador diferenciado")
-        if page.locator("#worldMap .geo-marker:not(.geo-marker-current)").count() != 0:
-            failures.append("una resolución DNS actual se mezcló con marcadores históricos")
-        if page.locator("#geoStatEvents").inner_text().strip() != "0":
-            failures.append("la consulta DNS actual alteró el contador de eventos históricos")
-        page.locator("#worldMap .geo-marker-current").click()
-        page.wait_for_function(
-            "() => document.querySelector('#geoSelectedDetails')?.textContent.includes('Resolución DNS actual')"
-        )
-        details = page.locator("#geoSelectedDetails").inner_text()
-        if "example.test" not in details or "no es un evento histórico" not in details.lower():
-            failures.append("el detalle seleccionado no distingue la resolución DNS actual del historial")
     except Exception as exc:
-        failures.append(f"no se pudo probar el flujo sintético de búsqueda DNS en el mapa: {exc}")
-    finally:
-        page.unroute_all(behavior="ignoreErrors")
+        return [f"el fallo forense no actualizó el estado y el historial en Chromium: {exc}"]
 
+    if "forensics-working-copies" in page.locator("#forensicAuditList").inner_text():
+        return ["el historial forense mostró la ubicación local de las copias de trabajo"]
+
+    # Comprueba el recorrido real del nuevo botón y verifica el archivo que descarga.
+    export_button = page.locator("#exportForensicCaseManifest")
+    if export_button.count() != 1:
+        failures.append("falta el botón para exportar el expediente consolidado")
+        return failures
+    if export_button.is_disabled():
+        failures.append("el botón para exportar el expediente no se habilitó para el caso seleccionado")
+        return failures
+
+    try:
+        with page.expect_download(timeout=8000) as download_info:
+            export_button.click()
+        download = download_info.value
+        if download.suggested_filename != "netsentinel-forensic-case-manifest.json":
+            failures.append("la exportación del expediente produjo un nombre de archivo inesperado")
+        download_path = download.path()
+        if not download_path:
+            failures.append("Chromium no proporcionó una descarga local para verificar")
+            return failures
+        manifest = json.loads(Path(download_path).read_text(encoding="utf-8"))
+        from netsentinel.forensics_case_manifest import verify_case_manifest
+
+        if not verify_case_manifest(manifest):
+            failures.append("el expediente descargado no superó la verificación de sus digests")
+        if manifest.get("format") != "netsentinel-forensic-case-manifest":
+            failures.append("la descarga no contiene el formato de expediente esperado")
+        summary = manifest.get("summary", {})
+        if summary.get("audit_chain_status") != "valid":
+            failures.append("la exportación no conserva una cadena de auditoría sintética válida")
+        if summary.get("failed_check_count", 0) < 1:
+            failures.append("el expediente no incluye la comprobación sintética fallida")
+        exported_text = Path(download_path).read_text(encoding="utf-8")
+        if "forensics-working-copies" in exported_text:
+            failures.append("el expediente descargado revela la carpeta de copias de trabajo")
+    except Exception as exc:
+        failures.append(f"no se pudo descargar y verificar el expediente consolidado en Chromium: {exc}")
     return failures
 
 
@@ -687,12 +672,17 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     f"título inesperado: {actual!r}; se esperaba {expected_title!r}"
                                 )
 
-                            current_links = page.locator(
-                                '.primary-nav a.nav-link[aria-current="page"]'
-                            )
+                            if path == "/forensics":
+                                current_links = page.locator(
+                                    '.product-switcher a.product-link[aria-current="true"]'
+                                )
+                            else:
+                                current_links = page.locator(
+                                    '.primary-nav a.nav-link[aria-current="page"]'
+                                )
                             if current_links.count() != 1:
                                 case_failures.append(
-                                    "la navegación no identifica exactamente una sección activa"
+                                    "la navegación no identifica exactamente un módulo activo"
                                 )
 
                             theme_options = page.locator('input[name="themeSelect"]')
@@ -714,8 +704,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     case_failures.extend(_scan_comparison_failures(page))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
-                            if path == "/world-map" and viewport == Viewport(1440, 900):
-                                case_failures.extend(_world_map_empty_state_failures(page))
+                            if path == "/forensics" and viewport == Viewport(1440, 900):
+                                case_failures.extend(_forensics_hash_failure_refresh_failures(page))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
@@ -780,7 +770,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Revisa las seis pantallas de NetSentinel en múltiples tamaños. "
+            "Revisa las secciones de NetSentinel en múltiples tamaños. "
             "Por defecto usa un servidor y una base de datos temporales."
         )
     )
