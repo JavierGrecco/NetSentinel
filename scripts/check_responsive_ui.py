@@ -592,6 +592,34 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
         exported_text = Path(download_path).read_text(encoding="utf-8")
         if "forensics-working-copies" in exported_text:
             failures.append("el expediente descargado revela la carpeta de copias de trabajo")
+
+
+        audit_button = page.locator("#exportForensicAuditManifest")
+        try:
+            with page.expect_download(timeout=8000) as audit_download_info:
+                audit_button.click()
+            audit_download = audit_download_info.value
+            if audit_download.suggested_filename != "netsentinel-forensic-audit-manifest.json":
+                failures.append("la exportación de auditoría produjo un nombre de archivo inesperado")
+            audit_path = audit_download.path()
+            if not audit_path:
+                failures.append("Chromium no proporcionó la descarga de auditoría para verificar")
+            else:
+                audit_manifest = json.loads(Path(audit_path).read_text(encoding="utf-8"))
+                from netsentinel.forensics_audit_manifest import verify_audit_manifest
+
+                if not verify_audit_manifest(audit_manifest):
+                    failures.append("el manifiesto de auditoría descargado no superó la verificación de integridad")
+                if audit_manifest.get("format") != "netsentinel-forensic-audit-manifest":
+                    failures.append("la descarga de auditoría no contiene el formato esperado")
+                integrity = audit_manifest.get("integrity", {})
+                if integrity.get("status") != "valid":
+                    failures.append("la auditoría exportada no informa una cadena íntegra para el caso sintético")
+                audit_text = Path(audit_path).read_text(encoding="utf-8")
+                if "forensics-working-copies" in audit_text:
+                    failures.append("el manifiesto de auditoría revela la carpeta de copias de trabajo")
+        except Exception as exc:
+            failures.append(f"no se pudo descargar y verificar la auditoría forense en Chromium: {exc}")
     except Exception as exc:
         failures.append(f"no se pudo descargar y verificar el expediente consolidado en Chromium: {exc}")
 
