@@ -167,3 +167,29 @@
 @media (prefers-reduced-motion: reduce) {
   .guided-progress-track span { transition: none; }
 }
+
+.guided-values dl {
+  display: grid;
+  grid-template-columns: minmax(125px, .45fr) minmax(0, 1fr);
+  gap: 7px 12px;
+  margin: 10px 0;
+}
+.guided-values dt {
+  color: var(--theme-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.guided-values dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.guided-values dd code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .guided-values dl { grid-template-columns: 1fr; gap: 3px; }
+  .guided-values dd { margin-bottom: 8px; }
+}
