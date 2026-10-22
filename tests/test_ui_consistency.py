@@ -12,6 +12,7 @@ PAGE_NAMES = (
     "tools.html",
     "activity.html",
     "geolocation.html",
+    "guided-test.html",
 )
 
 
@@ -24,7 +25,7 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert ".app-header-utilities .theme-option-card" in css
     assert "min-height: 48px" in css
     assert ".app-header-content > .primary-nav" in css
-    assert "grid-template-columns: repeat(6, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(7, minmax(0, 1fr))" in css
     assert "min-height: 42px" in css
     assert ".app-section-title" in css
     assert "background: #101827" in css
