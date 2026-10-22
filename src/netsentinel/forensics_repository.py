@@ -119,25 +119,11 @@ def _evidence_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def _report_dict(row: sqlite3.Row, *, include_payload: bool = False) -> dict[str, Any]:
-    """Devuelve los metadatos de una versión y su documento inmutable."""
+    """Devuelve metadatos y el JSON guardado; la verificación corresponde al servicio."""
     try:
         payload = json.loads(row["report_json"])
     except (json.JSONDecodeError, TypeError):
         payload = None
-    meta = payload.get("report", {}) if isinstance(payload, dict) else {}
-    integrity_valid = bool(
-        isinstance(payload, dict)
-        and verify_examination_report(payload)
-        and payload.get("report_sha256") == row["report_sha256"]
-        and meta.get("id") == row["id"]
-        and meta.get("version") == row["report_version"]
-        and meta.get("title") == row["title"]
-        and meta.get("status") == row["status"]
-        and meta.get("created_at") == row["created_at"]
-        and meta.get("created_by") == row["actor"]
-        and meta.get("amends_report_id") == row["amends_report_id"]
-        and payload.get("case", {}).get("id") == row["case_id"]
-    )
     result: dict[str, Any] = {
         "id": row["id"],
         "case_id": row["case_id"],
@@ -148,7 +134,7 @@ def _report_dict(row: sqlite3.Row, *, include_payload: bool = False) -> dict[str
         "created_by": row["actor"],
         "amends_report_id": row["amends_report_id"],
         "report_sha256": row["report_sha256"],
-        "integrity_valid": integrity_valid,
+        "integrity_valid": False,
     }
     if include_payload:
         result["report"] = payload
@@ -693,56 +679,54 @@ def create_examination_report(
     *,
     case_id: str,
     actor: str,
-    fields: dict[str, Any],
-    case_manifest: dict[str, Any],
-    amends_report_id: str | None,
+    report: dict[str, Any],
+    expected_latest_report_id: str | None,
 ) -> dict[str, Any] | None:
-    """Guarda una nueva versión inmutable y la agrega a la auditoría encadenada."""
-    report_id = str(uuid.uuid4())
+    """Guarda una versión preparada por el servicio y comprueba la concurrencia."""
+    meta = report.get("report")
+    if not isinstance(meta, dict):
+        raise ValueError("El borrador no tiene metadatos de versión.")
+    report_id = meta.get("id")
+    version = meta.get("version")
+    amends_report_id = meta.get("amends_report_id")
+    title = meta.get("title")
+    digest = report.get("report_sha256")
+    if (
+        not isinstance(report_id, str)
+        or not isinstance(version, int)
+        or version < 1
+        or not isinstance(title, str)
+        or not isinstance(digest, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", digest)
+        or meta.get("status") != "draft_unsigned"
+    ):
+        raise ValueError("El borrador de informe tiene metadatos inválidos.")
+
     with connect() as db:
         db.execute("BEGIN IMMEDIATE")
         case = _get_case_row(db, case_id)
         if case is None:
             return None
-
         latest = db.execute(
             """SELECT id, report_version FROM forensic_reports
                WHERE case_id = ? ORDER BY report_version DESC LIMIT 1""",
             (case_id,),
         ).fetchone()
-        if latest is None:
-            if amends_report_id:
-                raise ForensicConflictError(
-                    "No existe una versión previa que pueda ser enmendada."
-                )
-            if fields.get("amendment_reason"):
-                raise ValueError("El motivo de enmienda solo se usa al corregir un informe anterior.")
-            version = 1
-        else:
-            if not amends_report_id:
-                raise ForensicConflictError(
-                    "Ya hay un informe. Para crear otra versión, seleccioná el informe más reciente "
-                    "e indicá el motivo de la enmienda."
-                )
-            if amends_report_id != latest["id"]:
-                raise ForensicConflictError(
-                    "La nueva versión debe enmendar el informe más reciente del caso."
-                )
-            if not fields.get("amendment_reason"):
-                raise ValueError("Indicá el motivo por el que se corrige el informe anterior.")
-            version = int(latest["report_version"]) + 1
-
-        created_at = utc_now()
-        report = build_examination_report(
-            report_id=report_id,
-            version=version,
-            fields=fields,
-            case_manifest=case_manifest,
-            created_at=created_at,
-            actor=actor,
-            amends_report_id=amends_report_id,
-        )
+        current_latest_id = str(latest["id"]) if latest is not None else None
+        if current_latest_id != expected_latest_report_id:
+            raise ForensicConflictError(
+                "El historial de informes cambió mientras se preparaba el borrador. "
+                "Actualizá la lista y revisá la última versión antes de guardar."
+            )
+        expected_version = int(latest["report_version"]) + 1 if latest else 1
+        if version != expected_version or amends_report_id != current_latest_id:
+            raise ForensicConflictError(
+                "La versión preparada no coincide con la secuencia de informes del caso."
+            )
+        if meta.get("created_by") != actor or not meta.get("created_at"):
+            raise ValueError("Los metadatos de autoría del informe no coinciden con el operador.")
         report_json = json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+        created_at = str(meta["created_at"])
         db.execute(
             """INSERT INTO forensic_reports
                (id, case_id, report_version, amends_report_id, created_at, actor,
@@ -750,7 +734,7 @@ def create_examination_report(
                VALUES (?, ?, ?, ?, ?, ?, ?, 'draft_unsigned', ?, ?)""",
             (
                 report_id, case_id, version, amends_report_id, created_at, actor,
-                fields["title"], report["report_sha256"], report_json,
+                title, digest, report_json,
             ),
         )
         _append_audit(
@@ -762,9 +746,11 @@ def create_examination_report(
             details={
                 "report_id": report_id,
                 "report_version": version,
-                "report_sha256": report["report_sha256"],
+                "report_sha256": digest,
                 "amends_report_id": amends_report_id,
-                "source_case_manifest_sha256": case_manifest["manifest_sha256"],
+                "source_case_manifest_sha256": report.get("integrity", {}).get(
+                    "source_case_manifest_sha256"
+                ),
             },
         )
         db.execute(
