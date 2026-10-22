@@ -703,7 +703,7 @@ def test_forensics_router_has_only_declared_internal_dependencies() -> None:
 def test_html_pages_belong_to_pages_router() -> None:
     """Las seis páginas HTML se sirven desde su router dedicado."""
     paths = {route.path for route in pages.router.routes}
-    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools", "/forensics"}
+    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools", "/forensics", "/world-map"}
     assert all(not route.include_in_schema for route in pages.router.routes)
 
 
