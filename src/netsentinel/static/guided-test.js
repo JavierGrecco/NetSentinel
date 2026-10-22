@@ -95,6 +95,7 @@
       phase: "Actividad",
       title: "4. CSV: importar una vez y comprobar duplicados",
       checkKey: "csv-events",
+      checkAfterAction: true,
       actionDescription: "En la otra pestaña, importá activity.csv y repetí la vista previa. Volvé a esta guía y pulsá «Comprobar ahora» para ver cuántos eventos sintéticos quedaron guardados.",
       lead: "Ahora que revisaste la vista previa, comprobaremos qué ocurre al confirmar la importación y al repetirla.",
       objective: "Validar que los eventos se guarden una vez y que una nueva importación del mismo archivo no cree duplicados.",
@@ -117,6 +118,7 @@
       phase: "Actividad",
       title: "5. CSV: rechazar archivos inválidos",
       checkKey: "csv-rejections",
+      checkAfterAction: true,
       actionDescription: "Previsualizá y rechazá los dos CSV inválidos en la otra pestaña. Volvé aquí y pulsá «Comprobar ahora»: se revisará que los seis eventos válidos sigan presentes y que el marcador sensible no haya sido guardado.",
       lead: "Esta prueba negativa verifica que los datos problemáticos se rechacen por completo y dejen un mensaje comprensible.",
       objective: "Comprobar el rechazo de cabeceras sensibles y cabeceras duplicadas sin escrituras parciales.",
@@ -162,6 +164,7 @@
       phase: "Actividad",
       title: "7. Zeek: previsualizar e importar conn.log",
       checkKey: "zeek-events",
+      checkAfterAction: true,
       actionDescription: "Previsualizá e importá zeek-conn.tsv en la otra pestaña. Volvé a esta guía y pulsá «Comprobar ahora» para consultar los UID Zeek que quedaron guardados.",
       lead: "Este escenario usa un archivo exportado y sintético. No arranca Zeek, no captura paquetes y no consulta un sensor.",
       objective: "Verificar la lectura de TSV nativo de Zeek, la atribución por IP y fecha, el tratamiento de contadores ausentes y la deduplicación por UID.",
@@ -622,7 +625,7 @@
     $("wizardPrevious").disabled = state.currentStep === 0;
     $("wizardStart").hidden = step.type !== "intro";
     $("wizardRunCheck").hidden = !step.checkKey;
-    $("wizardRunCheck").disabled = Boolean(record.checking);
+    $("wizardRunCheck").disabled = Boolean(record.checking) || Boolean(step.checkAfterAction && !record.opened);
     $("wizardRunCheck").textContent = record.checking ? "Comprobando…" : record.autoChecked ? "Comprobar de nuevo" : "Comprobar ahora";
     $("wizardNext").hidden = step.type === "intro" || step.type === "summary";
     $("wizardNext").disabled = !canAdvance(step, record);
@@ -638,7 +641,9 @@
           : manualOutcomeReady(step, record)
             ? "Elegí un resultado para habilitar el siguiente paso."
             : step.checkKey
-              ? "1. Comprobá la API.  2. Abrí el módulo en otra pestaña.  3. Volvé y registrá el resultado."
+              ? step.checkAfterAction
+                ? "1. Abrí el módulo y completá la acción.  2. Volvé aquí.  3. Pulsá Comprobar ahora y registrá el resultado."
+                : "1. Pulsá Comprobar ahora.  2. Abrí el módulo en otra pestaña.  3. Volvé y registrá el resultado."
               : "1. Abrí el módulo en otra pestaña.  2. Volvé aquí y registrá el resultado.";
     $("wizardMessage").textContent = "";
     if (step.type === "summary") renderSummary();
@@ -860,6 +865,10 @@
     const step = steps[state.currentStep];
     if (!step.checkKey) return;
     const record = recordFor(step);
+    if (step.checkAfterAction && !record.opened) {
+      showMessage("Primero abrí el módulo y completá la acción indicada. Después volvé aquí para comprobar el resultado.", "warning");
+      return;
+    }
     record.checking = true;
     showMessage("Ejecutando una comprobación de lectura…");
     $("wizardRunCheck").disabled = true;
@@ -1010,9 +1019,11 @@
     const record = recordFor(step);
     record.opened = true;
     saveState();
-    renderManualResult(step, record);
+    renderStep();
     $("wizardFooterHint").textContent = step.checkKey && !record.autoChecked
-      ? "Volvé a esta pestaña, pulsá «Comprobar ahora» y después registrá el resultado."
+      ? step.checkAfterAction
+        ? "Volvé a esta pestaña y pulsá «Comprobar ahora» para revisar los datos guardados."
+        : "Volvé a esta pestaña, revisá los resultados automáticos y registrá el resultado."
       : "Volvé a esta pestaña cuando termines de revisar el módulo.";
     showMessage("La guía queda abierta aquí. Cuando termines en la otra pestaña, volvé y elegí el resultado observado.", "success");
   });
