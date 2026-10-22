@@ -1614,7 +1614,7 @@ def _world_map_render_failures(page, base_url: str) -> list[str]:
     return failures
 
 
-def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
+def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path | None = None) -> list[str]:
     """Valida el asistente secuencial, sus resultados, la persistencia y la ausencia de escaneos."""
     failures: list[str] = []
     scan_posts: list[str] = []
@@ -1677,6 +1677,103 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
             timeout=8000,
         )
 
+        def _select_synthetic_device(target_page, selector: str) -> str:
+            target_page.wait_for_function(
+                """selector => {
+                  const control = document.querySelector(selector);
+                  return control && Array.from(control.options).some(option => option.value);
+                }""",
+                arg=selector,
+                timeout=8000,
+            )
+            select = target_page.locator(selector)
+            options = select.locator("option").evaluate_all(
+                "(items) => items.filter(item => item.value).map(item => ({value:item.value,text:item.textContent || ''}))"
+            )
+            selected = next(
+                (item for item in options if "192.168.56.20" in item["text"] or "Dispositivo sintético de prueba" in item["text"]),
+                options[0] if options else None,
+            )
+            if selected is None:
+                raise AssertionError(f"el selector {selector} no recibió dispositivos")
+            select.select_option(selected["value"])
+            return selected["value"]
+
+        def _clear_status(target_page, selector: str) -> None:
+            target_page.locator(selector).evaluate("(element) => { element.textContent = ''; }")
+
+        def _exercise_activity_scenario(target_page, step_title: str) -> None:
+            if scenarios_dir is None:
+                return
+            tab = target_page.get_by_role("tab", name="Importar")
+            if tab.count() != 1:
+                failures.append(f"el módulo Actividad no mostró la pestaña Importar para «{step_title}»")
+                return
+            tab.click()
+
+            if "CSV: revisar antes de importar" in step_title or "CSV: importar una vez" in step_title:
+                _select_synthetic_device(target_page, "#csvDevice")
+                target_page.locator("#csvFile").set_input_files(str(scenarios_dir / "activity.csv"))
+                _clear_status(target_page, "#importStatus")
+                target_page.locator("#previewImport").click()
+                target_page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector("#previewPanel");
+                      const summary = document.querySelector("#previewSummary");
+                      return panel && !panel.hidden && summary && summary.textContent.includes("6 fila(s) válidas");
+                    }""",
+                    timeout=8000,
+                )
+                if "CSV: importar una vez" in step_title:
+                    _clear_status(target_page, "#importStatus")
+                    target_page.locator("#import").click()
+                    target_page.wait_for_function(
+                        """() => (document.querySelector("#importStatus")?.textContent || "").includes("evento(s) importados")""",
+                        timeout=8000,
+                    )
+                    status = target_page.locator("#importStatus").inner_text()
+                    if "duplicado(s)" not in status and "6 evento(s) importados" not in status:
+                        failures.append("la importación CSV no indicó importaciones ni duplicados en el asistente")
+                return
+
+            if "CSV: rechazar archivos inválidos" in step_title:
+                _select_synthetic_device(target_page, "#csvDevice")
+                for filename in ("activity-invalid-sensitive.csv", "activity-invalid-duplicate-header.csv"):
+                    target_page.locator("#csvFile").set_input_files(str(scenarios_dir / filename))
+                    _clear_status(target_page, "#importStatus")
+                    target_page.locator("#previewImport").click()
+                    target_page.wait_for_function(
+                        """() => (document.querySelector("#importStatus")?.textContent || "").trim().length > 0""",
+                        timeout=8000,
+                    )
+                    if not target_page.locator("#previewPanel").is_hidden():
+                        failures.append(f"{filename} dejó una vista previa visible como si fuera válido durante el asistente")
+                return
+
+            if "Zeek:" in step_title:
+                _select_synthetic_device(target_page, "#zeekDevice")
+                target_page.locator("#zeekFile").set_input_files(str(scenarios_dir / "zeek-conn.tsv"))
+                _clear_status(target_page, "#zeekImportStatus")
+                target_page.locator("#previewZeekImport").click()
+                target_page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector("#zeekPreviewPanel");
+                      const summary = document.querySelector("#zeekPreviewSummary");
+                      return panel && !panel.hidden && summary && summary.textContent.trim().length > 0;
+                    }""",
+                    timeout=8000,
+                )
+                _clear_status(target_page, "#zeekImportStatus")
+                target_page.locator("#importZeek").click()
+                target_page.wait_for_function(
+                    """() => (document.querySelector("#zeekImportStatus")?.textContent || "").includes("registro(s) importados")""",
+                    timeout=8000,
+                )
+                status = target_page.locator("#zeekImportStatus").inner_text()
+                if "2 registro(s) importados" not in status and "duplicado(s)" not in status:
+                    failures.append("la importación Zeek no indicó los registros importados o duplicados durante el asistente")
+                return
+
         def open_module_and_record(outcome: str = "passed") -> str:
             title = page.locator("#wizardStepTitle").inner_text()
             link = page.locator("#wizardActionLink")
@@ -1690,6 +1787,11 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
             expected_path = link.get_attribute("href")
             if expected_path and not popup.url.endswith(expected_path):
                 failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
+            if expected_path == "/activity":
+                try:
+                    _exercise_activity_scenario(popup, title)
+                except Exception as exc:
+                    failures.append(f"no se pudo completar la acción requerida en «{title}»: {exc}")
             popup.close()
             if "topología guardada" not in title.lower():
                 if page.locator("#wizardRunCheck").is_visible():
@@ -1714,12 +1816,11 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
                 failures.append(f"registrar el resultado no habilitó Siguiente en «{title}»")
             return title
 
-        # Topology combines an API response with a visual check in a separate tab.
+        # La API y la vista del grafo se comprueban sin iniciar descubrimiento.
         title = open_module_and_record("passed")
         if "topología guardada" not in title.lower():
             failures.append("se perdió el contexto del paso de topología")
 
-        # Exercise all remaining manual steps, including map diagnostics and result classifications.
         for index in range(10):
             if page.locator("#wizardNext").is_hidden():
                 failures.append("el asistente ocultó Siguiente antes de completar todos los pasos")
@@ -1922,7 +2023,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 )
                             if path == "/guided-test" and viewport == Viewport(1440, 900):
                                 case_failures.extend(
-                                    _guided_test_interaction_failures(page, base_url)
+                                    _guided_test_interaction_failures(page, base_url, scenarios_dir)
                                 )
                             if path == "/world-map" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
                                 case_failures.extend(_world_map_render_failures(page, base_url))
