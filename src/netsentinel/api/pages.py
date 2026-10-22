@@ -41,6 +41,12 @@ def tools_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "tools.html")
 
 
+@router.get("/guided-test", include_in_schema=False)
+def guided_test_page() -> FileResponse:
+    """Muestra el recorrido de validación manual con escenarios sintéticos."""
+    return FileResponse(_STATIC_DIR / "guided-test.html")
+
+
 @router.get("/world-map", include_in_schema=False)
 def world_map_page() -> FileResponse:
     """Muestra el mapa mundial de IP públicas incluidas en eventos locales."""
