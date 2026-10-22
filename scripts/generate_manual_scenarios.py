@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-DEFAULT_OUTPUT = Path(".netsentinel-test-artifacts/manual-scenarios")
+DEFAULT_OUTPUT = Path("netsentinel-test-artifacts/manual-scenarios")
 CSV_FIELDS = [
     "observed_at",
     "event_type",
