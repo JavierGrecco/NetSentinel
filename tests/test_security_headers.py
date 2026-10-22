@@ -201,6 +201,7 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(
         "/static/findings.js",
         "/static/tools.js",
         "/static/geolocation.js",
+        "/static/guided-test.js",
         "/static/theme.js",
         "/static/section-tabs.js",
     ],
