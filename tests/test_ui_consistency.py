@@ -215,6 +215,13 @@ def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
     assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
     assert 'id: "lab"' in script
     assert 'id: "summary"' in script
+    assert 'checkKey: "csv-events"' in script
+    assert 'checkKey: "csv-rejections"' in script
+    assert 'checkKey: "zeek-events"' in script
+    assert "async function checkCsvEvents()" in script
+    assert "async function checkCsvRejections()" in script
+    assert "async function checkZeekEvents()" in script
+    assert "zeek:CManualScenario101" in script
     assert "no se inició un escaneo" in script.lower()
     assert "wizardCopyReport" in script
 
