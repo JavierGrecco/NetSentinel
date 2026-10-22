@@ -275,7 +275,7 @@ def test_markdown_export_escapes_html_and_keeps_evidence_inside_its_table(
     assert "<script>alert(1)</script>" not in markdown.text
     assert "&lt;img src=x&gt;" in markdown.text
     assert "<img src=x>" not in markdown.text
-    assert "&lt;img src=x&gt;<br>\\| fila fabricada" in markdown.text
+    assert "&lt;img src=x&gt; \\| fila fabricada" in markdown.text
     assert report["report"]["source_case_manifest"]["evidence"][0]["label"] == "<img src=x>\n| fila fabricada"
     assert evidence["id"] == report["report"]["source_case_manifest"]["evidence"][0]["id"]
 
