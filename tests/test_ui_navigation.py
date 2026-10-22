@@ -215,6 +215,8 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     assert 'id="wizardCopyReferenceValues"' in html
     assert "PRUEBA GUIADA" in script
     assert "wizard-summary-row" in script
+    assert "Resumen: " in script
+    assert "window.setTimeout(() => URL.revokeObjectURL(url), 1000)" in script
     assert "prefers-reduced-motion" in stylesheet
 
     # The new experience replaces the dispersed checklist instead of duplicating it.

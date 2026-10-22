@@ -1976,6 +1976,30 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "Recorrido finalizado" not in page.locator("#wizardStepTitle").inner_text():
             failures.append("el título de cierre no quedó visible tras recargar")
 
+        # Comprobar una descarga real y el contenido del informe, no solo que exista el botón.
+        try:
+            with page.expect_download(timeout=8000) as download_info:
+                page.locator("#wizardDownloadReport").click()
+            report_download = download_info.value
+            if report_download.suggested_filename != "netsentinel-acceptance-report.txt":
+                failures.append(
+                    "el informe final tuvo un nombre de descarga inesperado: "
+                    + report_download.suggested_filename
+                )
+            report_path = report_download.path()
+            report_text = Path(report_path).read_text(encoding="utf-8") if report_path else ""
+            for expected_text in (
+                "NetSentinel — Informe del asistente de aceptación",
+                "Resumen: 12 de 12 pasos con resultado registrado.",
+                "Correctos: 10 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
+                "Resultado: Falló",
+                "Resultado: No pude comprobarlo",
+            ):
+                if expected_text not in report_text:
+                    failures.append("el informe descargado no contiene el dato esperado: " + expected_text)
+        except Exception as exc:
+            failures.append(f"no se pudo descargar o leer el informe de cierre: {exc}")
+
         if scan_posts:
             failures.append(
                 "el asistente de pruebas envió POST /api/scan, pero este flujo debe ser estrictamente de solo lectura: "

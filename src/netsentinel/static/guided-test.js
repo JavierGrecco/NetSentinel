@@ -956,10 +956,20 @@
 
   function makeReportText() {
     const date = state.finishedAt ? new Date(state.finishedAt) : new Date();
+    const counts = { passed: 0, failed: 0, blocked: 0 };
+    trackedSteps.forEach((step) => {
+      const outcome = recordFor(step).outcome;
+      if (outcome && Object.prototype.hasOwnProperty.call(counts, outcome)) counts[outcome] += 1;
+    });
+    const evaluated = counts.passed + counts.failed + counts.blocked;
+    const pending = trackedSteps.length - evaluated;
     const lines = [
       "NetSentinel — Informe del asistente de aceptación",
       "Fecha de cierre: " + new Intl.DateTimeFormat("es-AR", { dateStyle: "long", timeStyle: "short" }).format(date),
       "Modo: laboratorio local con datos sintéticos.",
+      "Resumen: " + evaluated + " de " + trackedSteps.length + " pasos con resultado registrado.",
+      "Correctos: " + counts.passed + " · Fallidos: " + counts.failed
+        + " · No comprobados: " + counts.blocked + " · Pendientes: " + pending + ".",
       "Nota: los resultados manuales son autodeclarados. Este informe no equivale a certificación ni aprobación automática.",
       ""
     ];
@@ -1145,7 +1155,8 @@
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    // No revocar la URL de inmediato: algunos navegadores todavía están iniciando la descarga.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     showMessage("Informe .txt descargado en tu computadora.", "success");
   });
 
