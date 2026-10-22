@@ -85,17 +85,30 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 
 ## Trabajo en paralelo — NetSentinel Forense
 
-**Estado:** desarrollo aislado en la [PR #157](https://github.com/JavierGrecco/NetSentinel/pull/157). No forma parte de `main` ni de la versión estable 0.10.0. Los workflows automáticos pasaron tras sincronizarse con la última base; si la cabeza cambia, hay que consultar de nuevo sus checks. No sacar del borrador hasta realizar y registrar las pruebas manuales.
+**Estado:** laboratorio experimental en la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`, PR #184 en borrador y apilada sobre la PR del mapa. No está en `main` ni forma parte de la versión estable 0.10.0. El módulo registra metadatos, compara SHA-256 de copias de trabajo, exporta manifiestos y ahora admite registrar transferencias de custodia en la auditoría encadenada. No adquiere discos ni autentica al operador.
 
-La entrega separa casos, metadatos de evidencia, auditoría, servicio, repositorios y pantalla. Permite comparar SHA-256 sobre una copia de trabajo autorizada y exportar un manifiesto JSON con verificador local. La comparación de hashes detecta diferencias respecto de un valor conservado, pero no es una firma digital ni certifica por sí sola una cadena de custodia; la aplicación tampoco autentica la identidad del operador.
+La [matriz de preparación pericial](FORENSIC_READINESS_MATRIX.md) es el inventario de controles implementados y brechas frente a prácticas publicadas de SWGDE/NIST. SWGDE considera mínimos de cadena de custodia la identificación del elemento, las personas que entregan/reciben, la fecha/hora y el propósito de cada transferencia; el informe de examen también debe describir solicitud, material, procesos/resultados, disposición y autorización. La implementación actual cubre solo una parte de ese alcance.
 
 ### Pruebas manuales antes de salir del borrador
 
-- Ejecutar la guía [FORENSIC_MANUAL_TEST.md](https://github.com/JavierGrecco/NetSentinel/blob/feat/reconcile-forensics-main-2026-10/docs/FORENSIC_MANUAL_TEST.md) con archivos sintéticos y registrar fecha, SHA, sistema operativo, navegador y resultado.
-- Probar casos duplicados/cerrados, timestamps con offset, metadatos de evidencia y su fuente, coincidencia/diferencia/fallo de SHA-256 y conservación del valor declarado.
-- Probar traversal, symlinks y nombres no válidos; confirmar que las rutas privadas no se devuelven ni se persisten y que el intento fallido se audita con un marcador genérico.
-- Verificar permisos de directorios, exportación/verificación del manifiesto de auditoría y del expediente consolidado, navegación Red/Forense, teclado, foco, ventana estrecha y lector de pantalla.
-- Confirmar la protección efectiva de `main` según el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73); no confundir esta comprobación con los tests sintéticos de Forense.
+- Ejecutar la [guía manual](FORENSIC_MANUAL_TEST.md) y la página `/guided-test` con archivos/casos sintéticos; registrar fecha, commit, sistema operativo, navegador y resultado.
+- Probar casos duplicados/cerrados, timestamps con offset, recepción, transferencias consecutivas y discontinuas, hash correcto/diferente/fallo de SHA-256 y conservación del valor declarado.
+- Corromper la cadena en una base de prueba y comprobar que una transferencia nueva se rechaza en vez de continuar una auditoría dañada.
+- Verificar traversal, symlinks, nombres no válidos y permisos; confirmar que las rutas privadas no se devuelven ni se persisten y que los intentos fallidos se auditan con un marcador genérico.
+- Descargar ambos manifiestos tras registrar una transferencia; verificar digests, datos de transferencia y estado de la cadena. Los digests no son firmas digitales.
+- Revisar navegación, teclado, foco, ventana estrecha y lector de pantalla; la prueba automática de Chromium no sustituye una revisión visual humana.
+- Confirmar la protección efectiva de `main` según el [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73); no confundir ese control con los tests sintéticos.
+
+### Brechas que impiden llamarlo listo para evidencia real
+
+- Autenticación individual, roles y separación de funciones.
+- Captura explícita de la persona que recibe durante la recepción inicial (distinta del nombre del operador que introduce los datos).
+- Informe formal y reproducible, con herramientas/versiones, resultados, limitaciones, disposición y autorización/firma.
+- Algoritmos adicionales y procedimientos de adquisición; ahora se calcula SHA-256 de una copia designada y no se crea una imagen forense.
+- Firma o anclaje externo independiente de auditoría, almacenamiento/retención con controles operativos y revisión independiente.
+
+No sacar del borrador ni integrar en `main` hasta que la última cabeza pase la matriz CI completa y se registre la revisión manual de esta versión exacta.
+
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
 **Objetivo:** evolucionar desde una lista de observaciones hacia un flujo de triaje útil, sin exagerar lo que una señal demuestra.

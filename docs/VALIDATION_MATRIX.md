@@ -152,6 +152,7 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - [ ] FOR-MAN-06 — Confirmar que la API bloquea nuevas recepciones/comprobaciones tras cerrar el caso y que el historial previo se mantiene.
 - [ ] FOR-MAN-07 — Confirmar la navegación Red/Forense, selección de temas, foco de teclado y lectura en ventana estrecha.
 - [ ] FOR-MAN-08 — En macOS/Linux, probar con permisos de carpeta inicialmente abiertos y confirmar que se restrinjan a `0700`; confirmar que un fallo al restringir permisos bloquea la lectura. En Windows, revisar el comportamiento bajo las ACL locales.
+- [ ] FOR-MAN-09 — Registrar dos transferencias consecutivas y confirmar continuidad del custodio; después intentar una transferencia con remitente incorrecto, caso cerrado y cadena de auditoría alterada. Los rechazos no deben añadir eventos ni ocultar el estado de integridad.
 
 **Registro de la revisión Forense:**
 - Fecha y zona horaria:
@@ -186,5 +187,6 @@ Usar un directorio de datos aislado y **archivos sintéticos**. No probar con ev
 - [ ] **FOR-07 — Interfaz y accesibilidad:** navegar con teclado, probar foco y mensajes de estado, tema claro/oscuro, ventana estrecha y lector de pantalla disponible. Anotar navegador y versión.
 - [ ] **FOR-08 — Revisión visual real:** revisar la pantalla en escritorio y ventana estrecha y adjuntar capturas sanitizadas; la ejecución automática de Chromium no reemplaza esta revisión humana.
 - [ ] **FOR-09 — Manifiesto consolidado:** exportar el expediente con datos sintéticos; verificar el digest externo y la auditoría incluida; confirmar caso, elementos, checks y eventos; comprobar que la salida no contiene contenido binario ni rutas absolutas y que la cadena de auditoría inválida produce un resultado no aprobado.
+- [ ] **FOR-10 — Transferencia de custodia:** registrar una entrega con remitente, receptor, fecha/hora con offset, motivo y método; comprobar que aparece en auditoría y ambos manifiestos. Verificar que la continuidad se imponga y que una cadena rota no acepte nuevas transferencias.
 
 **Registro de Forense:** commit exacto, sistema operativo y versión, versión de Python, navegador y versión, comandos utilizados, resultado de cada caso, problemas observados y enlaces a logs/capturas sanitizados. Todos los casos comienzan pendientes; no inferir aprobación manual a partir de CI.

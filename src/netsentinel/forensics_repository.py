@@ -437,6 +437,98 @@ def list_integrity_checks(*, case_id: str, evidence_id: str) -> list[dict[str, A
     return [_integrity_check_dict(row) for row in rows]
 
 
+def record_custody_transfer(
+    *,
+    case_id: str,
+    evidence_id: str,
+    actor: str,
+    from_custodian: str,
+    to_custodian: str,
+    transferred_at_original: str,
+    purpose: str,
+    delivery_method: str,
+    condition_notes: str | None,
+    seal_identifier: str | None,
+) -> dict[str, Any] | None:
+    """Registra una transferencia como evento inmutable en la auditoría encadenada."""
+    with connect() as db:
+        # Serializa los traspasos con el cierre y con otras operaciones del caso.
+        db.execute("BEGIN IMMEDIATE")
+        case = _get_case_row(db, case_id)
+        evidence = db.execute(
+            """SELECT evidence_number FROM forensic_evidence
+               WHERE case_id = ? AND id = ?""",
+            (case_id, evidence_id),
+        ).fetchone()
+        if case is None or evidence is None:
+            return None
+        if case["status"] != "open":
+            raise ForensicConflictError(
+                "El caso está cerrado. No se pueden registrar nuevas transferencias de custodia."
+            )
+
+        # No agregues una transferencia sobre una cadena ya rota: primero debe revisarse.
+        prior_events = _audit_events_from_connection(db, case_id=case_id, limit=None)
+        if any(event["integrity_status"] != "valid" for event in prior_events):
+            raise ForensicConflictError(
+                "La cadena de auditoría ya presenta faltantes o cambios. "
+                "Revisá la integridad antes de registrar otra transferencia."
+            )
+
+        prior_transfer = db.execute(
+            """SELECT details_json FROM forensic_audit
+               WHERE case_id = ? AND evidence_id = ?
+                 AND action = 'evidence_custody_transferred'
+               ORDER BY id DESC LIMIT 1""",
+            (case_id, evidence_id),
+        ).fetchone()
+        if prior_transfer is None:
+            expected_from = db.execute(
+                "SELECT received_from FROM forensic_evidence WHERE case_id = ? AND id = ?",
+                (case_id, evidence_id),
+            ).fetchone()["received_from"]
+        else:
+            try:
+                expected_from = json.loads(prior_transfer["details_json"]).get("to_custodian")
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                expected_from = None
+        if (
+            not expected_from
+            or expected_from.strip().casefold() != from_custodian.strip().casefold()
+        ):
+            raise ForensicConflictError(
+                "La persona que entrega no coincide con la última custodia registrada. "
+                "Revisá la persona indicada o documentá primero el traspaso que falta."
+            )
+
+        now = utc_now()
+        details = {
+            "evidence_number": evidence["evidence_number"],
+            "from_custodian": from_custodian,
+            "to_custodian": to_custodian,
+            "transferred_at_original": transferred_at_original,
+            "purpose": purpose,
+            "delivery_method": delivery_method,
+            "condition_notes": condition_notes,
+            "seal_identifier": seal_identifier,
+        }
+        _append_audit(
+            db,
+            case_id=case_id,
+            evidence_id=evidence_id,
+            actor=actor,
+            action="evidence_custody_transferred",
+            result="success",
+            details=details,
+        )
+        db.execute(
+            "UPDATE forensic_cases SET updated_at = ? WHERE id = ?",
+            (now, case_id),
+        )
+        event = _audit_events_from_connection(db, case_id=case_id, limit=1)[0]
+    return event
+
+
 def _audit_events_from_connection(
     db: sqlite3.Connection, *, case_id: str, limit: int | None
 ) -> list[dict[str, Any]]:

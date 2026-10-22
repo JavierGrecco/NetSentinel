@@ -69,6 +69,21 @@ class EvidenceHashCheckRequest(BaseModel):
     confirm_working_copy: bool = Field(strict=True)
 
 
+class CustodyTransferRequest(BaseModel):
+    """Datos declarados para registrar la entrega de un elemento entre custodios."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    from_custodian: str = Field(min_length=1, max_length=160)
+    to_custodian: str = Field(min_length=1, max_length=160)
+    transferred_at_original: str = Field(min_length=1, max_length=64)
+    purpose: str = Field(min_length=1, max_length=500)
+    delivery_method: str = Field(min_length=1, max_length=160)
+    condition_notes: str | None = Field(default=None, max_length=500)
+    seal_identifier: str | None = Field(default=None, max_length=120)
+    actor: str = Field(min_length=1, max_length=120)
+
+
 def _case_or_404(case_id: UUID) -> dict:
     """Busca un caso sin reflejar en el error datos enviados por el cliente."""
     case = forensics_service.get_case(str(case_id))
@@ -141,6 +156,32 @@ def register_forensic_evidence(case_id: UUID, body: EvidenceCreateRequest) -> di
     if evidence is None:
         raise HTTPException(status_code=404, detail="No se encontró el caso solicitado.")
     return evidence
+
+
+@router.post(
+    "/api/forensics/cases/{case_id}/evidence/{evidence_id}/custody-transfers",
+    status_code=status.HTTP_201_CREATED,
+)
+def register_forensic_custody_transfer(
+    case_id: UUID,
+    evidence_id: UUID,
+    body: CustodyTransferRequest,
+) -> dict:
+    """Registra una transferencia como evento inmutable y encadenado de auditoría."""
+    _case_or_404(case_id)
+    try:
+        event = forensics_service.record_custody_transfer(
+            case_id=str(case_id),
+            evidence_id=str(evidence_id),
+            **body.model_dump(),
+        )
+    except forensics_service.ForensicConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if event is None:
+        raise HTTPException(status_code=404, detail="No se encontró el elemento de evidencia del caso.")
+    return event
 
 
 @router.post("/api/forensics/cases/{case_id}/evidence/{evidence_id}/verify-hash")

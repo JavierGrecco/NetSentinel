@@ -558,7 +558,48 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
     if "forensics-working-copies" in page.locator("#forensicAuditList").inner_text():
         return ["el historial forense mostró la ubicación local de las copias de trabajo"]
 
-    # Comprueba el recorrido real del nuevo botón y verifica el archivo que descarga.
+    # Registra un traspaso sintético desde la UI y confirma que se encadena a la auditoría.
+    try:
+        transfer_panel = page.locator("#forensicEvidenceList details.forensic-transfer-panel")
+        if transfer_panel.count() != 1:
+            return ["no se encontró el formulario para registrar transferencia de custodia"]
+        if transfer_panel.get_attribute("open") is None:
+            transfer_panel.locator("summary").click()
+        transfer_panel.locator("input[name='from_custodian']").fill("Fuente sintética")
+        transfer_panel.locator("input[name='to_custodian']").fill("Examinador sintético UI")
+        transfer_panel.locator("input[name='transferred_at_original']").fill("2026-10-22T11:00:00-03:00")
+        transfer_panel.locator("textarea[name='purpose']").fill("Entrega sintética para examen de laboratorio.")
+        transfer_panel.locator("input[name='delivery_method']").fill("Entrega presencial simulada")
+        transfer_panel.locator("textarea[name='condition_notes']").fill("Embalaje sintético íntegro.")
+        transfer_panel.locator("input[name='seal_identifier']").fill("SELLO-UI-001")
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/custody-transfers"),
+            timeout=10000,
+        ) as response_info:
+            transfer_panel.locator("button[type='submit']").click()
+        transfer_response = response_info.value
+        if transfer_response.status != 201:
+            failures.append(f"la transferencia desde la interfaz respondió HTTP {transfer_response.status}")
+        transfer_payload = transfer_response.json()
+        if transfer_payload.get("action") != "evidence_custody_transferred":
+            failures.append("la respuesta no identifica el evento de transferencia de custodia")
+        if transfer_payload.get("integrity_status") != "valid":
+            failures.append("la nueva transferencia no quedó en una cadena de auditoría válida")
+        page.wait_for_function(
+            """() => {
+              const audit = document.querySelector("#forensicAuditList");
+              return audit &&
+                audit.textContent.includes("Transferencia de custodia registrada") &&
+                audit.textContent.includes("Examinador sintético UI") &&
+                audit.textContent.includes("Integridad del evento: válida");
+            }""",
+            timeout=8000,
+        )
+    except Exception as exc:
+        return [f"la transferencia de custodia no funcionó desde Chromium: {exc}"]
+
+    # Comprueba el recorrido real de los dos formatos de exportación.
     export_button = page.locator("#exportForensicCaseManifest")
     if export_button.count() != 1:
         failures.append("falta el botón para exportar el expediente consolidado")
@@ -589,6 +630,12 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
             failures.append("la exportación no conserva una cadena de auditoría sintética válida")
         if summary.get("failed_check_count", 0) < 1:
             failures.append("el expediente no incluye la comprobación sintética fallida")
+        audit_events = manifest.get("audit_manifest", {}).get("events", [])
+        transfer_events = [event for event in audit_events if event.get("action") == "evidence_custody_transferred"]
+        if len(transfer_events) != 1:
+            failures.append("el expediente no incluye exactamente el traspaso sintético recién registrado")
+        elif transfer_events[0].get("details", {}).get("to_custodian") != "Examinador sintético UI":
+            failures.append("el expediente no conserva a la persona que recibe el traspaso")
         exported_text = Path(download_path).read_text(encoding="utf-8")
         if "forensics-working-copies" in exported_text:
             failures.append("el expediente descargado revela la carpeta de copias de trabajo")
@@ -615,6 +662,12 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
                 integrity = audit_manifest.get("integrity", {})
                 if integrity.get("status") != "valid":
                     failures.append("la auditoría exportada no informa una cadena íntegra para el caso sintético")
+                exported_transfers = [
+                    event for event in audit_manifest.get("events", [])
+                    if event.get("action") == "evidence_custody_transferred"
+                ]
+                if len(exported_transfers) != 1:
+                    failures.append("el manifiesto de auditoría no contiene el traspaso sintético")
                 audit_text = Path(audit_path).read_text(encoding="utf-8")
                 if "forensics-working-copies" in audit_text:
                     failures.append("el manifiesto de auditoría revela la carpeta de copias de trabajo")
@@ -872,15 +925,15 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
     failures: list[str] = []
     try:
         steps = page.locator("[data-guided-step]")
-        if steps.count() != 16:
-            return [f"la guía mostró {steps.count()} pasos en lugar de 16"]
+        if steps.count() != 17:
+            return [f"la guía mostró {steps.count()} pasos en lugar de 17"]
         setup_step = page.locator('[data-guided-step="setup"]')
         if setup_step.count() != 1:
             return ["falta la casilla para confirmar la preparación del laboratorio"]
 
         page.locator("#resetGuidedProgress").click()
         setup_step.check()
-        if page.locator("#guidedProgressCount").inner_text() != "1 de 16 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "1 de 17 pasos":
             failures.append("el contador de progreso no actualizó el primer paso")
         page.reload(wait_until="load")
         if not page.locator('[data-guided-step="setup"]').is_checked():
@@ -905,7 +958,7 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
         page.locator("#resetGuidedProgress").click()
         if page.locator("[data-guided-step]:checked").count() != 0:
             failures.append("el botón de reinicio no limpió las casillas de la guía")
-        if page.locator("#guidedProgressCount").inner_text() != "0 de 16 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "0 de 17 pasos":
             failures.append("el reinicio no devolvió el contador de la guía a cero")
     except Exception as exc:
         failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")

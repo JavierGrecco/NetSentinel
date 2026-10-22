@@ -118,11 +118,12 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     script = (ROOT / "src/netsentinel/static/guided-test.js").read_text(encoding="utf-8")
     for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests"):
         assert f'id="{scenario_id}"' in html
-    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 16
+    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 17
     assert 'id="copySetupCommand"' in html
     assert "--force" not in html
     assert 'id="guidedProgressBar"' in html
-    assert 'aria-valuemax="16"' in html
+    assert 'aria-valuemax="17"' in html
+    assert 'data-guided-step="forensics-custody-transfer"' in html
     assert 'id="checkMapApi"' in html
     assert 'id="checkForensicsApi"' in html
     assert 'id="copyEvidenceChangeCommand"' in html

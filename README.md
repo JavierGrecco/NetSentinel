@@ -28,6 +28,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
 - [NetSentinel Forense: alcance y etapas](docs/FORENSIC_MODE.md)
 - [Prueba manual de NetSentinel Forense](docs/FORENSIC_MANUAL_TEST.md)
+- [Matriz de preparación pericial y brechas de NetSentinel Forense](docs/FORENSIC_READINESS_MATRIX.md)
 - **Prueba guiada dentro de la aplicación:** abrí `/guided-test` con NetSentinel en marcha.
 - [Escenarios sintéticos guiados](docs/MANUAL_TEST_SCENARIOS.md)
 - [Mapa mundial de IP](docs/WORLD_IP_MAP.md)

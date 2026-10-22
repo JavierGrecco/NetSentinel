@@ -88,9 +88,9 @@
           <p class="guided-kicker">TU RECORRIDO</p>
           <h2 id="guidedProgressTitle">Progreso de la prueba</h2>
         </div>
-        <strong id="guidedProgressCount">0 de 16 pasos</strong>
+        <strong id="guidedProgressCount">0 de 17 pasos</strong>
       </div>
-      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
+      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="17" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
       <p id="guidedProgressText" class="small">Marcá cada paso después de comprobarlo en la aplicación. El avance solo se guarda en este navegador.</p>
       <button type="button" id="resetGuidedProgress" class="quiet tiny">Reiniciar progreso</button>
     </div>
@@ -228,11 +228,14 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       </div>
       <p>Después de registrar y comparar la copia sintética, comprobá que el caso conserve el historial de operaciones.</p>
       <ol class="guided-instructions">
+        <li>En la tarjeta de evidencia, registrá el traspaso sintético desde <code>Generador local de pruebas</code> hacia <code>Examinador sintético</code>, con un motivo y método explícitos. Usá esa misma persona como origen si así aparece en el registro; no inventes un traspaso real.</li>
+        <li>Confirmá que el nuevo evento aparece en el historial y que su integridad figura como válida.</li>
         <li>Seleccioná el caso de prueba y descargá el <strong>manifiesto de auditoría</strong>.</li>
         <li>Descargá el <strong>expediente consolidado del caso</strong>.</li>
         <li>Abrí los dos JSON descargados. Comprobá que correspondan al caso sintético y que el historial incluya el registro de evidencia y las comprobaciones realizadas.</li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>Los dos archivos JSON se descargan y contienen metadatos del caso y la auditoría relevantes. Un hash o digest del manifiesto ayuda a detectar cambios, pero no es una firma digital ni acredita por sí solo la autenticidad.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-custody-transfer"><span>Registré el traspaso sintético y aparece en la auditoría.</span></label>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-audit-manifest"><span>Descargué y revisé el manifiesto de auditoría.</span></label>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case-manifest"><span>Descargué y revisé el expediente consolidado.</span></label>
       <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>

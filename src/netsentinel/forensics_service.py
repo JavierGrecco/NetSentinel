@@ -110,16 +110,16 @@ def _optional_text(value: str | None, field_name: str, max_length: int) -> str |
     return cleaned
 
 
-def _validate_iso_timestamp(value: str) -> str:
+def _validate_iso_timestamp(value: str, field_name: str = "fecha y hora") -> str:
     """Exige fecha ISO-8601 con zona u offset y conserva el texto introducido."""
-    timestamp = _required_text(value, "fecha de recepción", 64)
+    timestamp = _required_text(value, field_name, 64)
     normalized = timestamp[:-1] + "+00:00" if timestamp.endswith("Z") else timestamp
     try:
         parsed = datetime.fromisoformat(normalized)
     except ValueError as exc:
-        raise ValueError("La fecha de recepción debe tener formato ISO-8601.") from exc
+        raise ValueError(f"El campo {field_name} debe tener formato ISO-8601.") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise ValueError("La fecha de recepción debe incluir una zona horaria o un offset.")
+        raise ValueError(f"El campo {field_name} debe incluir una zona horaria o un offset.")
     return timestamp
 
 
@@ -208,12 +208,47 @@ def add_evidence(
         original_name=clean_original_name,
         source_description=_required_text(source_description, "procedencia", 2000),
         received_from=_required_text(received_from, "persona o fuente que entrega", 160),
-        received_at_original=_validate_iso_timestamp(received_at_original),
+        received_at_original=_validate_iso_timestamp(received_at_original, "fecha de recepción"),
         received_timezone=_required_text(received_timezone, "zona horaria", 80),
         size_bytes=size_bytes,
         reported_sha256=reported_hash,
         hash_source=normalized_hash_source,
         actor=_required_text(actor, "operador", 120),
+    )
+
+
+
+def record_custody_transfer(
+    *,
+    case_id: str,
+    evidence_id: str,
+    actor: str,
+    from_custodian: str,
+    to_custodian: str,
+    transferred_at_original: str,
+    purpose: str,
+    delivery_method: str,
+    condition_notes: str | None = None,
+    seal_identifier: str | None = None,
+) -> dict[str, Any] | None:
+    """Valida y registra el traspaso sin modificar los metadatos anteriores."""
+    clean_from = _required_text(from_custodian, "persona que entrega", 160)
+    clean_to = _required_text(to_custodian, "persona que recibe", 160)
+    if clean_from.casefold() == clean_to.casefold():
+        raise ValueError("La persona que entrega y la que recibe deben ser distintas.")
+    return forensics_repository.record_custody_transfer(
+        case_id=case_id,
+        evidence_id=evidence_id,
+        actor=_required_text(actor, "operador que registra", 120),
+        from_custodian=clean_from,
+        to_custodian=clean_to,
+        transferred_at_original=_validate_iso_timestamp(
+            transferred_at_original, "fecha y hora de la transferencia"
+        ),
+        purpose=_required_text(purpose, "motivo de la transferencia", 500),
+        delivery_method=_required_text(delivery_method, "método de entrega", 160),
+        condition_notes=_optional_text(condition_notes, "estado del embalaje o elemento", 500),
+        seal_identifier=_optional_text(seal_identifier, "identificador del precinto", 120),
     )
 
 

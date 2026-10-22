@@ -414,6 +414,196 @@ def test_audit_chain_migration_backfills_existing_events_once(monkeypatch, tmp_p
         assert len(audit.json()["items"][0]["event_hash"]) == 64
 
 
+def _registered_synthetic_evidence(client, case_id):
+    """Crea una ficha mínima, sin adjuntar ni abrir archivos."""
+    response = client.post(
+        f"/api/forensics/cases/{case_id}/evidence",
+        json={
+            "label": "Elemento sintético para traspaso",
+            "source_type": "file_copy",
+            "original_name": "custody-sample.bin",
+            "source_description": "Metadatos ficticios para probar transferencias de custodia.",
+            "received_from": "Custodio inicial",
+            "received_at_original": "2026-10-15T12:00:00Z",
+            "received_timezone": "UTC",
+            "actor": "Operador que recibe",
+        },
+        headers={"Origin": "http://127.0.0.1"},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def _custody_transfer_payload(**overrides):
+    payload = {
+        "from_custodian": "Custodio inicial",
+        "to_custodian": "Examinador de prueba",
+        "transferred_at_original": "2026-10-21T14:20:00-03:00",
+        "purpose": "Entrega autorizada para revisión técnica sintética.",
+        "delivery_method": "Entrega presencial en sobre cerrado",
+        "condition_notes": "Sobre íntegro; sin daños visibles.",
+        "seal_identifier": "SELLO-LAB-001",
+        "actor": "Operador que documenta",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_custody_transfer_is_chained_and_included_in_both_manifests(monkeypatch, tmp_path):
+    """Cada entrega conserva quién da, quién recibe y su motivo en la auditoría exportada."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _registered_synthetic_evidence(client, case["id"])
+        url = (
+            f"/api/forensics/cases/{case['id']}/evidence/"
+            f"{evidence['id']}/custody-transfers"
+        )
+        response = client.post(
+            url,
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        audit_response = client.get(f"/api/forensics/cases/{case['id']}/audit")
+        audit_manifest_response = client.get(
+            f"/api/forensics/cases/{case['id']}/audit/manifest"
+        )
+        case_manifest_response = client.get(
+            f"/api/forensics/cases/{case['id']}/manifest"
+        )
+
+    assert response.status_code == 201, response.text
+    transfer = response.json()
+    assert transfer["action"] == "evidence_custody_transferred"
+    assert transfer["result"] == "success"
+    assert transfer["integrity_status"] == "valid"
+    assert transfer["evidence_id"] == evidence["id"]
+    assert transfer["details"]["from_custodian"] == "Custodio inicial"
+    assert transfer["details"]["to_custodian"] == "Examinador de prueba"
+    assert transfer["details"]["transferred_at_original"] == "2026-10-21T14:20:00-03:00"
+    assert transfer["details"]["purpose"].startswith("Entrega autorizada")
+    assert transfer["details"]["delivery_method"] == "Entrega presencial en sobre cerrado"
+    assert transfer["details"]["condition_notes"] == "Sobre íntegro; sin daños visibles."
+    assert transfer["details"]["seal_identifier"] == "SELLO-LAB-001"
+
+    audit = audit_response.json()["items"]
+    assert audit[0]["action"] == "evidence_custody_transferred"
+    assert all(item["integrity_status"] == "valid" for item in audit)
+    assert audit_manifest_response.status_code == 200
+    audit_manifest = audit_manifest_response.json()
+    assert audit_manifest["integrity"]["status"] == "valid"
+    assert "evidence_custody_transferred" in [
+        event["action"] for event in audit_manifest["events"]
+    ]
+    assert verify_audit_manifest(audit_manifest) is True
+
+    assert case_manifest_response.status_code == 200
+    case_manifest = case_manifest_response.json()
+    assert case_manifest["summary"]["audit_chain_status"] == "valid"
+    assert any(
+        event["action"] == "evidence_custody_transferred"
+        for event in case_manifest["audit_manifest"]["events"]
+    )
+
+
+def test_custody_transfer_rejects_missing_offset_same_custodian_and_closed_case(
+    monkeypatch, tmp_path
+):
+    """Una transferencia no puede ser ambigua ni añadirse a un caso cerrado."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _registered_synthetic_evidence(client, case["id"])
+        url = (
+            f"/api/forensics/cases/{case['id']}/evidence/"
+            f"{evidence['id']}/custody-transfers"
+        )
+        missing_offset = client.post(
+            url,
+            json=_custody_transfer_payload(
+                transferred_at_original="2026-10-21T14:20:00"
+            ),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        same_person = client.post(
+            url,
+            json=_custody_transfer_payload(to_custodian="custodio INICIAL"),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        wrong_sender = client.post(
+            url,
+            json=_custody_transfer_payload(from_custodian="Custodio no registrado"),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        close = client.post(
+            f"/api/forensics/cases/{case['id']}/close",
+            json={"actor": "Operador que documenta"},
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        closed_case = client.post(
+            url,
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        unknown_evidence = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/"
+            "00000000-0000-0000-0000-000000000001/custody-transfers",
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+
+    assert missing_offset.status_code == 422
+    assert "zona horaria o un offset" in missing_offset.json()["detail"]
+    assert same_person.status_code == 422
+    assert "deben ser distintas" in same_person.json()["detail"]
+    assert wrong_sender.status_code == 409
+    assert "no coincide con la última custodia" in wrong_sender.json()["detail"]
+    assert close.status_code == 200
+    assert closed_case.status_code == 409
+    assert "caso está cerrado" in closed_case.json()["detail"]
+    assert unknown_evidence.status_code == 404
+
+
+def test_custody_transfer_refuses_to_extend_a_broken_audit_chain(monkeypatch, tmp_path):
+    """Una cadena dañada debe revisarse, no alargarse como si siguiera íntegra."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _registered_synthetic_evidence(client, case["id"])
+        with database.connect() as db:
+            first = db.execute(
+                "SELECT id FROM forensic_audit WHERE case_id = ? ORDER BY id ASC LIMIT 1",
+                (case["id"],),
+            ).fetchone()
+            assert first is not None
+            db.execute("DROP TRIGGER IF EXISTS forensic_audit_no_update")
+            db.execute(
+                "UPDATE forensic_audit SET action = 'tampered_before_transfer' WHERE id = ?",
+                (first["id"],),
+            )
+        audit_before = client.get(f"/api/forensics/cases/{case['id']}/audit").json()["items"]
+        transfer = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence['id']}/custody-transfers",
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        audit_after = client.get(f"/api/forensics/cases/{case['id']}/audit").json()["items"]
+
+    assert any(event["integrity_status"] == "invalid" for event in audit_before)
+    assert transfer.status_code == 409
+    assert "cadena de auditoría ya presenta" in transfer.json()["detail"]
+    assert len(audit_after) == len(audit_before)
+
+
 def test_hash_comparison_records_match_then_mismatch_without_storing_full_path(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")

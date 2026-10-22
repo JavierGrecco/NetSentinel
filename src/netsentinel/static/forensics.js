@@ -12,6 +12,7 @@
     case_opened: "Caso abierto",
     case_closed: "Caso cerrado",
     evidence_registered: "Evidencia registrada",
+    evidence_custody_transferred: "Transferencia de custodia registrada",
     evidence_hash_compared: "Hash comparado",
     evidence_hash_check_failed: "Falló la comparación del hash"
   };
@@ -196,6 +197,136 @@
     return panel;
   }
 
+  function addCustodyField(form, itemId, labelText, name, value, options = {}) {
+    const wrapper = element("div", options.wide ? "forensic-field forensic-field-wide" : "forensic-field");
+    const id = "forensic-custody-" + name + "-" + itemId;
+    const label = element("label", "", labelText);
+    label.htmlFor = id;
+    let control;
+    if (options.multiline) {
+      control = document.createElement("textarea");
+      control.rows = options.rows || 2;
+    } else {
+      control = document.createElement("input");
+      control.type = options.type || "text";
+    }
+    control.id = id;
+    control.name = name;
+    control.value = value || "";
+    control.maxLength = options.maxLength || 500;
+    control.required = options.required !== false;
+    if (options.pattern) control.pattern = options.pattern;
+    if (options.placeholder) control.placeholder = options.placeholder;
+    if (options.autocomplete) control.autocomplete = options.autocomplete;
+    wrapper.append(label, control);
+    if (options.help) wrapper.append(element("span", "", options.help));
+    form.append(wrapper);
+    return control;
+  }
+
+  function createCustodyTransferPanel(item) {
+    const panel = element("details", "forensic-transfer-panel");
+    panel.append(element("summary", "", "Registrar transferencia de custodia"));
+    const intro = element(
+      "p",
+      "forensic-evidence-description",
+      "Registrá la entrega real con datos observados. La hora de la transferencia se conserva aparte de la hora en que NetSentinel registra el evento. El nombre del operador es declarado, no autenticado."
+    );
+    const form = element("form", "forensic-form-grid forensic-custody-form");
+    const previousTransfer = state.audit.find((event) =>
+      event.action === "evidence_custody_transferred" && event.evidence_id === item.id
+    );
+    const knownSender = previousTransfer && previousTransfer.details
+      ? previousTransfer.details.to_custodian
+      : item.received_from;
+    addCustodyField(form, item.id, "Persona que entrega", "from_custodian", knownSender, {
+      maxLength: 160,
+      autocomplete: "off",
+      help: "Se propone el último destinatario registrado o, si no hay transferencias, la fuente que entregó el elemento."
+    });
+    addCustodyField(form, item.id, "Persona que recibe", "to_custodian", "", {
+      maxLength: 160,
+      autocomplete: "off"
+    });
+    addCustodyField(form, item.id, "Fecha/hora de la entrega (ISO-8601 con offset)", "transferred_at_original",
+      currentLocalTimestampWithOffset(), {
+        maxLength: 64,
+        autocomplete: "off",
+        pattern: "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})",
+        help: "Es la fecha/hora declarada de la entrega, no el sello de tiempo del servidor."
+      });
+    addCustodyField(form, item.id, "Motivo de la transferencia", "purpose", "", {
+      maxLength: 500,
+      multiline: true,
+      rows: 2,
+      wide: true,
+      placeholder: "Ej.: entrega para examen autorizado"
+    });
+    addCustodyField(form, item.id, "Método de entrega", "delivery_method", "", {
+      maxLength: 160,
+      placeholder: "Ej.: entrega presencial en sobre sellado"
+    });
+    addCustodyField(form, item.id, "Estado del elemento o embalaje", "condition_notes", "", {
+      maxLength: 500,
+      required: false,
+      multiline: true,
+      wide: true,
+      help: "Opcional. Describí el estado observado; no afirmes algo que no hayas comprobado."
+    });
+    addCustodyField(form, item.id, "Identificador del precinto", "seal_identifier", "", {
+      maxLength: 120,
+      required: false,
+      placeholder: "Opcional, si existe"
+    });
+
+    const actions = element("div", "forensic-form-actions");
+    const submit = element("button", "primary", "Registrar transferencia");
+    submit.type = "submit";
+    actions.append(submit);
+    form.append(actions);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (state.busy || !state.selectedCaseId) return;
+      if (!state.selectedCase || state.selectedCase.status !== "open") {
+        setStatus("El caso está cerrado. No se pueden registrar nuevas transferencias.", "error");
+        return;
+      }
+      const actor = operatorName();
+      if (!actor || !form.reportValidity()) return;
+      const caseId = state.selectedCaseId;
+      const values = Object.fromEntries(new FormData(form).entries());
+      values.actor = actor;
+      for (const key of ["condition_notes", "seal_identifier"]) {
+        values[key] = values[key] || null;
+      }
+
+      state.busy = true;
+      submit.disabled = true;
+      setStatus("Registrando la transferencia y encadenándola a la auditoría…");
+      try {
+        const result = await api(
+          "/api/forensics/cases/" + encodeURIComponent(caseId)
+            + "/evidence/" + encodeURIComponent(item.id) + "/custody-transfers",
+          { method: "POST", body: JSON.stringify(values) }
+        );
+        state.busy = false;
+        await selectCase(caseId);
+        setStatus(
+          "Transferencia registrada para " + item.evidence_number
+            + ". Revisá la continuidad y el estado de integridad de la auditoría.",
+          result.integrity_status === "valid" ? "success" : "error"
+        );
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        state.busy = false;
+        submit.disabled = false;
+      }
+    });
+    panel.append(intro, form);
+    return panel;
+  }
+
   function renderEvidence() {
     const list = $("forensicEvidenceList");
     list.replaceChildren();
@@ -220,7 +351,20 @@
       addMetaLine(meta, "Entregado por", item.received_from);
       addMetaLine(meta, "Fecha de recepción", item.received_at_original + " · " + item.received_timezone);
       addMetaLine(meta, "Tamaño", item.size_bytes === null ? "No informado" : Number(item.size_bytes).toLocaleString() + " bytes");
-      addMetaLine(meta, "Registrado", item.created_at);
+      addMetaLine(meta, "Registrado en NetSentinel", item.created_at);
+      const latestTransfer = state.audit.find((event) =>
+        event.action === "evidence_custody_transferred" && event.evidence_id === item.id
+      );
+      if (latestTransfer && latestTransfer.details) {
+        addMetaLine(meta, "Último destinatario registrado", latestTransfer.details.to_custodian);
+        addMetaLine(meta, "Fecha declarada de transferencia", latestTransfer.details.transferred_at_original);
+        if (latestTransfer.integrity_status !== "valid") {
+          card.append(element("p", "forensic-check-summary forensic-check-failed",
+            "Advertencia: el evento de transferencia no tiene integridad válida en la cadena de auditoría."));
+        }
+      } else {
+        addMetaLine(meta, "Historial de transferencias", "No hay transferencias posteriores registradas");
+      }
       card.append(meta);
       if (item.reported_sha256) {
         card.append(element("code", "forensic-hash-value", "SHA-256 declarado: " + item.reported_sha256));
@@ -252,6 +396,12 @@
             "El caso está cerrado; se conservan las comprobaciones anteriores, pero no se permiten nuevas operaciones."));
         }
       }
+      if (state.selectedCase && state.selectedCase.status === "open") {
+        card.append(createCustodyTransferPanel(item));
+      } else {
+        card.append(element("p", "forensic-evidence-description",
+          "El caso está cerrado; se conservan las transferencias anteriores, pero no se permiten nuevas operaciones."));
+      }
       list.append(card);
     });
   }
@@ -268,8 +418,32 @@
       const copy = element("div");
       copy.append(element("strong", "", actionLabels[item.action] || item.action));
       copy.append(element("p", "", item.actor + " · " + item.occurred_at));
+      const integrityStatus = item.integrity_status || "missing";
+      const integrityMessage = integrityStatus === "valid"
+        ? "Integridad del evento: válida"
+        : integrityStatus === "missing"
+          ? "Integridad del evento: falta la huella de auditoría"
+          : "Integridad del evento: inválida; revisar la cadena";
+      copy.append(element(
+        "p",
+        "forensic-audit-integrity forensic-check-" + integrityStatus,
+        integrityMessage
+      ));
+      const detailLabels = {
+        evidence_number: "Elemento",
+        from_custodian: "Entrega",
+        to_custodian: "Recibe",
+        transferred_at_original: "Fecha/hora declarada",
+        purpose: "Motivo",
+        delivery_method: "Método de entrega",
+        condition_notes: "Estado",
+        seal_identifier: "Precinto"
+      };
       const detailEntries = item.details ? Object.entries(item.details) : [];
-      const details = detailEntries.map(([key, value]) => key + ": " + String(value)).join(" · ");
+      const details = detailEntries
+        .filter(([, value]) => value !== null && value !== undefined && value !== "")
+        .map(([key, value]) => (detailLabels[key] || key) + ": " + String(value))
+        .join(" · ");
       if (details) copy.append(element("p", "", details));
       row.append(copy);
       list.append(row);
