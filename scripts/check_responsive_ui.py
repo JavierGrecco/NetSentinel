@@ -1644,6 +1644,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "Comprobar que el laboratorio está preparado" not in page.locator("#wizardStepTitle").inner_text():
             failures.append("el botón Empezar no condujo al primer paso")
             return failures
+        if page.evaluate("document.activeElement && document.activeElement.id") != "wizardStepTitle":
+            failures.append("el foco no anunció el título del paso nuevo después de empezar")
 
         # Un prerrequisito ausente debe detener la prueba, no crear una cascada de fallos.
         page.route(
@@ -1686,6 +1688,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "topología guardada" not in page.locator("#wizardStepTitle").inner_text().lower():
             failures.append("el asistente no avanzó a la comprobación de topología")
             return failures
+        if page.evaluate("document.activeElement && document.activeElement.id") != "wizardStepTitle":
+            failures.append("el foco no se trasladó al título tras avanzar al paso de topología")
 
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(

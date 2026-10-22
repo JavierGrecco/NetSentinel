@@ -706,12 +706,13 @@
       { label: "Lectura de topología", value: scan ? "Lectura #" + scan.id + " · origen synthetic-test-fixture · " + (scan.devices_found || "activos registrados") : scansResponse.ok ? "No se encontró la lectura synthetic-test-fixture" : "No se pudo consultar el historial (HTTP " + scansResponse.status + ")", ok: Boolean(scan) }
     ];
     const ok = details.every((item) => item.ok);
+    const unmet = details.filter((item) => !item.ok).map((item) => item.label + ": " + item.value);
     return {
       ok,
       details,
       summary: ok
         ? "El servicio, el dispositivo ficticio y la lectura sintética están disponibles. No se ejecutó un escaneo."
-        : "El servidor respondió parcialmente, pero falta una condición necesaria para una prueba aislada. Revisá las filas y la ayuda de preparación antes de continuar."
+        : "No se puede continuar todavía. " + unmet.join(" · ") + ". Revisá la ayuda de preparación y volvé a comprobar."
     };
   }
 
@@ -990,6 +991,16 @@
     if (!copied) throw new Error("El navegador no permitió copiar. Podés descargar el informe .txt.");
   }
 
+  function focusCurrentStepTitle() {
+    const title = $("wizardStepTitle");
+    if (!title) return;
+    try {
+      title.focus({ preventScroll: true });
+    } catch (_) {
+      title.focus();
+    }
+  }
+
   function advance() {
     const step = steps[state.currentStep];
     const record = step.track ? recordFor(step) : null;
@@ -1001,6 +1012,7 @@
     if (steps[state.currentStep].type === "summary" && !state.finishedAt) state.finishedAt = new Date().toISOString();
     saveState();
     renderStep();
+    focusCurrentStepTitle();
     window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
@@ -1008,6 +1020,7 @@
     state.currentStep = Math.max(0, state.currentStep - 1);
     saveState();
     renderStep();
+    focusCurrentStepTitle();
     window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
@@ -1073,6 +1086,7 @@
     saveState();
     $("wizardRecoveryDetails").open = false;
     renderStep();
+    focusCurrentStepTitle();
     showMessage("Recorrido reiniciado. La base y los datos sintéticos siguen intactos.", "success");
     window.scrollTo({ top: 0, behavior: "auto" });
   });

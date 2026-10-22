@@ -113,6 +113,7 @@
         <ol>
           <li>Detené el servidor con <kbd>Ctrl+C</kbd> en la terminal donde corre.</li>
           <li>Desde la raíz de esta copia del repositorio, ejecutá el bloque completo de abajo en una terminal y usá el nuevo servidor que arranque al final.</li>
+          <li>Cuando la terminal indique que el servidor está listo, volvé al navegador, recargá esta página y pulsá «Comprobar de nuevo». El recorrido debe permanecer en el paso de preparación.</li>
         </ol>
         <pre class="wizard-command"><code id="wizardRecoveryCommand">LAB_STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$LAB_STAMP"
@@ -140,7 +141,7 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
           <span id="wizardStepPhase" class="wizard-step-phase">ANTES DE EMPEZAR</span>
           <span id="wizardStepCounter" class="wizard-step-counter">Introducción</span>
         </div>
-        <h2 id="wizardStepTitle">Vamos a validar NetSentinel paso a paso</h2>
+        <h2 id="wizardStepTitle" tabindex="-1">Vamos a validar NetSentinel paso a paso</h2>
         <p id="wizardStepLead" class="wizard-step-lead">No tenés que recorrer la aplicación entera ni recordar una lista de tareas. El asistente te muestra una prueba a la vez.</p>
       </div>
 
