@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Recorrido guiado de validación local para NetSentinel con escenarios sintéticos y resultados esperados.">
+  <title>NetSentinel · Prueba guiada</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/guided-test.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="top app-header">
+    <div class="app-header-content">
+      <div class="app-header-brand-row">
+        <div class="app-brand">
+          <img class="app-brand-mark" src="/static/netsentinel-red.svg" alt="">
+          <div class="app-brand-copy">
+            <div class="eyebrow">Validación local</div>
+            <div class="app-brand-name">NetSentinel</div>
+          </div>
+        </div>
+        <div class="app-header-utilities">
+          <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+            <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+            <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+              <label class="theme-option">
+                <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="theme-option-label">Oscuro</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Medio</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Claro</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-section-heading-row">
+        <div class="app-section-heading">
+          <h1 class="app-section-title">Prueba guiada de NetSentinel</h1>
+          <p class="app-section-description">Escenarios concretos, acciones que tenés que realizar y resultados esperados.</p>
+        </div>
+      </div>
+
+      <nav class="product-switcher" aria-label="Cambiar entre módulos NetSentinel">
+        <a class="product-link is-current" href="/" aria-current="true"><img src="/static/netsentinel-red.svg" alt="" width="24" height="24">NetSentinel Red</a>
+        <a class="product-link" href="/forensics"><img src="/static/netsentinel-forense.svg" alt="" width="24" height="24">NetSentinel Forense</a>
+      </nav>
+
+      <nav class="primary-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="/">Inventario</a>
+        <a class="nav-link" href="/findings">Hallazgos</a>
+        <a class="nav-link" href="/monitors">Monitorización</a>
+        <a class="nav-link" href="/tools">Herramientas</a>
+        <a class="nav-link" href="/activity">Actividad</a>
+        <a class="nav-link" href="/world-map">Mapa mundial</a>
+        <a class="nav-link" aria-current="page" href="/guided-test">Prueba guiada</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="guided-intro" aria-label="Cómo usar esta prueba">
+    <div class="notice guided-scope">
+      <strong>Usá datos sintéticos, no evidencia ni registros reales.</strong>
+      Esta prueba está pensada para una instalación de laboratorio con una base SQLite independiente. No hace falta ejecutar descubrimientos ni diagnósticos sobre tu red.
+    </div>
+    <div class="panel guided-progress" aria-labelledby="guidedProgressTitle">
+      <div class="guided-progress-heading">
+        <div>
+          <p class="guided-kicker">TU RECORRIDO</p>
+          <h2 id="guidedProgressTitle">Progreso de la prueba</h2>
+        </div>
+        <strong id="guidedProgressCount">0 de 19 pasos</strong>
+      </div>
+      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
+      <p id="guidedProgressText" class="small">Marcá cada paso después de comprobarlo en la aplicación. El avance solo se guarda en este navegador.</p>
+      <button type="button" id="resetGuidedProgress" class="quiet tiny">Reiniciar progreso</button>
+    </div>
+  </section>
+
+  <section class="panel guided-setup" aria-labelledby="guidedSetupTitle">
+    <div class="guided-section-heading">
+      <div>
+        <p class="guided-kicker">ANTES DE EMPEZAR · UNA SOLA VEZ POR BASE</p>
+        <h2 id="guidedSetupTitle">Prepará el laboratorio aislado</h2>
+        <p>Si todavía no preparaste los datos sintéticos, ejecutá el bloque desde la raíz de esta copia del repositorio. Crea una base aislada con nombre único, genera CSV en una carpeta visible con nombre único y prepara el archivo ficticio para Forense. Imprime ambas rutas. Conserva las carpetas previas y no las sobrescribe.</p>
+      </div>
+      <button type="button" id="copySetupCommand" class="quiet">Copiar comandos</button>
+    </div>
+    <pre class="guided-command"><code id="setupCommand">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[test,geoip]"
+export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$NETSENTINEL_DATA_DIR"
+SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"
+mkdir -p "$(dirname "$SCENARIO_DIR")"
+python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
+python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+printf "NETSENTINEL_DATA_DIR=%s\\nSCENARIO_DIR=%s\\n" "$NETSENTINEL_DATA_DIR" "$SCENARIO_DIR"
+mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
+python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
+./run.sh</code></pre>
+    <p id="copyCommandStatus" class="guided-inline-status" role="status" aria-live="polite"></p>
+    <div class="guided-note"><strong>Importante:</strong> no ejecutes este bloque contra tu instalación habitual. Después de preparar la base, mantené esta terminal abierta y seguí los escenarios desde el navegador. Si ya preparaste esta base y el servidor está en marcha, no vuelvas a sembrarla.</div>
+    <label class="guided-check"><input type="checkbox" data-guided-step="setup"><span>Preparé una base de laboratorio separada y arranqué NetSentinel con esa base.</span></label>
+  </section>
+
+  <section class="guided-scenario-list" aria-label="Escenarios guiados">
+    <article class="panel guided-scenario" id="scenario-csv">
+      <div class="guided-scenario-title">
+        <span class="guided-number">01</span>
+        <div><p class="guided-kicker">IMPORTACIÓN</p><h2>CSV válido y detección de duplicados</h2></div>
+      </div>
+      <p>Validá que la vista previa no escriba eventos y que repetir una importación no duplique los registros.</p>
+      <ol class="guided-instructions">
+        <li>Abrí <code>Actividad</code> y seleccioná el dispositivo <strong>Dispositivo sintético de prueba</strong>.</li>
+        <li>En la carpeta indicada por <code>SCENARIO_DIR</code> al final de la preparación, elegí <code>activity.csv</code> y ejecutá la vista previa.</li>
+        <li>Confirmá la importación y después previsualizá el mismo archivo otra vez.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La vista previa muestra seis filas válidas; después de confirmar, la repetición identifica duplicados en lugar de crear una segunda copia.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="csv-preview"><span>La vista previa mostró seis filas y no guardó eventos.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="csv-import"><span>Confirmé la importación y el resumen informó el resultado.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="csv-duplicates"><span>La repetición reconoció registros duplicados.</span></label>
+      <div class="guided-actions"><a class="primary" href="/activity">Abrir Actividad</a><span class="small">No uses archivos de tus registros personales.</span></div>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-rejections">
+      <div class="guided-scenario-title">
+        <span class="guided-number">02</span>
+        <div><p class="guided-kicker">VALIDACIÓN NEGATIVA</p><h2>Rechazar archivos CSV inseguros</h2></div>
+      </div>
+      <p>Comprobá que la importación falle de forma completa si detecta cabeceras sensibles o ambiguas.</p>
+      <ol class="guided-instructions">
+        <li>Previsualizá <code>activity-invalid-sensitive.csv</code>.</li>
+        <li>Previsualizá <code>activity-invalid-duplicate-header.csv</code>.</li>
+        <li>Volvé a la lista de actividad y comprobá que ningún fragmento del lote rechazado quedó guardado.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>Ambos archivos se rechazan; no hay importación parcial ni se guardan campos sensibles.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="csv-sensitive"><span>El archivo con cabeceras sensibles fue rechazado.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="csv-headers"><span>El archivo con cabeceras duplicadas fue rechazado sin escrituras parciales.</span></label>
+      <div class="guided-actions"><a class="quiet" href="/activity">Volver a Actividad</a></div>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-map">
+      <div class="guided-scenario-title">
+        <span class="guided-number">03</span>
+        <div><p class="guided-kicker">GEOLOCALIZACIÓN</p><h2>Mapa mundial de IP observadas</h2></div>
+      </div>
+      <p>Después de importar <code>activity.csv</code>, comprobá que el mapa usa las IP destino guardadas y no inventa posiciones.</p>
+      <ol class="guided-instructions">
+        <li>Abrí el mapa y revisá el resumen, la tabla y el filtro.</li>
+        <li>Pulsá <strong>Comprobar API</strong> para verificar que la app puede leer el resumen local.</li>
+        <li>Si la base GeoLite2-City falta, revisá que la interfaz lo comunique y no dibuje coordenadas inventadas. Para marcadores reales se necesita una base autorizada instalada localmente.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La cartografía y la tabla cargan; los destinos sin coordenadas siguen visibles en la tabla, pero no se dibujan como puntos.</span></div>
+      <p>Prueba opcional si tenés conexión DNS: en la consulta manual de dominio probá <code>example.com</code>. La pantalla debe aclarar que es una resolución actual y no registrar esa IP como si fuera un evento histórico. Si no tenés conexión, omití ese paso.</p>
+      <label class="guided-check"><input type="checkbox" data-guided-step="map-table"><span>El mapa base, la tabla y el filtro funcionan.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="map-geoip"><span>La ubicación se muestra solo cuando hay coordenadas válidas de la base GeoIP.</span></label>
+      <div class="guided-actions"><a class="primary" href="/world-map">Abrir mapa mundial</a><button type="button" id="checkMapApi" class="quiet">Comprobar API</button></div>
+      <p id="mapApiStatus" class="guided-inline-status" role="status" aria-live="polite">Todavía no se verificó la API del mapa.</p>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-forensics">
+      <div class="guided-scenario-title">
+        <span class="guided-number">04</span>
+        <div><p class="guided-kicker">INTEGRIDAD DE EVIDENCIA</p><h2>NetSentinel Forense: comparar hashes</h2></div>
+      </div>
+      <p>Usá exclusivamente la copia sintética preparada en <code>forensics-working-copies</code>. No registres evidencia real en esta prueba.</p>
+      <ol class="guided-instructions">
+        <li>En el campo de operador, escribí <code>Operador sintético de prueba</code>. Abrí Forense y creá un caso usando los valores de la tarjeta inferior.</li>
+        <li>En ese caso, registrá <code>netsentinel-forensic-sample.bin</code> como una copia de archivo. Usá el SHA-256 que imprimió la preparación como dato informado por la fuente y completá su origen.</li>
+        <li>En la ficha recién registrada, abrí <strong>Comparar con una copia de trabajo</strong>, ingresá solo <code>netsentinel-forensic-sample.bin</code> y marcá la confirmación de que es una copia autorizada. Primero debe coincidir.</li>
+        <li>Desde otra terminal, exportá el mismo <code>NETSENTINEL_DATA_DIR</code> que imprimió la preparación y ejecutá el comando de abajo. Después repetí la comparación en Forense.</li>
+      </ol>
+      <div class="guided-expected guided-values" aria-label="Valores exactos para el caso de prueba"><strong>Valores para completar en el formulario</strong><dl><dt>Identificador</dt><dd><code>LAB-SINTETICO-001</code></dd><dt>Nombre breve</dt><dd><code>Verificación de archivo sintético</code></dd><dt>Autorización</dt><dd><code>AUTORIZACION-DE-PRUEBA</code></dd><dt>Objetivo</dt><dd><code>Probar coincidencia y discrepancia SHA-256 de una muestra sintética.</code></dd><dt>Alcance</dt><dd><code>Solo netsentinel-forensic-sample.bin en forensics-working-copies; sin evidencia real.</code></dd><dt>Examinador</dt><dd><code>Examinador sintético</code></dd><dt>Operador</dt><dd><code>Operador sintético de prueba</code></dd><dt>Descripción breve</dt><dd><code>Muestra sintética de integridad</code></dd><dt>Tipo de fuente</dt><dd><code>Copia de archivo</code></dd><dt>Nombre original</dt><dd><code>netsentinel-forensic-sample.bin</code></dd><dt>Descripción de evidencia</dt><dd><code>Archivo artificial para validar el control de integridad; no es evidencia real.</code></dd><dt>Entregado por</dt><dd><code>Generador local de pruebas</code></dd><dt>Recibido por</dt><dd><code>Examinador sintético</code></dd><dt>Origen del hash</dt><dd><code>SHA-256 calculado por el generador local al crear la muestra</code></dd></dl><p class="small">La hora y zona horaria del formulario se completan automáticamente. El tamaño es opcional. Pegá el hash exacto que imprimió la preparación.</p></div>
+      <div class="guided-section-heading"><div><p class="guided-kicker">SEGUNDA COMPROBACIÓN</p><p>Reemplazá el valor de la variable por la ruta exacta que imprimió la preparación, sin cambiar el resto del comando.</p></div><button type="button" id="copyEvidenceChangeCommand" class="quiet">Copiar comando de cambio</button></div>
+      <pre class="guided-command"><code id="evidenceChangeCommand">export NETSENTINEL_DATA_DIR="PEGAR_AQUI_LA_RUTA_IMPRESA"
+python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v2"); print("Muestra actualizada:", p.name)'</code></pre>
+      <p id="evidenceChangeStatus" class="guided-inline-status" role="status" aria-live="polite"></p>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La copia inicial coincide con el hash de referencia; tras cambiar el contenido, la comprobación detecta la diferencia y conserva el valor declarado por la fuente.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case"><span>Creé un caso de prueba con autorización y alcance ficticios.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-match"><span>La comparación de la copia inicial informó coincidencia.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-mismatch"><span>Tras cambiar el archivo, la comparación detectó una discrepancia.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Abrir NetSentinel Forense</a><button type="button" id="checkForensicsApi" class="quiet">Comprobar API</button></div>
+      <p id="forensicsApiStatus" class="guided-inline-status" role="status" aria-live="polite">Todavía no se verificó la API de Forense.</p>
+      <p class="guided-note"><strong>Límite:</strong> comprobar un hash ayuda a detectar cambios, pero no autentica al operador ni constituye por sí solo una cadena de custodia validada.</p>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-forensics-safety">
+      <div class="guided-scenario-title">
+        <span class="guided-number">05</span>
+        <div><p class="guided-kicker">PRUEBAS NEGATIVAS</p><h2>Forense: rechazar rutas y archivos inexistentes</h2></div>
+      </div>
+      <p>Este escenario verifica que la interfaz solo acceda por nombre a una copia de trabajo dentro de la carpeta restringida y no exponga rutas locales.</p>
+      <ol class="guided-instructions">
+        <li>En la evidencia sintética, volvé a abrir <strong>Comparar con una copia de trabajo</strong>. Probá el nombre <code>missing-sample.bin</code> y confirmá que es una copia de trabajo autorizada.</li>
+        <li>Repetí con <code>../fuera.bin</code>. No crees ese archivo ni uses una ruta real.</li>
+        <li>Revisá el mensaje de la pantalla y la auditoría del caso.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La aplicación rechaza ambos intentos, no lee archivos fuera de la carpeta permitida y no muestra ni conserva una ruta completa en el historial. El error de lectura queda trazado sin revelar información local.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-missing"><span>El archivo inexistente fue rechazado sin revelar rutas.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-traversal"><span>La ruta con <code>..</code> fue rechazada y el historial quedó saneado.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Abrir NetSentinel Forense</a></div>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-forensics-manifests">
+      <div class="guided-scenario-title">
+        <span class="guided-number">06</span>
+        <div><p class="guided-kicker">TRAZABILIDAD</p><h2>Forense: exportar auditoría y expediente</h2></div>
+      </div>
+      <p>Después de registrar y comparar la copia sintética, comprobá que el caso conserve el historial de operaciones.</p>
+      <ol class="guided-instructions">
+        <li>En la tarjeta de evidencia, registrá el traspaso sintético desde <code>Examinador sintético</code> hacia <code>Custodio sintético receptor</code>, con un motivo y método explícitos. Usá esa misma persona como origen si así aparece en el registro; no inventes un traspaso real.</li>
+        <li>Confirmá que el nuevo evento aparece en el historial y que su integridad figura como válida.</li>
+        <li>Seleccioná el caso de prueba y descargá el <strong>manifiesto de auditoría</strong>.</li>
+        <li>Descargá el <strong>expediente consolidado del caso</strong>.</li>
+        <li>Abrí los dos JSON descargados. Comprobá que correspondan al caso sintético y que el historial incluya el registro de evidencia y las comprobaciones realizadas.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>Los dos archivos JSON se descargan y contienen metadatos del caso y la auditoría relevantes. Un hash o digest del manifiesto ayuda a detectar cambios, pero no es una firma digital ni acredita por sí solo la autenticidad.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-custody-transfer"><span>Registré el traspaso sintético y aparece en la auditoría.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-audit-manifest"><span>Descargué y revisé el manifiesto de auditoría.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case-manifest"><span>Descargué y revisé el expediente consolidado.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
+    </article>
+  </section>
+
+    <article class="panel guided-scenario" id="scenario-forensics-report">
+      <div class="guided-scenario-title">
+        <span class="guided-number">07</span>
+        <div><p class="guided-kicker">DOCUMENTACIÓN REPRODUCIBLE</p><h2>Forense: crear y verificar el informe</h2></div>
+      </div>
+      <p>Usá el caso y la evidencia sintéticos del recorrido anterior. El informe se guarda como una versión inmutable y se exporta en JSON verificable y Markdown legible. No se firma ni se autoriza automáticamente.</p>
+      <details class="guided-values">
+        <summary>Valores sugeridos para el formulario</summary>
+        <dl>
+          <dt>Título</dt><dd><code>Informe de examen sintético</code></dd>
+          <dt>Organización examinadora</dt><dd><code>Laboratorio de pruebas</code></dd>
+          <dt>Fecha de solicitud</dt><dd><code>2026-10-22</code></dd>
+          <dt>Solicitante / organización</dt><dd><code>Solicitante sintético</code> / <code>Unidad de pruebas</code></dd>
+          <dt>Propósito</dt><dd><code>Comprobar el flujo de generación y verificación del informe.</code></dd>
+          <dt>Alcance realizado</dt><dd><code>Solo caso, metadatos y una muestra artificial.</code></dd>
+          <dt>Procedimientos</dt><dd><code>Se verificaron campos obligatorios y el expediente base.</code></dd>
+          <dt>Resultados</dt><dd><code>El flujo de generación se ejecutó con datos sintéticos.</code></dd>
+          <dt>Conclusiones</dt><dd><code>No se formula una conclusión sobre evidencia real.</code></dd>
+          <dt>Fundamento</dt><dd><code>La conclusión se limita a la respuesta observada en esta prueba automatizada.</code></dd>
+          <dt>Limitaciones</dt><dd><code>No hubo adquisición ni examen de evidencia real.</code></dd>
+          <dt>Desviaciones / material</dt><dd><code>Ninguna desviación en el escenario automatizado.</code> / <code>Salida sintética de la prueba.</code></dd>
+          <dt>Disposición original</dt><dd><code>El original no existe; se usó una muestra artificial.</code></dd>
+          <dt>Disposición derivados</dt><dd><code>Los artefactos temporales quedan en el directorio aislado de pruebas.</code></dd>
+          <dt>Autor declarado</dt><dd><code>Autor de pruebas</code></dd>
+        </dl>
+      </details>
+      <ol class="guided-instructions">
+        <li>En <strong>Informe de examen</strong>, completá los datos con las propuestas de arriba o con valores equivalentes igualmente sintéticos.</li>
+        <li>Guardá el primer borrador. Comprobá que la tarjeta indique versión 1 y estado <strong>Borrador sin firma</strong>.</li>
+        <li>Descargá el JSON y el Markdown. La descarga JSON debe contener un digest del informe y una captura del expediente con su propia huella.</li>
+        <li>Verificá el JSON desde el entorno instalado con <code>python -m netsentinel.forensics_report ruta/al/informe.json</code>. No cambies el archivo original exportado para hacer la prueba negativa; usá una copia separada.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>El informe y su expediente base superan la verificación; se conservan métodos, resultados, limitaciones, disposición y referencia de la auditoría. Si después corregís el contenido, debe crearse la versión 2 con motivo explícito, sin sobrescribir la versión 1. Un digest no es firma digital ni prueba de identidad.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-created"><span>Guardé el borrador V1 y revisé sus campos obligatorios.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-export"><span>Descargué JSON y Markdown y verifiqué el JSON original.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
+    </article>
+
+  <section class="panel guided-final" aria-labelledby="guidedFinalTitle">
+    <h2 id="guidedFinalTitle">Cierre de la prueba</h2>
+    <p>Si un paso no coincide con el resultado esperado, no lo marques como aprobado. Anotá la pantalla, la acción realizada y el mensaje observado para poder corregir el fallo con precisión.</p>
+    <label class="guided-check"><input type="checkbox" data-guided-step="review-results"><span>Revisé los resultados y dejé sin marcar los pasos que no pude verificar.</span></label>
+    <p id="guidedFinalStatus" class="guided-final-status" role="status" aria-live="polite">La prueba queda pendiente hasta que completes los pasos que correspondan.</p>
+  </section>
+
+  <footer class="footer">
+    <span>NetSentinel · Laboratorio de validación, datos locales</span>
+    <span><a href="https://github.com/JavierGrecco/NetSentinel/blob/qa/integrated-map-forensics-scenarios-2026-10/docs/MANUAL_TEST_SCENARIOS.md">Guía escrita completa</a></span>
+  </footer>
+</main>
+<script src="/static/guided-test.js" defer></script>
+</body>
+</html>
