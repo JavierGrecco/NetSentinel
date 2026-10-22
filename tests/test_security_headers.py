@@ -63,6 +63,7 @@ def test_inline_script_hashing_handles_unusual_closing_tag_whitespace(closing_ta
         "/api/export/findings.json",
         "/api/export/data.json",
         "/api/export/backup.sqlite3",
+        "/world-map",
     ],
 )
 def test_local_pages_inventory_and_exports_are_never_cached(client, path):
@@ -149,6 +150,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
         ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
         ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
+        ("/world-map", "NetSentinel · Mapa mundial de IP", ("/static/theme.js", "/static/geolocation.js")),
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(
@@ -198,6 +200,7 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(
         "/static/activity.js",
         "/static/findings.js",
         "/static/tools.js",
+        "/static/geolocation.js",
         "/static/theme.js",
         "/static/section-tabs.js",
     ],

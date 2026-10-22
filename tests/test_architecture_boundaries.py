@@ -99,6 +99,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.api.activity_models",
     }
     assert graph["netsentinel.api.activity_read"] == {"netsentinel.activity_tracking"}
+    assert graph["netsentinel.api.geolocation"] == {"netsentinel.geolocation_service"}
     assert graph["netsentinel.api.activity_sessions"] == {
         "netsentinel.activity_tracking",
         "netsentinel.api.activity_models",
@@ -143,6 +144,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_repository_support",
         "netsentinel.activity_retention_repository",
     }
+    assert graph["netsentinel.geolocation_repository"] == {"netsentinel.database"}
     assert graph["netsentinel.activity_tracking"] == {
         "netsentinel.activity_catalog",
         "netsentinel.activity_deletion_service",
@@ -190,6 +192,10 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_repository",
         "netsentinel.activity_retention_service",
         "netsentinel.inventory_read_repository",
+    }
+    assert graph["netsentinel.geolocation_service"] == {
+        "netsentinel.config",
+        "netsentinel.geolocation_repository",
     }
     assert graph["netsentinel.activity_event_service"] == {
         "netsentinel.activity_catalog",
