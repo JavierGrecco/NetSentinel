@@ -28,6 +28,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
 - [NetSentinel Forense: alcance y etapas](docs/FORENSIC_MODE.md)
 - [Prueba manual de NetSentinel Forense](docs/FORENSIC_MANUAL_TEST.md)
+- [Prueba guiada dentro de la aplicación](/guided-test)
 - [Escenarios sintéticos guiados](docs/MANUAL_TEST_SCENARIOS.md)
 - [Mapa mundial de IP](docs/WORLD_IP_MAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
@@ -153,6 +154,9 @@ Los datos se guardan localmente en SQLite. Las notificaciones externas solo se i
 Leé la [política de seguridad](SECURITY.md) y la [guía técnica de seguridad](docs/SECURITY.md) antes de habilitar integraciones o supervisar sistemas compartidos. No reportes vulnerabilidades mediante issues públicos.
 
 ## Laboratorio integrado de validación
+
+Con la aplicación en marcha, abrí **Prueba guiada** desde la navegación principal o entrá en `/guided-test`. Ahí se muestran los escenarios, los comandos copiables, las comprobaciones de API y los resultados esperados; el documento de escenarios amplía el recorrido.
+
 
 Esta rama de laboratorio reúne en una sola instalación el mapa mundial de IP, el espacio NetSentinel Forense y los datos de prueba sintéticos.
 
