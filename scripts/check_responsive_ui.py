@@ -600,7 +600,118 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
     except Exception as exc:
         return [f"la transferencia de custodia no funcionó desde Chromium: {exc}"]
 
-    # Comprueba el recorrido real de los dos formatos de exportación.
+    # Crea un informe desde la pantalla y verifica que ambas exportaciones correspondan
+    # al mismo borrador íntegro y a la captura del expediente con la custodia sintética.
+    try:
+        report_details = page.locator("#newForensicReportDetails")
+        if report_details.count() != 1:
+            return ["falta el formulario para crear el borrador de informe forense"]
+        if report_details.get_attribute("open") is None:
+            report_details.locator("summary").click()
+        page.locator("#forensicReportTitle").fill("Informe de examen desde Chromium")
+        page.locator("#forensicReportOrganization").fill("Laboratorio sintético Chromium")
+        page.locator("#forensicReportRequestDate").fill("2026-10-22")
+        page.locator("#forensicReportRequester").fill("Solicitante sintético Chromium")
+        page.locator("#forensicReportRequesterOrganization").fill("Unidad sintética de pruebas")
+        page.locator("#forensicReportPurpose").fill("Verificar la generación del informe desde la interfaz.")
+        page.locator("#forensicReportScope").fill("Solo metadatos y artefactos sintéticos de Chromium.")
+        page.locator("#forensicReportProcesses").fill(
+            "Se generó una muestra ficticia, se registró una transferencia y se comprobó el expediente."
+        )
+        page.locator("#forensicReportResults").fill(
+            "La prueba confirmó que el borrador se guarda con un expediente base verificable."
+        )
+        page.locator("#forensicReportConclusions").fill(
+            "No se formula conclusión alguna sobre evidencia real."
+        )
+        page.locator("#forensicReportConclusionBasis").fill(
+            "Respuesta HTTP, digest y campos obtenidos de la prueba automatizada."
+        )
+        page.locator("#forensicReportLimitations").fill(
+            "No se adquirió ni examinó evidencia real; solo se usaron datos sintéticos."
+        )
+        page.locator("#forensicReportDeviations").fill("Ninguna desviación en esta prueba.")
+        page.locator("#forensicReportSupportingMaterial").fill("Informe generado por la prueba Chromium.")
+        page.locator("#forensicReportOriginalDisposition").fill(
+            "No hay original real; se utilizó un elemento ficticio."
+        )
+        page.locator("#forensicReportDerivativeDisposition").fill(
+            "Los artefactos sintéticos se conservan en el directorio temporal del test."
+        )
+        page.locator("#forensicReportAuthor").fill("Autor sintético Chromium")
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/reports"),
+            timeout=10000,
+        ) as report_response_info:
+            page.locator("#forensicReportForm button[type='submit']").click()
+        report_response = report_response_info.value
+        if report_response.status != 201:
+            failures.append(f"la creación del informe respondió HTTP {report_response.status}")
+            return failures
+        saved_report = report_response.json()
+        if saved_report.get("version") != 1 or saved_report.get("status") != "draft_unsigned":
+            failures.append("el informe no se guardó como primera versión borrador sin firma")
+        if not saved_report.get("integrity_valid"):
+            failures.append("el informe recién creado no superó la verificación de integridad")
+        report_payload = saved_report.get("report", {})
+        from netsentinel.forensics_report import verify_examination_report
+
+        if not verify_examination_report(report_payload):
+            failures.append("el JSON del informe no superó el verificador local")
+        if report_payload.get("integrity", {}).get("source_audit_chain_status") != "valid":
+            failures.append("el informe no conserva el estado válido de la cadena base")
+        snapshot_events = report_payload.get("source_case_manifest", {}).get("audit_manifest", {}).get("events", [])
+        snapshot_transfers = [
+            event for event in snapshot_events
+            if event.get("action") == "evidence_custody_transferred"
+        ]
+        if len(snapshot_transfers) != 1:
+            failures.append("el informe no incorpora la transferencia sintética en su captura de expediente")
+        page.wait_for_function(
+            """() => {
+              const list = document.querySelector("#forensicReportsList");
+              return list && list.textContent.includes("Informe de examen desde Chromium") &&
+                list.textContent.includes("Borrador sin firma");
+            }""",
+            timeout=8000,
+        )
+        links = page.locator("#forensicReportsList .forensic-report-actions a")
+        if links.count() != 2:
+            failures.append("la interfaz no muestra las dos exportaciones del informe")
+        else:
+            with page.expect_download(timeout=8000) as report_json_download_info:
+                links.nth(0).click()
+            report_json_download = report_json_download_info.value
+            if report_json_download.suggested_filename != "netsentinel-examination-report-v001.json":
+                failures.append("el informe JSON produjo un nombre de descarga inesperado")
+            report_json_path = report_json_download.path()
+            if not report_json_path:
+                failures.append("Chromium no proporcionó el JSON del informe para verificar")
+            else:
+                exported_report = json.loads(Path(report_json_path).read_text(encoding="utf-8"))
+                if not verify_examination_report(exported_report):
+                    failures.append("el informe JSON descargado no superó la verificación local")
+                if exported_report.get("report_sha256") != saved_report.get("report_sha256"):
+                    failures.append("el digest del informe descargado no coincide con el documento guardado")
+                if "forensics-working-copies" in Path(report_json_path).read_text(encoding="utf-8"):
+                    failures.append("el JSON del informe expone la ubicación local de las copias")
+            with page.expect_download(timeout=8000) as report_md_download_info:
+                links.nth(1).click()
+            report_md_download = report_md_download_info.value
+            if report_md_download.suggested_filename != "netsentinel-examination-report-v001.md":
+                failures.append("el informe Markdown produjo un nombre de descarga inesperado")
+            report_md_path = report_md_download.path()
+            if not report_md_path:
+                failures.append("Chromium no proporcionó el Markdown del informe")
+            else:
+                report_markdown = Path(report_md_path).read_text(encoding="utf-8")
+                if "BORRADOR SIN FIRMA" not in report_markdown or "No hay firma digital" not in report_markdown:
+                    failures.append("el informe legible no advierte que sigue sin firma")
+    except Exception as exc:
+        return [f"el informe no se pudo crear y exportar desde Chromium: {exc}"]
+
+    # Comprueba el recorrido real de los dos formatos de exportación del expediente.
     export_button = page.locator("#exportForensicCaseManifest")
     if export_button.count() != 1:
         failures.append("falta el botón para exportar el expediente consolidado")
@@ -631,6 +742,11 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
             failures.append("la exportación no conserva una cadena de auditoría sintética válida")
         if summary.get("failed_check_count", 0) < 1:
             failures.append("el expediente no incluye la comprobación sintética fallida")
+        if summary.get("report_count") != 1:
+            failures.append("el expediente no incluye el índice del borrador de informe guardado")
+        report_refs = manifest.get("reports", [])
+        if len(report_refs) != 1 or report_refs[0].get("report_sha256") != saved_report.get("report_sha256"):
+            failures.append("el expediente no conserva la referencia al digest del informe guardado")
         audit_events = manifest.get("audit_manifest", {}).get("events", [])
         transfer_events = [event for event in audit_events if event.get("action") == "evidence_custody_transferred"]
         if len(transfer_events) != 1:
@@ -669,6 +785,11 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
                 ]
                 if len(exported_transfers) != 1:
                     failures.append("el manifiesto de auditoría no contiene el traspaso sintético")
+                if not any(
+                    event.get("action") == "report_draft_created"
+                    for event in audit_manifest.get("events", [])
+                ):
+                    failures.append("el manifiesto de auditoría no contiene la creación del informe")
                 audit_text = Path(audit_path).read_text(encoding="utf-8")
                 if "forensics-working-copies" in audit_text:
                     failures.append("el manifiesto de auditoría revela la carpeta de copias de trabajo")
@@ -927,15 +1048,15 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
     failures: list[str] = []
     try:
         steps = page.locator("[data-guided-step]")
-        if steps.count() != 17:
-            return [f"la guía mostró {steps.count()} pasos en lugar de 17"]
+        if steps.count() != 19:
+            return [f"la guía mostró {steps.count()} pasos en lugar de 19"]
         setup_step = page.locator('[data-guided-step="setup"]')
         if setup_step.count() != 1:
             return ["falta la casilla para confirmar la preparación del laboratorio"]
 
         page.locator("#resetGuidedProgress").click()
         setup_step.check()
-        if page.locator("#guidedProgressCount").inner_text() != "1 de 17 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "1 de 19 pasos":
             failures.append("el contador de progreso no actualizó el primer paso")
         page.reload(wait_until="load")
         if not page.locator('[data-guided-step="setup"]').is_checked():
@@ -960,7 +1081,7 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
         page.locator("#resetGuidedProgress").click()
         if page.locator("[data-guided-step]:checked").count() != 0:
             failures.append("el botón de reinicio no limpió las casillas de la guía")
-        if page.locator("#guidedProgressCount").inner_text() != "0 de 17 pasos":
+        if page.locator("#guidedProgressCount").inner_text() != "0 de 19 pasos":
             failures.append("el reinicio no devolvió el contador de la guía a cero")
     except Exception as exc:
         failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")

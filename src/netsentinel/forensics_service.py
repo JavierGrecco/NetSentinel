@@ -6,7 +6,7 @@ designadas para calcular su hash; no copia ni altera intencionalmente su conteni
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 import os
 import re
 from pathlib import Path
@@ -427,6 +427,91 @@ def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
     return forensics_repository.export_audit_manifest(case_id=case_id)
 
 
+
+def list_examination_reports(case_id: str) -> list[dict[str, Any]] | None:
+    """Lista las versiones inmutables de informe de un caso."""
+    return forensics_repository.list_examination_reports(case_id=case_id)
+
+
+def get_examination_report(*, case_id: str, report_id: str) -> dict[str, Any] | None:
+    """Busca un informe sin permitir que un ID de otro caso se use aquí."""
+    return forensics_repository.get_examination_report(
+        case_id=case_id,
+        report_id=report_id,
+    )
+
+
+def create_examination_report(
+    *,
+    case_id: str,
+    actor: str,
+    amends_report_id: str | None,
+    fields: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Valida la narración del examinador y guarda un borrador reproducible."""
+    clean: dict[str, Any] = {
+        "title": _required_text(fields.get("title"), "título del informe", 160),
+        "examining_organization": _required_text(
+            fields.get("examining_organization"), "organización examinadora", 240
+        ),
+        "request_date": _required_text(fields.get("request_date"), "fecha de solicitud", 10),
+        "requester_name": _required_text(fields.get("requester_name"), "solicitante", 160),
+        "requester_organization": _required_text(
+            fields.get("requester_organization"), "organización solicitante", 240
+        ),
+        "purpose": _required_text(fields.get("purpose"), "propósito del examen", 1000),
+        "scope_performed": _required_text(
+            fields.get("scope_performed"), "alcance efectivamente realizado", 2000
+        ),
+        "processes_performed": _required_text(
+            fields.get("processes_performed"), "procedimientos realizados", 4000
+        ),
+        "results": _required_text(fields.get("results"), "resultados del examen", 5000),
+        "limitations": _required_text(fields.get("limitations"), "limitaciones", 2000),
+        "original_disposition": _required_text(
+            fields.get("original_disposition"), "disposición de originales", 1000
+        ),
+        "derivative_disposition": _required_text(
+            fields.get("derivative_disposition"), "disposición de derivados", 1000
+        ),
+        "author_name": _required_text(fields.get("author_name"), "autor declarado", 160),
+        "conclusions": _optional_text(fields.get("conclusions"), "conclusiones", 4000),
+        "conclusion_basis": _optional_text(fields.get("conclusion_basis"), "base de conclusiones", 4000),
+        "deviations": _optional_text(fields.get("deviations"), "desviaciones", 2000),
+        "supporting_material": _optional_text(
+            fields.get("supporting_material"), "material de apoyo", 2000
+        ),
+        "authorizer_name": _optional_text(
+            fields.get("authorizer_name"), "autorizador declarado", 160
+        ),
+        "amendment_reason": _optional_text(
+            fields.get("amendment_reason"), "motivo de enmienda", 1000
+        ),
+    }
+    request_date = clean["request_date"]
+    try:
+        parsed_date = date.fromisoformat(request_date)
+    except ValueError as exc:
+        raise ValueError("La fecha de solicitud debe tener formato AAAA-MM-DD.") from exc
+    if parsed_date.isoformat() != request_date:
+        raise ValueError("La fecha de solicitud debe tener formato AAAA-MM-DD.")
+    if clean["conclusions"] and not clean["conclusion_basis"]:
+        raise ValueError(
+            "Si incluís conclusiones, documentá también los datos que las sustentan."
+        )
+    clean_actor = _required_text(actor, "operador que registra el informe", 120)
+    source_manifest = export_case_manifest(case_id=case_id)
+    if source_manifest is None:
+        return None
+    return forensics_repository.create_examination_report(
+        case_id=case_id,
+        actor=clean_actor,
+        fields=clean,
+        case_manifest=source_manifest,
+        amends_report_id=amends_report_id,
+    )
+
+
 def export_case_manifest(*, case_id: str) -> dict[str, Any] | None:
     """Prepara un expediente consolidado desde una instantánea de la base local."""
     snapshot = forensics_repository.export_case_manifest_data(case_id=case_id)
@@ -442,4 +527,5 @@ def export_case_manifest(*, case_id: str) -> dict[str, Any] | None:
         evidence=snapshot["evidence"],
         audit_manifest=audit_manifest,
         exported_at=snapshot["exported_at"],
+        reports=snapshot.get("reports", []),
     )

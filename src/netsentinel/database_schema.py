@@ -416,3 +416,35 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             BEFORE DELETE ON forensic_audit_chain
             BEGIN SELECT RAISE(ABORT, 'forensic audit chain is append-only'); END
         """)
+
+        # Los informes se versionan como documentos inmutables. Una corrección crea
+        # una fila nueva que referencia la versión anterior; no se reemplaza el informe.
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_reports (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                report_version INTEGER NOT NULL CHECK (report_version >= 1),
+                amends_report_id TEXT REFERENCES forensic_reports(id) ON DELETE RESTRICT,
+                created_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status = 'draft_unsigned'),
+                report_sha256 TEXT NOT NULL CHECK (length(report_sha256) = 64),
+                report_json TEXT NOT NULL,
+                UNIQUE (case_id, report_version)
+            )
+        """)
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_forensic_reports_case_version "
+            "ON forensic_reports(case_id, report_version DESC)"
+        )
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_reports_no_update
+            BEFORE UPDATE ON forensic_reports
+            BEGIN SELECT RAISE(ABORT, 'forensic reports are append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_reports_no_delete
+            BEFORE DELETE ON forensic_reports
+            BEGIN SELECT RAISE(ABORT, 'forensic reports are append-only'); END
+        """)

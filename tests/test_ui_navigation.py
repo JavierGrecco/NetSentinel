@@ -117,17 +117,47 @@ def test_forensics_workspace_does_not_link_to_world_map() -> None:
     assert 'received_by: values.received_by' in script
 
 
+def test_forensic_report_workspace_exposes_versioning_and_safe_exports() -> None:
+    """La interfaz permite crear informes, enmendarlos y descargar formatos no firmados."""
+    html = (ROOT / "src/netsentinel/static/forensics.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/netsentinel/static/forensics.js").read_text(encoding="utf-8")
+    stylesheet = (ROOT / "src/netsentinel/static/forensics.css").read_text(encoding="utf-8")
+    for element_id in (
+        "forensicReportsList",
+        "newForensicReportDetails",
+        "forensicReportForm",
+        "forensicReportProcesses",
+        "forensicReportResults",
+        "forensicReportLimitations",
+        "forensicReportOriginalDisposition",
+        "forensicReportDerivativeDisposition",
+        "forensicReportAmends",
+        "forensicReportAmendmentReason",
+    ):
+        assert f'id="{element_id}"' in html
+    assert "Borrador sin firma" in script
+    assert '"/api/forensics/cases/" + encodeURIComponent(caseId) + "/reports"' in script
+    assert 'payload.amends_report_id = payload.amends_report_id || null' in script
+    assert "renderReports();" in script
+    assert "installReportForm();" in script
+    assert ".forensic-report-actions a:focus-visible" in stylesheet
+    report_module = (ROOT / "src/netsentinel/forensics_report.py").read_text(encoding="utf-8")
+    assert "Borrador sin firma" in html
+    assert "Borrador sin firma" in script
+    assert "No hay firma digital" in report_module
+
+
 def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     """La guía se ve dentro de la app y ofrece escenarios concretos y comprobables."""
     html = (ROOT / "src/netsentinel/static/guided-test.html").read_text(encoding="utf-8")
     script = (ROOT / "src/netsentinel/static/guided-test.js").read_text(encoding="utf-8")
-    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests"):
+    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests", "scenario-forensics-report"):
         assert f'id="{scenario_id}"' in html
-    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 17
+    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 19
     assert 'id="copySetupCommand"' in html
     assert "--force" not in html
     assert 'id="guidedProgressBar"' in html
-    assert 'aria-valuemax="17"' in html
+    assert 'aria-valuemax="19"' in html
     assert 'data-guided-step="forensics-custody-transfer"' in html
     assert 'id="checkMapApi"' in html
     assert 'id="checkForensicsApi"' in html

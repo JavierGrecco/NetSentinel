@@ -109,6 +109,7 @@ def test_case_manifest_is_self_contained_and_has_a_stable_digest():
     assert first["audit_manifest"]["integrity"]["status"] == "valid"
     assert first["summary"] == {
         "evidence_count": 1,
+        "report_count": 0,
         "evidence_with_reported_hash": 1,
         "evidence_without_reported_hash": 0,
         "integrity_check_count": 1,
@@ -171,3 +172,33 @@ def test_case_manifest_keeps_a_broken_audit_status_visible():
     assert verify_case_manifest(manifest) is True
     assert manifest["summary"]["audit_chain_status"] == "invalid"
     assert manifest["audit_manifest"]["integrity"]["invalid_count"] == 1
+
+
+def test_case_manifest_includes_report_references_in_its_digest():
+    """El índice de informes forma parte del manifiesto consolidado del expediente."""
+    case, evidence = _sample()
+    reports = [{
+        "id": "report-id",
+        "case_id": "case-id",
+        "version": 1,
+        "title": "Informe sintético",
+        "status": "draft_unsigned",
+        "created_at": "2026-10-22T12:00:00Z",
+        "created_by": "Autor sintético",
+        "amends_report_id": None,
+        "report_sha256": "c" * 64,
+    }]
+    manifest = build_case_manifest(
+        case=case,
+        evidence=evidence,
+        audit_manifest=_audit(),
+        exported_at="2026-10-22T12:01:00Z",
+        reports=reports,
+    )
+
+    assert verify_case_manifest(manifest) is True
+    assert manifest["summary"]["report_count"] == 1
+    assert manifest["reports"][0]["id"] == "report-id"
+    changed = deepcopy(manifest)
+    changed["reports"][0]["report_sha256"] = "d" * 64
+    assert verify_case_manifest(changed) is False

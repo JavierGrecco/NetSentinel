@@ -103,7 +103,7 @@ La [matriz de preparación pericial](FORENSIC_READINESS_MATRIX.md) es el inventa
 
 - Autenticación individual, roles y separación de funciones.
 - Reconciliar recepciones históricas cuyo custodio receptor no fue registrado. La migración conserva ese dato como vacío y bloquea transferencias posteriores hasta reconciliarlo; no se infiere una identidad.
-- Informe formal y reproducible, con herramientas/versiones, resultados, limitaciones, disposición y autorización/firma.
+- Revisión y liberación de un informe final con identidad autenticada, autorización/firma verificable, organización y paginación oficiales, y procedimiento institucional de enmienda. El borrador versionado y exportable ya existe, pero no es un informe final autorizado.
 - Algoritmos adicionales y procedimientos de adquisición; ahora se calcula SHA-256 de una copia designada y no se crea una imagen forense.
 - Firma o anclaje externo independiente de auditoría, almacenamiento/retención con controles operativos y revisión independiente.
 

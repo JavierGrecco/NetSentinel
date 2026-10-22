@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const state = { cases: [], selectedCaseId: null, selectedCase: null, evidence: [], audit: [], busy: false };
+  const state = { cases: [], selectedCaseId: null, selectedCase: null, evidence: [], audit: [], reports: [], busy: false };
   const sourceLabels = {
     disk_image: "Imagen de disco", file_copy: "Copia de archivo",
     browser_export: "Exportación de navegador", email_export: "Exportación de correo",
@@ -14,7 +14,8 @@
     evidence_registered: "Evidencia registrada",
     evidence_custody_transferred: "Transferencia de custodia registrada",
     evidence_hash_compared: "Hash comparado",
-    evidence_hash_check_failed: "Falló la comparación del hash"
+    evidence_hash_check_failed: "Falló la comparación del hash",
+    report_draft_created: "Borrador de informe creado"
   };
 
   function element(tag, className, text) {
@@ -406,6 +407,73 @@
       list.append(card);
     });
   }
+  function renderReports() {
+    const list = $("forensicReportsList");
+    if (!list) return;
+    list.replaceChildren();
+    const amendmentSelect = $("forensicReportAmends");
+    const amendmentReason = $("forensicReportAmendmentReason");
+    if (amendmentSelect) {
+      amendmentSelect.replaceChildren();
+      const option = document.createElement("option");
+      if (state.reports.length) {
+        const latest = state.reports[0];
+        option.value = latest.id;
+        option.textContent = "Nueva versión enmendando V" + latest.version + " · " + latest.title;
+        amendmentSelect.required = true;
+        amendmentReason.required = true;
+        amendmentReason.placeholder = "Explicá qué se corrige y por qué; la versión anterior se conserva.";
+      } else {
+        option.value = "";
+        option.textContent = "Primera versión del informe";
+        amendmentSelect.required = false;
+        amendmentReason.required = false;
+        amendmentReason.placeholder = "No se enmienda una versión anterior.";
+      }
+      amendmentSelect.append(option);
+      amendmentSelect.value = option.value;
+    }
+
+    if (!state.reports.length) {
+      list.append(element("p", "forensic-empty-inline", "Todavía no hay informes. Podés preparar un primer borrador a partir del expediente actual."));
+      return;
+    }
+    state.reports.forEach((report) => {
+      const card = element("article", "forensic-report-card");
+      const header = element("div", "forensic-report-card-head");
+      const details = element("div");
+      details.append(element("strong", "", "Versión " + report.version + " · " + report.title));
+      details.append(element("p", "", report.created_at + " · Autor declarado: " + report.created_by));
+      header.append(details);
+      header.append(element("span", "forensic-report-status", "Borrador sin firma"));
+      card.append(header);
+      addMetaLine(card, "Digest SHA-256", report.report_sha256);
+      if (report.amends_report_id) {
+        addMetaLine(card, "Enmienda de", report.amends_report_id);
+      }
+      if (!report.integrity_valid) {
+        card.append(element(
+          "p",
+          "forensic-report-warning forensic-report-warning-error",
+          "El informe guardado no superó la verificación. No se permiten exportaciones de esta versión."
+        ));
+      } else {
+        const actions = element("div", "forensic-report-actions");
+        const base = "/api/forensics/cases/" + encodeURIComponent(state.selectedCaseId)
+          + "/reports/" + encodeURIComponent(report.id);
+        const jsonLink = element("a", "quiet", "Descargar JSON verificable");
+        jsonLink.href = base + "/json";
+        jsonLink.download = "netsentinel-examination-report-v" + String(report.version).padStart(3, "0") + ".json";
+        const markdownLink = element("a", "quiet", "Descargar informe legible (.md)");
+        markdownLink.href = base + "/markdown";
+        markdownLink.download = "netsentinel-examination-report-v" + String(report.version).padStart(3, "0") + ".md";
+        actions.append(jsonLink, markdownLink);
+        card.append(actions);
+      }
+      list.append(card);
+    });
+  }
+
   function renderAudit() {
     const list = $("forensicAuditList");
     list.replaceChildren();
@@ -459,22 +527,27 @@
       const results = await Promise.all([
         api("/api/forensics/cases/" + encodeURIComponent(caseId)),
         api("/api/forensics/cases/" + encodeURIComponent(caseId) + "/evidence"),
-        api("/api/forensics/cases/" + encodeURIComponent(caseId) + "/audit?limit=200")
+        api("/api/forensics/cases/" + encodeURIComponent(caseId) + "/audit?limit=200"),
+        api("/api/forensics/cases/" + encodeURIComponent(caseId) + "/reports")
       ]);
       state.selectedCase = results[0];
       state.evidence = results[1].items || [];
       state.audit = results[2].items || [];
+      state.reports = results[3].items || [];
       renderCaseSummary();
       renderEvidence();
       renderAudit();
+      renderReports();
       renderCaseList();
       setStatus("Caso " + state.selectedCase.case_number + " seleccionado. Los metadatos están guardados en esta computadora.");
     } catch (error) {
       state.selectedCase = null;
       state.evidence = [];
       state.audit = [];
+      state.reports = [];
       renderCaseSummary();
       renderCaseList();
+      renderReports();
       setStatus(error.message, "error");
     }
   }
@@ -494,9 +567,11 @@
         state.selectedCase = null;
         state.evidence = [];
         state.audit = [];
+        state.reports = [];
         renderCaseSummary();
         renderEvidence();
         renderAudit();
+        renderReports();
         setStatus("Todavía no hay casos. Usá «Abrir un caso» para registrar la autorización y el alcance.");
       }
     } catch (error) {
@@ -586,6 +661,67 @@
       }
     });
   }
+  function installReportForm() {
+    const form = $("forensicReportForm");
+    const details = $("newForensicReportDetails");
+    if (!form || !details) return;
+    const today = new Date();
+    const localDate = today.getFullYear() + "-"
+      + String(today.getMonth() + 1).padStart(2, "0") + "-"
+      + String(today.getDate()).padStart(2, "0");
+    $("forensicReportRequestDate").value = localDate;
+
+    $("forensicReportConclusions").addEventListener("input", () => {
+      $("forensicReportConclusionBasis").required = Boolean(
+        $("forensicReportConclusions").value.trim()
+      );
+    });
+    $("cancelForensicReport").addEventListener("click", () => {
+      details.open = false;
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (state.busy || !state.selectedCaseId) return;
+      const actor = operatorName();
+      if (!actor || !form.reportValidity()) return;
+      const caseId = state.selectedCaseId;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      payload.actor = actor;
+      payload.amends_report_id = payload.amends_report_id || null;
+      for (const key of [
+        "conclusions", "conclusion_basis", "deviations", "supporting_material",
+        "authorizer_name", "amendment_reason"
+      ]) {
+        payload[key] = payload[key] || null;
+      }
+      if (payload.conclusions && !payload.conclusion_basis) {
+        setStatus("Completá los datos que sustentan las conclusiones o dejá las conclusiones vacías.", "error");
+        $("forensicReportConclusionBasis").focus();
+        return;
+      }
+
+      state.busy = true;
+      setStatus("Creando la versión del informe y guardando el digest…");
+      try {
+        const saved = await api(
+          "/api/forensics/cases/" + encodeURIComponent(caseId) + "/reports",
+          { method: "POST", body: JSON.stringify(payload) }
+        );
+        state.busy = false;
+        details.open = false;
+        await loadCases();
+        setStatus(
+          "Borrador V" + saved.version + " guardado. La versión es inmutable y sigue sin firma ni autorización.",
+          saved.integrity_valid ? "success" : "error"
+        );
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        state.busy = false;
+      }
+    });
+  }
+
   function installCaseForms() {
     const caseDetails = $("newForensicCaseDetails");
     const evidenceDetails = $("newForensicEvidenceDetails");
@@ -724,5 +860,6 @@
     "Expediente consolidado descargado. Conservá su SHA-256 por separado si necesitás detectar sustituciones; el digest no es una firma digital."
   );
   installCaseForms();
+  installReportForm();
   loadCases();
 })();

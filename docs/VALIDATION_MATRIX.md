@@ -154,6 +154,7 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - [ ] FOR-MAN-08 — En macOS/Linux, probar con permisos de carpeta inicialmente abiertos y confirmar que se restrinjan a `0700`; confirmar que un fallo al restringir permisos bloquea la lectura. En Windows, revisar el comportamiento bajo las ACL locales.
 - [ ] FOR-MAN-09 — Registrar dos transferencias consecutivas y confirmar continuidad del custodio; después intentar una transferencia con remitente incorrecto, caso cerrado y cadena de auditoría alterada. Los rechazos no deben añadir eventos ni ocultar el estado de integridad.
 - [ ] FOR-MAN-11 — En una base anterior sin receptor inicial, confirmar que la migración conserva el receptor como desconocido y que no se permite transferir hasta reconciliar la recepción. No inferirlo desde el operador ni desde la fuente que entrega.
+- [ ] FOR-MAN-12 — Crear un borrador de informe, descargar JSON/Markdown, verificar el JSON con el verificador local y comprobar que una copia modificada falla. Crear una enmienda y confirmar que V1 permanece intacta.
 
 **Registro de la revisión Forense:**
 - Fecha y zona horaria:
@@ -189,5 +190,6 @@ Usar un directorio de datos aislado y **archivos sintéticos**. No probar con ev
 - [ ] **FOR-08 — Revisión visual real:** revisar la pantalla en escritorio y ventana estrecha y adjuntar capturas sanitizadas; la ejecución automática de Chromium no reemplaza esta revisión humana.
 - [ ] **FOR-09 — Manifiesto consolidado:** exportar el expediente con datos sintéticos; verificar el digest externo y la auditoría incluida; confirmar caso, elementos, checks y eventos; comprobar que la salida no contiene contenido binario ni rutas absolutas y que la cadena de auditoría inválida produce un resultado no aprobado.
 - [ ] **FOR-10 — Transferencia de custodia:** registrar una entrega con remitente, receptor, fecha/hora con offset, motivo y método; comprobar que aparece en auditoría y ambos manifiestos. Verificar que la continuidad se imponga y que una cadena rota no acepte nuevas transferencias.
+- [ ] **FOR-11 — Informe reproducible:** crear y verificar un borrador, revisar que incluya alcance, procedimientos, resultados, limitaciones, disposición y digest del snapshot; comprobar exportaciones JSON/Markdown, verificador local y creación de una enmienda sin sobrescribir V1. La firma y autorización auténtica siguen fuera de esta fase.
 
 **Registro de Forense:** commit exacto, sistema operativo y versión, versión de Python, navegador y versión, comandos utilizados, resultado de cada caso, problemas observados y enlaces a logs/capturas sanitizados. Todos los casos comienzan pendientes; no inferir aprobación manual a partir de CI.

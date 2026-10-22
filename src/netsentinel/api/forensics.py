@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import forensics_service
+from ..forensics_report import render_examination_report_markdown
 
 router = APIRouter(tags=["forensics"])
 
@@ -55,6 +56,34 @@ class EvidenceCreateRequest(BaseModel):
     size_bytes: int | None = Field(default=None, ge=0, strict=True)
     reported_sha256: str | None = Field(default=None, max_length=64)
     hash_source: str | None = Field(default=None, max_length=240)
+    actor: str = Field(min_length=1, max_length=120)
+
+
+class ExaminationReportCreateRequest(BaseModel):
+    """Contenido declarado para crear un borrador de informe versionado."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=160)
+    examining_organization: str = Field(min_length=1, max_length=240)
+    request_date: str = Field(min_length=10, max_length=10, pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+    requester_name: str = Field(min_length=1, max_length=160)
+    requester_organization: str = Field(min_length=1, max_length=240)
+    purpose: str = Field(min_length=1, max_length=1000)
+    scope_performed: str = Field(min_length=1, max_length=2000)
+    processes_performed: str = Field(min_length=1, max_length=4000)
+    results: str = Field(min_length=1, max_length=5000)
+    conclusions: str | None = Field(default=None, max_length=4000)
+    conclusion_basis: str | None = Field(default=None, max_length=4000)
+    limitations: str = Field(min_length=1, max_length=2000)
+    deviations: str | None = Field(default=None, max_length=2000)
+    supporting_material: str | None = Field(default=None, max_length=2000)
+    original_disposition: str = Field(min_length=1, max_length=1000)
+    derivative_disposition: str = Field(min_length=1, max_length=1000)
+    author_name: str = Field(min_length=1, max_length=160)
+    authorizer_name: str | None = Field(default=None, max_length=160)
+    amends_report_id: UUID | None = None
+    amendment_reason: str | None = Field(default=None, max_length=1000)
     actor: str = Field(min_length=1, max_length=120)
 
 
@@ -276,6 +305,104 @@ def export_forensic_case_manifest(case_id: UUID) -> Response:
         media_type="application/json",
         headers={
             "Content-Disposition": 'attachment; filename="netsentinel-forensic-case-manifest.json"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/api/forensics/cases/{case_id}/reports")
+def list_forensic_examination_reports(case_id: UUID) -> dict:
+    """Lista borradores e informes versionados del caso."""
+    items = forensics_service.list_examination_reports(str(case_id))
+    if items is None:
+        raise HTTPException(status_code=404, detail="No se encontró el caso solicitado.")
+    return {"items": items}
+
+
+@router.post(
+    "/api/forensics/cases/{case_id}/reports",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_forensic_examination_report(
+    case_id: UUID,
+    body: ExaminationReportCreateRequest,
+) -> dict:
+    """Guarda una nueva versión inmutable de un borrador de informe."""
+    try:
+        fields = body.model_dump(exclude={"actor", "amends_report_id"})
+        report = forensics_service.create_examination_report(
+            case_id=str(case_id),
+            actor=body.actor,
+            amends_report_id=str(body.amends_report_id) if body.amends_report_id else None,
+            fields=fields,
+        )
+    except forensics_service.ForensicConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if report is None:
+        raise HTTPException(status_code=404, detail="No se encontró el caso solicitado.")
+    return report
+
+
+@router.get("/api/forensics/cases/{case_id}/reports/{report_id}")
+def get_forensic_examination_report(case_id: UUID, report_id: UUID) -> dict:
+    """Devuelve el documento y el estado de integridad de su versión guardada."""
+    report = forensics_service.get_examination_report(
+        case_id=str(case_id),
+        report_id=str(report_id),
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="No se encontró el informe solicitado.")
+    return report
+
+
+@router.get("/api/forensics/cases/{case_id}/reports/{report_id}/json")
+def export_forensic_examination_report_json(case_id: UUID, report_id: UUID) -> Response:
+    """Descarga el JSON original del informe, conservando su digest y su expediente base."""
+    report = forensics_service.get_examination_report(
+        case_id=str(case_id),
+        report_id=str(report_id),
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="No se encontró el informe solicitado.")
+    if not report.get("integrity_valid"):
+        raise HTTPException(status_code=409, detail="El informe guardado no superó la verificación de integridad.")
+    body = json.dumps(report["report"], ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    version = int(report["version"])
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="netsentinel-examination-report-v{version:03d}.json"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/api/forensics/cases/{case_id}/reports/{report_id}/markdown")
+def export_forensic_examination_report_markdown(case_id: UUID, report_id: UUID) -> Response:
+    """Genera Markdown legible únicamente a partir del JSON de informe verificable."""
+    report = forensics_service.get_examination_report(
+        case_id=str(case_id),
+        report_id=str(report_id),
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="No se encontró el informe solicitado.")
+    if not report.get("integrity_valid"):
+        raise HTTPException(status_code=409, detail="El informe guardado no superó la verificación de integridad.")
+    try:
+        body = render_examination_report_markdown(report["report"])
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    version = int(report["version"])
+    return Response(
+        content=body + "\n",
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f'attachment; filename="netsentinel-examination-report-v{version:03d}.md"',
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
         },

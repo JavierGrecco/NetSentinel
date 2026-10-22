@@ -36,6 +36,7 @@ def build_case_manifest(
     evidence: list[dict[str, Any]],
     audit_manifest: dict[str, Any],
     exported_at: str,
+    reports: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Construye una exportación autocontenida, sin incluir contenido de archivos."""
     evidence_entries: list[dict[str, Any]] = []
@@ -97,6 +98,16 @@ def build_case_manifest(
 
     audit_integrity = audit_manifest.get("integrity", {})
     audit_events = audit_manifest.get("events", [])
+    report_entries = [
+        {
+            key: entry.get(key)
+            for key in (
+                "id", "case_id", "version", "title", "status", "created_at",
+                "created_by", "amends_report_id", "report_sha256",
+            )
+        }
+        for entry in (reports or [])
+    ]
     payload: dict[str, Any] = {
         "format": CASE_MANIFEST_FORMAT,
         "schema_version": CASE_MANIFEST_SCHEMA_VERSION,
@@ -118,10 +129,12 @@ def build_case_manifest(
             )
         },
         "evidence": evidence_entries,
+        "reports": report_entries,
         # Conserva el manifiesto de auditoría original, incluida su propia huella.
         "audit_manifest": audit_manifest,
         "summary": {
             "evidence_count": len(evidence_entries),
+            "report_count": len(report_entries),
             "evidence_with_reported_hash": sum(
                 bool(item.get("reported_sha256")) for item in evidence_entries
             ),

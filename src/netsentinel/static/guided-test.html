@@ -88,9 +88,9 @@
           <p class="guided-kicker">TU RECORRIDO</p>
           <h2 id="guidedProgressTitle">Progreso de la prueba</h2>
         </div>
-        <strong id="guidedProgressCount">0 de 17 pasos</strong>
+        <strong id="guidedProgressCount">0 de 19 pasos</strong>
       </div>
-      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="17" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
+      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
       <p id="guidedProgressText" class="small">Marcá cada paso después de comprobarlo en la aplicación. El avance solo se guarda en este navegador.</p>
       <button type="button" id="resetGuidedProgress" class="quiet tiny">Reiniciar progreso</button>
     </div>
@@ -241,6 +241,44 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
     </article>
   </section>
+
+    <article class="panel guided-scenario" id="scenario-forensics-report">
+      <div class="guided-scenario-title">
+        <span class="guided-number">07</span>
+        <div><p class="guided-kicker">DOCUMENTACIÓN REPRODUCIBLE</p><h2>Forense: crear y verificar el informe</h2></div>
+      </div>
+      <p>Usá el caso y la evidencia sintéticos del recorrido anterior. El informe se guarda como una versión inmutable y se exporta en JSON verificable y Markdown legible. No se firma ni se autoriza automáticamente.</p>
+      <details class="guided-values">
+        <summary>Valores sugeridos para el formulario</summary>
+        <dl>
+          <dt>Título</dt><dd><code>Informe de examen sintético</code></dd>
+          <dt>Organización examinadora</dt><dd><code>Laboratorio de pruebas</code></dd>
+          <dt>Fecha de solicitud</dt><dd><code>2026-10-22</code></dd>
+          <dt>Solicitante / organización</dt><dd><code>Solicitante sintético</code> / <code>Unidad de pruebas</code></dd>
+          <dt>Propósito</dt><dd><code>Comprobar el flujo de generación y verificación del informe.</code></dd>
+          <dt>Alcance realizado</dt><dd><code>Solo caso, metadatos y una muestra artificial.</code></dd>
+          <dt>Procedimientos</dt><dd><code>Se verificaron campos obligatorios y el expediente base.</code></dd>
+          <dt>Resultados</dt><dd><code>El flujo de generación se ejecutó con datos sintéticos.</code></dd>
+          <dt>Conclusiones</dt><dd><code>No se formula una conclusión sobre evidencia real.</code></dd>
+          <dt>Fundamento</dt><dd><code>La conclusión se limita a la respuesta observada en esta prueba automatizada.</code></dd>
+          <dt>Limitaciones</dt><dd><code>No hubo adquisición ni examen de evidencia real.</code></dd>
+          <dt>Desviaciones / material</dt><dd><code>Ninguna desviación en el escenario automatizado.</code> / <code>Salida sintética de la prueba.</code></dd>
+          <dt>Disposición original</dt><dd><code>El original no existe; se usó una muestra artificial.</code></dd>
+          <dt>Disposición derivados</dt><dd><code>Los artefactos temporales quedan en el directorio aislado de pruebas.</code></dd>
+          <dt>Autor declarado</dt><dd><code>Autor de pruebas</code></dd>
+        </dl>
+      </details>
+      <ol class="guided-instructions">
+        <li>En <strong>Informe de examen</strong>, completá los datos con las propuestas de arriba o con valores equivalentes igualmente sintéticos.</li>
+        <li>Guardá el primer borrador. Comprobá que la tarjeta indique versión 1 y estado <strong>Borrador sin firma</strong>.</li>
+        <li>Descargá el JSON y el Markdown. La descarga JSON debe contener un digest del informe y una captura del expediente con su propia huella.</li>
+        <li>Verificá el JSON desde el entorno instalado con <code>python -m netsentinel.forensics_report ruta/al/informe.json</code>. No cambies el archivo original exportado para hacer la prueba negativa; usá una copia separada.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>El informe y su expediente base superan la verificación; se conservan métodos, resultados, limitaciones, disposición y referencia de la auditoría. Si después corregís el contenido, debe crearse la versión 2 con motivo explícito, sin sobrescribir la versión 1. Un digest no es firma digital ni prueba de identidad.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-created"><span>Guardé el borrador V1 y revisé sus campos obligatorios.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-report-export"><span>Descargué JSON y Markdown y verifiqué el JSON original.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
+    </article>
 
   <section class="panel guided-final" aria-labelledby="guidedFinalTitle">
     <h2 id="guidedFinalTitle">Cierre de la prueba</h2>

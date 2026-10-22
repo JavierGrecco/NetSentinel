@@ -258,6 +258,109 @@
           <ol id="forensicAuditList" class="forensic-audit-list">
             <li class="forensic-empty-inline">Cargando historial…</li>
           </ol>
+          <section class="forensic-report-workspace" aria-labelledby="forensicReportsTitle">
+            <div class="forensic-panel-heading">
+              <div>
+                <h3 id="forensicReportsTitle">Informe de examen</h3>
+                <p>Crear un borrador reproducible a partir de la captura del expediente. Cada corrección crea una nueva versión; ninguna versión queda firmada ni autorizada por esta pantalla.</p>
+              </div>
+            </div>
+            <div id="forensicReportsList" class="forensic-reports-list">
+              <p class="forensic-empty-inline">Consultando informes guardados…</p>
+            </div>
+            <details id="newForensicReportDetails" class="forensic-form-disclosure forensic-report-disclosure">
+              <summary>+ Crear borrador de informe</summary>
+              <p class="forensic-report-warning">Escribí lo que se hizo y observó, no lo que se espera que el sistema concluya. Si incluís una conclusión, indicá qué datos la sustentan. El documento se guarda como borrador sin firma.</p>
+              <form id="forensicReportForm" class="forensic-form-grid">
+                <div class="forensic-field">
+                  <label for="forensicReportTitle">Título del informe</label>
+                  <input id="forensicReportTitle" name="title" required maxlength="160" value="Informe de examen digital">
+                </div>
+                <div class="forensic-field">
+                  <label for="forensicReportOrganization">Organización o laboratorio examinador</label>
+                  <input id="forensicReportOrganization" name="examining_organization" required maxlength="240" placeholder="Nombre declarado de la organización">
+                </div>
+                <div class="forensic-field">
+                  <label for="forensicReportRequestDate">Fecha de la solicitud</label>
+                  <input id="forensicReportRequestDate" name="request_date" type="date" required>
+                </div>
+                <div class="forensic-field">
+                  <label for="forensicReportRequester">Persona solicitante</label>
+                  <input id="forensicReportRequester" name="requester_name" required maxlength="160">
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportRequesterOrganization">Organización solicitante</label>
+                  <input id="forensicReportRequesterOrganization" name="requester_organization" required maxlength="240">
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportPurpose">Propósito del examen</label>
+                  <textarea id="forensicReportPurpose" name="purpose" rows="2" required maxlength="1000"></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportScope">Alcance efectivamente realizado</label>
+                  <textarea id="forensicReportScope" name="scope_performed" rows="3" required maxlength="2000"></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportProcesses">Procedimientos y herramientas utilizados</label>
+                  <textarea id="forensicReportProcesses" name="processes_performed" rows="3" required maxlength="4000" placeholder="Anotá procedimientos, herramientas y versiones conocidas, parámetros relevantes y pasos repetibles."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportResults">Resultados observados</label>
+                  <textarea id="forensicReportResults" name="results" rows="3" required maxlength="5000"></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportConclusions">Conclusiones u opiniones (opcional)</label>
+                  <textarea id="forensicReportConclusions" name="conclusions" rows="2" maxlength="4000" placeholder="Dejá vacío si no corresponde emitir una conclusión."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportConclusionBasis">Datos que sustentan las conclusiones</label>
+                  <textarea id="forensicReportConclusionBasis" name="conclusion_basis" rows="2" maxlength="4000" placeholder="Obligatorio cuando se incluyen conclusiones."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportLimitations">Limitaciones del examen</label>
+                  <textarea id="forensicReportLimitations" name="limitations" rows="2" required maxlength="2000" placeholder="Fuentes no disponibles, funciones no ejecutadas, límites del método u otras reservas."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportDeviations">Desviaciones de procedimiento (opcional)</label>
+                  <textarea id="forensicReportDeviations" name="deviations" rows="2" maxlength="2000"></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportSupportingMaterial">Material de apoyo (opcional)</label>
+                  <textarea id="forensicReportSupportingMaterial" name="supporting_material" rows="2" maxlength="2000" placeholder="Referencias a salidas, capturas u otros anexos conservados por separado."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportOriginalDisposition">Disposición de originales</label>
+                  <textarea id="forensicReportOriginalDisposition" name="original_disposition" rows="2" required maxlength="1000" placeholder="Indicá si se conservaron, devolvieron, transfirieron u otra situación observada."></textarea>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportDerivativeDisposition">Disposición de copias y derivados</label>
+                  <textarea id="forensicReportDerivativeDisposition" name="derivative_disposition" rows="2" required maxlength="1000"></textarea>
+                </div>
+                <div class="forensic-field">
+                  <label for="forensicReportAuthor">Autor declarado</label>
+                  <input id="forensicReportAuthor" name="author_name" required maxlength="160" placeholder="Nombre del autor del borrador">
+                </div>
+                <div class="forensic-field">
+                  <label for="forensicReportAuthorizer">Autorizador declarado (opcional)</label>
+                  <input id="forensicReportAuthorizer" name="authorizer_name" maxlength="160" placeholder="No representa una firma ni autenticación">
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportAmends">Versión anterior a enmendar</label>
+                  <select id="forensicReportAmends" name="amends_report_id">
+                    <option value="">Primera versión del informe</option>
+                  </select>
+                </div>
+                <div class="forensic-field forensic-field-wide">
+                  <label for="forensicReportAmendmentReason">Motivo de enmienda (obligatorio para una nueva versión)</label>
+                  <textarea id="forensicReportAmendmentReason" name="amendment_reason" rows="2" maxlength="1000" placeholder="No se modifica un informe anterior: se crea una versión nueva y queda trazada."></textarea>
+                </div>
+                <div class="forensic-form-actions">
+                  <button type="submit" class="primary">Guardar nueva versión sin firma</button>
+                  <button type="button" id="cancelForensicReport" class="quiet">Cancelar</button>
+                </div>
+              </form>
+            </details>
+          </section>
         </section>
       </div>
     </div>
