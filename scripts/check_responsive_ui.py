@@ -1647,9 +1647,10 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
+              const panel = document.querySelector("#wizardAutomaticPanel");
               const badge = document.querySelector("#wizardAutomaticBadge");
               const rows = document.querySelectorAll("#wizardAutomaticDetails .wizard-check-result");
-              return badge && badge.textContent && rows.length >= 3;
+              return panel && !panel.hidden && badge && badge.textContent && rows.length >= 3;
             }""",
             timeout=8000,
         )
@@ -1671,11 +1672,18 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
+              const panel = document.querySelector("#wizardAutomaticPanel");
               const badge = document.querySelector("#wizardAutomaticBadge");
-              return badge && badge.textContent.includes("Comprobación correcta");
+              return panel && !panel.hidden && badge && badge.textContent.trim().length > 0;
             }""",
             timeout=8000,
         )
+        if "Comprobación correcta" not in page.locator("#wizardAutomaticBadge").inner_text():
+            failures.append(
+                "la comprobación automática de topología no confirmó la fixture: "
+                + page.locator("#wizardAutomaticSummary").inner_text()
+            )
+            return failures
 
         def _select_synthetic_device(target_page, selector: str) -> str:
             target_page.wait_for_function(
