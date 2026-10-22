@@ -107,7 +107,7 @@ La [matriz de preparación pericial](FORENSIC_READINESS_MATRIX.md) es el inventa
 - Algoritmos adicionales y procedimientos de adquisición; ahora se calcula SHA-256 de una copia designada y no se crea una imagen forense.
 - Firma o anclaje externo independiente de auditoría, almacenamiento/retención con controles operativos y revisión independiente.
 
-No sacar del borrador ni integrar en `main` hasta que la última cabeza pase la matriz CI completa y se registre la revisión manual de esta versión exacta.
+La cabeza `753a377` ya pasó la matriz CI completa (18/18, incluida la guía Chromium de 120/120). Mantener la PR en borrador y no integrar en `main` hasta registrar la aceptación manual de esta versión exacta, con datos sintéticos y revisión visual/accesible del procedimiento.
 
 ## Fase 1 — Hallazgos explicables y evidencia correlacionada
 
