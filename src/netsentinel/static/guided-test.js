@@ -194,7 +194,7 @@
         "Abrí NetSentinel Forense en otra pestaña. En «Nombre de quien realiza la operación», escribí Operador sintético de prueba.",
         "Pulsá «Abrir un caso» y usá los valores de referencia que aparecen debajo de estas instrucciones.",
         "En «Evidencia registrada», pulsá «Registrar un elemento de evidencia». Usá netsentinel-forensic-sample.bin como nombre original, «Copia de archivo» como tipo y el SHA-256 que imprimió el generador en la terminal.",
-        "En el origen del hash indicá «SHA-256 calculado por el generador local al crear la muestra». Como descripción de recepción, usá «Archivo artificial para validar el control de integridad; no es evidencia real».",
+        "Usá el SHA-256 esperado que aparece en las referencias debajo; corresponde al contenido exacto de esta muestra sintética. En el origen del hash indicá «SHA-256 calculado por el generador local al crear la muestra». Como descripción de recepción, usá «Archivo artificial para validar el control de integridad; no es evidencia real».",
         "Guardá y revisá que el caso y la evidencia aparezcan en la página antes de volver al asistente."
       ],
       referenceValues: [
@@ -210,7 +210,8 @@
         ["Recibido por", "Examinador sintético"],
         ["Fecha/hora de recepción", "El formulario la completa automáticamente con la hora local y su offset. Verificá que coincida con la máquina de prueba."],
         ["Zona horaria", "El formulario propone la zona horaria local; comprobá que sea la adecuada para esta prueba."],
-        ["Tamaño", "Dejá el campo vacío: no es necesario para esta prueba."]
+        ["Tamaño", "Dejá el campo vacío: no es necesario para esta prueba."],
+        ["SHA-256 esperado", "6762a47ef555f45bc4b8a9d5b4cda875cef2630ea601db6cb538db3237bfb37a"]
       ],
       expected: "El caso sintético se guarda con alcance y autorización ficticios y la ficha de evidencia aparece bajo ese mismo caso.",
       link: "/forensics",
