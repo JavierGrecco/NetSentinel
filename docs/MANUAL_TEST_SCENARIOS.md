@@ -7,6 +7,11 @@ Los archivos son artificiales. No representan una observación de NetSentinel,
 no demuestran actividad de una persona y no deben mezclarse con una instalación
 que contenga datos reales. El generador no accede a la red ni a SQLite.
 
+**Para la aceptación integrada de esta rama**, prepará el entorno siguiendo
+[el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md) y recorré `/guided-test`.
+El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de
+rama ni repetir la preparación sobre una base que ya esté sembrada.
+
 ## Generar los archivos
 
 Desde la raíz del repositorio, en la rama que contiene este documento:
@@ -110,14 +115,16 @@ No hace falta consultar un dominio real para probar el mapa histórico. La
 consulta DNS manual del mapa es una acción distinta, representa una resolución
 actual y no confirma la IP utilizada durante el evento de prueba.
 
-## Prueba C: importación Zeek (fuera del alcance de esta rama)
+## Prueba C: importación Zeek en Actividad (detalle complementario)
 
-Esta rama integrada cubre el mapa y NetSentinel Forense; el importador Zeek y el explorador LAN pertenecen a otras PRs y no se habilitan aquí. Omití esta sección durante la primera prueba guiada. Cuando esas funciones se integren, se preparará un recorrido único actualizado.
+El importador Zeek está integrado en la rama consolidada. Este procedimiento amplía
+el paso Zeek del asistente con detalle adicional; no instala Zeek, no inicia captura
+y no se conecta a un sensor. Para el recorrido principal, seguí `/guided-test`.
 
 1. Iniciá la rama candidata con una base de datos aislada.
-2. En el inventario, seleccioná **Dispositivo sintético de prueba**, cuya dirección
+2. En Actividad, seleccioná **Dispositivo sintético de prueba**, cuya dirección
    debe coincidir con la opción --device-ip que usaste para crear la base y los archivos.
-   Si es necesario, actualizá primero el inventario en tu red autorizada.
+   No ejecutes descubrimientos ni cambies el inventario de tu red real para completar este escenario.
 3. En Actividad, elegí ese dispositivo y previsualizá zeek-conn.jsonl.
    Confirmá que se reconocen origen, destino, protocolo, puerto e ID de Zeek.
 4. Repetí la vista previa con zeek-conn.tsv. Debe reconocer las directivas
@@ -138,11 +145,12 @@ la IP no corresponde al dispositivo seleccionado o el evento queda fuera del
 intervalo observado, puede omitirse. Eso es preferible a atribuirlo al equipo
 equivocado; no debilites esa validación para que el ejemplo aparezca.
 
-## Prueba D: explorador LAN con topología sintética
+## Prueba D: explorador LAN con topología sintética (detalle complementario)
 
-El escenario predeterminado **no** crea lecturas de inventario. Para probar la
-PR #171, prepará una segunda base nueva y exclusiva. El generador de archivos
-puede reutilizarse, pero no uses una base de datos con información real.
+En la aceptación integrada, la preparación de `docs/EXPERT_ACCEPTANCE_LAB.md` ya
+crea la lectura sintética con tres activos. No vuelvas a ejecutar el auxiliar sobre
+esa base: se niega a sobrescribir una base SQLite existente. Para un ensayo aislado
+del explorador, prepará una base nueva y exclusiva.
 
 Desde el checkout que contiene este script:
 
@@ -153,7 +161,7 @@ Desde el checkout que contiene este script:
 Este modo opcional agrega una lectura y tres observaciones de dispositivos ficticios
 relacionados con una subred RFC1918, etiquetadas como `synthetic-test-fixture`. No ejecuta
 descubrimiento, ping ni comandos del sistema. Para abrir esa base con el
-explorador, iniciá después la copia de NetSentinel de la PR #171 usando el mismo
+explorador, abrí `/network` en la misma copia de NetSentinel usando el mismo
 `NETSENTINEL_DATA_DIR`, sin ejecutar dos instancias contra la misma base.
 
 1. Abrí la página **Explorador de red** y elegí la única lectura sintética.

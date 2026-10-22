@@ -163,7 +163,7 @@ Leé la [política de seguridad](SECURITY.md) y la [guía técnica de seguridad]
 Con la aplicación en marcha, abrí **Prueba guiada** desde la navegación principal o entrá en `/guided-test`. Ahí se muestran los escenarios, los comandos copiables, las comprobaciones de API y los resultados esperados; el documento de escenarios amplía el recorrido.
 
 
-Esta rama de laboratorio reúne en una sola instalación el mapa mundial de IP, el espacio NetSentinel Forense y los datos de prueba sintéticos.
+Esta rama de laboratorio reúne en una sola instalación el explorador histórico LAN, el importador Zeek, el mapa mundial de IP, el espacio NetSentinel Forense y los datos de prueba sintéticos.
 
 - **Mapa mundial:** abrí `/world-map`. La página siempre está disponible, pero los marcadores reales necesitan una base GeoLite2-City autorizada instalada localmente.
 - **Datos sintéticos:** seguí [los escenarios guiados](docs/MANUAL_TEST_SCENARIOS.md). El generador escribe archivos de ejemplo; el auxiliar de base prepara una base de prueba separada. La importación CSV se confirma desde Actividad, no automáticamente.

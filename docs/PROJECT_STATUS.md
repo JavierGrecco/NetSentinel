@@ -2,15 +2,15 @@
 
 ## Rama consolidada de aceptación manual — 22 de octubre de 2026
 
-La rama `qa/expert-acceptance-consolidated-2026-10` reúne una versión de laboratorio con el mapa mundial GeoIP local, el explorador histórico LAN (`/network`), la importación Zeek en Actividad, NetSentinel Forense y una guía dentro de la aplicación con nueve escenarios y 24 pasos. El objetivo es ejecutar aceptación manual sobre una única instalación, no declarar automáticamente que cada función está aprobada.
+La rama `qa/expert-acceptance-consolidated-2026-10` reúne una versión de laboratorio con el mapa mundial GeoIP local, el explorador histórico LAN (`/network`), la importación Zeek en Actividad, NetSentinel Forense y un asistente secuencial dentro de `/guided-test` con 12 pasos evaluables, uno por pantalla. El objetivo es ejecutar aceptación manual sobre una única instalación, no declarar automáticamente que cada función está aprobada.
 
 La guía y la matriz de cobertura están en [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). La base de prueba es independiente y usa una lectura LAN sintética, CSV/Zeek generados localmente y una copia de trabajo forense artificial. La base GeoLite2-City necesaria para dibujar marcadores no se descarga con las dependencias Python y debe instalarse por separado con licencia/autorización adecuada.
 
-**Estado de calidad:** CI, análisis de seguridad y cadena de suministro de las ramas de origen no equivalen a la validación de esta combinación. Esta rama debe pasar su propia CI completa y después una revisión manual en la máquina de prueba. Hasta entonces, no declarar esta combinación lista para uso operativo ni estable. `main` no se modifica ni recibe esta integración.
+**Estado de calidad:** la cabeza de código de esta rama pasó CI (18/18 tareas), Security Analysis y Supply Chain Security. Chromium completó 135/135 comprobaciones responsive, incluido el recorrido guiado y la descarga del informe. Sigue pendiente la aceptación manual en la máquina de prueba y una revisión humana de accesibilidad con lector de pantalla; hasta cerrar esas pruebas, no declarar la combinación lista para uso operativo ni estable. `main` no se modifica ni recibe esta integración.
 
 > Esta es la nota breve para retomar el trabajo. El [roadmap](ROADMAP.md) contiene las tareas completas y la [matriz de validación](VALIDATION_MATRIX.md) guarda la evidencia de las pruebas reales.
 
-**Actualizado:** 20 de octubre de 2026  
+**Actualizado:** 22 de octubre de 2026  
 **Versión objetivo:** 0.10.0. Sigue en estabilización; no hay fecha prometida.
 
 **Revisión técnica del repositorio:** [diagnóstico y prioridades al 16/10/2026](REVIEW_2026-10-16.md). Resume los riesgos de publicación, la modularización pendiente y la evidencia que falta; no reemplaza la matriz de pruebas manuales.

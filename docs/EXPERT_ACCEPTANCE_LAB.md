@@ -69,11 +69,11 @@ El progreso y las notas se guardan solo en el navegador de esta máquina. El asi
 ## Orden sugerido para la prueba manual
 
 1. **Preparación e inventario sintético.** Confirmá las rutas aisladas y que no se inició un descubrimiento real.
-2. **CSV en Actividad.** Elegí `activity.csv`, revisá la vista previa, importá y repetí la importación; después probá los CSV negativos.
-3. **Topología histórica.** En la guía pulsá *Comprobar API*; luego abrí `/network`, seleccioná la lectura con origen `synthetic-test-fixture` y probá búsqueda, filtros, zoom, selección y detalle textual.
-4. **Zeek.** En `/activity`, elegí el activo ficticio `192.168.56.20`, cargá `$SCENARIO_DIR/zeek-conn.tsv`, previsualizá, revisá atribución y contadores, importá y repetí. Guardá si alguna fila se atribuye de forma inesperada.
+2. **CSV en Actividad.** Elegí `activity.csv`, revisá la vista previa e importá. La segunda importación debe indicar 0 eventos nuevos y 6 duplicados omitidos; después probá los CSV negativos.
+3. **Topología histórica.** En la guía pulsá **Comprobar ahora** y revisá los nodos/enlaces observados; luego abrí `/network`, seleccioná la lectura con origen `synthetic-test-fixture` y probá búsqueda, filtros, zoom, selección y detalle textual.
+4. **Zeek.** En `/activity`, elegí el activo ficticio `192.168.56.20`, cargá `$SCENARIO_DIR/zeek-conn.tsv`, previsualizá y revisá atribución y contadores. Importá dos veces: la segunda debe mostrar 0 registros nuevos y 2 duplicados omitidos. Anotá cualquier atribución inesperada.
 5. **Mapa mundial.** En `/world-map`, revisá tabla, filtro, estados vacíos y mensajes de cobertura. Para comprobar marcadores geográficos se necesita una base GeoLite2-City autorizada y vigente instalada localmente; instalar el paquete Python no descarga esa base.
-6. **Forense.** Creá el caso con valores ficticios de la propia guía, registrá la muestra, compará el hash inicial, cambiá la copia de trabajo con el comando propuesto y repetí la comparación. Revisá el registro de auditoría, manifiestos y las exportaciones JSON/Markdown.
+6. **Forense.** Creá el caso con valores ficticios de la guía, registrá la muestra, compará el hash inicial, cambiá la copia de trabajo con el comando propuesto y repetí la comparación. Revisá transferencias, auditoría y manifiestos; creá también el informe sin firma, descargá JSON/Markdown y verificá el JSON desde una segunda terminal.
 7. **Cierre.** Recorré los enlaces entre Red/Forense, la navegación por teclado y los tamaños de escritorio/móvil. Anotá la versión de Python, SO, SHA de la rama, resultado observado y cualquier fallo.
 
 ## Pruebas automatizadas locales
