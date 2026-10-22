@@ -17,26 +17,43 @@
     }
   }
 
-  function writeProgress() {
+  function writeProgress(completedAt) {
     const progress = {};
     checks.forEach((input) => { progress[input.dataset.guidedStep] = input.checked; });
+    if (completedAt) progress._completedAt = completedAt;
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch (_) { /* El progreso seguirá disponible durante esta visita. */ }
   }
 
   function updateProgress(save) {
     const completed = checks.filter((input) => input.checked).length;
     const percentage = total ? Math.round((completed / total) * 100) : 0;
+    const isComplete = total > 0 && completed === total;
+    const savedProgress = readProgress();
+    const completedAt = isComplete
+      ? (savedProgress._completedAt || new Date().toISOString())
+      : null;
+
     $("guidedProgressCount").textContent = completed + " de " + total + " pasos";
     $("guidedProgressFill").style.width = percentage + "%";
     $("guidedProgressBar").setAttribute("aria-valuemax", String(total));
     $("guidedProgressBar").setAttribute("aria-valuenow", String(completed));
-    $("guidedProgressText").textContent = completed === total
-      ? "Marcaste todos los pasos. Revisá tus resultados: el avance lo marcaste vos y no equivale a una certificación automática."
+    $("guidedProgressText").textContent = isComplete
+      ? "PRUEBA GUIADA FINALIZADA. Marcaste todos los pasos; el resultado es una declaración manual, no una aprobación automática."
       : "Completaste " + percentage + "%. Marcá cada paso solo después de comprobarlo en la aplicación.";
-    $("guidedFinalStatus").textContent = completed === total
-      ? "Recorrido marcado como completo. Conservá cualquier fallo o resultado inesperado en tus notas."
-      : "Quedan " + (total - completed) + " pasos sin marcar. No marques una prueba que no pudiste verificar.";
-    if (save) writeProgress();
+
+    $("guidedCompletionPanel").hidden = !isComplete;
+    if (isComplete) {
+      const completionDate = new Intl.DateTimeFormat("es-AR", {
+        dateStyle: "long",
+        timeStyle: "short"
+      }).format(new Date(completedAt));
+      $("guidedCompletionTimestamp").textContent = "Cierre registrado en este navegador: " + completionDate + ".";
+      $("guidedFinalStatus").textContent = "✅ PRUEBA GUIADA FINALIZADA: " + completed + " de " + total + " pasos marcados. Revisá y compartí el resumen de resultados.";
+    } else {
+      $("guidedFinalStatus").textContent = "Recorrido pendiente: faltan " + (total - completed) + " pasos. No marques una prueba que no pudiste verificar.";
+    }
+
+    if (save || (isComplete && !savedProgress._completedAt)) writeProgress(completedAt);
   }
 
   function announce(target, message, kind) {
@@ -145,6 +162,30 @@
       const cases = Array.isArray(payload && payload.items) ? payload.items.length : 0;
       return "consulta de casos completada; " + cases + " caso(s) devuelto(s) en esta muestra.";
     });
+  });
+
+  $("copyGuidedResults").addEventListener("click", async () => {
+    const completed = checks.filter((input) => input.checked).length;
+    const stored = readProgress();
+    const completedAt = stored._completedAt || new Date().toISOString();
+    const formattedDate = new Intl.DateTimeFormat("es-AR", {
+      dateStyle: "long",
+      timeStyle: "short"
+    }).format(new Date(completedAt));
+    const lines = [
+      "NetSentinel — Resultado de la prueba guiada",
+      "Pasos marcados: " + completed + " de " + total,
+      "Cierre: " + formattedDate,
+      "Resultado autodeclarado por quien realizó la prueba; no equivale a certificación ni aprobación automática.",
+      "",
+      ...checks.map((input) => (input.checked ? "[x] " : "[ ] ") + input.closest("label").innerText.replace(/\s+/g, " ").trim())
+    ];
+    try {
+      await copyText(lines.join("\n"));
+      announce($("guidedCompletionCopyStatus"), "Resumen copiado. Revisá los pasos pendientes antes de compartirlo.", "is-success");
+    } catch (error) {
+      announce($("guidedCompletionCopyStatus"), error && error.message ? error.message : "No se pudo copiar el resumen.", "is-error");
+    }
   });
 
   updateProgress(false);
