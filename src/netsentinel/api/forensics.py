@@ -49,6 +49,7 @@ class EvidenceCreateRequest(BaseModel):
     original_name: str | None = Field(default=None, max_length=255)
     source_description: str = Field(min_length=1, max_length=2000)
     received_from: str = Field(min_length=1, max_length=160)
+    received_by: str = Field(min_length=1, max_length=160)
     received_at_original: str = Field(min_length=1, max_length=64)
     received_timezone: str = Field(min_length=1, max_length=80)
     size_bytes: int | None = Field(default=None, ge=0, strict=True)

@@ -215,6 +215,11 @@
                 <input id="forensicReceivedFrom" name="received_from" required maxlength="160" placeholder="Responsable, institución o sistema de origen">
               </div>
               <div class="forensic-field">
+                <label for="forensicReceivedBy">Persona que recibe y queda a cargo</label>
+                <input id="forensicReceivedBy" name="received_by" required maxlength="160" autocomplete="name" placeholder="Persona que recibe físicamente el elemento">
+                <span>Es la persona que queda a cargo tras la recepción, no quien completa el formulario.</span>
+              </div>
+              <div class="forensic-field">
                 <label for="forensicReceivedAt">Fecha y hora original (ISO-8601 con offset)</label>
                 <input id="forensicReceivedAt" name="received_at_original" type="text" inputmode="text" autocomplete="off" spellcheck="false" required maxlength="64" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})" placeholder="2026-10-15T09:30:00-03:00">
                 <span>Conservá la hora y el offset de la fuente. Ejemplo: 09:30 en UTC−03:00.</span>

@@ -238,7 +238,7 @@
     );
     const knownSender = previousTransfer && previousTransfer.details
       ? previousTransfer.details.to_custodian
-      : item.received_from;
+      : item.received_by;
     addCustodyField(form, item.id, "Persona que entrega", "from_custodian", knownSender, {
       maxLength: 160,
       autocomplete: "off",
@@ -349,6 +349,7 @@
       addMetaLine(meta, "Tipo", sourceLabels[item.source_type] || "Otro tipo de fuente");
       addMetaLine(meta, "Nombre original", item.original_name);
       addMetaLine(meta, "Entregado por", item.received_from);
+      addMetaLine(meta, "Recibido por / custodio inicial", item.received_by);
       addMetaLine(meta, "Fecha de recepción", item.received_at_original + " · " + item.received_timezone);
       addMetaLine(meta, "Tamaño", item.size_bytes === null ? "No informado" : Number(item.size_bytes).toLocaleString() + " bytes");
       addMetaLine(meta, "Registrado en NetSentinel", item.created_at);
@@ -643,6 +644,7 @@
         original_name: values.original_name || null,
         source_description: values.source_description,
         received_from: values.received_from,
+        received_by: values.received_by,
         received_at_original: values.received_at_original.trim(),
         received_timezone: values.received_timezone,
         size_bytes: values.size_bytes === "" ? null : Number(values.size_bytes),

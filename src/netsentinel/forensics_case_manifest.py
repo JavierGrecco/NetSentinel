@@ -55,6 +55,7 @@ def build_case_manifest(
             "original_name",
             "source_description",
             "received_from",
+            "received_by",
             "received_at_original",
             "received_timezone",
             "size_bytes",

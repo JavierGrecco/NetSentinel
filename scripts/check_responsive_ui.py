@@ -206,6 +206,7 @@ def _seed_topology_fixture(data_dir: Path) -> None:
             original_name="missing-synthetic-evidence.bin",
             source_description="Elemento sintético para probar un error de lectura.",
             received_from="Fuente sintética",
+            received_by="Examinador sintético UI",
             received_at_original=datetime.now(timezone.utc).isoformat(),
             received_timezone="UTC",
             size_bytes=None,
@@ -565,8 +566,8 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
             return ["no se encontró el formulario para registrar transferencia de custodia"]
         if transfer_panel.get_attribute("open") is None:
             transfer_panel.locator("summary").click()
-        transfer_panel.locator("input[name='from_custodian']").fill("Fuente sintética")
-        transfer_panel.locator("input[name='to_custodian']").fill("Examinador sintético UI")
+        transfer_panel.locator("input[name='from_custodian']").fill("Examinador sintético UI")
+        transfer_panel.locator("input[name='to_custodian']").fill("Custodio sintético UI")
         transfer_panel.locator("input[name='transferred_at_original']").fill("2026-10-22T11:00:00-03:00")
         transfer_panel.locator("textarea[name='purpose']").fill("Entrega sintética para examen de laboratorio.")
         transfer_panel.locator("input[name='delivery_method']").fill("Entrega presencial simulada")
@@ -634,7 +635,7 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
         transfer_events = [event for event in audit_events if event.get("action") == "evidence_custody_transferred"]
         if len(transfer_events) != 1:
             failures.append("el expediente no incluye exactamente el traspaso sintético recién registrado")
-        elif transfer_events[0].get("details", {}).get("to_custodian") != "Examinador sintético UI":
+        elif transfer_events[0].get("details", {}).get("to_custodian") != "Custodio sintético UI":
             failures.append("el expediente no conserva a la persona que recibe el traspaso")
         exported_text = Path(download_path).read_text(encoding="utf-8")
         if "forensics-working-copies" in exported_text:
@@ -712,6 +713,7 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
             "Metadatos ficticios para comprobar el formulario; no hay contenido real adjunto."
         )
         page.locator("#forensicReceivedFrom").fill("Fixture automática de Chromium")
+        page.locator("#forensicReceivedBy").fill("Examinador sintético Chromium")
         page.locator("#forensicReportedHash").fill("a" * 64)
         page.locator("#forensicHashSource").fill("Hash fijo sintético de la prueba UI")
 

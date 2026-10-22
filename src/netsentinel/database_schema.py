@@ -278,6 +278,7 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 original_name TEXT,
                 source_description TEXT NOT NULL,
                 received_from TEXT NOT NULL,
+                received_by TEXT NOT NULL,
                 received_at_original TEXT NOT NULL,
                 received_timezone TEXT NOT NULL,
                 size_bytes INTEGER CHECK (size_bytes >= 0 OR size_bytes IS NULL),
@@ -288,6 +289,17 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 CHECK (reported_sha256 IS NULL OR length(reported_sha256) = 64)
             )
         """)
+        # Migración aditiva: las recepciones antiguas no identificaban a la
+        # persona que quedó a cargo. Un valor vacío significa "no registrado"; no
+        # inferimos esa identidad a partir del operador ni de la fuente que entrega.
+        evidence_columns = {
+            str(row["name"]) for row in db.execute("PRAGMA table_info(forensic_evidence)")
+        }
+        if "received_by" not in evidence_columns:
+            db.execute(
+                "ALTER TABLE forensic_evidence ADD COLUMN received_by TEXT NOT NULL DEFAULT ''"
+            )
+
         db.execute("""
             CREATE TABLE IF NOT EXISTS forensic_integrity_checks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

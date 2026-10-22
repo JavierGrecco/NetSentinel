@@ -56,6 +56,7 @@ def _sample():
         "original_name": "synthetic.bin",
         "source_description": "Muestra artificial para pruebas.",
         "received_from": "Fixture",
+        "received_by": "Examinador sintético",
         "received_at_original": "2026-10-20T09:00:00-03:00",
         "received_timezone": "America/Argentina/Cordoba",
         "size_bytes": 12,
@@ -100,6 +101,7 @@ def test_case_manifest_is_self_contained_and_has_a_stable_digest():
 
     assert first == second
     assert verify_case_manifest(first) is True
+    assert first["evidence"][0]["received_by"] == "Examinador sintético"
     assert first["format"] == "netsentinel-forensic-case-manifest"
     assert first["schema_version"] == 1
     assert first["case"]["authority_reference"] == "AUT-TEST"

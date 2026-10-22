@@ -111,6 +111,11 @@ def test_forensics_workspace_does_not_link_to_world_map() -> None:
     assert 'href="/world-map"' not in html
     assert 'href="/"' in html
 
+    assert 'id="forensicReceivedFrom"' in html
+    assert 'id="forensicReceivedBy"' in html
+    script = (ROOT / "src/netsentinel/static/forensics.js").read_text(encoding="utf-8")
+    assert 'received_by: values.received_by' in script
+
 
 def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     """La guía se ve dentro de la app y ofrece escenarios concretos y comprobables."""

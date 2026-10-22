@@ -53,6 +53,7 @@ def test_consolidated_case_manifest_includes_evidence_checks_and_audit(
                 "original_name": source_name,
                 "source_description": "Archivo generado exclusivamente para este test.",
                 "received_from": "Fixture automatizada",
+                "received_by": "Examinador sintético",
                 "received_at_original": "2026-10-20T10:00:00-03:00",
                 "received_timezone": "America/Argentina/Cordoba",
                 "size_bytes": len(payload_bytes),
@@ -94,6 +95,7 @@ def test_consolidated_case_manifest_includes_evidence_checks_and_audit(
     assert len(manifest["evidence"]) == 1
     exported_evidence = manifest["evidence"][0]
     assert exported_evidence["id"] == evidence["id"]
+    assert exported_evidence["received_by"] == "Examinador sintético"
     assert exported_evidence["reported_sha256"] == source_hash
     assert exported_evidence["integrity_checks"][0]["status"] == "match"
     assert exported_evidence["integrity_checks"][0]["calculated_sha256"] == source_hash

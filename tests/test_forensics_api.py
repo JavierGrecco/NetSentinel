@@ -94,6 +94,7 @@ def test_evidence_registration_stores_metadata_but_not_file_contents_or_paths(mo
                 "original_name": "browser-history.json",
                 "source_description": "Exportación sintética de un perfil de prueba.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T09:30:00-03:00",
                 "received_timezone": "America/Argentina/Cordoba",
                 "size_bytes": 26,
@@ -110,6 +111,8 @@ def test_evidence_registration_stores_metadata_but_not_file_contents_or_paths(mo
     assert response.status_code == 201, response.text
     evidence = response.json()
     assert evidence["evidence_number"] == "E-0001"
+    assert evidence["received_from"] == "Responsable de prueba"
+    assert evidence["received_by"] == "Receptor de prueba"
     assert evidence["reported_sha256"] == expected_hash
     assert evidence["hash_status"] == "reported"
     assert listing.status_code == 200
@@ -117,6 +120,9 @@ def test_evidence_registration_stores_metadata_but_not_file_contents_or_paths(mo
     assert updated_case.json()["evidence_count"] == 1
     audit_actions = [entry["action"] for entry in audit.json()["items"]]
     assert audit_actions == ["evidence_registered", "case_opened"]
+    registered_event = audit.json()["items"][0]
+    assert registered_event["details"]["received_from"] == "Responsable de prueba"
+    assert registered_event["details"]["received_by"] == "Receptor de prueba"
     assert "file_path" not in evidence
     assert "content" not in evidence
     assert str(tmp_path) not in response.text
@@ -129,6 +135,7 @@ def test_evidence_registration_stores_metadata_but_not_file_contents_or_paths(mo
                 "source_type": "browser_export",
                 "source_description": "Segunda muestra de prueba.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T09:31:00-03:00",
                 "received_timezone": "America/Argentina/Cordoba",
                 "actor": "Operador de prueba",
@@ -154,6 +161,7 @@ def test_evidence_name_rejects_full_paths_to_avoid_storing_private_directories(m
                 "original_name": r"C:\Users\Private\Desktop\evidence.bin",
                 "source_description": "Muestra de prueba.",
                 "received_from": "Operador de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "actor": "Operador de prueba",
@@ -177,6 +185,7 @@ def test_reported_hash_must_be_valid_and_identify_its_source(monkeypatch, tmp_pa
             "source_type": "file_copy",
             "source_description": "Archivo sintético.",
             "received_from": "Operador de prueba",
+            "received_by": "Receptor de prueba",
             "received_at_original": "2026-10-15T12:00:00Z",
             "received_timezone": "UTC",
             "actor": "Operador de prueba",
@@ -227,6 +236,7 @@ def test_closed_case_keeps_history_and_rejects_new_evidence(monkeypatch, tmp_pat
                 "source_type": "other",
                 "source_description": "Prueba posterior al cierre.",
                 "received_from": "Operador de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "actor": "Operador de prueba",
@@ -423,7 +433,8 @@ def _registered_synthetic_evidence(client, case_id):
             "source_type": "file_copy",
             "original_name": "custody-sample.bin",
             "source_description": "Metadatos ficticios para probar transferencias de custodia.",
-            "received_from": "Custodio inicial",
+            "received_from": "Fuente sintética",
+            "received_by": "Custodio inicial",
             "received_at_original": "2026-10-15T12:00:00Z",
             "received_timezone": "UTC",
             "actor": "Operador que recibe",
@@ -570,6 +581,33 @@ def test_custody_transfer_rejects_missing_offset_same_custodian_and_closed_case(
     assert unknown_evidence.status_code == 404
 
 
+def test_legacy_receipt_without_receiver_must_be_reconciled_before_transfer(
+    monkeypatch, tmp_path
+):
+    """La migración no inventa un custodio; bloquea transferencias sin recepción conocida."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _registered_synthetic_evidence(client, case["id"])
+        # Simula el marcador vacío que deja una base antigua sin campo received_by.
+        with database.connect() as db:
+            db.execute(
+                "UPDATE forensic_evidence SET received_by = '' WHERE case_id = ? AND id = ?",
+                (case["id"], evidence["id"]),
+            )
+        response = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence['id']}/custody-transfers",
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+
+    assert response.status_code == 409
+    assert "recepción inicial no identifica" in response.json()["detail"]
+
+
 def test_custody_transfer_refuses_to_extend_a_broken_audit_chain(monkeypatch, tmp_path):
     """Una cadena dañada debe revisarse, no alargarse como si siguiera íntegra."""
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
@@ -604,6 +642,46 @@ def test_custody_transfer_refuses_to_extend_a_broken_audit_chain(monkeypatch, tm
     assert len(audit_after) == len(audit_before)
 
 
+def test_existing_database_migrates_missing_receiver_as_unknown(monkeypatch, tmp_path):
+    """La migración conserva la evidencia antigua sin inventar quién quedó a cargo."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
+    database.initialize()
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        case = _open_case(client)
+        evidence = _registered_synthetic_evidence(client, case["id"])
+
+    # Simula el esquema legado previo a received_by. Algunas versiones viejas de
+    # SQLite podrían no permitir DROP COLUMN; en ellas se valida el camino equivalente
+    # con el marcador vacío en test_legacy_receipt_without_receiver_must_be_reconciled_before_transfer.
+    if sqlite3.sqlite_version_info < (3, 35, 0):
+        pytest.skip("La versión de SQLite no permite simular DROP COLUMN en este test.")
+    with database.connect() as db:
+        db.execute("ALTER TABLE forensic_evidence DROP COLUMN received_by")
+
+    database.initialize()
+    with database.connect() as db:
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(forensic_evidence)")}
+        row = db.execute(
+            "SELECT received_by FROM forensic_evidence WHERE case_id = ? AND id = ?",
+            (case["id"], evidence["id"]),
+        ).fetchone()
+
+    assert "received_by" in columns
+    assert row is not None
+    assert row["received_by"] == ""
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        transfer = client.post(
+            f"/api/forensics/cases/{case['id']}/evidence/{evidence['id']}/custody-transfers",
+            json=_custody_transfer_payload(),
+            headers={"Origin": "http://127.0.0.1"},
+        )
+    assert transfer.status_code == 409
+    assert "recepción inicial no identifica" in transfer.json()["detail"]
+
+
 def test_hash_comparison_records_match_then_mismatch_without_storing_full_path(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("NETSENTINEL_DISABLE_SCHEDULER", "1")
@@ -626,6 +704,7 @@ def test_hash_comparison_records_match_then_mismatch_without_storing_full_path(m
                 "original_name": "evidence.bin",
                 "source_description": "Archivo sintético preparado para probar el flujo.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "size_bytes": len(original_content),
@@ -698,6 +777,7 @@ def test_failed_hash_read_is_recorded_without_revealing_the_path(monkeypatch, tm
                 "original_name": "missing-evidence.bin",
                 "source_description": "Elemento sintético para probar errores de lectura.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "reported_sha256": reference_hash,
@@ -763,6 +843,7 @@ def test_hash_comparison_reports_conflict_if_case_closes_during_read(monkeypatch
                 "source_type": "file_copy",
                 "source_description": "Prueba de cierre concurrente.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "size_bytes": len(content),
@@ -821,6 +902,7 @@ def test_closed_case_rejects_hash_comparison_without_writing_a_new_check(monkeyp
                 "source_type": "file_copy",
                 "source_description": "Prueba de cierre.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "reported_sha256": hashlib.sha256(content).hexdigest(),
@@ -868,6 +950,7 @@ def test_hash_comparison_without_reference_hash_is_a_conflict(monkeypatch, tmp_p
                 "source_type": "file_copy",
                 "source_description": "Prueba sin hash de referencia.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "actor": "Operador de prueba",
@@ -913,6 +996,7 @@ def test_hash_comparison_requires_explicit_working_copy_confirmation(monkeypatch
                 "source_type": "file_copy",
                 "source_description": "Muestra de prueba.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "reported_sha256": expected_hash,
@@ -972,6 +1056,7 @@ def test_hash_comparison_rejects_paths_and_traversal_names(monkeypatch, tmp_path
                 "source_type": "file_copy",
                 "source_description": "Prueba de validación de nombres.",
                 "received_from": "Responsable de prueba",
+                "received_by": "Receptor de prueba",
                 "received_at_original": "2026-10-15T12:00:00Z",
                 "received_timezone": "UTC",
                 "reported_sha256": reference_hash,

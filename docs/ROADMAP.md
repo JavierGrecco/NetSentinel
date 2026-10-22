@@ -85,7 +85,7 @@ La 0.10.0 solo se declara estable cuando REL-01 a REL-11 estén cerradas o tenga
 
 ## Trabajo en paralelo — NetSentinel Forense
 
-**Estado:** laboratorio experimental en la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`, PR #184 en borrador y apilada sobre la PR del mapa. No está en `main` ni forma parte de la versión estable 0.10.0. El módulo registra metadatos, compara SHA-256 de copias de trabajo, exporta manifiestos y ahora admite registrar transferencias de custodia en la auditoría encadenada. No adquiere discos ni autentica al operador.
+**Estado:** laboratorio experimental en la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`, PR #184 en borrador y apilada sobre la PR del mapa. No está en `main` ni forma parte de la versión estable 0.10.0. El módulo registra metadatos diferenciando quién entrega y quién recibe al ingreso, compara SHA-256 de copias de trabajo, exporta manifiestos y registra transferencias de custodia en la auditoría encadenada. En bases antiguas sin receptor documentado, la migración deja el campo vacío y bloquea nuevos traspasos hasta reconciliar la recepción. No adquiere discos ni autentica al operador.
 
 La [matriz de preparación pericial](FORENSIC_READINESS_MATRIX.md) es el inventario de controles implementados y brechas frente a prácticas publicadas de SWGDE/NIST. SWGDE considera mínimos de cadena de custodia la identificación del elemento, las personas que entregan/reciben, la fecha/hora y el propósito de cada transferencia; el informe de examen también debe describir solicitud, material, procesos/resultados, disposición y autorización. La implementación actual cubre solo una parte de ese alcance.
 
@@ -102,7 +102,7 @@ La [matriz de preparación pericial](FORENSIC_READINESS_MATRIX.md) es el inventa
 ### Brechas que impiden llamarlo listo para evidencia real
 
 - Autenticación individual, roles y separación de funciones.
-- Captura explícita de la persona que recibe durante la recepción inicial (distinta del nombre del operador que introduce los datos).
+- Reconciliar recepciones históricas cuyo custodio receptor no fue registrado. La migración conserva ese dato como vacío y bloquea transferencias posteriores hasta reconciliarlo; no se infiere una identidad.
 - Informe formal y reproducible, con herramientas/versiones, resultados, limitaciones, disposición y autorización/firma.
 - Algoritmos adicionales y procedimientos de adquisición; ahora se calcula SHA-256 de una copia designada y no se crea una imagen forense.
 - Firma o anclaje externo independiente de auditoría, almacenamiento/retención con controles operativos y revisión independiente.

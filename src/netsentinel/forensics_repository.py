@@ -91,6 +91,7 @@ def _evidence_dict(row: sqlite3.Row) -> dict[str, Any]:
         "original_name": row["original_name"],
         "source_description": row["source_description"],
         "received_from": row["received_from"],
+        "received_by": row["received_by"] if "received_by" in row.keys() else "",
         "received_at_original": row["received_at_original"],
         "received_timezone": row["received_timezone"],
         "size_bytes": row["size_bytes"],
@@ -221,6 +222,7 @@ def add_evidence(
     original_name: str | None,
     source_description: str,
     received_from: str,
+    received_by: str,
     received_at_original: str,
     received_timezone: str,
     size_bytes: int | None,
@@ -248,12 +250,12 @@ def add_evidence(
         db.execute(
             """INSERT INTO forensic_evidence
                (id, case_id, evidence_number, label, source_type, original_name,
-                source_description, received_from, received_at_original, received_timezone,
+                source_description, received_from, received_by, received_at_original, received_timezone,
                 size_bytes, reported_sha256, hash_source, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 evidence_id, case_id, evidence_number, label, source_type, original_name,
-                source_description, received_from, received_at_original, received_timezone,
+                source_description, received_from, received_by, received_at_original, received_timezone,
                 size_bytes, reported_sha256, hash_source, now,
             ),
         )
@@ -272,6 +274,8 @@ def add_evidence(
                 "evidence_number": evidence_number,
                 "source_type": source_type,
                 "reported_hash_present": bool(reported_sha256),
+                "received_from": received_from,
+                "received_by": received_by,
                 "size_bytes": size_bytes,
             },
         )
@@ -484,18 +488,20 @@ def record_custody_transfer(
         ).fetchone()
         if prior_transfer is None:
             expected_from = db.execute(
-                "SELECT received_from FROM forensic_evidence WHERE case_id = ? AND id = ?",
+                "SELECT received_by FROM forensic_evidence WHERE case_id = ? AND id = ?",
                 (case_id, evidence_id),
-            ).fetchone()["received_from"]
+            ).fetchone()["received_by"]
         else:
             try:
                 expected_from = json.loads(prior_transfer["details_json"]).get("to_custodian")
             except (json.JSONDecodeError, TypeError, AttributeError):
                 expected_from = None
-        if (
-            not expected_from
-            or expected_from.strip().casefold() != from_custodian.strip().casefold()
-        ):
+        if not expected_from or not expected_from.strip():
+            raise ForensicConflictError(
+                "La recepción inicial no identifica a la persona que quedó a cargo. "
+                "Revisá los metadatos del elemento antes de registrar una transferencia."
+            )
+        if expected_from.strip().casefold() != from_custodian.strip().casefold():
             raise ForensicConflictError(
                 "La persona que entrega no coincide con la última custodia registrada. "
                 "Revisá la persona indicada o documentá primero el traspaso que falta."
