@@ -2,7 +2,7 @@
 
 ## Estado y propósito
 
-La primera versión del mapa vive en la rama `feat/ip-world-map-geoip-2026-10`; todavía no está integrada en `main`. La pantalla es `/world-map`. `/api/geolocation/map` lista destinos observados y `/api/geolocation/lookup` enriquece direcciones que la persona usuaria ya resolvió manualmente.
+En esta rama de laboratorio integrada, la pantalla `/world-map` se sirve junto con NetSentinel Red y NetSentinel Forense. `/api/geolocation/map` lista destinos observados y `/api/geolocation/lookup` enriquece direcciones que la persona usuaria ya resolvió manualmente. La rama sigue siendo experimental y no modifica `main`.
 
 La vista muestra ubicaciones aproximadas de direcciones IP públicas que **ya existen como `destination_ip` en eventos guardados en la base local de NetSentinel**. No es un mapa de dispositivos LAN, no descubre IP externas y no captura conexiones o paquetes en vivo.
 
