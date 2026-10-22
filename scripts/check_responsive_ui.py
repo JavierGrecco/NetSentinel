@@ -1670,7 +1670,7 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
             if expected_path and not popup.url.endswith(expected_path):
                 failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
             popup.close()
-            if title != "Ver la topología guardada":
+            if "topología guardada" not in title.lower():
                 if page.locator("#wizardRunCheck").is_visible():
                     page.locator("#wizardRunCheck").click()
                     page.wait_for_function(
