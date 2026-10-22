@@ -178,21 +178,45 @@ def test_forensic_report_workspace_exposes_versioning_and_safe_exports() -> None
 
 
 def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
-    """La guía se ve dentro de la app y ofrece escenarios concretos y comprobables."""
+    """El asistente guía un paso a la vez, muestra resultados y no dispara escaneos."""
     html = (ROOT / "src/netsentinel/static/guided-test.html").read_text(encoding="utf-8")
     script = (ROOT / "src/netsentinel/static/guided-test.js").read_text(encoding="utf-8")
-    for scenario_id in ("scenario-csv", "scenario-rejections", "scenario-map", "scenario-topology", "scenario-zeek", "scenario-forensics", "scenario-forensics-safety", "scenario-forensics-manifests", "scenario-forensics-report"):
-        assert f'id="{scenario_id}"' in html
-    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 24
-    assert 'id="copySetupCommand"' in html
-    assert "--force" not in html
-    assert 'id="guidedProgressBar"' in html
-    assert 'aria-valuemax="24"' in html
-    assert 'data-guided-step="forensics-custody-transfer"' in html
-    assert 'id="checkMapApi"' in html
-    assert 'id="checkForensicsApi"' in html
-    assert 'id="copyEvidenceChangeCommand"' in html
-    assert 'id="evidenceChangeCommand"' in html
-    assert "netsentinel.guided-test.progress.v1" in script
-    assert 'checkApi("/api/geolocation/map?limit=1"' in script
-    assert 'checkApi("/api/forensics/cases?limit=1"' in script
+    stylesheet = (ROOT / "src/netsentinel/static/guided-test.css").read_text(encoding="utf-8")
+
+    for element_id in (
+        "wizardStepTitle",
+        "wizardObjective",
+        "wizardWhy",
+        "wizardInstructions",
+        "wizardExpected",
+        "wizardAutomaticPanel",
+        "wizardActionLink",
+        "wizardManualResultPanel",
+        "wizardSummaryPanel",
+        "wizardCopyReport",
+        "wizardDownloadReport",
+        "wizardRecoveryDetails",
+    ):
+        assert f'id="{element_id}"' in html
+
+    assert 'target="_blank"' in html
+    assert 'data-wizard-outcome="passed"' in html
+    assert 'data-wizard-outcome="failed"' in html
+    assert 'data-wizard-outcome="blocked"' in html
+    assert "no llama a" in html
+    assert "synthetic-test-fixture" in script
+    assert 'getJson("/api/health")' in script
+    assert 'getJson("/api/scans?limit=100")' in script
+    assert 'getJson("/api/geolocation/map?limit=250")' in script
+    assert 'method: "GET"' in script
+    assert 'method: "POST"' not in script
+    assert "netsentinel.acceptance-wizard.v2" in script
+    assert "PRUEBA GUIADA" in script
+    assert "wizard-summary-row" in script
+    assert "prefers-reduced-motion" in stylesheet
+
+    # The new experience replaces the dispersed checklist instead of duplicating it.
+    assert 'data-guided-step="' not in html
+    assert 'id="scenario-csv"' not in html
+
+
