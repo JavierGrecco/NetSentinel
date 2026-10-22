@@ -1789,9 +1789,32 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
                         """() => (document.querySelector("#importStatus")?.textContent || "").includes("evento(s) importados")""",
                         timeout=8000,
                     )
-                    status = target_page.locator("#importStatus").inner_text()
-                    if "duplicado(s)" not in status and "6 evento(s) importados" not in status:
-                        failures.append("la importación CSV no indicó importaciones ni duplicados en el asistente")
+                    first_status = target_page.locator("#importStatus").inner_text()
+                    if "evento(s) importados" not in first_status or "duplicado(s) omitidos" not in first_status:
+                        failures.append("la primera importación CSV no informó claramente importados y duplicados")
+
+                    # Volver a previsualizar debe mostrar los seis registros como duplicados.
+                    _clear_status(target_page, "#importStatus")
+                    target_page.locator("#previewImport").click()
+                    target_page.wait_for_function(
+                        """() => {
+                          const panel = document.querySelector("#previewPanel");
+                          const summary = document.querySelector("#previewSummary")?.textContent || "";
+                          return panel && !panel.hidden && summary.includes("6 fila(s) válidas") &&
+                            summary.includes("0 nueva(s)") && summary.includes("6 duplicada(s)");
+                        }""",
+                        timeout=8000,
+                    )
+                    # La segunda importación demuestra que los duplicados no se guardan de nuevo.
+                    _clear_status(target_page, "#importStatus")
+                    target_page.locator("#import").click()
+                    target_page.wait_for_function(
+                        """() => (document.querySelector("#importStatus")?.textContent || "").includes("duplicado(s) omitidos")""",
+                        timeout=8000,
+                    )
+                    second_status = target_page.locator("#importStatus").inner_text()
+                    if "0 evento(s) importados" not in second_status or "6 duplicado(s) omitidos" not in second_status:
+                        failures.append("la segunda importación CSV no informó 0 nuevos y 6 duplicados omitidos")
                 return
 
             if "CSV: rechazar archivos inválidos" in step_title:
@@ -1827,9 +1850,30 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
                     """() => (document.querySelector("#zeekImportStatus")?.textContent || "").includes("registro(s) importados")""",
                     timeout=8000,
                 )
-                status = target_page.locator("#zeekImportStatus").inner_text()
-                if "2 registro(s) importados" not in status and "duplicado(s)" not in status:
-                    failures.append("la importación Zeek no indicó los registros importados o duplicados durante el asistente")
+                first_status = target_page.locator("#zeekImportStatus").inner_text()
+                if "registro(s) importados" not in first_status or "duplicado(s)" not in first_status:
+                    failures.append("la primera importación Zeek no informó claramente importados y duplicados")
+
+                # Repetir primero la vista previa y después la importación prueba idempotencia por UID.
+                _clear_status(target_page, "#zeekImportStatus")
+                target_page.locator("#previewZeekImport").click()
+                target_page.wait_for_function(
+                    """() => {
+                      const panel = document.querySelector("#zeekPreviewPanel");
+                      const summary = document.querySelector("#zeekPreviewSummary")?.textContent || "";
+                      return panel && !panel.hidden && summary.includes("0 nuevo(s)") && summary.includes("2 duplicado(s)");
+                    }""",
+                    timeout=8000,
+                )
+                _clear_status(target_page, "#zeekImportStatus")
+                target_page.locator("#importZeek").click()
+                target_page.wait_for_function(
+                    """() => (document.querySelector("#zeekImportStatus")?.textContent || "").includes("duplicado(s)")""",
+                    timeout=8000,
+                )
+                second_status = target_page.locator("#zeekImportStatus").inner_text()
+                if "0 registro(s) importados" not in second_status or "2 duplicado(s)" not in second_status:
+                    failures.append("la segunda importación Zeek no informó 0 nuevos y 2 UID duplicados")
                 return
 
         def open_module_and_record(outcome: str = "passed") -> str:

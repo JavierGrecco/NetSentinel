@@ -96,15 +96,15 @@
       title: "4. CSV: importar una vez y comprobar duplicados",
       checkKey: "csv-events",
       checkAfterAction: true,
-      actionDescription: "En la otra pestaña, importá activity.csv y repetí la vista previa. Volvé a esta guía y pulsá «Comprobar ahora» para ver cuántos eventos sintéticos quedaron guardados.",
+      actionDescription: "En la otra pestaña, importá activity.csv. Después previsualizá el mismo archivo e importalo una segunda vez. Volvé aquí y pulsá «Comprobar ahora» para ver el recuento guardado.",
       lead: "Ahora que revisaste la vista previa, comprobaremos qué ocurre al confirmar la importación y al repetirla.",
       objective: "Validar que los eventos se guarden una vez y que una nueva importación del mismo archivo no cree duplicados.",
       why: "Sin idempotencia, volver a importar un archivo puede inflar contadores y distorsionar el historial de actividad.",
       instructions: [
-        "En la pestaña de Actividad que ya abriste, confirmá «Importar metadatos». Leé el resumen de importados y duplicados.",
-        "Sin cambiar el dispositivo, volvé a seleccionar activity.csv y pulsá «Previsualizar CSV» otra vez.",
-        "Revisá el resumen de registros ya vistos o duplicados. Si el resumen no lo explica, revisá la lista de eventos para comprobar que no haya una segunda copia.",
-        "Volvé al asistente y registrá el resultado observado."
+        "En la pestaña de Actividad que ya abriste, confirmá «Importar metadatos». Leé cuántos eventos se importaron y cuántos se omitieron.",
+        "Sin cambiar el dispositivo ni el archivo, pulsá «Previsualizar CSV» otra vez. Debe indicar 6 filas válidas, 0 nuevas y 6 duplicadas que se omitirían.",
+        "Pulsá «Importar metadatos» una segunda vez. El resultado esperado es 0 eventos importados y 6 duplicados omitidos.",
+        "Revisá «Eventos» y volvé al asistente. Registrá el resultado observado; no marques correcto si los contadores no coinciden."
       ],
       expected: "La primera importación guarda los seis eventos válidos; la repetición identifica los registros duplicados y no vuelve a contarlos como eventos nuevos.",
       link: "/activity",
@@ -165,7 +165,7 @@
       title: "7. Zeek: previsualizar e importar conn.log",
       checkKey: "zeek-events",
       checkAfterAction: true,
-      actionDescription: "Previsualizá e importá zeek-conn.tsv en la otra pestaña. Volvé a esta guía y pulsá «Comprobar ahora» para consultar los UID Zeek que quedaron guardados.",
+      actionDescription: "Previsualizá e importá zeek-conn.tsv. Luego repetí la importación del mismo archivo para comprobar duplicados. Volvé aquí y pulsá «Comprobar ahora» para ver los UID guardados.",
       lead: "Este escenario usa un archivo exportado y sintético. No arranca Zeek, no captura paquetes y no consulta un sensor.",
       objective: "Verificar la lectura de TSV nativo de Zeek, la atribución por IP y fecha, el tratamiento de contadores ausentes y la deduplicación por UID.",
       why: "Los contadores ausentes no equivalen a cero, y una conexión solo debe atribuirse cuando el dispositivo y el intervalo temporal coinciden con los datos guardados.",
@@ -173,8 +173,9 @@
         "En Actividad, abrí «Importar conexiones de Zeek (conn.log)».",
         "Elegí «Dispositivo sintético de prueba» (192.168.56.20) y seleccioná zeek-conn.tsv dentro de SCENARIO_DIR.",
         "Pulsá «Previsualizar registros». Revisá los UID, la hora, la IP de origen/destino y los contadores. Los campos marcados como ausentes deben permanecer desconocidos.",
-        "Si la vista previa corresponde a la IP y al intervalo del activo, pulsá «Importar conexiones». Después previsualizá el mismo archivo otra vez y revisá los UID duplicados.",
-        "Volvé a esta guía y anotá cualquier atribución o contador inesperado."
+        "Si la vista previa corresponde a la IP y al intervalo del activo, pulsá «Importar conexiones». Volvé a previsualizar el archivo: debe indicar 0 nuevas y 2 duplicadas.",
+        "Pulsá «Importar conexiones» una segunda vez. El resultado esperado es 0 registros importados y 2 duplicados omitidos; luego volvé a esta guía.",
+        "Anotá cualquier atribución, contador o cantidad inesperada."
       ],
       expected: "La vista previa explica filas aceptadas y omitidas; los contadores ausentes siguen como desconocidos y los UID repetidos no generan duplicados.",
       link: "/activity",
@@ -194,7 +195,7 @@
         "Abrí NetSentinel Forense en otra pestaña. En «Nombre de quien realiza la operación», escribí Operador sintético de prueba.",
         "Pulsá «Abrir un caso» y usá los valores de referencia que aparecen debajo de estas instrucciones.",
         "En «Evidencia registrada», pulsá «Registrar un elemento de evidencia». Usá netsentinel-forensic-sample.bin como nombre original, «Copia de archivo» como tipo y el SHA-256 que imprimió el generador en la terminal.",
-        "Usá el SHA-256 esperado que aparece en las referencias debajo; corresponde al contenido exacto de esta muestra sintética. En el origen del hash indicá «SHA-256 calculado por el generador local al crear la muestra». Como descripción de recepción, usá «Archivo artificial para validar el control de integridad; no es evidencia real».",
+        "Copiá el SHA-256 exacto que aparece en las referencias debajo (también lo imprime el generador). En el origen del hash indicá «SHA-256 calculado por el generador local al crear la muestra». Como descripción de recepción, usá «Archivo artificial para validar el control de integridad; no es evidencia real».",
         "Guardá y revisá que el caso y la evidencia aparezcan en la página antes de volver al asistente."
       ],
       referenceValues: [
@@ -284,6 +285,7 @@
         ["Persona que recibe", "Custodio sintético receptor"],
         ["Motivo de la transferencia", "Traslado sintético para validar el registro de custodia."],
         ["Método de entrega", "Entrega simulada dentro del laboratorio local; no se entrega ningún objeto físico."],
+        ["Fecha/hora de la transferencia", "Se completa con la hora local y su offset; verificá que corresponda a la máquina de prueba."],
         ["Estado del elemento", "Muestra digital ficticia; no hubo embalaje físico. (Campo opcional)"],
         ["Precinto", "Dejalo vacío: no hay precinto físico. (Campo opcional)"]
       ],
@@ -306,7 +308,7 @@
         "En «Informe de examen», desplegá «Crear borrador de informe». La fecha de solicitud se completa sola. Rellená los demás campos obligatorios usando los valores de referencia de abajo; dejá Conclusiones vacías para que el campo de fundamento no sea obligatorio.",
         "Pulsá «Guardar nueva versión sin firma». En la tarjeta del informe, verificá que indique «Borrador sin firma» y que muestre un digest SHA-256.",
         "Desde esa tarjeta, descargá «JSON verificable» y «informe legible (.md)». Confirmá que corresponden al caso LAB-SINTETICO-001.",
-        "Desde la raíz del repositorio/laboratorio, ejecutá .venv/bin/python -m netsentinel.forensics_report \"RUTA_COMPLETA_DEL_JSON\"; reemplazá el marcador por la ruta real del JSON descargado. El verificador debe informar que el borrador es verificable y sin firma.",
+        "Abrí una segunda ventana o pestaña de Terminal; no detengas el servidor que está ejecutando NetSentinel. Desde la raíz del repositorio/laboratorio, ejecutá .venv/bin/python -m netsentinel.forensics_report \"RUTA_COMPLETA_DEL_JSON\"; reemplazá el marcador por la ruta real del JSON descargado. El verificador debe informar que el borrador es verificable y sin firma.",
         "Volvé al asistente e indicá qué campo, descarga o verificación no coincidió. No uses ni adjuntes evidencia real."
       ],
       referenceValues: [
