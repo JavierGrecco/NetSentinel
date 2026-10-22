@@ -210,7 +210,9 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     assert 'getJson("/api/geolocation/map?limit=250")' in script
     assert 'method: "GET"' in script
     assert 'method: "POST"' not in script
-    assert "netsentinel.acceptance-wizard.v2" in script
+    assert "netsentinel.acceptance-wizard.v3" in script
+    assert 'if (step.type === "auto" && record.autoChecked' in script
+    assert 'id="wizardCopyReferenceValues"' in html
     assert "PRUEBA GUIADA" in script
     assert "wizard-summary-row" in script
     assert "prefers-reduced-motion" in stylesheet

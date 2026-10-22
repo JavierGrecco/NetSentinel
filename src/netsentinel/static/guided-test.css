@@ -494,6 +494,20 @@
   font-size: 11px;
   line-height: 1.5;
 }
+.wizard-reference-panel .wizard-automatic-header {
+  align-items: center;
+}
+.wizard-reference-panel .wizard-automatic-header h3 {
+  margin: 0;
+}
+#wizardReferenceStatus {
+  margin: 8px 0 0;
+}
+#wizardCopyReferenceValues {
+  flex: 0 0 auto;
+  min-height: 38px;
+  font-size: 11px;
+}
 .wizard-reference-values {
   display: grid;
   grid-template-columns: minmax(130px, .45fr) minmax(0, 1fr);
@@ -636,6 +650,8 @@
   .wizard-outcome-buttons { grid-template-columns: 1fr; }
   .wizard-action-panel { padding: 12px; }
   .wizard-module-link { width: 100%; align-self: stretch; }
+  .wizard-reference-panel .wizard-automatic-header { align-items: flex-start; }
+  #wizardCopyReferenceValues { width: 100%; }
   .wizard-reference-values { grid-template-columns: 1fr; gap: 3px; }
   .wizard-reference-values dd { margin-bottom: 8px; }
   .wizard-automatic-header { flex-direction: column; align-items: flex-start; }

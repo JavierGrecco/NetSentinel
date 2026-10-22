@@ -168,7 +168,11 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
         </section>
 
         <section id="wizardReferencePanel" class="wizard-reference-panel" hidden aria-labelledby="wizardReferenceHeading">
-          <h3 id="wizardReferenceHeading">Valores de referencia para completar el formulario</h3>
+          <div class="wizard-automatic-header">
+            <h3 id="wizardReferenceHeading">Valores de referencia para completar el formulario</h3>
+            <button type="button" id="wizardCopyReferenceValues" class="quiet">Copiar valores</button>
+          </div>
+          <p id="wizardReferenceStatus" class="wizard-muted" role="status" aria-live="polite">Los valores son ficticios y solo deben usarse en este laboratorio.</p>
           <dl id="wizardReferenceValues" class="wizard-reference-values"></dl>
         </section>
 

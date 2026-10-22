@@ -215,6 +215,9 @@ def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
     assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
     assert 'id: "lab"' in script
     assert 'id: "summary"' in script
+    assert "netsentinel.acceptance-wizard.v3" in script
+    assert 'id: "forensics-manifests"' in script
+    assert 'Registrar transferencia de custodia' in script
     assert 'checkKey: "csv-events"' in script
     assert 'checkKey: "csv-rejections"' in script
     assert 'checkKey: "zeek-events"' in script

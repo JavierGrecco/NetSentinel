@@ -3,7 +3,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const STORAGE_KEY = "netsentinel.acceptance-wizard.v2";
+  const STORAGE_KEY = "netsentinel.acceptance-wizard.v3";
   const DEVICE_IP = "192.168.56.20";
   const STATUS_TEXT = {
     passed: "Correcto",
@@ -207,7 +207,10 @@
         ["Operador", "Operador sintético de prueba"],
         ["Descripción breve de evidencia", "Muestra sintética de integridad"],
         ["Entregado por", "Generador local de pruebas"],
-        ["Recibido por", "Examinador sintético"]
+        ["Recibido por", "Examinador sintético"],
+        ["Fecha/hora de recepción", "El formulario la completa automáticamente con la hora local y su offset. Verificá que coincida con la máquina de prueba."],
+        ["Zona horaria", "El formulario propone la zona horaria local; comprobá que sea la adecuada para esta prueba."],
+        ["Tamaño", "Dejá el campo vacío: no es necesario para esta prueba."]
       ],
       expected: "El caso sintético se guarda con alcance y autorización ficticios y la ficha de evidencia aparece bajo ese mismo caso.",
       link: "/forensics",
@@ -268,10 +271,20 @@
       objective: "Validar el traspaso sintético, el historial de operaciones, la integridad del registro y las dos exportaciones JSON.",
       why: "El expediente tiene que permitir reconstruir qué operaciones se declararon. Un digest ayuda a detectar cambios, pero sin firma y anclaje independientes no certifica la identidad de los autores.",
       instructions: [
-        "En la evidencia sintética, registrá un traspaso de Examinador sintético a Custodio sintético receptor, con motivo y método explícitos.",
-        "Confirmá que el nuevo evento aparece en el historial de operaciones y que el estado de integridad se muestra.",
-        "Pulsa «Descargar auditoría» y «Exportar expediente». Abre ambos JSON y verifica que hagan referencia al caso LAB-SINTETICO-001 e incluyan los eventos y la evidencia que registraste.",
-        "Volvé al asistente y registrá si ambas exportaciones se generaron y correspondían al caso correcto."
+        "Abrí «NetSentinel Forense» en la pestaña nueva. Si no está seleccionado, elegí LAB-SINTETICO-001 en «Casos locales» y comprobá que netsentinel-forensic-sample.bin figure dentro del caso.",
+        "En la tarjeta de esa evidencia, desplegá «Registrar transferencia de custodia». La persona que entrega debería ser Examinador sintético; completá la persona que recibe y los campos obligatorios con los valores de referencia de abajo.",
+        "Pulsá «Registrar transferencia». Leé el mensaje de resultado y comprobá que la transferencia aparece en la tarjeta y en el historial de operaciones.",
+        "Pulsá «Descargar auditoría» y «Exportar expediente». Revisá que ambos archivos JSON correspondan al caso LAB-SINTETICO-001 y contengan la evidencia y la transferencia.",
+        "Volvé al asistente y registrá si el nuevo evento y las dos descargas coinciden con lo esperado."
+      ],
+      referenceValues: [
+        ["Caso", "LAB-SINTETICO-001"],
+        ["Persona que entrega", "Examinador sintético (normalmente aparece completado)"],
+        ["Persona que recibe", "Custodio sintético receptor"],
+        ["Motivo de la transferencia", "Traslado sintético para validar el registro de custodia."],
+        ["Método de entrega", "Entrega simulada dentro del laboratorio local; no se entrega ningún objeto físico."],
+        ["Estado del elemento", "Muestra digital ficticia; no hubo embalaje físico. (Campo opcional)"],
+        ["Precinto", "Dejalo vacío: no hay precinto físico. (Campo opcional)"]
       ],
       expected: "El historial contiene el evento sintético y los dos JSON se descargan con el identificador del caso, los metadatos de evidencia y los eventos relevantes.",
       link: "/forensics",
@@ -288,26 +301,31 @@
       objective: "Crear un informe, exportarlo en JSON y Markdown y comprobar que el JSON conserva un digest verificable.",
       why: "El lector tiene que distinguir un borrador versionado de un informe firmado o aprobado. La verificación de integridad no autentica automáticamente al autor.",
       instructions: [
-        "En «Informe de examen», pulsá «Crear borrador de informe» y completá los campos obligatorios con los valores de referencia de abajo.",
-        "Guardá la versión 1 y verificá que la tarjeta indique «Borrador sin firma».",
-        "Descargá JSON y Markdown. Confirmá que el JSON se refiera al caso sintético y contenga el digest del informe.",
-        "Conservá intacto el JSON exportado y ejecutá python -m netsentinel.forensics_report RUTA_DEL_JSON con la ruta real del archivo descargado.",
-        "Volvé al asistente. Si algo falló, registrá qué campo, descarga o verificación no coincidió."
+        "Abrí NetSentinel Forense. Confirmá que esté seleccionado el caso LAB-SINTETICO-001; si no, seleccionalo en «Casos locales». El nombre del operador debe ser Operador sintético de prueba.",
+        "En «Informe de examen», desplegá «Crear borrador de informe». La fecha de solicitud se completa sola. Rellená los demás campos obligatorios usando los valores de referencia de abajo; dejá Conclusiones vacías para que el campo de fundamento no sea obligatorio.",
+        "Pulsá «Guardar nueva versión sin firma». En la tarjeta del informe, verificá que indique «Borrador sin firma» y que muestre un digest SHA-256.",
+        "Desde esa tarjeta, descargá «JSON verificable» y «informe legible (.md)». Confirmá que corresponden al caso LAB-SINTETICO-001.",
+        "Desde la raíz del repositorio/laboratorio, ejecutá .venv/bin/python -m netsentinel.forensics_report \"RUTA_COMPLETA_DEL_JSON\"; reemplazá el marcador por la ruta real del JSON descargado. El verificador debe informar que el borrador es verificable y sin firma.",
+        "Volvé al asistente e indicá qué campo, descarga o verificación no coincidió. No uses ni adjuntes evidencia real."
       ],
       referenceValues: [
+        ["Caso vinculado", "LAB-SINTETICO-001; seleccioná ese caso antes de abrir el formulario."],
         ["Título", "Informe de examen sintético"],
         ["Organización examinadora", "Laboratorio de pruebas"],
+        ["Fecha de solicitud", "Se completa automáticamente con la fecha local de la máquina."],
         ["Solicitante", "Solicitante sintético"],
         ["Organización solicitante", "Unidad de pruebas"],
         ["Propósito", "Comprobar el flujo de generación y verificación del informe."],
         ["Alcance realizado", "Solo caso, metadatos y una muestra artificial."],
         ["Procedimientos", "Se verificaron campos obligatorios y el expediente base."],
         ["Resultados", "El flujo de generación se ejecutó con datos sintéticos."],
-        ["Conclusiones", "No se formula una conclusión sobre evidencia real."],
-        ["Fundamento", "La conclusión se limita a la respuesta observada en esta prueba automatizada."],
+        ["Conclusiones", "Dejalo vacío en esta prueba; así no se exige una justificación de conclusiones."],
+        ["Datos que sustentan conclusiones", "Dejalo vacío porque no se declaran conclusiones."],
         ["Limitaciones", "No hubo adquisición ni examen de evidencia real."],
-        ["Disposición original", "El original no existe; se usó una muestra artificial."],
-        ["Autor declarado", "Autor de pruebas"]
+        ["Disposición original", "No existe un original real; se usó una muestra artificial."],
+        ["Disposición de copias y derivados", "La copia sintética de trabajo permanece en el directorio aislado; no hay derivados reales."],
+        ["Autor declarado", "Autor de pruebas"],
+        ["Autorizador declarado", "Dejalo vacío: no hay autorización ni firma en este borrador."]
       ],
       expected: "Se genera la versión 1 como borrador sin firma; las exportaciones JSON y Markdown corresponden al caso y el verificador acepta el JSON original.",
       link: "/forensics",
@@ -458,7 +476,9 @@
     values.forEach(([label, value]) => {
       list.append(makeNode("dt", "", label), makeNode("dd", "", value));
     });
+    $("wizardReferenceStatus").textContent = "Valores ficticios para este laboratorio. No los reutilices en expedientes ni datos reales.";
     panel.hidden = values.length === 0;
+    $("wizardCopyReferenceValues").hidden = values.length === 0;
   }
 
   function renderCommand(step) {
@@ -527,6 +547,11 @@
   function canAdvance(step, record) {
     if (step.type === "intro") return true;
     if (step.type === "summary") return false;
+    // Si falla el control previo del laboratorio, detenemos el recorrido aquí.
+    // Así no se genera una cascada de errores por ausencia de la fixture o del servicio.
+    if (step.type === "auto" && record.autoChecked && (!record.autoResult || !record.autoResult.ok)) {
+      return false;
+    }
     return Boolean(record.outcome);
   }
 
@@ -1058,6 +1083,19 @@
       $("wizardRecoveryStatus").textContent = "Comandos copiados. Revisá que estés en la raíz del laboratorio y que hayas detenido el servidor anterior.";
     } catch (error) {
       $("wizardRecoveryStatus").textContent = error && error.message ? error.message : "No se pudieron copiar los comandos.";
+    }
+  });
+
+  $("wizardCopyReferenceValues").addEventListener("click", async () => {
+    const step = steps[state.currentStep];
+    const values = step.referenceValues || [];
+    if (!values.length) return;
+    try {
+      await copyText(values.map(([label, value]) => label + ": " + value).join(String.fromCharCode(10)));
+      $("wizardReferenceStatus").textContent = "Valores copiados. Pegalos solo en el formulario ficticio de este paso.";
+      showMessage("Valores de referencia copiados al portapapeles.", "success");
+    } catch (error) {
+      $("wizardReferenceStatus").textContent = error && error.message ? error.message : "No se pudieron copiar los valores.";
     }
   });
 

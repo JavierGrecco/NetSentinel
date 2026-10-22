@@ -1639,11 +1639,29 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "no llama a" not in page.locator(".wizard-safety").inner_text().lower():
             failures.append("la guía no explica que sus comprobaciones no inician escaneos")
 
-        page.locator("#wizardStart").click()
+        page.locator("#wizardStart").focus()
+        page.keyboard.press("Enter")
         if "Comprobar que el laboratorio está preparado" not in page.locator("#wizardStepTitle").inner_text():
             failures.append("el botón Empezar no condujo al primer paso")
             return failures
 
+        # Un prerrequisito ausente debe detener la prueba, no crear una cascada de fallos.
+        page.route(
+            "**/api/health",
+            lambda route: route.fulfill(
+                status=503, content_type="application/json", body='{"detail":"fallo temporal sintético"}'
+            ),
+        )
+        page.locator("#wizardRunCheck").click()
+        page.wait_for_function(
+            "() => document.querySelector('#wizardAutomaticBadge')?.textContent.includes('Revisar')",
+            timeout=8000,
+        )
+        if not page.locator("#wizardNext").is_disabled():
+            failures.append("la guía permitió avanzar aunque falló la comprobación de prerrequisitos")
+        if not page.locator("#wizardRecoveryDetails").evaluate("(element) => element.open"):
+            failures.append("la guía no abrió la ayuda de recuperación al fallar la preparación")
+        page.unroute("**/api/health")
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
@@ -1899,7 +1917,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
                 if not popup.is_closed():
                     popup.close()
             page.goto(f"{base_url}/guided-test", wait_until="load", timeout=10000)
-            page.evaluate("window.localStorage.removeItem('netsentinel.acceptance-wizard.v2')")
+            page.evaluate("window.localStorage.removeItem('netsentinel.acceptance-wizard.v3')")
             page.reload(wait_until="load")
         except Exception:
             pass
