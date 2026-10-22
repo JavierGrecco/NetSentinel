@@ -29,6 +29,22 @@ def run_generator(output_dir: Path, *extra_args: str) -> subprocess.CompletedPro
     )
 
 
+def test_default_output_is_a_visible_folder(tmp_path: Path) -> None:
+    """La carpeta por defecto debe encontrarse fácilmente al elegir un archivo."""
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT)],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    output = tmp_path / "netsentinel-test-artifacts" / "manual-scenarios"
+    assert output.is_dir()
+    assert (output / "activity.csv").is_file()
+    assert (output / "activity-invalid-sensitive.csv").is_file()
+
+
 def test_generator_creates_expected_valid_and_negative_scenarios(tmp_path: Path) -> None:
     result = run_generator(tmp_path, "--device-ip", "192.168.1.25")
     assert result.returncode == 0, result.stderr
