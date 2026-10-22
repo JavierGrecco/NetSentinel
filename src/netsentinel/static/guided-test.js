@@ -547,7 +547,12 @@
       badge.textContent = "Todo correcto según el recorrido";
       badge.className = "wizard-result-badge is-success";
     }
-    $("wizardCompletionMessage").textContent = summary;
+    const finishedAt = state.finishedAt ? new Date(state.finishedAt) : new Date();
+    const finishedText = new Intl.DateTimeFormat("es-AR", {
+      dateStyle: "long",
+      timeStyle: "short"
+    }).format(finishedAt);
+    $("wizardCompletionMessage").textContent = "PRUEBA GUIADA FINALIZADA · " + finishedText + ". " + summary;
     const rows = $("wizardSummaryRows");
     rows.replaceChildren();
     trackedSteps.forEach((step) => {
