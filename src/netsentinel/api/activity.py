@@ -18,6 +18,11 @@ from .activity_import import (
     preview_family_activity,
     router as import_router,
 )
+from .activity_zeek_import import (
+    import_zeek_activity,
+    preview_zeek_activity,
+    router as zeek_import_router,
+)
 from .activity_models import (
     ActivityCSVImport,
     ActivityDeleteRequest,
@@ -25,6 +30,7 @@ from .activity_models import (
     ActivityEventIngest,
     ActivityRetentionUpdate,
     ActivitySessionCreate,
+    ActivityZeekImport,
 )
 from .activity_read import (
     export_family_activity_csv,
@@ -46,5 +52,6 @@ router = APIRouter()
 router.include_router(read_router)
 router.include_router(sessions_router)
 router.include_router(import_router)
+router.include_router(zeek_import_router)
 router.include_router(deletion_router)
 router.include_router(retention_router)

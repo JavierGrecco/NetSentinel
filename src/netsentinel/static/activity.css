@@ -3,3 +3,12 @@
 
 /* Replaces the former inline margin on the CSV import actions. */
 .actions.import-actions{margin-top:12px}
+
+/* Keep native file controls and the preview table inside narrow panels. */
+.field input[type="file"]{display:block;min-width:0;max-width:100%}
+.activity-tab-panel{min-width:0;max-width:100%}
+#zeekPreviewPanel{min-width:0;max-width:100%}
+#zeekPreviewPanel .table-wrap{min-width:0;max-width:100%}
+
+/* Long CSV field lists must wrap on mobile instead of widening the page. */
+#activity-import .small code{overflow-wrap:anywhere;word-break:break-word}

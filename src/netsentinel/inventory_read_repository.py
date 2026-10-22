@@ -80,6 +80,42 @@ def get_device_addresses(device_id: int, path: Path | None = None) -> list[dict[
     return [dict(row) for row in rows]
 
 
+def get_address_owners(
+    ip_addresses: list[str], path: Path | None = None
+) -> dict[str, list[dict[str, Any]]]:
+    """Devuelve los activos que tienen registrada cada IP y su intervalo observado.
+
+    La consulta es de solo lectura y se limita a las direcciones solicitadas.
+    Permite a las importaciones detectar reutilización o intervalos solapados de IP
+    antes de asociar una conexión a una ficha del inventario.
+    """
+    addresses = sorted({str(value) for value in ip_addresses if value})
+    owners: dict[str, list[dict[str, Any]]] = {address: [] for address in addresses}
+    if not addresses:
+        return owners
+
+    # Mantener grupos moderados para no depender de un límite SQLite de parámetros alto.
+    with connect(path) as db:
+        for offset in range(0, len(addresses), 400):
+            batch = addresses[offset : offset + 400]
+            placeholders = ",".join("?" for _ in batch)
+            rows = db.execute(
+                "SELECT device_id, ip_address, first_seen, last_seen "
+                "FROM device_addresses WHERE ip_address IN (" + placeholders + ") "
+                "UNION ALL "
+                "SELECT d.id AS device_id, d.ip_address, d.first_seen, d.last_seen "
+                "FROM devices d WHERE d.ip_address IN (" + placeholders + ") "
+                "AND NOT EXISTS (SELECT 1 FROM device_addresses a "
+                "WHERE a.device_id = d.id AND a.ip_address = d.ip_address) "
+                "ORDER BY 2, 3, 1",
+                [*batch, *batch],
+            ).fetchall()
+            for row in rows:
+                item = dict(row)
+                owners.setdefault(str(item["ip_address"]), []).append(item)
+    return owners
+
+
 def get_device_history(device_id: int, limit: int = 100, path: Path | None = None) -> dict[str, Any] | None:
     """Devuelve observaciones históricas de un dispositivo, más recientes primero."""
     bounded_limit = max(1, min(int(limit), 500))

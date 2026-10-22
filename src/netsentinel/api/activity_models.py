@@ -51,6 +51,15 @@ class ActivityCSVImport(BaseModel):
     csv_data: str = Field(min_length=1, max_length=1_000_000)
 
 
+class ActivityZeekImport(BaseModel):
+    """Entrada acotada para un archivo Zeek conn.log en JSON Lines o TSV."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: int = Field(ge=1)
+    log_data: str = Field(min_length=1, max_length=1_000_000)
+
+
 class ActivityRetentionUpdate(BaseModel):
     retention_days: int = Field(ge=1, le=90, strict=True)
 

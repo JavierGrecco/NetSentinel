@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -820,6 +821,167 @@ def _scan_comparison_failures(page) -> list[str]:
 
 
 
+def _zeek_import_ui_failures(page, base_url: str, viewport: Viewport) -> list[str]:
+    """Comprueba vista previa sin escritura e importación explícita de Zeek en Chromium."""
+    failures: list[str] = []
+    source_event_id = f"zeek:CZeekUI{viewport.width}x{viewport.height}"
+    tab = page.get_by_role("tab", name="Importar")
+    if tab.count() != 1:
+        return ["no se encontró la pestaña Importar de Actividad"]
+
+    try:
+        tab.click()
+        device_select = page.locator("#zeekDevice")
+        page.wait_for_function(
+            "() => { const select = document.querySelector('#zeekDevice'); "
+            "return !!select && Array.from(select.options).some(option => option.value); }",
+            timeout=5000,
+        )
+        options = device_select.locator("option").evaluate_all(
+            "(items) => items.filter(item => item.value).map(item => item.value)"
+        )
+        if not options:
+            return ["la importación Zeek no recibió dispositivos del inventario"]
+        device_id = options[0]
+
+        addresses_response = page.request.get(
+            f"{base_url}/api/devices/{device_id}/addresses",
+            timeout=5000,
+        )
+        if addresses_response.status != 200:
+            return [f"no se pudo preparar la prueba Zeek: la consulta de direcciones respondió HTTP {addresses_response.status}"]
+        addresses = addresses_response.json()
+        address = next(
+            (
+                item for item in addresses
+                if item.get("ip_address") and item.get("first_seen") and item.get("last_seen")
+            ),
+            None,
+        )
+        if address is None:
+            return ["la fixture de navegador no tiene una dirección IP con historial temporal"]
+        observed_at = datetime.fromisoformat(
+            str(address["last_seen"]).replace("Z", "+00:00")
+        ).timestamp()
+        record = {
+            "ts": observed_at,
+            "uid": source_event_id.removeprefix("zeek:"),
+            "id.orig_h": address["ip_address"],
+            "id.orig_p": 51514,
+            "id.resp_h": "198.51.100.53",
+            "id.resp_p": 53,
+            "proto": "udp",
+            "orig_bytes": 62,
+            "resp_bytes": 141,
+            "orig_ip_bytes": 118,
+            "resp_ip_bytes": 197,
+            "orig_pkts": 2,
+            "resp_pkts": 3,
+        }
+        import json
+
+        jsonl_data = json.dumps(record, separators=(",", ":")) + "\n"
+        device_select.select_option(device_id)
+        page.locator("#zeekFile").set_input_files({
+            "name": "synthetic-conn.jsonl",
+            "mimeType": "application/x-ndjson",
+            "buffer": jsonl_data.encode("utf-8"),
+        })
+        page.locator("#previewZeekImport").click()
+        page.wait_for_function(
+            """() => {
+              const panel = document.querySelector('#zeekPreviewPanel');
+              const summary = document.querySelector('#zeekPreviewSummary')?.textContent || '';
+              return !!panel && !panel.hidden && summary.includes('1 registro(s) válidos');
+            }""",
+            timeout=7000,
+        )
+        preview_text = page.locator("#zeekPreviewSummary").inner_text()
+        if "1 atribuibles por IP y fecha" not in preview_text:
+            failures.append("la vista previa Zeek no informa el registro atribuible al equipo seleccionado")
+        if "1 nuevo(s)" not in preview_text:
+            failures.append("la vista previa Zeek no distingue el registro nuevo")
+        if "no se guardó" not in preview_text.lower():
+            failures.append("la vista previa Zeek no aclara que no se guardaron eventos")
+
+        displayed_time = page.locator("#zeekPreviewRows tr td").first.inner_text()
+        expected_utc_time = page.evaluate(
+            """(timestamp) => new Intl.DateTimeFormat(undefined, {
+              dateStyle: "short", timeStyle: "medium", timeZone: "UTC"
+            }).format(new Date(timestamp * 1000)) + " UTC" """,
+            observed_at,
+        )
+        if displayed_time != expected_utc_time:
+            failures.append(
+                "la hora de la vista previa Zeek no coincide con UTC "
+                f"(mostrada: {displayed_time}; esperada: {expected_utc_time})"
+            )
+
+        before = page.request.get(
+            f"{base_url}/api/activity?device_id={device_id}",
+            timeout=5000,
+        )
+        if before.status != 200:
+            failures.append("no se pudo comprobar que la vista previa Zeek fuera de solo lectura")
+        elif any(item.get("source_event_id") == source_event_id for item in before.json().get("events", [])):
+            failures.append("la vista previa Zeek escribió el evento actual antes de confirmar la importación")
+
+        page.locator("#importZeek").click()
+        page.wait_for_function(
+            """() => (document.querySelector('#zeekImportStatus')?.textContent || '')
+              .includes('1 registro(s) importados')""",
+            timeout=7000,
+        )
+        after = page.request.get(
+            f"{base_url}/api/activity?device_id={device_id}",
+            timeout=5000,
+        )
+        if after.status != 200:
+            failures.append("no se pudo consultar el resultado de la importación Zeek")
+        else:
+            events = after.json().get("events", [])
+            imported = [item for item in events if item.get("source_event_id") == source_event_id]
+            if len(imported) != 1:
+                failures.append("la importación desde la interfaz no guardó exactamente un evento sintético")
+            elif imported[0].get("bytes_sent") != 118 or imported[0].get("bytes_received") != 197:
+                failures.append("la interfaz Zeek no conservó los contadores IP del registro sintético")
+
+        metrics = _page_metrics(page)
+        if metrics["documentWidth"] > metrics["viewportWidth"] + 1:
+            offenders = page.evaluate(
+                """() => Array.from(document.querySelectorAll("body *"))
+                  .map(element => {
+                    const rect = element.getBoundingClientRect();
+                    const style = getComputedStyle(element);
+                    return {
+                      tag: element.tagName.toLowerCase(),
+                      id: element.id || "",
+                      className: typeof element.className === "string" ? element.className : "",
+                      left: Math.round(rect.left),
+                      right: Math.round(rect.right),
+                      width: Math.round(rect.width),
+                      scrollWidth: element.scrollWidth,
+                      clientWidth: element.clientWidth,
+                      overflowX: style.overflowX,
+                      display: style.display
+                    };
+                  })
+                  .filter(item => item.display !== "none" && item.width > 0 &&
+                    (item.right > window.innerWidth + 1 || item.width > window.innerWidth + 1))
+                  .sort((a, b) => Math.max(b.right, b.width) - Math.max(a.right, a.width))
+                  .slice(0, 12)"""
+            )
+            failures.append(
+                f"la pestaña Importar presenta desplazamiento horizontal a {viewport.width} px "
+                f"(documento {metrics['documentWidth']} px, ventana {metrics['viewportWidth']} px); "
+                f"elementos fuera de ancho: {json.dumps(offenders, ensure_ascii=False)}"
+            )
+
+    except Exception as exc:
+        failures.append(f"no se pudo completar el recorrido de importación Zeek en Chromium: {exc}")
+    return failures
+
+
 def _monitor_history_accessibility_failures(page) -> list[str]:
     """Prueba el detalle textual de monitorización mediante teclado en Chromium."""
     failures: list[str] = []
@@ -983,6 +1145,11 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 ))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
+                            if path == "/activity" and viewport in {
+                                Viewport(390, 844),
+                                Viewport(1440, 900),
+                            }:
+                                case_failures.extend(_zeek_import_ui_failures(page, base_url, viewport))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
