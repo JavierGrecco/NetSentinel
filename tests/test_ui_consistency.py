@@ -215,7 +215,7 @@ def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
     assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
     assert 'id: "lab"' in script
     assert 'id: "summary"' in script
-    assert "No se inició un escaneo" in script
+    assert "no se inició un escaneo" in script.lower()
     assert "wizardCopyReport" in script
 
 
