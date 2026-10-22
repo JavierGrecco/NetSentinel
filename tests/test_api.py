@@ -313,6 +313,7 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
         ("/activity", "activity.html", "activity.js"),
         ("/tools", "tools.html", "tools.js"),
         ("/findings", "findings.html", "findings.js"),
+        ("/forensics", "forensics.html", "forensics.js"),
     ],
 )
 def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
@@ -376,10 +377,11 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
 
 
 def test_shared_theme_and_task_focused_sections_are_present():
+    import re
     from pathlib import Path
 
     static = Path("src/netsentinel/static")
-    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html")
+    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html", "forensics.html")
     for page_name in page_names:
         html = (static / page_name).read_text(encoding="utf-8")
         assert 'id="themeSelect"' in html, f"{page_name} must expose the shared theme selector"
@@ -388,6 +390,8 @@ def test_shared_theme_and_task_focused_sections_are_present():
         assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
         assert 'role="radiogroup" aria-label="Tema visual"' in html
         assert 'class="app-brand-name">NetSentinel</div>' in html
+        assert 'src="/static/netsentinel-red.svg"' in html
+        assert 'src="/static/netsentinel-forense.svg"' in html
         assert 'class="app-section-title"' in html
         assert 'class="app-section-description"' in html
         assert 'class="theme-option-card"' in html
@@ -417,6 +421,26 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "router_dns:" in activity_js and "router_flow:" in activity_js and "device_agent:" in activity_js
     assert "todavía no viene integrado" in activity_js
 
+    forensics_html = (static / "forensics.html").read_text(encoding="utf-8")
+    forensics_js = (static / "forensics.js").read_text(encoding="utf-8")
+    for identifier in ("forensicCaseForm", "forensicEvidenceForm", "forensicCaseList", "forensicAuditList"):
+        assert f'id="{identifier}"' in forensics_html
+    assert "source_description" in forensics_js
+    assert "reported_sha256" in forensics_js
+    assert "no verificado" in forensics_js
+    assert not re.search(r'<input[^>]+type="file"', forensics_html, re.IGNORECASE)
+    assert "credentials: \"same-origin\"" in forensics_js
+    assert 'name="received_at_original" type="text"' in forensics_html
+    assert 'name="received_at_local"' not in forensics_html
+    assert "currentLocalTimestampWithOffset" in forensics_js
+    assert "received_at_original: values.received_at_original.trim()" in forensics_js
+    assert "verify-hash" in forensics_js
+    assert "confirm_working_copy" in forensics_js
+    assert "Solo se consulta el nombre dentro de la carpeta forensics-working-copies" in forensics_js
+    assert 'pathInput.id = "forensic-copy-name-" + item.id' in forensics_js
+    assert 'pathInput.name = "source_name"' in forensics_js
+    assert 'source_name: pathInput.value.trim()' in forensics_js
+
     findings_js = (static / "findings.js").read_text(encoding="utf-8")
     assert "Marcar dispositivo como conocido" in findings_js
     assert "Solo marcar como revisado" in findings_js
@@ -424,11 +448,23 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "Esto no equivale a una certificación de seguridad" in findings_js
 
 
+def test_forensic_brand_marks_are_served_as_local_svg_assets(monkeypatch, tmp_path):
+    """Los dos logos deben estar disponibles desde el paquete, sin CDN externo."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        for asset in ("netsentinel-red.svg", "netsentinel-forense.svg"):
+            response = client.get(f"/static/{asset}")
+            assert response.status_code == 200
+            assert "image/svg+xml" in response.headers["content-type"]
+            assert "<svg" in response.text
+            assert "<script" not in response.text.lower()
+
+
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
     import re
     from pathlib import Path
 
-    for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
+    for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html", "forensics.html"):
         content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
         assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
             f"{asset} contains an inline event handler incompatible with the local CSP policy"
@@ -443,6 +479,7 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
         ("/activity", "activity.html"),
         ("/tools", "tools.html"),
         ("/findings", "findings.html"),
+        ("/forensics", "forensics.html"),
     ],
 )
 def test_application_pages_use_external_styles_without_inline_style(monkeypatch, tmp_path, route, asset):
