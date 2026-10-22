@@ -597,7 +597,177 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
     return failures
 
 
-def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
+def _activity_synthetic_import_failures(page, base_url: str, scenarios_dir: Path) -> list[str]:
+    """Prueba el recorrido CSV visible con archivos sintéticos y una base temporal propia."""
+    failures: list[str] = []
+    required_files = (
+        "activity.csv",
+        "activity-invalid-sensitive.csv",
+        "activity-invalid-duplicate-header.csv",
+    )
+    missing = [name for name in required_files if not (scenarios_dir / name).is_file()]
+    if missing:
+        return [f"faltan los escenarios CSV sintéticos: {', '.join(missing)}"]
+
+    try:
+        import_tab = page.locator('button.section-tab[data-tab-target="activity-import"]')
+        if import_tab.count() != 1:
+            return ["no se encontró la pestaña Importar de Actividad"]
+        import_tab.click()
+        page.wait_for_function(
+            """() => {
+              const device = document.querySelector("#csvDevice");
+              return device && device.options.length > 1;
+            }""",
+            timeout=8000,
+        )
+        page.locator("#csvDevice").select_option(index=1)
+        page.locator("#csvFile").set_input_files(str(scenarios_dir / "activity.csv"))
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import/preview"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#previewImport").click()
+        preview_response = response_info.value
+        if preview_response.status != 200:
+            failures.append(f"la vista previa CSV válida respondió HTTP {preview_response.status}")
+        page.wait_for_function(
+            """() => {
+              const panel = document.querySelector("#previewPanel");
+              const summary = document.querySelector("#previewSummary");
+              return panel && !panel.hidden && summary &&
+                summary.textContent.includes("6 fila(s) válidas");
+            }""",
+            timeout=8000,
+        )
+        summary = page.locator("#previewSummary").inner_text()
+        if "6 nueva(s)" not in summary:
+            failures.append(f"la vista previa no identificó seis filas nuevas: {summary}")
+        if "No se guardaron eventos" not in page.locator("#importStatus").inner_text():
+            failures.append("la vista previa no confirmó que todavía no se guardaron eventos")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#import").click()
+        import_response = response_info.value
+        if import_response.status != 200:
+            failures.append(f"la importación CSV válida respondió HTTP {import_response.status}")
+        page.wait_for_function(
+            """() => (document.querySelector("#importStatus")?.textContent || "")
+              .includes("6 evento(s) importados")""",
+            timeout=10000,
+        )
+
+        # Repetir el archivo debe detectar duplicados, no insertar otra copia.
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import/preview"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#previewImport").click()
+        duplicate_response = response_info.value
+        if duplicate_response.status != 200:
+            failures.append(f"la vista previa repetida respondió HTTP {duplicate_response.status}")
+        page.wait_for_function(
+            """() => {
+              const summary = document.querySelector("#previewSummary");
+              return summary && summary.textContent.includes("6 duplicada(s)");
+            }""",
+            timeout=8000,
+        )
+        duplicate_summary = page.locator("#previewSummary").inner_text()
+        if "0 nueva(s)" not in duplicate_summary:
+            failures.append(f"la repetición de CSV no quedó completamente deduplicada: {duplicate_summary}")
+
+        for filename in ("activity-invalid-sensitive.csv", "activity-invalid-duplicate-header.csv"):
+            page.locator("#importStatus").evaluate("(element) => { element.textContent = ''; }")
+            page.locator("#csvFile").set_input_files(str(scenarios_dir / filename))
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith("/api/activity/import/preview"),
+                timeout=10000,
+            ) as response_info:
+                page.locator("#previewImport").click()
+            response = response_info.value
+            if not 400 <= response.status < 500:
+                failures.append(f"{filename} no fue rechazado por la API (HTTP {response.status})")
+            page.wait_for_function(
+                """() => (document.querySelector("#importStatus")?.textContent || "").trim().length > 0""",
+                timeout=8000,
+            )
+            if not page.locator("#previewPanel").is_hidden():
+                failures.append(f"{filename} dejó visible una vista previa como si fuera válida")
+            error_text = page.locator("#importStatus").inner_text()
+            if "Vista previa completada. No se guardaron eventos." in error_text:
+                failures.append(f"{filename} mostró un mensaje de éxito en lugar de rechazo")
+    except Exception as exc:
+        failures.append(f"el recorrido CSV sintético no se completó en Chromium: {exc}")
+    finally:
+        # No dejamos la vista en un panel de error ni reutilizamos el archivo inválido.
+        try:
+            page.goto(f"{base_url}/activity", wait_until="load", timeout=10000)
+        except Exception:
+            pass
+    return failures
+
+
+def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
+    """Comprueba el progreso persistente y las dos comprobaciones de API de la guía."""
+    failures: list[str] = []
+    try:
+        steps = page.locator("[data-guided-step]")
+        if steps.count() != 16:
+            return [f"la guía mostró {steps.count()} pasos en lugar de 16"]
+        setup_step = page.locator('[data-guided-step="setup"]')
+        if setup_step.count() != 1:
+            return ["falta la casilla para confirmar la preparación del laboratorio"]
+
+        page.locator("#resetGuidedProgress").click()
+        setup_step.check()
+        if page.locator("#guidedProgressCount").inner_text() != "1 de 16 pasos":
+            failures.append("el contador de progreso no actualizó el primer paso")
+        page.reload(wait_until="load")
+        if not page.locator('[data-guided-step="setup"]').is_checked():
+            failures.append("el progreso de la guía no persistió al recargar la página")
+
+        page.locator("#checkMapApi").click()
+        page.wait_for_function(
+            """() => document.querySelector("#mapApiStatus")?.classList.contains("is-success")""",
+            timeout=8000,
+        )
+        if "API del mapa: disponible" not in page.locator("#mapApiStatus").inner_text():
+            failures.append("la guía no confirmó correctamente la API del mapa")
+
+        page.locator("#checkForensicsApi").click()
+        page.wait_for_function(
+            """() => document.querySelector("#forensicsApiStatus")?.classList.contains("is-success")""",
+            timeout=8000,
+        )
+        if "API de Forense: disponible" not in page.locator("#forensicsApiStatus").inner_text():
+            failures.append("la guía no confirmó correctamente la API de Forense")
+
+        page.locator("#resetGuidedProgress").click()
+        if page.locator("[data-guided-step]:checked").count() != 0:
+            failures.append("el botón de reinicio no limpió las casillas de la guía")
+        if page.locator("#guidedProgressCount").inner_text() != "0 de 16 pasos":
+            failures.append("el reinicio no devolvió el contador de la guía a cero")
+    except Exception as exc:
+        failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")
+    finally:
+        try:
+            page.goto(f"{base_url}/guided-test", wait_until="load", timeout=10000)
+            page.locator("#resetGuidedProgress").click()
+        except Exception:
+            pass
+    return failures
+
+
+def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool, scenarios_dir: Path | None = None) -> dict:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
@@ -707,6 +877,14 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
                             if path == "/forensics" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_forensics_hash_failure_refresh_failures(page))
+                            if path == "/activity" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
+                                case_failures.extend(
+                                    _activity_synthetic_import_failures(page, base_url, scenarios_dir)
+                                )
+                            if path == "/guided-test" and viewport == Viewport(1440, 900):
+                                case_failures.extend(
+                                    _guided_test_interaction_failures(page, base_url)
+                                )
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
@@ -799,6 +977,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    scenarios_dir: Path | None = None
     if args.base_url:
         try:
             base_url = _validate_local_url(args.base_url)
@@ -820,6 +999,24 @@ def main() -> int:
                 base_url, args.viewports, args.output_dir, args.screenshots
             )
         else:
+            scenarios_dir = temp_root / "manual-scenarios"
+            generated = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "scripts" / "generate_manual_scenarios.py"),
+                    "--output-dir", str(scenarios_dir),
+                    "--device-ip", "192.168.56.20",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if generated.returncode != 0:
+                raise RuntimeError(
+                    "No pude preparar los CSV sintéticos para la prueba de navegador. "
+                    f"Detalle: {generated.stderr[-2000:]}"
+                )
             with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as server_log:
                 environment = os.environ.copy()
                 environment["NETSENTINEL_DATA_DIR"] = str(data_dir)
@@ -840,7 +1037,7 @@ def main() -> int:
                 try:
                     _wait_for_server(base_url, process, server_log)
                     report = _run_browser_checks(
-                        base_url, args.viewports, args.output_dir, args.screenshots
+                        base_url, args.viewports, args.output_dir, args.screenshots, scenarios_dir
                     )
                 finally:
                     _stop_server(process)
