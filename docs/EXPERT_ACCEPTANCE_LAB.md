@@ -3,7 +3,9 @@
 **Rama aislada:** `qa/expert-acceptance-consolidated-2026-10`  
 **Estado:** candidata para pruebas manuales; no equivale a una versión estable ni está fusionada en `main`.
 
-Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y la prueba guiada dentro de la aplicación. Su finalidad es que la revisión manual compruebe la integración real de la combinación, además de las pruebas aisladas de cada módulo.
+Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
+
+El asistente reemplaza la lista de casillas dispersas por un recorrido de **12 pasos evaluables, uno por pantalla**. Explica qué se comprueba y por qué importa; abre el módulo necesario en otra pestaña sin cerrar la guía; muestra resultados de API en las pruebas automáticas de solo lectura; y permite registrar cada resultado como correcto, fallido o no comprobado. El cierre resume los estados y las notas, con opciones para copiar o descargar el informe. La guía no envía `POST /api/scan` ni inicia descubrimientos.
 
 ## Cobertura de aceptación
 
@@ -60,7 +62,9 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
 
 **Guardá las dos rutas impresas.** No apuntes `NETSENTINEL_DATA_DIR` a `~/.netsentinel` ni a una carpeta que contenga tu base habitual. El generador y el auxiliar están diseñados para preparar datos ficticios; no ejecutan escaneo de red. La fixture de topología añade una única lectura sintética con tres activos.
 
-Abrí [http://127.0.0.1:8765/guided-test](http://127.0.0.1:8765/guided-test). La página contiene nueve escenarios y 24 casillas de control. Ejecutá cada acción, confirmá el resultado en la vista correspondiente y marcá la casilla solo después de observarlo. El progreso se guarda en el navegador y no es un veredicto automático.
+Abrí [http://127.0.0.1:8765/guided-test](http://127.0.0.1:8765/guided-test). Pulsá **Empezar la prueba** y seguí la pantalla actual: primero ejecutá las comprobaciones de lectura; cuando se indique, abrí el módulo en la pestaña nueva, completá exactamente esa acción y volvé a la guía. Elegí **Coincide con lo esperado**, **Encontré un fallo** o **No pude comprobarlo**; añadí una nota cuando haya alguna diferencia. No se puede avanzar sin registrar un resultado en el paso actual.
+
+El progreso y las notas se guardan solo en el navegador de esta máquina. El asistente no adivina el resultado de acciones manuales: el resumen final distingue éxitos declarados, fallos y pasos sin comprobar. Completar el recorrido no equivale a certificar el producto ni sustituye revisión técnica.
 
 ## Orden sugerido para la prueba manual
 
