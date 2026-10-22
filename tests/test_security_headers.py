@@ -151,6 +151,7 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
         ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
         ("/world-map", "NetSentinel · Mapa mundial de IP", ("/static/theme.js", "/static/geolocation.js")),
+        ("/guided-test", "NetSentinel · Prueba guiada", ("/static/theme.js", "/static/guided-test.js")),
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(
@@ -201,6 +202,7 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(
         "/static/findings.js",
         "/static/tools.js",
         "/static/geolocation.js",
+        "/static/guided-test.js",
         "/static/theme.js",
         "/static/section-tabs.js",
     ],
@@ -217,3 +219,13 @@ def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
     assert "script-src 'self'" in policy
     assert "'unsafe-inline'" not in policy
     assert "sha256-" not in policy
+
+
+
+def test_guided_test_stylesheet_is_served_with_defensive_headers(client):
+    """La nueva interfaz guiada debe servir su hoja de estilos local instalada."""
+    response = client.get("/static/guided-test.css")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert ".guided-scenario-list" in response.text
+    assert_defensive_headers(response)
