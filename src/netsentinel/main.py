@@ -20,6 +20,7 @@ from .monitoring import MonitorSupervisor
 from .api.activity import router as activity_router
 from .api.tools import router as tools_router
 from .api.findings import router as findings_router
+from .api.forensics import router as forensics_router
 from .api.geolocation import router as geolocation_router
 from .api.inventory import router as inventory_router
 from .api.monitoring import router as monitoring_router
@@ -80,8 +81,9 @@ app.add_exception_handler(Exception, handle_unexpected_exception)
 # en el módulo dueño, no en este archivo de arranque.
 app.include_router(tools_router)
 app.include_router(activity_router)
-app.include_router(geolocation_router)
 app.include_router(findings_router)
+app.include_router(forensics_router)
+app.include_router(geolocation_router)
 app.include_router(inventory_router)
 app.include_router(monitoring_router)
 app.include_router(pages_router)
