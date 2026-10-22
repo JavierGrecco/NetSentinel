@@ -875,7 +875,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     case_failures.extend(_scan_comparison_failures(page))
                             if path == "/monitors" and viewport == Viewport(1440, 900):
                                 case_failures.extend(_monitor_history_accessibility_failures(page))
-                            if path == "/forensics" and viewport == Viewport(1440, 900):
+                            if path == "/forensics" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
                                 case_failures.extend(_forensics_hash_failure_refresh_failures(page))
                             if path == "/activity" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
                                 case_failures.extend(
