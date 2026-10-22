@@ -217,3 +217,13 @@ def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
     assert "script-src 'self'" in policy
     assert "'unsafe-inline'" not in policy
     assert "sha256-" not in policy
+
+
+
+def test_guided_test_stylesheet_is_served_with_defensive_headers(client):
+    """La nueva interfaz guiada debe servir su hoja de estilos local instalada."""
+    response = client.get("/static/guided-test.css")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert ".guided-scenario-list" in response.text
+    assert_defensive_headers(response)
