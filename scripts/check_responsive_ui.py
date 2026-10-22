@@ -1628,11 +1628,33 @@ def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
         if "API de Forense: disponible" not in page.locator("#forensicsApiStatus").inner_text():
             failures.append("la guía no confirmó correctamente la API de Forense")
 
+        # Complete all manual confirmations to verify the explicit finish notice.
+        for index in range(steps.count()):
+            steps.nth(index).check()
+        page.wait_for_function(
+            """() => {
+              const panel = document.querySelector("#guidedCompletionPanel");
+              const status = document.querySelector("#guidedFinalStatus");
+              return panel && !panel.hidden && status &&
+                status.textContent.includes("PRUEBA GUIADA FINALIZADA");
+            }""",
+            timeout=5000,
+        )
+        if "24 de 24" not in page.locator("#guidedFinalStatus").inner_text():
+            failures.append("el cierre no informó que se completaron los 24 pasos")
+        page.reload(wait_until="load")
+        if page.locator("#guidedCompletionPanel").is_hidden():
+            failures.append("el estado final de la guía no persistió tras recargar")
+        if "PRUEBA GUIADA FINALIZADA" not in page.locator("#guidedFinalStatus").inner_text():
+            failures.append("el aviso final no informó que la prueba guiada terminó")
+
         page.locator("#resetGuidedProgress").click()
         if page.locator("[data-guided-step]:checked").count() != 0:
             failures.append("el botón de reinicio no limpió las casillas de la guía")
         if page.locator("#guidedProgressCount").inner_text() != "0 de 24 pasos":
             failures.append("el reinicio no devolvió el contador de la guía a cero")
+        if not page.locator("#guidedCompletionPanel").is_hidden():
+            failures.append("el reinicio no ocultó el aviso de finalización")
     except Exception as exc:
         failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")
     finally:
