@@ -31,6 +31,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Matriz de preparación pericial y brechas de NetSentinel Forense](docs/FORENSIC_READINESS_MATRIX.md)
 - [Informe de examen: versiones, verificación y límites](docs/FORENSIC_REPORTS.md)
 - **Prueba guiada dentro de la aplicación:** abrí `/guided-test` con NetSentinel en marcha.
+- [Laboratorio consolidado de aceptación manual](docs/EXPERT_ACCEPTANCE_LAB.md): red, topología, Zeek, mapa mundial y Forense en una sola rama aislada.
 - [Escenarios sintéticos guiados](docs/MANUAL_TEST_SCENARIOS.md)
 - [Mapa mundial de IP](docs/WORLD_IP_MAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
@@ -41,6 +42,8 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - Consultar dispositivos con sus direcciones IP y MAC, buscar por cualquiera de sus direcciones IPv4/IPv6 y revisar la procedencia de cada observación.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
+- Explorar topología LAN histórica basada en observaciones persistidas en `/network`, con selección de lecturas, filtros, detalle y procedencia; no representa tráfico vivo.
+- Importar metadatos Zeek (`conn.log`) en Actividad tras revisar una vista previa y confirmar explícitamente la importación.
 - Consultar el mapa mundial de IP públicas observadas en eventos guardados mediante la vista `/world-map`. Las coordenadas son aproximadas y requieren una base GeoLite2-City local válida; no se inventan ubicaciones cuando falta esa base.
 - Revisar **actividad y telemetría autorizada** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
