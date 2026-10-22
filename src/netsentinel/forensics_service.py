@@ -429,8 +429,15 @@ def list_audit_events(*, case_id: str, limit: int = 100) -> list[dict[str, Any]]
 
 
 def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
-    """Prepara un manifiesto con toda la auditoría del caso, en orden cronológico."""
-    return forensics_repository.export_audit_manifest(case_id=case_id)
+    """Construye el manifiesto desde una instantánea coherente del repositorio."""
+    snapshot = forensics_repository.export_audit_manifest_data(case_id=case_id)
+    if snapshot is None:
+        return None
+    return build_audit_manifest(
+        case=snapshot["case"],
+        events=snapshot["audit_events"],
+        exported_at=snapshot["exported_at"],
+    )
 
 
 

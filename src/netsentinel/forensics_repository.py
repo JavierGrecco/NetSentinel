@@ -14,7 +14,6 @@ from typing import Any
 
 from .database_storage import connect, utc_now
 from .forensics_audit_integrity import audit_event_hash
-from .forensics_audit_manifest import build_audit_manifest
 from .forensics_errors import ForensicConflictError
 
 
@@ -636,19 +635,26 @@ def list_audit_events(
         return _audit_events_from_connection(db, case_id=case_id, limit=limit)
 
 
-def export_audit_manifest(*, case_id: str) -> dict[str, Any] | None:
-    """Exporta caso y auditoría desde una sola conexión para conservar una vista coherente."""
+def export_audit_manifest_data(*, case_id: str) -> dict[str, Any] | None:
+    """Lee una instantánea coherente para que el servicio construya el manifiesto.
+
+    Devuelve metadatos del caso y la auditoría verificada en orden cronológico.
+    La capa de persistencia no decide el formato ni construye el documento exportable.
+    """
     with connect() as db:
+        # Mantener todas las lecturas en una única transacción evita mezclar eventos
+        # nuevos con un estado del caso obtenido antes de la exportación.
+        db.execute("BEGIN")
         case_row = _get_case_row(db, case_id)
         if case_row is None:
             return None
         case = _case_dict(case_row)
         events_newest_first = _audit_events_from_connection(db, case_id=case_id, limit=None)
-        return build_audit_manifest(
-            case=case,
-            events=list(reversed(events_newest_first)),
-            exported_at=utc_now(),
-        )
+        return {
+            "case": case,
+            "audit_events": list(reversed(events_newest_first)),
+            "exported_at": utc_now(),
+        }
 
 
 def list_examination_reports(*, case_id: str) -> list[dict[str, Any]] | None:
