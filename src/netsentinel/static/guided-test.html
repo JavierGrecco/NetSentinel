@@ -88,9 +88,9 @@
           <p class="guided-kicker">TU RECORRIDO</p>
           <h2 id="guidedProgressTitle">Progreso de la prueba</h2>
         </div>
-        <strong id="guidedProgressCount">0 de 12 pasos</strong>
+        <strong id="guidedProgressCount">0 de 16 pasos</strong>
       </div>
-      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
+      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
       <p id="guidedProgressText" class="small">Marcá cada paso después de comprobarlo en la aplicación. El avance solo se guarda en este navegador.</p>
       <button type="button" id="resetGuidedProgress" class="quiet tiny">Reiniciar progreso</button>
     </div>
@@ -101,7 +101,7 @@
       <div>
         <p class="guided-kicker">ANTES DE EMPEZAR · UNA SOLA VEZ POR BASE</p>
         <h2 id="guidedSetupTitle">Prepará el laboratorio aislado</h2>
-        <p>Si todavía no preparaste los datos sintéticos, detené la app con Ctrl+C y ejecutá el bloque desde la raíz de esta copia del repositorio. Crea una base nueva con nombre único, genera los CSV y prepara el archivo ficticio para Forense.</p>
+        <p>Si todavía no preparaste los datos sintéticos, ejecutá el bloque desde la raíz de esta copia del repositorio. Crea una base aislada con nombre único, genera los CSV y prepara el archivo ficticio para Forense. No sobrescribe escenarios previos: si la carpeta de archivos de prueba ya existe, conservála y usá una copia limpia del laboratorio.</p>
       </div>
       <button type="button" id="copySetupCommand" class="quiet">Copiar comandos</button>
     </div>
@@ -110,7 +110,7 @@ source .venv/bin/activate
 python -m pip install -e ".[test,geoip]"
 export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$NETSENTINEL_DATA_DIR"
-python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20 --force
+python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
 python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
 printf "NETSENTINEL_DATA_DIR=%s\\n" "$NETSENTINEL_DATA_DIR"
 mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
@@ -169,6 +169,7 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
         <li>Si la base GeoLite2-City falta, revisá que la interfaz lo comunique y no dibuje coordenadas inventadas. Para marcadores reales se necesita una base autorizada instalada localmente.</li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La cartografía y la tabla cargan; los destinos sin coordenadas siguen visibles en la tabla, pero no se dibujan como puntos.</span></div>
+      <p>Prueba opcional si tenés conexión DNS: en la consulta manual de dominio probá <code>example.com</code>. La pantalla debe aclarar que es una resolución actual y no registrar esa IP como si fuera un evento histórico. Si no tenés conexión, omití ese paso.</p>
       <label class="guided-check"><input type="checkbox" data-guided-step="map-table"><span>El mapa base, la tabla y el filtro funcionan.</span></label>
       <label class="guided-check"><input type="checkbox" data-guided-step="map-geoip"><span>La ubicación se muestra solo cuando hay coordenadas válidas de la base GeoIP.</span></label>
       <div class="guided-actions"><a class="primary" href="/world-map">Abrir mapa mundial</a><button type="button" id="checkMapApi" class="quiet">Comprobar API</button></div>
@@ -182,11 +183,12 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       </div>
       <p>Usá exclusivamente la copia sintética preparada en <code>forensics-working-copies</code>. No registres evidencia real en esta prueba.</p>
       <ol class="guided-instructions">
-        <li>Abrí Forense y creá un caso con la referencia <code>AUTORIZACION-DE-PRUEBA</code>; indicá que solo cubre el archivo de laboratorio.</li>
-        <li>Registrá <code>netsentinel-forensic-sample.bin</code> como una copia de prueba. Usá el SHA-256 que imprimió la preparación como dato de referencia.</li>
-        <li>Usá la función de comparar con una copia de trabajo autorizada: primero debe coincidir.</li>
+        <li>En el campo de operador, escribí <code>Operador sintético de prueba</code>. Abrí Forense y creá un caso usando los valores de la tarjeta inferior.</li>
+        <li>En ese caso, registrá <code>netsentinel-forensic-sample.bin</code> como una copia de archivo. Usá el SHA-256 que imprimió la preparación como dato informado por la fuente y completá su origen.</li>
+        <li>En la ficha recién registrada, abrí <strong>Comparar con una copia de trabajo</strong>, ingresá solo <code>netsentinel-forensic-sample.bin</code> y marcá la confirmación de que es una copia autorizada. Primero debe coincidir.</li>
         <li>Desde otra terminal, exportá el mismo <code>NETSENTINEL_DATA_DIR</code> que imprimió la preparación y ejecutá el comando de abajo. Después repetí la comparación en Forense.</li>
       </ol>
+      <div class="guided-expected guided-values" aria-label="Valores exactos para el caso de prueba"><strong>Valores para completar en el formulario</strong><dl><dt>Identificador</dt><dd><code>LAB-SINTETICO-001</code></dd><dt>Nombre breve</dt><dd><code>Verificación de archivo sintético</code></dd><dt>Autorización</dt><dd><code>AUTORIZACION-DE-PRUEBA</code></dd><dt>Objetivo</dt><dd><code>Probar coincidencia y discrepancia SHA-256 de una muestra sintética.</code></dd><dt>Alcance</dt><dd><code>Solo netsentinel-forensic-sample.bin en forensics-working-copies; sin evidencia real.</code></dd><dt>Examinador</dt><dd><code>Examinador sintético</code></dd><dt>Descripción de evidencia</dt><dd><code>Archivo artificial para validar el control de integridad; no es evidencia real.</code></dd><dt>Entregado por</dt><dd><code>Generador local de pruebas</code></dd><dt>Origen del hash</dt><dd><code>SHA-256 calculado por el generador local al crear la muestra</code></dd></dl><p class="small">La hora y zona horaria del formulario se completan automáticamente. El tamaño es opcional. Pegá el hash exacto que imprimió la preparación.</p></div>
       <div class="guided-section-heading"><div><p class="guided-kicker">SEGUNDA COMPROBACIÓN</p><p>Reemplazá el valor de la variable por la ruta exacta que imprimió la preparación, sin cambiar el resto del comando.</p></div><button type="button" id="copyEvidenceChangeCommand" class="quiet">Copiar comando de cambio</button></div>
       <pre class="guided-command"><code id="evidenceChangeCommand">export NETSENTINEL_DATA_DIR="PEGAR_AQUI_LA_RUTA_IMPRESA"
 python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v2"); print("Muestra actualizada:", p.name)'</code></pre>
@@ -198,6 +200,40 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
       <div class="guided-actions"><a class="primary" href="/forensics">Abrir NetSentinel Forense</a><button type="button" id="checkForensicsApi" class="quiet">Comprobar API</button></div>
       <p id="forensicsApiStatus" class="guided-inline-status" role="status" aria-live="polite">Todavía no se verificó la API de Forense.</p>
       <p class="guided-note"><strong>Límite:</strong> comprobar un hash ayuda a detectar cambios, pero no autentica al operador ni constituye por sí solo una cadena de custodia validada.</p>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-forensics-safety">
+      <div class="guided-scenario-title">
+        <span class="guided-number">05</span>
+        <div><p class="guided-kicker">PRUEBAS NEGATIVAS</p><h2>Forense: rechazar rutas y archivos inexistentes</h2></div>
+      </div>
+      <p>Este escenario verifica que la interfaz solo acceda por nombre a una copia de trabajo dentro de la carpeta restringida y no exponga rutas locales.</p>
+      <ol class="guided-instructions">
+        <li>En la evidencia sintética, volvé a abrir <strong>Comparar con una copia de trabajo</strong>. Probá el nombre <code>missing-sample.bin</code> y confirmá que es una copia de trabajo autorizada.</li>
+        <li>Repetí con <code>../fuera.bin</code>. No crees ese archivo ni uses una ruta real.</li>
+        <li>Revisá el mensaje de la pantalla y la auditoría del caso.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La aplicación rechaza ambos intentos, no lee archivos fuera de la carpeta permitida y no muestra ni conserva una ruta completa en el historial. El error de lectura queda trazado sin revelar información local.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-missing"><span>El archivo inexistente fue rechazado sin revelar rutas.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-traversal"><span>La ruta con <code>..</code> fue rechazada y el historial quedó saneado.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Abrir NetSentinel Forense</a></div>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-forensics-manifests">
+      <div class="guided-scenario-title">
+        <span class="guided-number">06</span>
+        <div><p class="guided-kicker">TRAZABILIDAD</p><h2>Forense: exportar auditoría y expediente</h2></div>
+      </div>
+      <p>Después de registrar y comparar la copia sintética, comprobá que el caso conserve el historial de operaciones.</p>
+      <ol class="guided-instructions">
+        <li>Seleccioná el caso de prueba y descargá el <strong>manifiesto de auditoría</strong>.</li>
+        <li>Descargá el <strong>expediente consolidado del caso</strong>.</li>
+        <li>Abrí los dos JSON descargados. Comprobá que correspondan al caso sintético y que el historial incluya el registro de evidencia y las comprobaciones realizadas.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>Los dos archivos JSON se descargan y contienen metadatos del caso y la auditoría relevantes. Un hash o digest del manifiesto ayuda a detectar cambios, pero no es una firma digital ni acredita por sí solo la autenticidad.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-audit-manifest"><span>Descargué y revisé el manifiesto de auditoría.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case-manifest"><span>Descargué y revisé el expediente consolidado.</span></label>
+      <div class="guided-actions"><a class="primary" href="/forensics">Volver a Forense</a></div>
     </article>
   </section>
 
