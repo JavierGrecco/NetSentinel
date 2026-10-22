@@ -28,6 +28,7 @@
     const percentage = total ? Math.round((completed / total) * 100) : 0;
     $("guidedProgressCount").textContent = completed + " de " + total + " pasos";
     $("guidedProgressFill").style.width = percentage + "%";
+    $("guidedProgressBar").setAttribute("aria-valuemax", String(total));
     $("guidedProgressBar").setAttribute("aria-valuenow", String(completed));
     $("guidedProgressText").textContent = completed === total
       ? "Marcaste todos los pasos. Revisá tus resultados: el avance lo marcaste vos y no equivale a una certificación automática."
