@@ -123,5 +123,5 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     assert 'id="checkMapApi"' in html
     assert 'id="checkForensicsApi"' in html
     assert "netsentinel.guided-test.progress.v1" in script
-    assert 'fetch("/api/geolocation/map?limit=1"' in script
-    assert 'fetch("/api/forensics/cases?limit=1"' in script
+    assert 'checkApi("/api/geolocation/map?limit=1"' in script
+    assert 'checkApi("/api/forensics/cases?limit=1"' in script
