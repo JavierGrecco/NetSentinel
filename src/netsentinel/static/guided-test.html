@@ -101,7 +101,7 @@
       <div>
         <p class="guided-kicker">ANTES DE EMPEZAR · UNA SOLA VEZ POR BASE</p>
         <h2 id="guidedSetupTitle">Prepará el laboratorio aislado</h2>
-        <p>Si todavía no preparaste los datos sintéticos, ejecutá el bloque desde la raíz de esta copia del repositorio. Crea una base aislada con nombre único, genera los CSV y prepara el archivo ficticio para Forense. No sobrescribe escenarios previos: si la carpeta de archivos de prueba ya existe, conservála y usá una copia limpia del laboratorio.</p>
+        <p>Si todavía no preparaste los datos sintéticos, ejecutá el bloque desde la raíz de esta copia del repositorio. Crea una base aislada con nombre único, genera CSV en una carpeta visible con nombre único y prepara el archivo ficticio para Forense. Imprime ambas rutas. Conserva las carpetas previas y no las sobrescribe.</p>
       </div>
       <button type="button" id="copySetupCommand" class="quiet">Copiar comandos</button>
     </div>
@@ -110,9 +110,11 @@ source .venv/bin/activate
 python -m pip install -e ".[test,geoip]"
 export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$NETSENTINEL_DATA_DIR"
-python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
+SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"
+mkdir -p "$(dirname "$SCENARIO_DIR")"
+python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
 python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
-printf "NETSENTINEL_DATA_DIR=%s\\n" "$NETSENTINEL_DATA_DIR"
+printf "NETSENTINEL_DATA_DIR=%s\\nSCENARIO_DIR=%s\\n" "$NETSENTINEL_DATA_DIR" "$SCENARIO_DIR"
 mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
 python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
 ./run.sh</code></pre>
@@ -130,7 +132,7 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       <p>Validá que la vista previa no escriba eventos y que repetir una importación no duplique los registros.</p>
       <ol class="guided-instructions">
         <li>Abrí <code>Actividad</code> y seleccioná el dispositivo <strong>Dispositivo sintético de prueba</strong>.</li>
-        <li>En la carpeta <code>netsentinel-test-artifacts/manual-scenarios</code>, elegí <code>activity.csv</code> y ejecutá la vista previa.</li>
+        <li>En la carpeta indicada por <code>SCENARIO_DIR</code> al final de la preparación, elegí <code>activity.csv</code> y ejecutá la vista previa.</li>
         <li>Confirmá la importación y después previsualizá el mismo archivo otra vez.</li>
       </ol>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La vista previa muestra seis filas válidas; después de confirmar, la repetición identifica duplicados en lugar de crear una segunda copia.</span></div>
