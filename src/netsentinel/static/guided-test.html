@@ -105,12 +105,14 @@
       </div>
       <button type="button" id="copySetupCommand" class="quiet">Copiar comandos</button>
     </div>
-    <pre class="guided-command"><code id="setupCommand">source .venv/bin/activate
+    <pre class="guided-command"><code id="setupCommand">python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -e ".[test,geoip]"
 export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$NETSENTINEL_DATA_DIR"
 python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20 --force
 python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+printf "NETSENTINEL_DATA_DIR=%s\\n" "$NETSENTINEL_DATA_DIR"
 mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
 python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
 ./run.sh</code></pre>
@@ -183,8 +185,12 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
         <li>Abrí Forense y creá un caso con la referencia <code>AUTORIZACION-DE-PRUEBA</code>; indicá que solo cubre el archivo de laboratorio.</li>
         <li>Registrá <code>netsentinel-forensic-sample.bin</code> como una copia de prueba. Usá el SHA-256 que imprimió la preparación como dato de referencia.</li>
         <li>Usá la función de comparar con una copia de trabajo autorizada: primero debe coincidir.</li>
-        <li>Desde otra terminal, cambiá el contenido a <code>NetSentinel synthetic evidence v2</code> y repetí la comprobación; debe señalar una discrepancia.</li>
+        <li>Desde otra terminal, exportá el mismo <code>NETSENTINEL_DATA_DIR</code> que imprimió la preparación y ejecutá el comando de abajo. Después repetí la comparación en Forense.</li>
       </ol>
+      <div class="guided-section-heading"><div><p class="guided-kicker">SEGUNDA COMPROBACIÓN</p><p>Reemplazá el valor de la variable por la ruta exacta que imprimió la preparación, sin cambiar el resto del comando.</p></div><button type="button" id="copyEvidenceChangeCommand" class="quiet">Copiar comando de cambio</button></div>
+      <pre class="guided-command"><code id="evidenceChangeCommand">export NETSENTINEL_DATA_DIR="PEGAR_AQUI_LA_RUTA_IMPRESA"
+python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v2"); print("Muestra actualizada:", p.name)'</code></pre>
+      <p id="evidenceChangeStatus" class="guided-inline-status" role="status" aria-live="polite"></p>
       <div class="guided-expected"><strong>Resultado esperado</strong><span>La copia inicial coincide con el hash de referencia; tras cambiar el contenido, la comprobación detecta la diferencia y conserva el valor declarado por la fuente.</span></div>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-case"><span>Creé un caso de prueba con autorización y alcance ficticios.</span></label>
       <label class="guided-check"><input type="checkbox" data-guided-step="forensics-match"><span>La comparación de la copia inicial informó coincidencia.</span></label>
