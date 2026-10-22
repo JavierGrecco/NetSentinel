@@ -158,6 +158,24 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
           <p id="wizardExpected">Vas a ver el resultado aquí antes de pasar al siguiente paso.</p>
         </section>
 
+        <section id="wizardReferencePanel" class="wizard-reference-panel" hidden aria-labelledby="wizardReferenceHeading">
+          <h3 id="wizardReferenceHeading">Valores de referencia para completar el formulario</h3>
+          <dl id="wizardReferenceValues" class="wizard-reference-values"></dl>
+        </section>
+
+        <section id="wizardCommandPanel" class="wizard-command-panel" hidden aria-labelledby="wizardCommandHeading">
+          <div class="wizard-automatic-header">
+            <div>
+              <p class="wizard-kicker">COMANDO DE APOYO</p>
+              <h3 id="wizardCommandHeading">Cambiar la muestra sintética</h3>
+            </div>
+            <button type="button" id="wizardCopyCommand" class="quiet">Copiar comando</button>
+          </div>
+          <p id="wizardCommandDescription" class="wizard-muted"></p>
+          <pre class="wizard-command"><code id="wizardCommandText"></code></pre>
+          <p id="wizardCommandStatus" class="wizard-muted" role="status" aria-live="polite"></p>
+        </section>
+
         <section id="wizardAutomaticPanel" class="wizard-automatic-panel" aria-labelledby="wizardAutomaticHeading" hidden>
           <div class="wizard-automatic-header">
             <div>
