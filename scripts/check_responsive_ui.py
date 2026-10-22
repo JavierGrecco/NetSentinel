@@ -41,7 +41,7 @@ PAGE_CASES = (
     ("/activity", "Actividad y telemetría", "actividad"),
     ("/forensics", "Área de análisis forense", "forensics"),
     ("/world-map", "Mapa mundial de IP", "geolocation"),
-    ("/guided-test", "Prueba guiada de NetSentinel", "guided-test"),
+    ("/guided-test", "Asistente de pruebas", "guided-test"),
 )
 
 
