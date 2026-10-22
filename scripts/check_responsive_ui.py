@@ -8,6 +8,7 @@ No inicia descubrimientos ni ejecuta diagnósticos de red.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -38,7 +39,9 @@ PAGE_CASES = (
     ("/monitors", "Monitorización", "monitorizacion"),
     ("/tools", "Herramientas de red", "herramientas"),
     ("/activity", "Actividad y telemetría", "actividad"),
-    ("/world-map", "Mapa mundial de IP", "mapa-mundial"),
+    ("/forensics", "Área de análisis forense", "forensics"),
+    ("/world-map", "Mapa mundial de IP", "geolocation"),
+    ("/guided-test", "Prueba guiada de NetSentinel", "guided-test"),
 )
 
 
@@ -192,6 +195,35 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "UPDATE monitor_checks SET checked_at = ? WHERE id = ?",
                 ((now - timedelta(hours=2)).isoformat(), check_ids[1]),
             )
+
+        # Caso forense sintético para probar el registro visible de un intento fallido.
+        # El archivo NO se crea: Chromium debe ver el error y el historial actualizado.
+        from netsentinel import forensics_service
+
+        forensic_case = forensics_service.create_case(
+            case_number="UI-FORENSICS-001",
+            title="Caso sintético de navegador",
+            authority_reference="AUTORIZACION-SINTETICA-001",
+            objective="Comprobar el registro visible de errores de lectura.",
+            scope="Solo datos sintéticos de la prueba Chromium.",
+            examiner="Examinador sintético",
+            actor="Prueba automatizada",
+        )
+        forensics_service.add_evidence(
+            case_id=forensic_case["id"],
+            label="Archivo sintético no creado",
+            source_type="file_copy",
+            original_name="missing-synthetic-evidence.bin",
+            source_description="Elemento sintético para probar un error de lectura.",
+            received_from="Fuente sintética",
+            received_by="Examinador sintético UI",
+            received_at_original=datetime.now(timezone.utc).isoformat(),
+            received_timezone="UTC",
+            size_bytes=None,
+            reported_sha256=hashlib.sha256(b"synthetic evidence reference").hexdigest(),
+            hash_source="Fixture automática de Chromium",
+            actor="Prueba automatizada",
+        )
     finally:
         if previous_data_dir is None:
             os.environ.pop("NETSENTINEL_DATA_DIR", None)
@@ -1039,129 +1071,580 @@ def _monitor_history_accessibility_failures(page) -> list[str]:
     return failures
 
 
-def _world_map_empty_state_failures(page) -> list[str]:
-    """Comprueba cartografía local y estado vacío sin IP ni coordenadas inventadas."""
+def _forensics_hash_failure_refresh_failures(page) -> list[str]:
+    """Comprueba que un fallo de lectura aparezca en la ficha y el historial."""
+    failures: list[str] = []
+    operator = page.locator("#forensicOperator")
+    source_name = page.locator("#forensicEvidenceList .forensic-verify-form input[name='source_name']")
+    confirmation = page.locator("#forensicEvidenceList .forensic-verify-form input[name='confirm_working_copy']")
+    submit = page.locator("#forensicEvidenceList .forensic-verify-form button[type='submit']")
+    if any(locator.count() != 1 for locator in (operator, source_name, confirmation, submit)):
+        return ["no se preparó el formulario forense sintético para la prueba de error"]
+
+    try:
+        verify_panel = page.locator("#forensicEvidenceList details.forensic-verify-panel")
+        if verify_panel.count() != 1:
+            return ["no se encontró el panel de comparación de hash sintético"]
+        if verify_panel.get_attribute("open") is None:
+            verify_panel.locator("summary").click()
+
+        operator.fill("Operador sintético")
+        source_name.fill("missing-synthetic-evidence.bin")
+        confirmation.check()
+        submit.click()
+        page.wait_for_function(
+            """() => {
+              const status = document.querySelector("#forensicWorkspaceStatus");
+              const evidence = document.querySelector("#forensicEvidenceList");
+              const audit = document.querySelector("#forensicAuditList");
+              return status && status.textContent.includes("NS-FORENSIC-INT-002") &&
+                evidence && evidence.textContent.includes("Última comprobación: no se pudo leer") &&
+                audit && audit.textContent.includes("Falló la comparación del hash");
+            }""",
+            timeout=8000,
+        )
+    except Exception as exc:
+        return [f"el fallo forense no actualizó el estado y el historial en Chromium: {exc}"]
+
+    if "forensics-working-copies" in page.locator("#forensicAuditList").inner_text():
+        return ["el historial forense mostró la ubicación local de las copias de trabajo"]
+
+    # Registra un traspaso sintético desde la UI y confirma que se encadena a la auditoría.
+    try:
+        transfer_panel = page.locator("#forensicEvidenceList details.forensic-transfer-panel")
+        if transfer_panel.count() != 1:
+            return ["no se encontró el formulario para registrar transferencia de custodia"]
+        if transfer_panel.get_attribute("open") is None:
+            transfer_panel.locator("summary").click()
+        transfer_panel.locator("input[name='from_custodian']").fill("Examinador sintético UI")
+        transfer_panel.locator("input[name='to_custodian']").fill("Custodio sintético UI")
+        transfer_panel.locator("input[name='transferred_at_original']").fill("2026-10-22T11:00:00-03:00")
+        transfer_panel.locator("textarea[name='purpose']").fill("Entrega sintética para examen de laboratorio.")
+        transfer_panel.locator("input[name='delivery_method']").fill("Entrega presencial simulada")
+        transfer_panel.locator("textarea[name='condition_notes']").fill("Embalaje sintético íntegro.")
+        transfer_panel.locator("input[name='seal_identifier']").fill("SELLO-UI-001")
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/custody-transfers"),
+            timeout=10000,
+        ) as response_info:
+            transfer_panel.locator("button[type='submit']").click()
+        transfer_response = response_info.value
+        if transfer_response.status != 201:
+            failures.append(f"la transferencia desde la interfaz respondió HTTP {transfer_response.status}")
+        transfer_payload = transfer_response.json()
+        if transfer_payload.get("action") != "evidence_custody_transferred":
+            failures.append("la respuesta no identifica el evento de transferencia de custodia")
+        if transfer_payload.get("integrity_status") != "valid":
+            failures.append("la nueva transferencia no quedó en una cadena de auditoría válida")
+        page.wait_for_function(
+            """() => {
+              const audit = document.querySelector("#forensicAuditList");
+              return audit &&
+                audit.textContent.includes("Transferencia de custodia registrada") &&
+                audit.textContent.includes("Examinador sintético UI") &&
+                audit.textContent.includes("Integridad del evento: válida");
+            }""",
+            timeout=8000,
+        )
+    except Exception as exc:
+        return [f"la transferencia de custodia no funcionó desde Chromium: {exc}"]
+
+    # Crea un informe desde la pantalla y verifica que ambas exportaciones correspondan
+    # al mismo borrador íntegro y a la captura del expediente con la custodia sintética.
+    try:
+        report_details = page.locator("#newForensicReportDetails")
+        if report_details.count() != 1:
+            return ["falta el formulario para crear el borrador de informe forense"]
+        if report_details.get_attribute("open") is None:
+            report_details.locator("summary").click()
+        page.locator("#forensicReportTitle").fill("Informe de examen desde Chromium")
+        page.locator("#forensicReportOrganization").fill("Laboratorio sintético Chromium")
+        page.locator("#forensicReportRequestDate").fill("2026-10-22")
+        page.locator("#forensicReportRequester").fill("Solicitante sintético Chromium")
+        page.locator("#forensicReportRequesterOrganization").fill("Unidad sintética de pruebas")
+        page.locator("#forensicReportPurpose").fill("Verificar la generación del informe desde la interfaz.")
+        page.locator("#forensicReportScope").fill("Solo metadatos y artefactos sintéticos de Chromium.")
+        page.locator("#forensicReportProcesses").fill(
+            "Se generó una muestra ficticia, se registró una transferencia y se comprobó el expediente."
+        )
+        page.locator("#forensicReportResults").fill(
+            "La prueba confirmó que el borrador se guarda con un expediente base verificable."
+        )
+        page.locator("#forensicReportConclusions").fill(
+            "No se formula conclusión alguna sobre evidencia real."
+        )
+        page.locator("#forensicReportConclusionBasis").fill(
+            "Respuesta HTTP, digest y campos obtenidos de la prueba automatizada."
+        )
+        page.locator("#forensicReportLimitations").fill(
+            "No se adquirió ni examinó evidencia real; solo se usaron datos sintéticos."
+        )
+        page.locator("#forensicReportDeviations").fill("Ninguna desviación en esta prueba.")
+        page.locator("#forensicReportSupportingMaterial").fill("Informe generado por la prueba Chromium.")
+        page.locator("#forensicReportOriginalDisposition").fill(
+            "No hay original real; se utilizó un elemento ficticio."
+        )
+        page.locator("#forensicReportDerivativeDisposition").fill(
+            "Los artefactos sintéticos se conservan en el directorio temporal del test."
+        )
+        page.locator("#forensicReportAuthor").fill("Autor sintético Chromium")
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/reports"),
+            timeout=10000,
+        ) as report_response_info:
+            page.locator("#forensicReportForm button[type='submit']").click()
+        report_response = report_response_info.value
+        if report_response.status != 201:
+            failures.append(f"la creación del informe respondió HTTP {report_response.status}")
+            return failures
+        saved_report = report_response.json()
+        if saved_report.get("version") != 1 or saved_report.get("status") != "draft_unsigned":
+            failures.append("el informe no se guardó como primera versión borrador sin firma")
+        if not saved_report.get("integrity_valid"):
+            failures.append("el informe recién creado no superó la verificación de integridad")
+        report_payload = saved_report.get("report", {})
+        from netsentinel.forensics_report import verify_examination_report
+
+        if not verify_examination_report(report_payload):
+            failures.append("el JSON del informe no superó el verificador local")
+        if report_payload.get("integrity", {}).get("source_audit_chain_status") != "valid":
+            failures.append("el informe no conserva el estado válido de la cadena base")
+        snapshot_events = report_payload.get("source_case_manifest", {}).get("audit_manifest", {}).get("events", [])
+        snapshot_transfers = [
+            event for event in snapshot_events
+            if event.get("action") == "evidence_custody_transferred"
+        ]
+        if len(snapshot_transfers) != 1:
+            failures.append("el informe no incorpora la transferencia sintética en su captura de expediente")
+        page.wait_for_function(
+            """() => {
+              const list = document.querySelector("#forensicReportsList");
+              return list && list.textContent.includes("Informe de examen desde Chromium") &&
+                list.textContent.includes("Borrador sin firma");
+            }""",
+            timeout=8000,
+        )
+        links = page.locator("#forensicReportsList .forensic-report-actions a")
+        if links.count() != 2:
+            failures.append("la interfaz no muestra las dos exportaciones del informe")
+        else:
+            with page.expect_download(timeout=8000) as report_json_download_info:
+                links.nth(0).click()
+            report_json_download = report_json_download_info.value
+            if report_json_download.suggested_filename != "netsentinel-examination-report-v001.json":
+                failures.append("el informe JSON produjo un nombre de descarga inesperado")
+            report_json_path = report_json_download.path()
+            if not report_json_path:
+                failures.append("Chromium no proporcionó el JSON del informe para verificar")
+            else:
+                exported_report = json.loads(Path(report_json_path).read_text(encoding="utf-8"))
+                if not verify_examination_report(exported_report):
+                    failures.append("el informe JSON descargado no superó la verificación local")
+                if exported_report.get("report_sha256") != saved_report.get("report_sha256"):
+                    failures.append("el digest del informe descargado no coincide con el documento guardado")
+                if "forensics-working-copies" in Path(report_json_path).read_text(encoding="utf-8"):
+                    failures.append("el JSON del informe expone la ubicación local de las copias")
+            with page.expect_download(timeout=8000) as report_md_download_info:
+                links.nth(1).click()
+            report_md_download = report_md_download_info.value
+            if report_md_download.suggested_filename != "netsentinel-examination-report-v001.md":
+                failures.append("el informe Markdown produjo un nombre de descarga inesperado")
+            report_md_path = report_md_download.path()
+            if not report_md_path:
+                failures.append("Chromium no proporcionó el Markdown del informe")
+            else:
+                report_markdown = Path(report_md_path).read_text(encoding="utf-8")
+                if "BORRADOR SIN FIRMA" not in report_markdown or "No hay firma digital" not in report_markdown:
+                    failures.append("el informe legible no advierte que sigue sin firma")
+    except Exception as exc:
+        return [f"el informe no se pudo crear y exportar desde Chromium: {exc}"]
+
+    # Comprueba el recorrido real de los dos formatos de exportación del expediente.
+    export_button = page.locator("#exportForensicCaseManifest")
+    if export_button.count() != 1:
+        failures.append("falta el botón para exportar el expediente consolidado")
+        return failures
+    if export_button.is_disabled():
+        failures.append("el botón para exportar el expediente no se habilitó para el caso seleccionado")
+        return failures
+
+    try:
+        with page.expect_download(timeout=8000) as download_info:
+            export_button.click()
+        download = download_info.value
+        if download.suggested_filename != "netsentinel-forensic-case-manifest.json":
+            failures.append("la exportación del expediente produjo un nombre de archivo inesperado")
+        download_path = download.path()
+        if not download_path:
+            failures.append("Chromium no proporcionó una descarga local para verificar")
+            return failures
+        manifest = json.loads(Path(download_path).read_text(encoding="utf-8"))
+        from netsentinel.forensics_case_manifest import verify_case_manifest
+
+        if not verify_case_manifest(manifest):
+            failures.append("el expediente descargado no superó la verificación de sus digests")
+        if manifest.get("format") != "netsentinel-forensic-case-manifest":
+            failures.append("la descarga no contiene el formato de expediente esperado")
+        summary = manifest.get("summary", {})
+        if summary.get("audit_chain_status") != "valid":
+            failures.append("la exportación no conserva una cadena de auditoría sintética válida")
+        if summary.get("failed_check_count", 0) < 1:
+            failures.append("el expediente no incluye la comprobación sintética fallida")
+        if summary.get("report_count") != 1:
+            failures.append("el expediente no incluye el índice del borrador de informe guardado")
+        report_refs = manifest.get("reports", [])
+        if len(report_refs) != 1 or report_refs[0].get("report_sha256") != saved_report.get("report_sha256"):
+            failures.append("el expediente no conserva la referencia al digest del informe guardado")
+        audit_events = manifest.get("audit_manifest", {}).get("events", [])
+        transfer_events = [event for event in audit_events if event.get("action") == "evidence_custody_transferred"]
+        if len(transfer_events) != 1:
+            failures.append("el expediente no incluye exactamente el traspaso sintético recién registrado")
+        elif transfer_events[0].get("details", {}).get("to_custodian") != "Custodio sintético UI":
+            failures.append("el expediente no conserva a la persona que recibe el traspaso")
+        exported_text = Path(download_path).read_text(encoding="utf-8")
+        if "forensics-working-copies" in exported_text:
+            failures.append("el expediente descargado revela la carpeta de copias de trabajo")
+
+
+        audit_button = page.locator("#exportForensicAuditManifest")
+        try:
+            with page.expect_download(timeout=8000) as audit_download_info:
+                audit_button.click()
+            audit_download = audit_download_info.value
+            if audit_download.suggested_filename != "netsentinel-forensic-audit-manifest.json":
+                failures.append("la exportación de auditoría produjo un nombre de archivo inesperado")
+            audit_path = audit_download.path()
+            if not audit_path:
+                failures.append("Chromium no proporcionó la descarga de auditoría para verificar")
+            else:
+                audit_manifest = json.loads(Path(audit_path).read_text(encoding="utf-8"))
+                from netsentinel.forensics_audit_manifest import verify_audit_manifest
+
+                if not verify_audit_manifest(audit_manifest):
+                    failures.append("el manifiesto de auditoría descargado no superó la verificación de integridad")
+                if audit_manifest.get("format") != "netsentinel-forensic-audit-manifest":
+                    failures.append("la descarga de auditoría no contiene el formato esperado")
+                integrity = audit_manifest.get("integrity", {})
+                if integrity.get("status") != "valid":
+                    failures.append("la auditoría exportada no informa una cadena íntegra para el caso sintético")
+                exported_transfers = [
+                    event for event in audit_manifest.get("events", [])
+                    if event.get("action") == "evidence_custody_transferred"
+                ]
+                if len(exported_transfers) != 1:
+                    failures.append("el manifiesto de auditoría no contiene el traspaso sintético")
+                if not any(
+                    event.get("action") == "report_draft_created"
+                    for event in audit_manifest.get("events", [])
+                ):
+                    failures.append("el manifiesto de auditoría no contiene la creación del informe")
+                audit_text = Path(audit_path).read_text(encoding="utf-8")
+                if "forensics-working-copies" in audit_text:
+                    failures.append("el manifiesto de auditoría revela la carpeta de copias de trabajo")
+        except Exception as exc:
+            failures.append(f"no se pudo descargar y verificar la auditoría forense en Chromium: {exc}")
+    except Exception as exc:
+        failures.append(f"no se pudo descargar y verificar el expediente consolidado en Chromium: {exc}")
+
+    # Verifica desde la pantalla que se puedan crear un caso y una ficha de
+    # evidencia, no solo leer los registros que preparó el fixture automático.
+    try:
+        case_details = page.locator("#newForensicCaseDetails")
+        case_details.locator("summary").click()
+        page.locator("#forensicOperator").fill("Operador sintético Chromium")
+        page.locator("#forensicCaseNumber").fill("UI-FORENSICS-CREATE-002")
+        page.locator("#forensicCaseTitle").fill("Alta sintética desde la interfaz")
+        page.locator("#forensicAuthority").fill("AUTORIZACION-SINTETICA-002")
+        page.locator("#forensicObjective").fill("Verificar el alta de caso desde Chromium.")
+        page.locator("#forensicScope").fill("Solo registros sintéticos; ninguna evidencia real.")
+        page.locator("#forensicExaminer").fill("Examinador sintético Chromium")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.rstrip("/").endswith("/api/forensics/cases"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#forensicCaseForm button[type='submit']").click()
+        created_case_response = response_info.value
+        if created_case_response.status != 201:
+            failures.append(f"el alta de caso desde la interfaz respondió HTTP {created_case_response.status}")
+
+        page.wait_for_function(
+            """() => (document.querySelector("#forensicSelectedCaseNumber")?.textContent || "")
+              .includes("UI-FORENSICS-CREATE-002")""",
+            timeout=10000,
+        )
+        page.locator("#newForensicEvidenceDetails summary").click()
+        page.locator("#forensicEvidenceLabel").fill("Muestra creada en Chromium")
+        page.locator("#forensicEvidenceType").select_option("file_copy")
+        page.locator("#forensicOriginalName").fill("netsentinel-ui-sample.bin")
+        page.locator("#forensicSourceDescription").fill(
+            "Metadatos ficticios para comprobar el formulario; no hay contenido real adjunto."
+        )
+        page.locator("#forensicReceivedFrom").fill("Fixture automática de Chromium")
+        page.locator("#forensicReceivedBy").fill("Examinador sintético Chromium")
+        page.locator("#forensicReportedHash").fill("a" * 64)
+        page.locator("#forensicHashSource").fill("Hash fijo sintético de la prueba UI")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and "/api/forensics/cases/" in response.url
+            and response.url.endswith("/evidence"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#forensicEvidenceForm button[type='submit']").click()
+        created_evidence_response = response_info.value
+        if created_evidence_response.status != 201:
+            failures.append(f"el registro de evidencia desde la interfaz respondió HTTP {created_evidence_response.status}")
+        page.wait_for_function(
+            """() => (document.querySelector("#forensicEvidenceList")?.textContent || "")
+              .includes("Muestra creada en Chromium") &&
+              (document.querySelector("#forensicWorkspaceStatus")?.textContent || "")
+                .includes("quedó registrada")""",
+            timeout=10000,
+        )
+    except Exception as exc:
+        failures.append(f"no se completó el alta de caso y evidencia desde Chromium: {exc}")
+    return failures
+
+
+def _activity_synthetic_import_failures(page, base_url: str, scenarios_dir: Path) -> list[str]:
+    """Prueba el recorrido CSV visible con archivos sintéticos y una base temporal propia."""
+    failures: list[str] = []
+    required_files = (
+        "activity.csv",
+        "activity-invalid-sensitive.csv",
+        "activity-invalid-duplicate-header.csv",
+    )
+    missing = [name for name in required_files if not (scenarios_dir / name).is_file()]
+    if missing:
+        return [f"faltan los escenarios CSV sintéticos: {', '.join(missing)}"]
+
+    try:
+        import_tab = page.locator('button.section-tab[data-tab-target="activity-import"]')
+        if import_tab.count() != 1:
+            return ["no se encontró la pestaña Importar de Actividad"]
+        import_tab.click()
+        page.wait_for_function(
+            """() => {
+              const device = document.querySelector("#csvDevice");
+              return device && device.options.length > 1;
+            }""",
+            timeout=8000,
+        )
+        page.locator("#csvDevice").select_option(index=1)
+        page.locator("#csvFile").set_input_files(str(scenarios_dir / "activity.csv"))
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import/preview"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#previewImport").click()
+        preview_response = response_info.value
+        if preview_response.status != 200:
+            failures.append(f"la vista previa CSV válida respondió HTTP {preview_response.status}")
+        page.wait_for_function(
+            """() => {
+              const panel = document.querySelector("#previewPanel");
+              const summary = document.querySelector("#previewSummary");
+              return panel && !panel.hidden && summary &&
+                summary.textContent.includes("6 fila(s) válidas");
+            }""",
+            timeout=8000,
+        )
+        summary = page.locator("#previewSummary").inner_text()
+        if "6 nueva(s)" not in summary:
+            failures.append(f"la vista previa no identificó seis filas nuevas: {summary}")
+        if "No se guardaron eventos" not in page.locator("#importStatus").inner_text():
+            failures.append("la vista previa no confirmó que todavía no se guardaron eventos")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#import").click()
+        import_response = response_info.value
+        if import_response.status != 200:
+            failures.append(f"la importación CSV válida respondió HTTP {import_response.status}")
+        page.wait_for_function(
+            """() => (document.querySelector("#importStatus")?.textContent || "")
+              .includes("6 evento(s) importados")""",
+            timeout=10000,
+        )
+
+        # Repetir el archivo debe detectar duplicados, no insertar otra copia.
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import/preview"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#previewImport").click()
+        duplicate_response = response_info.value
+        if duplicate_response.status != 200:
+            failures.append(f"la vista previa repetida respondió HTTP {duplicate_response.status}")
+        page.wait_for_function(
+            """() => {
+              const summary = document.querySelector("#previewSummary");
+              return summary && summary.textContent.includes("6 duplicada(s)");
+            }""",
+            timeout=8000,
+        )
+        duplicate_summary = page.locator("#previewSummary").inner_text()
+        if "0 nueva(s)" not in duplicate_summary:
+            failures.append(f"la repetición de CSV no quedó completamente deduplicada: {duplicate_summary}")
+
+        for filename in ("activity-invalid-sensitive.csv", "activity-invalid-duplicate-header.csv"):
+            page.locator("#importStatus").evaluate("(element) => { element.textContent = ''; }")
+            page.locator("#csvFile").set_input_files(str(scenarios_dir / filename))
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith("/api/activity/import/preview"),
+                timeout=10000,
+            ) as response_info:
+                page.locator("#previewImport").click()
+            response = response_info.value
+            if not 400 <= response.status < 500:
+                failures.append(f"{filename} no fue rechazado por la API (HTTP {response.status})")
+            page.wait_for_function(
+                """() => (document.querySelector("#importStatus")?.textContent || "").trim().length > 0""",
+                timeout=8000,
+            )
+            if not page.locator("#previewPanel").is_hidden():
+                failures.append(f"{filename} dejó visible una vista previa como si fuera válida")
+            error_text = page.locator("#importStatus").inner_text()
+            if "Vista previa completada. No se guardaron eventos." in error_text:
+                failures.append(f"{filename} mostró un mensaje de éxito en lugar de rechazo")
+    except Exception as exc:
+        failures.append(f"el recorrido CSV sintético no se completó en Chromium: {exc}")
+    finally:
+        # No dejamos la vista en un panel de error ni reutilizamos el archivo inválido.
+        try:
+            page.goto(f"{base_url}/activity", wait_until="load", timeout=10000)
+        except Exception:
+            pass
+    return failures
+
+
+def _world_map_render_failures(page, base_url: str) -> list[str]:
+    """Comprueba el mapa local, una IP sintética importada y el filtro de destinos."""
     failures: list[str] = []
     try:
         page.wait_for_function(
             """() => {
               const map = document.querySelector("#worldMap");
+              const body = document.querySelector("#geoDestinationsBody");
               const status = document.querySelector("#geoMapStatus");
-              return map && map.querySelectorAll(".geo-country").length > 50 &&
-                status && status.textContent.includes("No hay eventos guardados con una IP de destino");
+              return map && map.querySelectorAll(".geo-country").length > 0 &&
+                body && Array.from(body.querySelectorAll("tr")).some((row) =>
+                  row.textContent.includes("1.1.1.1")) &&
+                status && status.textContent.includes("evento(s) con IP destino");
             }""",
-            timeout=15000,
+            timeout=10000,
         )
+
+        response = page.request.get(f"{base_url}/api/geolocation/map?limit=250")
+        if response.status != 200:
+            return [f"la API del mapa respondió HTTP {response.status}"]
+        payload = response.json()
+        summary = payload.get("summary", {})
+        databases = payload.get("databases", {})
+        if int(summary.get("events_with_destination_ip", 0)) < 1:
+            failures.append("la API del mapa no reconoció eventos con IP destino después de importar el CSV sintético")
+
+        # Si no hay una base City válida, la interfaz debe conservar la tabla y el
+        # mapa base pero no dibujar ubicaciones fabricadas.
+        if databases.get("city_status") != "available":
+            markers = page.locator("#worldMap .geo-observed-marker-layer .geo-marker").count()
+            if markers:
+                failures.append("el mapa dibujó marcadores observados sin una base GeoIP disponible")
+
+        target_row = page.locator("#geoDestinationsBody tr").filter(has_text="1.1.1.1").first
+        if target_row.count() != 1:
+            failures.append("la tabla del mapa no muestra la IP sintética pública 1.1.1.1")
+        else:
+            target_row.locator("button.geo-select-ip").click()
+            page.wait_for_function(
+                """() => document.querySelector("#geoSelectedTitle")?.textContent === "1.1.1.1" """,
+                timeout=5000,
+            )
+            page.locator("#geoDestinationFilter").fill("no-such-synthetic-destination")
+            page.wait_for_function(
+                """() => (document.querySelector("#geoDestinationsBody")?.textContent || "")
+                  .includes("No hay destinos que coincidan con el filtro.")""",
+                timeout=5000,
+            )
+            page.locator("#geoDestinationFilter").fill("")
+            page.wait_for_function(
+                """() => Array.from(document.querySelectorAll("#geoDestinationsBody tr"))
+                  .some((row) => row.textContent.includes("1.1.1.1"))""",
+                timeout=5000,
+            )
     except Exception as exc:
-        return [f"el mapa mundial local no cargó su cartografía o el estado vacío: {exc}"]
-
-    if page.locator("#worldMap .geo-marker").count() != 0:
-        failures.append("el mapa dibujó puntos de IP aunque la base sintética no contiene IP de destino")
-    if page.locator("#geoDestinationsBody tr").count() != 1:
-        failures.append("la tabla de IP no muestra una única fila de estado vacío")
-    elif "Todavía no hay IP públicas registradas" not in page.locator("#geoDestinationsBody").inner_text():
-        failures.append("la fila vacía no explica que faltan IP de destino registradas")
-    if not page.locator("#geoSetup").is_visible():
-        failures.append("el mapa no explica que necesita una base GeoIP local cuando no está instalada")
-
-    # La resolución DNS y la geolocalización se simulan: CI no hace consultas DNS reales.
-    import json
-
-    dns_payload = {
-        "hostname": "example.test",
-        "addresses": [
-            {"ip": "8.8.8.8", "family": "IPv4"},
-            {"ip": "192.168.1.22", "family": "IPv4"},
-        ],
-        "count": 2,
-        "source": "synthetic-system-resolver",
-        "timeout_seconds": 3.0,
-        "note": "Fixture sintética",
-    }
-    geo_payload = {
-        "source": "current_dns_resolution",
-        "queried_at": "2026-10-20T12:00:00Z",
-        "summary": {
-            "requested_ip_count": 2,
-            "public_ip_count": 1,
-            "located_ip_count": 1,
-            "unlocated_ip_count": 0,
-            "private_or_special_ip_count_skipped": 1,
-            "invalid_ip_count_skipped": 0,
-        },
-        "databases": {
-            "geoip_library_available": True,
-            "city_status": "available",
-            "asn_status": "database_missing",
-            "city_configured": True,
-            "asn_configured": False,
-        },
-        "destinations": [{
-            "ip": "8.8.8.8",
-            "event_count": 0,
-            "last_seen": "",
-            "sample_domain": "",
-            "country": "United States",
-            "country_iso": "US",
-            "city": "Mountain View",
-            "latitude": 37.4056,
-            "longitude": -122.0775,
-            "asn": 15169,
-            "asn_organization": "Google LLC",
-            "location_status": "located",
-        }],
-        "notes": [
-            "La resolución DNS actual no demuestra qué IP se usó en una visita anterior."
-        ],
-    }
-
-    try:
-        def mock_dns(route):
-            if "hostname=example.test" in route.request.url:
-                route.fulfill(status=200, content_type="application/json", body=json.dumps(dns_payload))
-            else:
-                route.continue_()
-
-        page.route("**/api/tools/dns/lookup*", mock_dns)
-        page.route(
-            "**/api/geolocation/lookup",
-            lambda route: route.fulfill(
-                status=200, content_type="application/json", body=json.dumps(geo_payload)
-            ),
-        )
-        page.locator("#geoDomainInput").fill("example.test")
-        page.locator("#geoDomainLookupButton").click()
-        page.wait_for_function(
-            """() => {
-              const status = document.querySelector("#geoDomainLookupStatus");
-              const results = document.querySelector("#geoDomainLookupResults");
-              return status && status.textContent.includes("No es evidencia de una IP histórica") &&
-                results && results.textContent.includes("8.8.8.8");
-            }""",
-            timeout=8000,
-        )
-        if page.locator("#worldMap .geo-marker-current").count() != 1:
-            failures.append("la resolución DNS actual no dibujó un marcador diferenciado")
-        if page.locator("#worldMap .geo-marker:not(.geo-marker-current)").count() != 0:
-            failures.append("una resolución DNS actual se mezcló con marcadores históricos")
-        if page.locator("#geoStatEvents").inner_text().strip() != "0":
-            failures.append("la consulta DNS actual alteró el contador de eventos históricos")
-        page.locator("#worldMap .geo-marker-current").click()
-        page.wait_for_function(
-            "() => document.querySelector('#geoSelectedDetails')?.textContent.includes('Resolución DNS actual')"
-        )
-        details = page.locator("#geoSelectedDetails").inner_text()
-        if "example.test" not in details or "no es un evento histórico" not in details.lower():
-            failures.append("el detalle seleccionado no distingue la resolución DNS actual del historial")
-    except Exception as exc:
-        failures.append(f"no se pudo probar el flujo sintético de búsqueda DNS en el mapa: {exc}")
+        failures.append(f"el mapa mundial no completó la comprobación con el CSV sintético: {exc}")
     finally:
-        page.unroute_all(behavior="ignoreErrors")
-
+        try:
+            page.goto(f"{base_url}/world-map", wait_until="load", timeout=10000)
+        except Exception:
+            pass
     return failures
 
 
-def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool) -> dict:
+def _guided_test_interaction_failures(page, base_url: str) -> list[str]:
+    """Comprueba el progreso persistente y las dos comprobaciones de API de la guía."""
+    failures: list[str] = []
+    try:
+        steps = page.locator("[data-guided-step]")
+        if steps.count() != 19:
+            return [f"la guía mostró {steps.count()} pasos en lugar de 19"]
+        setup_step = page.locator('[data-guided-step="setup"]')
+        if setup_step.count() != 1:
+            return ["falta la casilla para confirmar la preparación del laboratorio"]
+
+        page.locator("#resetGuidedProgress").click()
+        setup_step.check()
+        if page.locator("#guidedProgressCount").inner_text() != "1 de 19 pasos":
+            failures.append("el contador de progreso no actualizó el primer paso")
+        page.reload(wait_until="load")
+        if not page.locator('[data-guided-step="setup"]').is_checked():
+            failures.append("el progreso de la guía no persistió al recargar la página")
+
+        page.locator("#checkMapApi").click()
+        page.wait_for_function(
+            """() => document.querySelector("#mapApiStatus")?.classList.contains("is-success")""",
+            timeout=8000,
+        )
+        if "API del mapa: disponible" not in page.locator("#mapApiStatus").inner_text():
+            failures.append("la guía no confirmó correctamente la API del mapa")
+
+        page.locator("#checkForensicsApi").click()
+        page.wait_for_function(
+            """() => document.querySelector("#forensicsApiStatus")?.classList.contains("is-success")""",
+            timeout=8000,
+        )
+        if "API de Forense: disponible" not in page.locator("#forensicsApiStatus").inner_text():
+            failures.append("la guía no confirmó correctamente la API de Forense")
+
+        page.locator("#resetGuidedProgress").click()
+        if page.locator("[data-guided-step]:checked").count() != 0:
+            failures.append("el botón de reinicio no limpió las casillas de la guía")
+        if page.locator("#guidedProgressCount").inner_text() != "0 de 19 pasos":
+            failures.append("el reinicio no devolvió el contador de la guía a cero")
+    except Exception as exc:
+        failures.append(f"la interacción de Prueba guiada falló en Chromium: {exc}")
+    finally:
+        try:
+            page.goto(f"{base_url}/guided-test", wait_until="load", timeout=10000)
+            page.locator("#resetGuidedProgress").click()
+        except Exception:
+            pass
+    return failures
+
+
+def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_dir: Path, screenshots: bool, scenarios_dir: Path | None = None) -> dict:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
@@ -1237,12 +1720,17 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                     f"título inesperado: {actual!r}; se esperaba {expected_title!r}"
                                 )
 
-                            current_links = page.locator(
-                                '.primary-nav a.nav-link[aria-current="page"]'
-                            )
+                            if path == "/forensics":
+                                current_links = page.locator(
+                                    '.product-switcher a.product-link[aria-current="true"]'
+                                )
+                            else:
+                                current_links = page.locator(
+                                    '.primary-nav a.nav-link[aria-current="page"]'
+                                )
                             if current_links.count() != 1:
                                 case_failures.append(
-                                    "la navegación no identifica exactamente una sección activa"
+                                    "la navegación no identifica exactamente un módulo activo"
                                 )
 
                             theme_options = page.locator('input[name="themeSelect"]')
@@ -1273,7 +1761,19 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 Viewport(1440, 900),
                             }:
                                 case_failures.extend(_zeek_import_ui_failures(page, base_url, viewport))
-                            if path == "/world-map" and viewport == Viewport(1440, 900):
+                            if path == "/forensics" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
+                                case_failures.extend(_forensics_hash_failure_refresh_failures(page))
+                            if path == "/activity" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
+                                case_failures.extend(
+                                    _activity_synthetic_import_failures(page, base_url, scenarios_dir)
+                                )
+                            if path == "/guided-test" and viewport == Viewport(1440, 900):
+                                case_failures.extend(
+                                    _guided_test_interaction_failures(page, base_url)
+                                )
+                            if path == "/world-map" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
+                                case_failures.extend(_world_map_render_failures(page, base_url))
+                            if path == "/world-map" and viewport == Viewport(1440, 900) and scenarios_dir is None:
                                 case_failures.extend(_world_map_empty_state_failures(page))
 
                             for script_error in page_errors[error_start:]:
@@ -1339,7 +1839,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Revisa las seis pantallas de NetSentinel en múltiples tamaños. "
+            "Revisa las secciones de NetSentinel en múltiples tamaños. "
             "Por defecto usa un servidor y una base de datos temporales."
         )
     )
@@ -1367,6 +1867,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    scenarios_dir: Path | None = None
     if args.base_url:
         try:
             base_url = _validate_local_url(args.base_url)
@@ -1388,6 +1889,24 @@ def main() -> int:
                 base_url, args.viewports, args.output_dir, args.screenshots
             )
         else:
+            scenarios_dir = temp_root / "manual-scenarios"
+            generated = subprocess.run(
+                [
+                    sys.executable,
+                    str(REPO_ROOT / "scripts" / "generate_manual_scenarios.py"),
+                    "--output-dir", str(scenarios_dir),
+                    "--device-ip", "192.168.56.20",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if generated.returncode != 0:
+                raise RuntimeError(
+                    "No pude preparar los CSV sintéticos para la prueba de navegador. "
+                    f"Detalle: {generated.stderr[-2000:]}"
+                )
             with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as server_log:
                 environment = os.environ.copy()
                 environment["NETSENTINEL_DATA_DIR"] = str(data_dir)
@@ -1408,7 +1927,7 @@ def main() -> int:
                 try:
                     _wait_for_server(base_url, process, server_log)
                     report = _run_browser_checks(
-                        base_url, args.viewports, args.output_dir, args.screenshots
+                        base_url, args.viewports, args.output_dir, args.screenshots, scenarios_dir
                     )
                 finally:
                     _stop_server(process)
