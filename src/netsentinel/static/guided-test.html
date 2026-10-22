@@ -88,9 +88,9 @@
           <p class="guided-kicker">TU RECORRIDO</p>
           <h2 id="guidedProgressTitle">Progreso de la prueba</h2>
         </div>
-        <strong id="guidedProgressCount">0 de 19 pasos</strong>
+        <strong id="guidedProgressCount">0 de 24 pasos</strong>
       </div>
-      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
+      <div class="guided-progress-track" role="progressbar" aria-label="Progreso de los pasos" aria-valuemin="0" aria-valuemax="24" aria-valuenow="0" id="guidedProgressBar"><span id="guidedProgressFill"></span></div>
       <p id="guidedProgressText" class="small">Marcá cada paso después de comprobarlo en la aplicación. El avance solo se guarda en este navegador.</p>
       <button type="button" id="resetGuidedProgress" class="quiet tiny">Reiniciar progreso</button>
     </div>
@@ -108,12 +108,12 @@
     <pre class="guided-command"><code id="setupCommand">python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[test,geoip]"
-export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)"
+export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$(date +%Y%m%d-%H%M%S)-$"
 mkdir -p "$NETSENTINEL_DATA_DIR"
-SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"
+export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$(date +%Y%m%d-%H%M%S)-$"
 mkdir -p "$(dirname "$SCENARIO_DIR")"
 python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
-python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology
 printf "NETSENTINEL_DATA_DIR=%s\\nSCENARIO_DIR=%s\\n" "$NETSENTINEL_DATA_DIR" "$SCENARIO_DIR"
 mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
 python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
@@ -178,9 +178,39 @@ python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETS
       <p id="mapApiStatus" class="guided-inline-status" role="status" aria-live="polite">Todavía no se verificó la API del mapa.</p>
     </article>
 
+    <article class="panel guided-scenario" id="scenario-topology">
+      <div class="guided-scenario-title"><span class="guided-number">04</span><div><p class="guided-kicker">TOPOLOGÍA LAN HISTÓRICA</p><h2>Explorador de red: lectura sintética y evidencia</h2></div></div>
+      <p>La preparación crea una lectura etiquetada como <code>synthetic-test-fixture</code>. No ejecuta descubrimiento, ping ni escaneo de red: permite comprobar que el grafo usa observaciones guardadas.</p>
+      <ol class="guided-instructions">
+        <li>Pulsá <strong>Comprobar API</strong> para encontrar la lectura sintética y consultar su topología en modo de solo lectura.</li>
+        <li>Abrí <strong>Mapa de red</strong>, elegí esa lectura y seleccioná nodos. Deben aparecer los dispositivos ficticios, la subred <code>192.168.56.0/24</code> y la interfaz <code>synthetic-fixture</code> cuando la fuente lo permite.</li>
+        <li>Probá búsqueda, filtros, zoom y el detalle textual. Una línea no demuestra tráfico en vivo ni la ausencia de un equipo demuestra desconexión.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>La API devuelve la lectura guardada, nodos, relaciones y procedencia, sin ejecutar un escaneo ni sustituir evidencia histórica por datos actuales.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="topology-api"><span>La API encontró la lectura sintética y devolvió el grafo.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="topology-view"><span>En /network revisé la captura, selección de nodos y detalle textual.</span></label>
+      <div class="guided-actions"><a class="primary" href="/network">Abrir mapa de red</a><button type="button" id="checkTopologyApi" class="quiet">Comprobar API</button></div>
+      <p id="topologyApiStatus" class="guided-inline-status" role="status" aria-live="polite">Todavía no se comprobó la lectura sintética de topología.</p>
+    </article>
+
+    <article class="panel guided-scenario" id="scenario-zeek">
+      <div class="guided-scenario-title"><span class="guided-number">05</span><div><p class="guided-kicker">INGESTA AUTORIZADA</p><h2>Zeek conn.log: previsualizar, importar y deduplicar</h2></div></div>
+      <p>El archivo <code>zeek-conn.tsv</code> se genera localmente. No inicia Zeek, no captura paquetes ni se conecta a otro equipo. Usalo solamente contra esta base sintética aislada.</p>
+      <ol class="guided-instructions">
+        <li>Abrí <strong>Actividad</strong>, seleccioná el dispositivo <code>192.168.56.20</code> y cargá el archivo <code>zeek-conn.tsv</code> de la carpeta de escenarios que imprimió la preparación.</li>
+        <li>Pulsá <strong>Previsualizar registros</strong> y revisá validez, atribución por IP y fecha, bytes IP enviados/recibidos y filas omitidas. La vista previa no escribe eventos.</li>
+        <li>Después de revisar, pulsá <strong>Importar conexiones</strong> y previsualizá de nuevo el mismo archivo. Los UID ya importados deben reconocerse como duplicados.</li>
+      </ol>
+      <div class="guided-expected"><strong>Resultado esperado</strong><span>Los contadores ausentes permanecen desconocidos; las filas fuera de intervalo o ambiguas se omiten y la segunda importación no duplica UID <code>zeek:</code>.</span></div>
+      <label class="guided-check"><input type="checkbox" data-guided-step="zeek-preview"><span>La vista previa validó Zeek y mostró la atribución antes de escribir.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="zeek-import"><span>Importé únicamente filas que correspondían a la IP e intervalo sintéticos.</span></label>
+      <label class="guided-check"><input type="checkbox" data-guided-step="zeek-idempotence"><span>Repetí la importación y confirmé que se omitieron los duplicados.</span></label>
+      <div class="guided-actions"><a class="primary" href="/activity">Abrir Actividad y Zeek</a></div>
+    </article>
+
     <article class="panel guided-scenario" id="scenario-forensics">
       <div class="guided-scenario-title">
-        <span class="guided-number">04</span>
+        <span class="guided-number">06</span>
         <div><p class="guided-kicker">INTEGRIDAD DE EVIDENCIA</p><h2>NetSentinel Forense: comparar hashes</h2></div>
       </div>
       <p>Usá exclusivamente la copia sintética preparada en <code>forensics-working-copies</code>. No registres evidencia real en esta prueba.</p>
@@ -206,7 +236,7 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
 
     <article class="panel guided-scenario" id="scenario-forensics-safety">
       <div class="guided-scenario-title">
-        <span class="guided-number">05</span>
+        <span class="guided-number">07</span>
         <div><p class="guided-kicker">PRUEBAS NEGATIVAS</p><h2>Forense: rechazar rutas y archivos inexistentes</h2></div>
       </div>
       <p>Este escenario verifica que la interfaz solo acceda por nombre a una copia de trabajo dentro de la carpeta restringida y no exponga rutas locales.</p>
@@ -223,7 +253,7 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
 
     <article class="panel guided-scenario" id="scenario-forensics-manifests">
       <div class="guided-scenario-title">
-        <span class="guided-number">06</span>
+        <span class="guided-number">08</span>
         <div><p class="guided-kicker">TRAZABILIDAD</p><h2>Forense: exportar auditoría y expediente</h2></div>
       </div>
       <p>Después de registrar y comparar la copia sintética, comprobá que el caso conserve el historial de operaciones.</p>
@@ -244,7 +274,7 @@ python -c 'from pathlib import Path; import os; p=Path(os.environ["NETSENTINEL_D
 
     <article class="panel guided-scenario" id="scenario-forensics-report">
       <div class="guided-scenario-title">
-        <span class="guided-number">07</span>
+        <span class="guided-number">09</span>
         <div><p class="guided-kicker">DOCUMENTACIÓN REPRODUCIBLE</p><h2>Forense: crear y verificar el informe</h2></div>
       </div>
       <p>Usá el caso y la evidencia sintéticos del recorrido anterior. El informe se guarda como una versión inmutable y se exporta en JSON verificable y Markdown legible. No se firma ni se autoriza automáticamente.</p>

@@ -7,6 +7,7 @@ from pathlib import Path
 STATIC = Path("src/netsentinel/static")
 PAGE_NAMES = (
     "index.html",
+    "network.html",
     "findings.html",
     "monitors.html",
     "tools.html",
@@ -25,7 +26,7 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert ".app-header-utilities .theme-option-card" in css
     assert "min-height: 48px" in css
     assert ".app-header-content > .primary-nav" in css
-    assert "grid-template-columns: repeat(7, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(8, minmax(0, 1fr))" in css
     assert "min-height: 42px" in css
     assert ".app-section-title" in css
     assert "background: #101827" in css
@@ -195,3 +196,19 @@ def test_every_main_page_uses_the_shared_content_shell():
         assert '<main class="wrap">' in html, (
             f"{page_name} must use the shared content shell"
         )
+
+def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
+    """El recorrido local incluye los módulos integrados y prepara datos ficticios."""
+    html = (STATIC / "guided-test.html").read_text(encoding="utf-8")
+    assert 'id="scenario-topology"' in html
+    assert 'id="scenario-zeek"' in html
+    assert 'id="checkTopologyApi"' in html
+    assert 'id="topologyApiStatus"' in html
+    assert 'data-guided-step="topology-api"' in html
+    assert 'data-guided-step="zeek-preview"' in html
+    assert 'data-guided-step="zeek-idempotence"' in html
+    assert "seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology" in html
+    assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
+    assert 'aria-valuemax="24"' in html
+    assert len(re.findall(r'<article class="panel guided-scenario" id="scenario-[^"]+">', html)) == 9
+    assert len(re.findall(r'data-guided-step="[^"]+"', html)) == 24

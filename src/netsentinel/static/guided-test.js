@@ -114,6 +114,32 @@
     });
   });
 
+  $("checkTopologyApi").addEventListener("click", async () => {
+    const target = $("topologyApiStatus");
+    target.textContent = "Buscando la lectura sintética guardada…";
+    target.classList.remove("is-success", "is-error");
+    try {
+      const scansResponse = await fetch("/api/scans?limit=100", { cache: "no-store", credentials: "same-origin" });
+      if (!scansResponse.ok) throw new Error("No se pudo consultar el historial (HTTP " + scansResponse.status + ").");
+      const scans = await scansResponse.json();
+      if (!Array.isArray(scans)) throw new Error("El historial no devolvió una lista de lecturas.");
+      const scan = scans.find((item) => item && item.source === "synthetic-test-fixture");
+      if (!scan) throw new Error("No se encontró la lectura sintética. Prepará una base nueva con --include-topology.");
+      const graphResponse = await fetch("/api/scans/" + encodeURIComponent(scan.id) + "/topology", { cache: "no-store", credentials: "same-origin" });
+      if (!graphResponse.ok) throw new Error("La topología respondió HTTP " + graphResponse.status + ".");
+      const graph = await graphResponse.json();
+      const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+      const edges = Array.isArray(graph.edges) ? graph.edges : [];
+      if (graph.evidence_available === false) throw new Error("La lectura no tiene evidencia disponible; revisá el fixture y las migraciones.");
+      if (nodes.length < 3 || !JSON.stringify(nodes).includes("192.168.56.20")) {
+        throw new Error("La API respondió, pero no encontró los dispositivos sintéticos esperados.");
+      }
+      announce(target, "Topología disponible: lectura sintética #" + scan.id + "; " + nodes.length + " nodos y " + edges.length + " enlaces. La consulta fue de solo lectura.", "is-success");
+    } catch (error) {
+      announce(target, error && error.message ? error.message : "No se pudo verificar la topología.", "is-error");
+    }
+  });
+
   $("checkForensicsApi").addEventListener("click", () => {
     checkApi("/api/forensics/cases?limit=1", $("forensicsApiStatus"), "API de Forense", (payload) => {
       const cases = Array.isArray(payload && payload.items) ? payload.items.length : 0;

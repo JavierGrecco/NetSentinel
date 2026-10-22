@@ -71,6 +71,7 @@ def test_historical_selectors_offer_more_readings_without_expanding_recent_activ
 
 MODULE_PAGES = {
     "/": "src/netsentinel/static/index.html",
+    "/network": "src/netsentinel/static/network.html",
     "/findings": "src/netsentinel/static/findings.html",
     "/monitors": "src/netsentinel/static/monitors.html",
     "/tools": "src/netsentinel/static/tools.html",

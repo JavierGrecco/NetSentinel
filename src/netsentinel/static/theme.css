@@ -985,7 +985,7 @@ html[data-theme] .app-section-heading-row .app-page-actions button {
 /* La navegación deja de estar atrapada en una columna lateral. */
 html[data-theme] .app-header-content > .primary-nav {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   width: 100%;
