@@ -58,6 +58,9 @@ API_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.api.activity_read": {
         "netsentinel.activity_tracking",
     },
+    "netsentinel.api.geolocation": {
+        "netsentinel.geolocation_service",
+    },
     "netsentinel.api.activity_sessions": {
         "netsentinel.activity_tracking",
         "netsentinel.api.activity_models",
@@ -174,6 +177,10 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
     },
+    "netsentinel.geolocation_service": {
+        "netsentinel.config",
+        "netsentinel.geolocation_repository",
+    },
     "netsentinel.findings_service": {
         "netsentinel.database",
         "netsentinel.findings",
@@ -239,6 +246,9 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
         "netsentinel.database",
         "netsentinel.activity_repository_support",
         "netsentinel.activity_retention_repository",
+    },
+    "netsentinel.geolocation_repository": {
+        "netsentinel.database",
     },
     "netsentinel.inventory_repository": {
         "netsentinel.database_storage",
