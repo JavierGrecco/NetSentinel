@@ -594,6 +594,65 @@ def _forensics_hash_failure_refresh_failures(page) -> list[str]:
             failures.append("el expediente descargado revela la carpeta de copias de trabajo")
     except Exception as exc:
         failures.append(f"no se pudo descargar y verificar el expediente consolidado en Chromium: {exc}")
+
+    # Verifica desde la pantalla que se puedan crear un caso y una ficha de
+    # evidencia, no solo leer los registros que preparó el fixture automático.
+    try:
+        case_details = page.locator("#newForensicCaseDetails")
+        case_details.locator("summary").click()
+        page.locator("#forensicOperator").fill("Operador sintético Chromium")
+        page.locator("#forensicCaseNumber").fill("UI-FORENSICS-CREATE-002")
+        page.locator("#forensicCaseTitle").fill("Alta sintética desde la interfaz")
+        page.locator("#forensicAuthority").fill("AUTORIZACION-SINTETICA-002")
+        page.locator("#forensicObjective").fill("Verificar el alta de caso desde Chromium.")
+        page.locator("#forensicScope").fill("Solo registros sintéticos; ninguna evidencia real.")
+        page.locator("#forensicExaminer").fill("Examinador sintético Chromium")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.rstrip("/").endswith("/api/forensics/cases"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#forensicCaseForm button[type='submit']").click()
+        created_case_response = response_info.value
+        if created_case_response.status != 201:
+            failures.append(f"el alta de caso desde la interfaz respondió HTTP {created_case_response.status}")
+
+        page.wait_for_function(
+            """() => (document.querySelector("#forensicSelectedCaseNumber")?.textContent || "")
+              .includes("UI-FORENSICS-CREATE-002")""",
+            timeout=10000,
+        )
+        page.locator("#newForensicEvidenceDetails summary").click()
+        page.locator("#forensicEvidenceLabel").fill("Muestra creada en Chromium")
+        page.locator("#forensicEvidenceType").select_option("file_copy")
+        page.locator("#forensicOriginalName").fill("netsentinel-ui-sample.bin")
+        page.locator("#forensicSourceDescription").fill(
+            "Metadatos ficticios para comprobar el formulario; no hay contenido real adjunto."
+        )
+        page.locator("#forensicReceivedFrom").fill("Fixture automática de Chromium")
+        page.locator("#forensicReportedHash").fill("a" * 64)
+        page.locator("#forensicHashSource").fill("Hash fijo sintético de la prueba UI")
+
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and "/api/forensics/cases/" in response.url
+            and response.url.endswith("/evidence"),
+            timeout=10000,
+        ) as response_info:
+            page.locator("#forensicEvidenceForm button[type='submit']").click()
+        created_evidence_response = response_info.value
+        if created_evidence_response.status != 201:
+            failures.append(f"el registro de evidencia desde la interfaz respondió HTTP {created_evidence_response.status}")
+        page.wait_for_function(
+            """() => (document.querySelector("#forensicEvidenceList")?.textContent || "")
+              .includes("Muestra creada en Chromium") &&
+              (document.querySelector("#forensicWorkspaceStatus")?.textContent || "")
+                .includes("quedó registrada")""",
+            timeout=10000,
+        )
+    except Exception as exc:
+        failures.append(f"no se completó el alta de caso y evidencia desde Chromium: {exc}")
     return failures
 
 
@@ -711,6 +770,70 @@ def _activity_synthetic_import_failures(page, base_url: str, scenarios_dir: Path
         # No dejamos la vista en un panel de error ni reutilizamos el archivo inválido.
         try:
             page.goto(f"{base_url}/activity", wait_until="load", timeout=10000)
+        except Exception:
+            pass
+    return failures
+
+
+def _world_map_render_failures(page, base_url: str) -> list[str]:
+    """Comprueba el mapa local, una IP sintética importada y el filtro de destinos."""
+    failures: list[str] = []
+    try:
+        page.wait_for_function(
+            """() => {
+              const map = document.querySelector("#worldMap");
+              const body = document.querySelector("#geoDestinationsBody");
+              const status = document.querySelector("#geoMapStatus");
+              return map && map.querySelectorAll(".geo-country").length > 0 &&
+                body && Array.from(body.querySelectorAll("tr")).some((row) =>
+                  row.textContent.includes("1.1.1.1")) &&
+                status && status.textContent.includes("evento(s) con IP destino");
+            }""",
+            timeout=10000,
+        )
+
+        response = page.request.get(f"{base_url}/api/geolocation/map?limit=250")
+        if response.status != 200:
+            return [f"la API del mapa respondió HTTP {response.status}"]
+        payload = response.json()
+        summary = payload.get("summary", {})
+        databases = payload.get("databases", {})
+        if int(summary.get("events_with_destination_ip", 0)) < 1:
+            failures.append("la API del mapa no reconoció eventos con IP destino después de importar el CSV sintético")
+
+        # Si no hay una base City válida, la interfaz debe conservar la tabla y el
+        # mapa base pero no dibujar ubicaciones fabricadas.
+        if databases.get("city_status") != "available":
+            markers = page.locator("#worldMap .geo-observed-marker-layer .geo-marker").count()
+            if markers:
+                failures.append("el mapa dibujó marcadores observados sin una base GeoIP disponible")
+
+        target_row = page.locator("#geoDestinationsBody tr").filter(has_text="1.1.1.1").first
+        if target_row.count() != 1:
+            failures.append("la tabla del mapa no muestra la IP sintética pública 1.1.1.1")
+        else:
+            target_row.locator("button.geo-select-ip").click()
+            page.wait_for_function(
+                """() => document.querySelector("#geoSelectedTitle")?.textContent === "1.1.1.1" """,
+                timeout=5000,
+            )
+            page.locator("#geoDestinationFilter").fill("no-such-synthetic-destination")
+            page.wait_for_function(
+                """() => (document.querySelector("#geoDestinationsBody")?.textContent || "")
+                  .includes("No hay destinos que coincidan con el filtro.")""",
+                timeout=5000,
+            )
+            page.locator("#geoDestinationFilter").fill("")
+            page.wait_for_function(
+                """() => Array.from(document.querySelectorAll("#geoDestinationsBody tr"))
+                  .some((row) => row.textContent.includes("1.1.1.1"))""",
+                timeout=5000,
+            )
+    except Exception as exc:
+        failures.append(f"el mapa mundial no completó la comprobación con el CSV sintético: {exc}")
+    finally:
+        try:
+            page.goto(f"{base_url}/world-map", wait_until="load", timeout=10000)
         except Exception:
             pass
     return failures
@@ -885,6 +1008,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 case_failures.extend(
                                     _guided_test_interaction_failures(page, base_url)
                                 )
+                            if path == "/world-map" and viewport == Viewport(1440, 900) and scenarios_dir is not None:
+                                case_failures.extend(_world_map_render_failures(page, base_url))
 
                             for script_error in page_errors[error_start:]:
                                 case_failures.append(
