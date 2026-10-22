@@ -271,7 +271,7 @@ def test_markdown_export_escapes_html_and_keeps_evidence_inside_its_table(
         )
 
     assert markdown.status_code == 200
-    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in markdown.text
+    assert "&lt;script&gt;alert\\(1\\)&lt;/script&gt;" in markdown.text
     assert "<script>alert(1)</script>" not in markdown.text
     assert "&lt;img src=x&gt;" in markdown.text
     assert "<img src=x>" not in markdown.text
