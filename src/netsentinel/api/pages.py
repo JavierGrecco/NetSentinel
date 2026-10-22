@@ -45,3 +45,10 @@ def tools_page() -> FileResponse:
 def world_map_page() -> FileResponse:
     """Muestra el mapa mundial de IP públicas incluidas en eventos locales."""
     return FileResponse(_STATIC_DIR / "geolocation.html")
+
+
+@router.get("/forensics", include_in_schema=False)
+def forensics_page() -> FileResponse:
+    """Muestra el punto de entrada de NetSentinel Forense."""
+    return FileResponse(_STATIC_DIR / "forensics.html")
+
