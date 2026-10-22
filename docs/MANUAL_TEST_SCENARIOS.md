@@ -81,41 +81,38 @@ Esta parte utiliza el importador CSV de la aplicación principal.
 7. Confirmá que los errores no guarden una parte del archivo.
 
 Los dominios con sufijo .invalid se reservan para ejemplos y no deben resolverse.
-La IP pública 1.1.1.1 aparece solo para ejercitar el enriquecimiento GeoIP: el
-dominio de prueba no se afirma relacionado con esa IP. En el mapa mundial de la
-PR #182, un punto solo debe aparecer si está disponible una base GeoLite2-City
-válida y esta devuelve coordenadas utilizables. Sin esa base, es correcto que
-no aparezca el marcador; la aplicación no debe inventar la ubicación. Como
-1.1.1.1 es una dirección anycast, el punto es una aproximación y no una
-ubicación exacta del equipo o de una persona.
+La IP 1.1.1.1 aparece solo para ejercitar el enriquecimiento GeoIP: el dominio
+de prueba no se afirma relacionado con esa IP. Como es anycast, cualquier
+ubicación de su base GeoIP es aproximada, no una localización exacta de una
+persona o equipo.
 
 ## Prueba B: mapa mundial de IP
 
-El mapa no está en main; esta prueba corresponde a la
-[PR #182](https://github.com/JavierGrecco/NetSentinel/pull/182).
+El mapa está integrado en esta rama de laboratorio. **No cambies de rama.**
 
-1. Conservá los archivos generados fuera del árbol del código y probá la rama
-   de la PR en una copia de trabajo separada.
-2. Configurá de forma local una base GeoLite2-City autorizada siguiendo
-   docs/WORLD_IP_MAP.md de esa rama.
-3. Importá activity.csv mediante Actividad y abrí /world-map.
-4. Comprobá el resumen, los filtros y la tabla de destinos. El evento con
-   1.1.1.1 puede dibujar un punto si la base local contiene una ubicación válida.
-5. Verificá también los destinos de documentación 198.51.100.0/24 y
-   203.0.113.0/24: no deben convertirse en marcadores geográficos públicos.
-6. Repetí la prueba sin configurar la base GeoIP. La pantalla debe comunicar
-   que falta el enriquecimiento y no mostrar coordenadas inventadas.
+1. En Actividad, elegí el dispositivo **Dispositivo sintético de prueba** e
+   importá `activity.csv`. Primero usá la vista previa; después confirmá la
+   importación. La repetición debe reconocer los registros duplicados.
+2. Abrí `http://127.0.0.1:8765/world-map`. El mapa base y la tabla deben
+   cargarse de forma local. En la tabla deberían aparecer los destinos de los
+   registros importados, aunque no estén geolocalizados.
+3. Sin una base GeoLite2-City válida, la pantalla debe indicar que GeoIP no está
+   disponible y no dibujar marcadores inventados. Esto es un resultado esperado,
+   no un fallo del mapa. La base de países se incluye en el proyecto, pero no
+   contiene las coordenadas de IP.
+4. Para probar marcadores reales, instalá una base GeoLite2-City autorizada
+   según `docs/WORLD_IP_MAP.md` y reiniciá la aplicación. Una IP pública solo
+   recibe un punto si esa base devuelve coordenadas válidas.
+5. Comprobá también los destinos de documentación `198.51.100.0/24` y
+   `203.0.113.0/24`: no deben convertirse en ubicaciones geográficas públicas.
 
 No hace falta consultar un dominio real para probar el mapa histórico. La
-consulta DNS manual es una acción distinta y representa una resolución actual,
-no la IP usada durante el evento de prueba.
+consulta DNS manual del mapa es una acción distinta, representa una resolución
+actual y no confirma la IP utilizada durante el evento de prueba.
 
-## Prueba C: importación Zeek
+## Prueba C: importación Zeek (fuera del alcance de esta rama)
 
-El importador Zeek pertenece a la
-[PR #177](https://github.com/JavierGrecco/NetSentinel/pull/177), apilada sobre
-la rama del explorador de red. No está disponible en main. Probalo en otra
-copia de trabajo y no mezcles esta rama de escenarios con las ramas funcionales.
+Esta rama integrada cubre el mapa y NetSentinel Forense; el importador Zeek y el explorador LAN pertenecen a otras PRs y no se habilitan aquí. Omití esta sección durante la primera prueba guiada. Cuando esas funciones se integren, se preparará un recorrido único actualizado.
 
 1. Iniciá la rama candidata con una base de datos aislada.
 2. En el inventario, seleccioná **Dispositivo sintético de prueba**, cuya dirección
