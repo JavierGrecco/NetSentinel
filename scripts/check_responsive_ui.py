@@ -161,6 +161,21 @@ def _seed_topology_fixture(data_dir: Path) -> None:
             },
         )
 
+        # Marca explícitamente el origen de la lectura generada por esta suite.
+        # El asistente prueba la procedencia, no debe confundir esta fixture con un escaneo real.
+        with database.connect(database_file) as db:
+            db.execute(
+                "UPDATE scans SET source = 'synthetic-test-fixture' WHERE source LIKE '%responsive-ui-fixture%'"
+            )
+            db.execute(
+                "UPDATE device_addresses SET source = 'synthetic-test-fixture' "
+                "WHERE interface = 'fixture0' AND ip_address LIKE '192.168.56.%'"
+            )
+            db.execute(
+                "UPDATE observations SET source = 'synthetic-test-fixture' "
+                "WHERE scan_id IN (SELECT id FROM scans WHERE source = 'synthetic-test-fixture')"
+            )
+
         # La UI de monitorización también usa solo datos sintéticos.
         from datetime import datetime, timedelta, timezone
 
