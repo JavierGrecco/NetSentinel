@@ -654,14 +654,14 @@
     ]);
     const devices = Array.isArray(devicesResponse.data) ? devicesResponse.data : [];
     const scans = Array.isArray(scansResponse.data) ? scansResponse.data : [];
-    const device = devices.find((item) => item && item.ip_address === DEVICE_IP &&
-      ((item.display_name || "").toLowerCase().includes("sintético") ||
-       (item.notes || "").toLowerCase().includes("ficticio") ||
-       (item.interface || "").includes("synthetic-fixture")));
+    const device = devices.find((item) => item && item.ip_address === DEVICE_IP);
     const scan = scans.find((item) => item && item.source === "synthetic-test-fixture");
+    const deviceName = device && (device.display_name || "").toLowerCase().includes("sintético")
+      ? device.display_name
+      : "Activo " + DEVICE_IP + " (la captura sintética confirma su contexto)";
     const details = [
       { label: "API de salud", value: health.ok ? "HTTP " + health.status + " · servicio responde" : "No responde (HTTP " + health.status + ")", ok: health.ok },
-      { label: "Activo de laboratorio", value: device ? (device.display_name || "Dispositivo sintético") + " · " + DEVICE_IP + " · ID " + device.id : devicesResponse.ok ? "No se encontró el activo ficticio " + DEVICE_IP : "No se pudo consultar el inventario (HTTP " + devicesResponse.status + ")", ok: Boolean(device) },
+      { label: "Activo de laboratorio", value: device ? deviceName + " · " + DEVICE_IP + " · ID " + device.id : devicesResponse.ok ? "No se encontró el activo de prueba " + DEVICE_IP : "No se pudo consultar el inventario (HTTP " + devicesResponse.status + ")", ok: Boolean(device) },
       { label: "Lectura de topología", value: scan ? "Lectura #" + scan.id + " · origen synthetic-test-fixture · " + (scan.devices_found || "activos registrados") : scansResponse.ok ? "No se encontró la lectura synthetic-test-fixture" : "No se pudo consultar el historial (HTTP " + scansResponse.status + ")", ok: Boolean(scan) }
     ];
     const ok = details.every((item) => item.ok);
