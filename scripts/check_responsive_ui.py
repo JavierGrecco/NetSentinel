@@ -1647,32 +1647,51 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if page.evaluate("document.activeElement && document.activeElement.id") != "wizardStepTitle":
             failures.append("el foco no anunció el título del paso nuevo después de empezar")
 
-        # Forzamos un solo fallo sintético y dejamos pasar la consulta siguiente.
-        # Mantener el mismo handler evita depender de una retirada de rutas que pueda
-        # dejar interceptada la recuperación bajo Chromium.
-        health_mock = {"remaining": 1}
-
-        def _fail_health_once(route) -> None:
-            if health_mock["remaining"]:
-                health_mock["remaining"] -= 1
-                route.fulfill(
-                    status=503,
-                    content_type="application/json",
-                    body='{"detail":"fallo temporal sintético"}',
-                )
-            else:
-                route.continue_()
-
-        page.route("**/api/health", _fail_health_once)
-        page.locator("#wizardRunCheck").click()
-        page.wait_for_function(
-            "() => document.querySelector('#wizardAutomaticBadge')?.textContent.includes('Revisar')",
-            timeout=8000,
+        # Simulamos un fallo ya registrado para comprobar el estado de recuperación
+        # sin interceptar la petición real de salud que usará el paso siguiente.
+        page.evaluate(
+            """() => localStorage.setItem("netsentinel.acceptance-wizard.v3", JSON.stringify({
+              currentStep: 1,
+              records: {
+                lab: {
+                  outcome: "failed",
+                  note: "",
+                  opened: false,
+                  autoChecked: true,
+                  autoResult: {
+                    ok: false,
+                    summary: "Fallo temporal sintético",
+                    details: [{label: "API de salud", value: "HTTP 503 simulado", ok: false}],
+                    checkedAt: new Date().toISOString()
+                  }
+                }
+              },
+              finishedAt: null
+            }))"""
         )
+        page.reload(wait_until="load")
+        if "Comprobar que el laboratorio está preparado" not in page.locator("#wizardStepTitle").inner_text():
+            failures.append("el estado de recuperación no volvió al paso de preparación")
+            return failures
         if not page.locator("#wizardNext").is_disabled():
-            failures.append("la guía permitió avanzar aunque falló la comprobación de prerrequisitos")
+            failures.append("la guía permitió avanzar con un prerrequisito marcado como fallido")
         if not page.locator("#wizardRecoveryDetails").evaluate("(element) => element.open"):
-            failures.append("la guía no abrió la ayuda de recuperación al fallar la preparación")
+            failures.append("la guía no abrió la ayuda de recuperación para un prerrequisito fallido")
+        if page.locator("#wizardRunCheck").inner_text() != "Comprobar de nuevo":
+            failures.append("la guía no ofrece repetir la comprobación después del fallo")
+        page.evaluate("window.localStorage.removeItem('netsentinel.acceptance-wizard.v3')")
+        page.reload(wait_until="load")
+        if page.locator("#wizardStepTitle").inner_text() != "Vamos a validar NetSentinel juntos":
+            failures.append("la guía no recuperó el inicio limpio después de reiniciar el estado sintético")
+
+        page.locator("#wizardStart").focus()
+        page.keyboard.press("Enter")
+        if "Comprobar que el laboratorio está preparado" not in page.locator("#wizardStepTitle").inner_text():
+            failures.append("el botón Empezar no condujo al primer paso")
+            return failures
+        if page.evaluate("document.activeElement && document.activeElement.id") != "wizardStepTitle":
+            failures.append("el foco no anunció el título del paso nuevo después de empezar")
+
         page.locator("#wizardRunCheck").click()
         page.wait_for_function(
             """() => {
@@ -1683,7 +1702,6 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             }""",
             timeout=8000,
         )
-        page.unroute("**/api/health", _fail_health_once)
         if "Comprobación correcta" not in page.locator("#wizardAutomaticBadge").inner_text():
             failures.append(
                 "la comprobación inicial del asistente no confirmó la fixture: "
