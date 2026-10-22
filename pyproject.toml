@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest>=9.1.1,<10.0", "httpx2>=2.0.0,<3.0"]
 ui-test = ["playwright>=1.64.0,<2.0"]
+geoip = ["maxminddb>=2.6.0,<3.0"]
 
 [project.scripts]
 netsentinel = "netsentinel.cli:main"
@@ -33,7 +34,7 @@ where = ["src"]
 version = {attr = "netsentinel.__version__"}
 
 [tool.setuptools.package-data]
-netsentinel = ["static/*.html", "static/*.css", "static/*.js", "static/*.txt"]
+netsentinel = ["static/*.html", "static/*.css", "static/*.js", "static/*.geojson", "static/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
