@@ -10,6 +10,12 @@ Los intervalos van de 15 segundos a 24 horas; el tiempo límite va de 1 a 10 seg
 
 Las comprobaciones TCP y HTTP/HTTPS se ejecutan en un proceso hijo terminable, con un límite total de `timeout_seconds + 1` segundo de margen para iniciar Python. Esto cubre también una resolución DNS del sistema bloqueada, que no siempre queda contenida por el timeout del socket. Un resultado agotado se registra como caída sin exponer URLs completas ni detalles del resolvedor. Ping mantiene su proceso y timeout nativo por sistema operativo. El webhook opcional usa otro proceso aislado con límite total de 5 segundos, para que un DNS HTTPS o servidor lento no congele el supervisor secuencial.
 
+## Recuperación ante fallos individuales
+
+Si una excepción inesperada impide completar una comprobación, el supervisor registra el error y programa un reintento interno con retroceso exponencial: 2, 4, 8 segundos y así sucesivamente, hasta un máximo de 60 segundos. El retraso se aplica solo al monitor que falló; los otros monitores siguen ejecutándose. Cuando el monitor vuelve a funcionar, se desactiva o se elimina, se limpia su estado de reintento.
+
+Este mecanismo no modifica el intervalo configurado ni sustituye el resultado normal de una sonda que informa que el destino está caído. Se aplica a excepciones inesperadas (por ejemplo, errores temporales de almacenamiento) para evitar bucles de reintento y mensajes repetidos cada pocos segundos.
+
 ## Apagado seguro del supervisor
 
 Al cerrar NetSentinel, el supervisor solicita una parada cooperativa y no inicia nuevas comprobaciones del resto de la cola. La comprobación que ya estaba en curso puede terminar dentro de sus límites; el cierre espera el tiempo máximo documentado para una sonda y un posible webhook. Si el sistema operativo no permite que el worker termine dentro de ese margen, NetSentinel conserva la referencia al hilo y registra un error en vez de olvidar un worker activo y arriesgar un segundo supervisor sobre la misma base SQLite.

@@ -485,6 +485,79 @@ def test_run_due_once_continues_after_one_monitor_raises(monkeypatch, caplog):
     assert "se continuará con los siguientes" in caplog.text
 
 
+def test_run_due_once_backs_off_failed_monitor_and_clears_retry_state(monkeypatch, caplog):
+    import logging
+    from types import SimpleNamespace
+
+    supervisor = MonitorSupervisor()
+    clock = {"now": 100.0}
+    # Replace only this module's clock so retry timings are exact and the test
+    # does not sleep or change the clock used by other test code.
+    monkeypatch.setattr(monitoring, "time", SimpleNamespace(monotonic=lambda: clock["now"]))
+    monkeypatch.setattr(supervisor, "cleanup_history_if_due", lambda: 0)
+    monitors = [
+        {"id": 1, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 2, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+        {"id": 3, "enabled": True, "last_checked_at": None, "interval_seconds": 60},
+    ]
+    monkeypatch.setattr(monitoring.database, "list_monitors", lambda: monitors)
+    should_fail = {"enabled": True}
+    checked = []
+
+    def check_monitor(monitor):
+        checked.append(monitor["id"])
+        if monitor["id"] == 1 and should_fail["enabled"]:
+            raise RuntimeError("simulated transient storage error")
+        return {"status": "up"}
+
+    monkeypatch.setattr(monitoring, "check_once", check_monitor)
+
+    with caplog.at_level(logging.ERROR, logger="netsentinel.monitoring"):
+        assert supervisor.run_due_once() == 2
+
+    assert checked == [1, 2, 3]
+    assert supervisor._consecutive_errors[1] == 1
+    assert supervisor._retry_after[1] == 102.0
+    assert "Reintento interno en 2.0 segundos." in caplog.text
+
+    # The failing monitor is skipped during its backoff; the rest of the queue
+    # continues to run on every normal supervisor cycle.
+    checked.clear()
+    assert supervisor.run_due_once() == 2
+    assert checked == [2, 3]
+
+    # A second failure doubles the delay, but still does not block healthy peers.
+    clock["now"] = 102.0
+    checked.clear()
+    with caplog.at_level(logging.ERROR, logger="netsentinel.monitoring"):
+        assert supervisor.run_due_once() == 2
+    assert checked == [1, 2, 3]
+    assert supervisor._consecutive_errors[1] == 2
+    assert supervisor._retry_after[1] == 106.0
+    assert "Reintento interno en 4.0 segundos." in caplog.text
+
+    # Recovery clears the backoff so later failures start from the base delay.
+    should_fail["enabled"] = False
+    clock["now"] = 106.0
+    checked.clear()
+    assert supervisor.run_due_once() == 3
+    assert checked == [1, 2, 3]
+    assert 1 not in supervisor._consecutive_errors
+    assert 1 not in supervisor._retry_after
+
+    # Disabled and deleted monitors must not retain retry state indefinitely.
+    supervisor._consecutive_errors[3] = 1
+    supervisor._retry_after[3] = 200.0
+    supervisor._consecutive_errors[99] = 1
+    supervisor._retry_after[99] = 200.0
+    monitors[2]["enabled"] = False
+    checked.clear()
+    assert supervisor.run_due_once() == 2
+    assert checked == [1, 2]
+    assert 3 not in supervisor._consecutive_errors and 3 not in supervisor._retry_after
+    assert 99 not in supervisor._consecutive_errors and 99 not in supervisor._retry_after
+
+
 def test_stop_keeps_reference_to_worker_that_missed_shutdown_deadline():
     class SlowWorker:
         joined_with = None

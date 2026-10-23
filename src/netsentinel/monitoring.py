@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_MONITOR_HISTORY_DAYS = 90
 MAX_MONITOR_HISTORY_DAYS = 3650
 HISTORY_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+# A failing monitor must not retry on every short supervisor poll.
+_SUPERVISOR_RETRY_BASE_SECONDS = 2.0
+_SUPERVISOR_RETRY_MAX_SECONDS = 60.0
 # Give Python startup a small grace period, while keeping the complete network
 # operation bounded even if the operating-system DNS resolver stalls.
 _PROBE_PROCESS_STARTUP_GRACE_SECONDS = 1.0
@@ -230,6 +233,8 @@ class MonitorSupervisor:
         self._stop = Event()
         self._thread: Thread | None = None
         self._last_history_cleanup_monotonic = 0.0
+        self._consecutive_errors: dict[int, int] = {}
+        self._retry_after: dict[int, float] = {}
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -297,13 +302,31 @@ class MonitorSupervisor:
 
         now = datetime.now(timezone.utc)
         executed = 0
-        for monitor in database.list_monitors():
+        monitors = database.list_monitors()
+        monitor_ids = {int(item["id"]) for item in monitors}
+
+        # Olvidar el estado de reintento de monitores eliminados.
+        for monitor_id in set(self._consecutive_errors) - monitor_ids:
+            self._consecutive_errors.pop(monitor_id, None)
+            self._retry_after.pop(monitor_id, None)
+
+        for monitor in monitors:
             # Shutdown should finish the current bounded check, not drain every
             # due monitor in sequence after the application asked us to stop.
             if self._stop.is_set():
                 break
+
+            monitor_id = int(monitor["id"])
             if not monitor["enabled"]:
+                self._consecutive_errors.pop(monitor_id, None)
+                self._retry_after.pop(monitor_id, None)
                 continue
+
+            # El retraso se aplica solo después de una excepción inesperada; no
+            # altera el intervalo configurado ni los fallos normales de una sonda.
+            if time.monotonic() < self._retry_after.get(monitor_id, 0.0):
+                continue
+
             last_checked = monitor.get("last_checked_at")
             due = True
             if last_checked:
@@ -320,14 +343,23 @@ class MonitorSupervisor:
                 try:
                     check_once(monitor)
                 except Exception:
-                    # A storage error or unexpected failure for one monitor must
-                    # not starve every later monitor on each supervisor cycle.
+                    failures = self._consecutive_errors.get(monitor_id, 0) + 1
+                    self._consecutive_errors[monitor_id] = failures
+                    delay = min(
+                        _SUPERVISOR_RETRY_MAX_SECONDS,
+                        _SUPERVISOR_RETRY_BASE_SECONDS * (2 ** min(failures - 1, 8)),
+                    )
+                    self._retry_after[monitor_id] = time.monotonic() + delay
                     logger.exception(
                         "No se pudo completar la comprobación programada del monitor id=%s; "
-                        "se continuará con los siguientes.",
-                        monitor.get("id"),
+                        "se continuará con los siguientes. Reintento interno en %.1f segundos.",
+                        monitor_id,
+                        delay,
                     )
                     continue
+
+                self._consecutive_errors.pop(monitor_id, None)
+                self._retry_after.pop(monitor_id, None)
                 executed += 1
         return executed
 
