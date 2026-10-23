@@ -1,11 +1,7 @@
 # Laboratorio consolidado de aceptación para expertos
 
-**Rama canónica:** `main`  
-**Último commit consultado al actualizar esta guía (23/10/2026):** [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1).  
-**Asistente iterativo:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
-**Regresión interactiva de Chromium:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194); CI 18/18 y navegador 135/135 correctos sobre el SHA de la PR. Las ejecuciones posteriores al merge se deben verificar de nuevo en [Actions](https://github.com/JavierGrecco/NetSentinel/actions).  
-**Análisis de producto:** [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198) añadió documentación estratégica, sin modificar el código del laboratorio.  
-**Estado:** laboratorio integrado; aceptación manual, revisión visual y de accesibilidad todavía pendientes.
+**Objetivo de esta ejecución:** validar manualmente el HEAD actual de la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200), rama `feat/findings-zeek-evidence-context-2026-10-23`. Esa rama incluye el paso de correlación Hallazgos–Zeek que todavía no está integrado en `main`.  
+**Estado:** las pruebas automatizadas del HEAD anterior terminaron correctamente; cualquier commit nuevo requiere comprobar de nuevo Actions contra el SHA exacto que se va a probar. La aceptación manual, revisión visual y revisión de accesibilidad siguen pendientes.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
@@ -30,8 +26,8 @@ El asistente reemplaza la lista de casillas dispersas por un recorrido de **13 p
 Para no pisar tu rama actual ni ningún cambio local, creá una copia de trabajo separada. Desde tu checkout actual del repositorio:
 
 ```bash
-git fetch origin "refs/heads/main:refs/remotes/origin/main"
-git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/main
+git fetch origin "refs/heads/feat/findings-zeek-evidence-context-2026-10-23:refs/remotes/origin/feat/findings-zeek-evidence-context-2026-10-23"
+git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/feat/findings-zeek-evidence-context-2026-10-23
 cd ../NetSentinel-acceptance-lab
 printf "Commit exacto que vas a probar: "
 git rev-parse HEAD
@@ -40,7 +36,7 @@ git status --short
 
 Este modo deja intacta tu rama y tu directorio de trabajo actual. Si ya existe una carpeta `../NetSentinel-acceptance-lab`, elegí otro nombre de carpeta antes de ejecutar `git worktree add`.
 
-**Por qué se usa este `fetch`:** al indicar solo el nombre de la rama, Git puede dejar el commit en `FETCH_HEAD` sin crear la referencia local `origin/main`. El refspec explícito crea o actualiza `origin/main` y evita el error `fatal: invalid reference`. La copia de trabajo queda fijada al commit descargado, sin cambiar tu rama original.
+**Por qué se usa este `fetch`:** el refspec explícito crea o actualiza `origin/feat/findings-zeek-evidence-context-2026-10-23` y evita el error `fatal: invalid reference`. La copia queda fijada al HEAD de la PR #200, sin cambiar tu rama ni tus archivos actuales. No uses `origin/main` para esta aceptación: esa rama todavía no contiene la correlación que estamos por validar.
 
 Si ya apareció ese error, el comando terminó; no hay un proceso bloqueado que necesite `Ctrl+C`. Volvé a ejecutar el bloque corregido desde la raíz del repositorio. Si Git informa que la carpeta de destino ya existe, revisá `git worktree list` o elegí otro nombre de carpeta; no borres una carpeta a ciegas.
 
@@ -94,7 +90,7 @@ python -m pytest -q
 python scripts/check_architecture_boundaries.py
 ```
 
-La prueba responsive requiere el navegador Playwright y una instancia de laboratorio. Seguí su ayuda antes de ejecutarla; no la apuntes a una aplicación que use datos personales. Antes de probar, comprobá en Actions que CI, seguridad y cadena de suministro hayan finalizado correctamente para el commit exacto de `main` que descargaste. Los checks de la PR anterior no validan automáticamente commits posteriores.
+La prueba responsive requiere el navegador Playwright y una instancia de laboratorio. Seguí su ayuda antes de ejecutarla; no la apuntes a una aplicación que use datos personales. Antes de probar, comprobá en [Actions](https://github.com/JavierGrecco/NetSentinel/actions) que CI, seguridad y cadena de suministro hayan finalizado correctamente para el SHA exacto que imprime `git rev-parse HEAD` en esta copia de trabajo. Los checks de otro SHA —incluidos los de `main` o los de un commit anterior de la PR— no validan automáticamente el código que estás ejecutando.
 
 ## Límites que deben quedar visibles al experto
 
@@ -103,7 +99,7 @@ La prueba responsive requiere el navegador Playwright y una instancia de laborat
 - La geolocalización IP es aproximada, requiere datos locales y no identifica personas ni dispositivos exactos.
 - Los hashes detectan cambios de contenido, pero no autentican la identidad del operador. Los informes no tienen firma digital ni anclaje externo de auditoría.
 - Los datos sintéticos no sustituyen la validación con datos autorizados reales, revisión visual manual, pruebas de accesibilidad ni recuperación de copias de seguridad.
-- El laboratorio ya está integrado en `main`, pero no es una versión estable ni está aprobado para uso operativo hasta cerrar la aceptación local y las brechas de la matriz forense.
+- Los módulos base del laboratorio están en `main`; la correlación Hallazgos–Zeek de esta aceptación sigue en la PR #200 y debe probarse en ese HEAD antes de fusionarla. El proyecto no está aprobado para uso operativo hasta cerrar la aceptación local y las brechas de la matriz forense.
 
 ## Limpieza
 
