@@ -1,7 +1,7 @@
 # Laboratorio consolidado de aceptación para expertos
 
 **Objetivo de esta ejecución:** validar manualmente el HEAD actual de la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200), rama `feat/findings-zeek-evidence-context-2026-10-23`. Esa rama incluye el paso de correlación Hallazgos–Zeek que todavía no está integrado en `main`.  
-**Estado:** las pruebas automatizadas del HEAD anterior terminaron correctamente; cualquier commit nuevo requiere comprobar de nuevo Actions contra el SHA exacto que se va a probar. La aceptación manual, revisión visual y revisión de accesibilidad siguen pendientes.
+**Estado de aceptación:** la ejecución manual, la revisión visual y la revisión de accesibilidad siguen pendientes. Antes de empezar, verificá en Actions los checks del SHA exacto que imprimen los comandos de preparación.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
