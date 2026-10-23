@@ -219,7 +219,7 @@ def test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target(mon
     with TestClient(app, base_url="http://127.0.0.1") as client:
         response = client.get("/api/findings?state=active")
         activity = client.get(
-            f"/api/activity?device_id={device_id}&source_event_id={source_event_id}"
+            f"/api/activity?device_id={device_id}&source_event_id={source_event_id}&import_format=zeek_conn_log"
         )
 
     assert response.status_code == 200
@@ -244,7 +244,9 @@ def test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target(mon
     assert activity.status_code == 200
     activity_payload = activity.json()
     assert activity_payload["focus_event_id"] == source_event_id
+    assert activity_payload["focus_import_format"] == "zeek_conn_log"
     assert [row["source_event_id"] for row in activity_payload["events"]] == [source_event_id]
+    assert [row["import_format"] for row in activity_payload["events"]] == ["zeek_conn_log"]
 
 
 def test_findings_do_not_resolve_monitor_hostnames_for_zeek_context(monkeypatch, tmp_path):
