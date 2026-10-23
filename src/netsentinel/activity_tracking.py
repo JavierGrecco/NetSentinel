@@ -141,8 +141,6 @@ def preview_delete_activity(
         from_date=from_date,
         to_date=to_date,
         source=source,
-        source_event_id=source_event_id,
-        import_format=import_format,
     )
 
 
@@ -205,4 +203,6 @@ def get_activity(
         from_date=from_date,
         to_date=to_date,
         source=source,
+        source_event_id=source_event_id,
+        import_format=import_format,
     )
