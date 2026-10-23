@@ -124,6 +124,7 @@ def _attach_related_activity(
         if source.get("system") == "inventory":
             event = events_by_id.get(str(record_id))
             if event:
+                before_count = len(contexts)
                 _add_context(
                     contexts,
                     finding_id=finding_id,
@@ -132,7 +133,7 @@ def _attach_related_activity(
                     device_id=event.get("device_id"),
                     relation="same_device_near_inventory_event",
                 )
-                candidates = contexts[-1:] if contexts and contexts[-1].get("finding_id") == finding_id else []
+                candidates = contexts[before_count:]
         elif source.get("system") == "monitoring":
             incident = incidents_by_id.get(str(record_id))
             target_ip = _monitor_target_ip(incident.get("target")) if incident else None
