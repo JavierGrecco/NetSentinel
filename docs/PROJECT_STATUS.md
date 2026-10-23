@@ -24,7 +24,7 @@ La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MON
 
 ## Validación automatizada
 
-**HEAD de referencia validado antes de esta actualización documental:** [`60557638e89dcae377437263d74d2ff5e4ff9b1e`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e). Esta revisión de estado se tramita por la [PR #190](https://github.com/JavierGrecco/NetSentinel/pull/190); sus checks específicos deben terminar antes de integrarla.
+**HEAD documental vigente:** [`d25036e6fe189fc6dd338e224e2a03d3cb0c412d`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d). La PR #190 se integró por merge normal después de aprobar sus checks. Las ejecuciones sobre el merge commit también terminaron correctamente: CI 18/18 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358)), Security Analysis 2/2 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271)) y Supply Chain Security ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406); detección de secretos y build/SBOM/manifiesto correctos, firma de procedencia omitida por no ser una publicación de release).
 
 Las tres ejecuciones de GitHub Actions terminaron correctamente sobre ese SHA:
 
