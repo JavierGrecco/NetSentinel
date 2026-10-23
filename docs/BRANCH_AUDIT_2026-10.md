@@ -50,6 +50,10 @@ Se compararon los árboles de las 21 referencias sin una PR fusionada asociada c
 
 La comparación de rutas no es lo mismo que declarar idénticos todos los archivos: ramas viejas contienen versiones anteriores de archivos compartidos. Por eso la limpieza debe basarse en el estado de las PR, el SHA remoto actual y la preservación de los cambios útiles, no en borrar todas las ramas por patrón.
 
+## Inventario exacto por rama
+
+El archivo [`BRANCH_CLEANUP_MANIFEST_2026-10.csv`](BRANCH_CLEANUP_MANIFEST_2026-10.csv) registra las 173 referencias fuera de `main`, el SHA observado el 23/10/2026, PR asociadas, coincidencia exacta con la cabeza de origen de PR fusionadas y acción recomendada. Es una fotografía de auditoría, no una orden de borrado: volvé a consultar el SHA de cada rama antes de cualquier eliminación.
+
 ## Ruleset actual de GitHub: control pendiente
 
 Lectura directa del ruleset `rules` (ID `25281660`), consultado el 23 de octubre de 2026:
