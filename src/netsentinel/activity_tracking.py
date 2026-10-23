@@ -141,6 +141,7 @@ def preview_delete_activity(
         from_date=from_date,
         to_date=to_date,
         source=source,
+        source_event_id=source_event_id,
     )
 
 
@@ -170,6 +171,7 @@ def export_activity_csv(
     to_date: str | None = None,
     limit: int = 10000,
     source: str | None = None,
+    source_event_id: str | None = None,
 ) -> str:
     """Conserva la API pública y delega la consulta y el formato del CSV."""
     return activity_read_service.export_activity_csv(
@@ -179,6 +181,7 @@ def export_activity_csv(
         to_date=to_date,
         limit=limit,
         source=source,
+        source_event_id=source_event_id,
     )
 
 def get_activity(
@@ -188,6 +191,7 @@ def get_activity(
     from_date: str | None = None,
     to_date: str | None = None,
     source: str | None = None,
+    source_event_id: str | None = None,
 ) -> dict[str, Any]:
     """Conserva el contrato que consume la API y delega el modelo de lectura."""
     return activity_read_service.get_activity(
