@@ -64,7 +64,24 @@ def test_progress_distinguishes_passed_failed_blocked_and_pending_steps():
     assert 'setAttribute("aria-valuetext", detail)' in script
 
 
+def test_correlation_step_is_in_the_wizard_and_keeps_legacy_progress():
+    script = JS_PATH.read_text(encoding="utf-8")
+    html = HTML_PATH.read_text(encoding="utf-8")
+
+    assert 'id: "findings-correlation"' in script
+    assert 'checkKey: "findings-correlation"' in script
+    assert "async function checkFindingsCorrelation()" in script
+    assert '"zeek:CManualScenario101"' in script
+    assert '"zeek:CManualScenario102"' in script
+    assert '"/api/findings?state=all&limit=200"' in script
+    assert "format_version: 4" in script
+    assert "LEGACY_STEP_IDS" in script
+    assert 'aria-valuetext="0 de 13 pasos con resultado"' in html
+
+
 def test_acceptance_guide_documents_iteration_and_local_resume():
     guide = GUIDE_PATH.read_text(encoding="utf-8")
+    assert "13 pasos evaluables" in guide
+    assert "Hallazgos y correlación" in guide
     assert "un indicador visible" in guide
     assert "cada fila tiene una acción para revisar directamente ese paso" in guide
