@@ -78,6 +78,55 @@
     card.append(details);
   }
 
+  function appendRelatedActivity(card, finding) {
+    const related = finding.related_activity;
+    if (!related || typeof related !== "object") return;
+    const details = document.createElement("details");
+    details.className = "finding-section";
+    details.open = related.status === "matched";
+    details.append(node("summary", "", "Conexiones Zeek en contexto temporal"));
+    details.append(node("p", "", related.message || "No hay información adicional."));
+    details.append(node("p", "", related.notice || "Una coincidencia temporal no demuestra causalidad."));
+    if (Array.isArray(related.records) && related.records.length) {
+      const records = document.createElement("ul");
+      records.className = "finding-related-list";
+      for (const record of related.records) {
+        const item = document.createElement("li");
+        const endpoint = [record.source_ip, record.source_port ? ":" + record.source_port : ""].join("");
+        const destination = [record.destination_ip, record.destination_port ? ":" + record.destination_port : ""].join("");
+        const counters = [
+          record.bytes_sent !== null && record.bytes_sent !== undefined ? "bytes enviados " + record.bytes_sent : null,
+          record.bytes_received !== null && record.bytes_received !== undefined ? "bytes recibidos " + record.bytes_received : null,
+          record.packets_sent !== null && record.packets_sent !== undefined ? "paquetes enviados " + record.packets_sent : null,
+          record.packets_received !== null && record.packets_received !== undefined ? "paquetes recibidos " + record.packets_received : null
+        ].filter(Boolean);
+        const summary = [
+          dateText(record.observed_at),
+          record.device_name || record.device_ip || ("dispositivo " + (record.device_id ?? "desconocido")),
+          endpoint + " → " + destination,
+          record.protocol || "protocolo no indicado",
+          "diferencia temporal " + (record.time_delta_seconds ?? "desconocida") + " s",
+          ...counters
+        ].filter(Boolean).join(" · ");
+        item.append(node("p", "", summary));
+        if (record.correlation_reason) item.append(node("p", "", record.correlation_reason));
+        const params = new URLSearchParams();
+        if (Number.isInteger(record.device_id)) params.set("device_id", String(record.device_id));
+        if (typeof record.source_event_id === "string" && record.source_event_id) {
+          params.set("source_event_id", record.source_event_id);
+        }
+        if (params.has("source_event_id")) {
+          const link = node("a", "", "Abrir este registro en Actividad");
+          link.href = "/activity?" + params.toString();
+          item.append(link);
+        }
+        records.append(item);
+      }
+      details.append(records);
+    }
+    card.append(details);
+  }
+
   function renderFinding(finding) {
     const card = node("article", "finding-card");
     const head = node("div", "finding-head");
@@ -98,6 +147,7 @@
     appendSection(card, "Qué significa y sus límites", ((finding.confidence || {}).explanation || "No se indicó una explicación de confianza.") + " " + (finding.severity_basis || ""));
     appendSection(card, "Próximo paso sugerido", finding.recommended_action || "Contrastá el dato con una fuente independiente.");
     appendEvidence(card, finding);
+    appendRelatedActivity(card, finding);
 
     if (Array.isArray(finding.limitations) && finding.limitations.length) {
       const list = document.createElement("ul");
