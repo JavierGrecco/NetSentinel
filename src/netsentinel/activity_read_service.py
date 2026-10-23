@@ -119,7 +119,7 @@ def export_activity_csv(
     buffer = io.StringIO(newline="")
     fields = [
         "observed_at", "event_type", "device_id", "device_name", "ip_address", "source",
-        "domain", "page_url", "search_engine", "search_terms", "source_ip",
+        "import_format", "domain", "page_url", "search_engine", "search_terms", "source_ip",
         "source_port", "destination_ip", "destination_port", "protocol",
         "bytes_sent", "bytes_received", "packets_sent", "packets_received",
         "network_interface", "source_event_id", "app_name", "blocked", "email_provider",
@@ -135,6 +135,7 @@ def export_activity_csv(
             "device_name": event["display_name"],
             "ip_address": event["ip_address"],
             "source": event["source"],
+            "import_format": event.get("import_format"),
             "domain": event["domain"],
             "page_url": event["page_url"],
             "search_engine": event["search_engine"],
