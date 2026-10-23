@@ -42,7 +42,7 @@ La base GeoLite2-City no se descarga junto con las dependencias Python y requier
 
 Las PR de integración #157, #171, #177, #183, #184 y #188 se cerraron como supersedidas por #189. Sus comentarios y commits siguen disponibles para auditoría. **Cerrar esas PR no borra sus ramas.**
 
-La enumeración de GitHub devolvió 174 ramas remotas. No se borraron referencias de rama en esta pasada, porque hacerlo sin comparar cada árbol contra `main` podría ocultar trabajo único. La limpieza física de ramas queda pendiente de una auditoría explícita de diferencias y de conservar cualquier cambio que no esté integrado. La propuesta documental independiente [PR #112](https://github.com/JavierGrecco/NetSentinel/pull/112) permanece separada para revisión.
+La enumeración de GitHub devolvió 174 ramas remotas. No se borraron referencias de rama en esta pasada, porque hacerlo sin comparar cada árbol contra `main` podría ocultar trabajo único. La limpieza física de ramas queda pendiente de una auditoría explícita de diferencias y de conservar cualquier cambio que no esté integrado. El alcance futuro se conserva en [FORENSIC_MODE_PROPOSAL.md](FORENSIC_MODE_PROPOSAL.md) como propuesta documental. No implica que los recolectores, categorías de artefactos o integraciones allí descritos estén implementados ni preparados para evidencia real.
 
 ## Documentación vigente
 
@@ -53,6 +53,7 @@ La enumeración de GitHub devolvió 174 ramas remotas. No se borraron referencia
 - [Arquitectura](ARCHITECTURE.md)
 - [Preparación manual en macOS](MACOS_MANUAL_TEST.md)
 - [Matriz de preparación forense](FORENSIC_READINESS_MATRIX.md)
+- [Propuesta estratégica de análisis forense — alcance futuro](FORENSIC_MODE_PROPOSAL.md)
 - [Mapa mundial de IP](WORLD_IP_MAP.md)
 - [Importación Zeek](ZEEK_CONNLOG_IMPORT.md)
 - [Explorador de topología LAN](NETWORK_OBSERVABILITY_CONSOLE.md)
