@@ -9,12 +9,13 @@ La consulta de GitHub encontró 174 referencias de ramas: `main` y otras 173. Se
 
 | Grupo de ramas | Cantidad | Tratamiento |
 |---|---:|---|
-| Asociadas al menos a una PR fusionada | 152 | Candidatas normales a limpieza, previa comprobación de que la referencia actual siga apuntando al SHA fusionado. |
-| Asociadas a PR cerradas sin fusionar | 15 | Revisadas como reemplazadas, superadas o incorporadas por otra integración. |
+| HEAD coincide con PR fusionada directamente en `main` | 150 | El SHA remoto coincide exactamente con el SHA de origen de la PR fusionada; candidatas a limpieza después de resolver el ruleset y verificar su alcance. |
+| HEAD coincide con PR apilada en el laboratorio, luego absorbida por #189 | 2 | Topología (#186) y Zeek (#187) se integraron primero en `qa/expert-acceptance-consolidated-2026-10`; la rama de laboratorio pasó después a `main` mediante #189. El SHA remoto coincide exactamente con el SHA de la PR fuente. |
+| Asociadas a PR cerradas sin fusionar | 15 | Requieren el criterio de contenido preservado descrito abajo; no borrar por tener estado cerrado. |
 | Sin PR asociada | 6 | Revisadas por duplicación de SHA, contenido antiguo y diferencias con `main`. |
 | **Total fuera de `main`** | **173** | No confundir ramas cerradas con ramas eliminadas. |
 
-No se borraron referencias remotas en esta pasada. Una rama fusionada por *squash* puede mantener un historial Git distinto aunque su contenido ya esté en `main`; para borrarla con seguridad hay que confirmar que su HEAD no recibió cambios posteriores al merge. Las ramas cerradas sin fusionar requieren también comprobar que cualquier contenido exclusivo quedó preservado.
+No se borraron referencias remotas en esta pasada. Se consultaron las 184 PR y las 173 ramas remotas fuera de `main`: las 152 ramas cuya PR se fusionó tienen exactamente el mismo SHA en la referencia remota que en el HEAD de la PR de origen (150 mergeadas directamente a `main` y 2 apiladas en la rama de laboratorio absorbida por #189). No hay señales de commits agregados después de esos heads. Las otras 21 referencias (15 cerradas sin merge y 6 sin PR) se auditaron por árbol; el único archivo exclusivo se preservó y la mejora útil de reintentos se adaptó a `main` con pruebas. La eliminación física sigue en pausa por la ambigüedad del alcance del ruleset y porque la integración disponible no ofrece una operación de borrado de ramas.
 
 ## PR cerradas sin fusionar
 

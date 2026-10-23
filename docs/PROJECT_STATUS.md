@@ -38,7 +38,7 @@ La prueba real en macOS, el teclado y el lector de pantalla siguen pendientes. L
 
 No hay PR abiertas de integración. La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) documenta las 174 referencias encontradas, las ramas duplicadas o reemplazadas y el contenido exclusivo recuperado a `main`.
 
-La limpieza lógica de PR está terminada, pero las ramas remotas no se han borrado físicamente. La auditoría separa las referencias asociadas a PR fusionadas de las ramas cerradas sin merge y de las que no tienen PR; no se deben eliminar en bloque sin comprobar el SHA actual de cada referencia.
+La clasificación de ramas ya está reconciliada: 150 referencias coinciden exactamente con heads de PR fusionadas directamente en `main`, 2 corresponden a PR apiladas en el laboratorio consolidado luego absorbido por #189, 15 están asociadas a PR cerradas sin merge y 6 no tienen PR. No se borró ninguna referencia. El ruleset no define los checks requeridos ni expresa explícitamente su alcance; la limpieza física queda en pausa hasta resolverlo administrativamente. Ver [auditoría completa](BRANCH_AUDIT_2026-10.md).
 
 ## Controles administrativos de GitHub
 
