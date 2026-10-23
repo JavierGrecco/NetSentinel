@@ -289,6 +289,7 @@ def test_manual_import_repository_keeps_preview_read_only_and_deduplicates(monke
     assert duplicate["skipped_duplicates"] == 1
     with database.connect() as db:
         assert db.execute("SELECT COUNT(*) FROM activity_events").fetchone()[0] == 1
+        assert db.execute("SELECT import_format FROM activity_events").fetchone()[0] == "csv"
 
 
 def test_manual_import_repository_rejects_old_rows_before_writing(monkeypatch, tmp_path):
