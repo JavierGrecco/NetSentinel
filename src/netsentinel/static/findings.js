@@ -105,6 +105,7 @@
           record.device_name || record.device_ip || ("dispositivo " + (record.device_id ?? "desconocido")),
           endpoint + " → " + destination,
           record.protocol || "protocolo no indicado",
+          record.source_event_id || "ID de origen no indicado",
           "diferencia temporal " + (record.time_delta_seconds ?? "desconocida") + " s",
           ...counters
         ].filter(Boolean).join(" · ");
@@ -114,6 +115,7 @@
         if (Number.isInteger(record.device_id)) params.set("device_id", String(record.device_id));
         if (typeof record.source_event_id === "string" && record.source_event_id) {
           params.set("source_event_id", record.source_event_id);
+          params.set("import_format", "zeek_conn_log");
         }
         if (params.has("source_event_id")) {
           const link = node("a", "", "Abrir este registro en Actividad");
