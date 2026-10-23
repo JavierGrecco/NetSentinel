@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ipaddress
 from datetime import datetime, timedelta, timezone
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -42,8 +43,51 @@ def _parse_timestamp(value: str | None) -> str:
     return _iso(parsed)
 
 
+def _optional_ip(value: Any, field: str) -> str | None:
+    """Normaliza una IP; vacío indica que la fuente no aportó el dato."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field} debe ser una dirección IPv4 o IPv6 válida.")
+    try:
+        return str(ipaddress.ip_address(value.strip()))
+    except ValueError as exc:
+        raise ValueError(f"{field} debe ser una dirección IPv4 o IPv6 válida.") from exc
+
+
+def _optional_integer(value: Any, field: str, *, minimum: int, maximum: int) -> int | None:
+    """Valida puertos y contadores sin redondear ni convertir booleanos en números."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        raise ValueError(f"{field} debe ser un entero entre {minimum} y {maximum}.")
+    raw = str(value).strip()
+    if not re.fullmatch(r"[0-9]+", raw) or len(raw) > len(str(maximum)):
+        raise ValueError(f"{field} debe ser un entero entre {minimum} y {maximum}.")
+    normalized = int(raw)
+    if not minimum <= normalized <= maximum:
+        raise ValueError(f"{field} debe ser un entero entre {minimum} y {maximum}.")
+    return normalized
+
+
+def _optional_metadata(value: Any, field: str, *, maximum: int) -> str | None:
+    """Normaliza etiquetas de procedencia y rechaza caracteres de control."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field} debe ser texto.")
+    if any(ord(character) < 32 for character in value):
+        raise ValueError(f"{field} supera su límite o contiene caracteres de control.")
+    normalized = " ".join(value.split())
+    if not normalized:
+        return None
+    if len(normalized) > maximum:
+        raise ValueError(f"{field} supera su límite o contiene caracteres de control.")
+    return normalized
+
+
 def normalize_event(payload: dict[str, Any], *, source_override: str | None = None) -> dict[str, Any]:
-    """Valida un evento de metadatos; rechaza silenciosamente no es una opción."""
+    """Valida un evento de metadatos y conserva solo los campos que la fuente aporta."""
     event_type = str(payload.get("event_type", "")).strip().lower()
     if event_type not in EVENT_TYPES:
         raise ValueError(f"Tipo de evento no admitido. Usá: {', '.join(sorted(EVENT_TYPES))}.")
@@ -92,28 +136,17 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
                     domain = None
                 except ValueError:
                     raise
-    destination_ip = payload.get("destination_ip")
-    if destination_ip is not None and str(destination_ip).strip():
-        try:
-            destination_ip = str(ipaddress.ip_address(str(destination_ip).strip()))
-        except ValueError as exc:
-            raise ValueError("destination_ip debe ser una dirección IPv4 o IPv6 válida.") from exc
-    else:
-        destination_ip = None
-    port = payload.get("destination_port")
-    if port in ("", None):
-        port = None
-    else:
-        # No truncar flotantes ni convertir True en el puerto 1. Las cadenas
-        # enteras se conservan por compatibilidad con CSV y fuentes antiguas.
-        if isinstance(port, bool) or not isinstance(port, (int, str)):
-            raise ValueError("destination_port debe ser un entero entre 1 y 65535.")
-        try:
-            port = int(port)
-        except (ValueError, TypeError, OverflowError) as exc:
-            raise ValueError("destination_port debe ser un entero entre 1 y 65535.") from exc
-        if not 1 <= port <= 65535:
-            raise ValueError("destination_port debe ser un entero entre 1 y 65535.")
+    source_ip = _optional_ip(payload.get("source_ip"), "source_ip")
+    source_port = _optional_integer(payload.get("source_port"), "source_port", minimum=1, maximum=65535)
+    destination_ip = _optional_ip(payload.get("destination_ip"), "destination_ip")
+    destination_port = _optional_integer(payload.get("destination_port"), "destination_port", minimum=1, maximum=65535)
+    max_counter = 9_223_372_036_854_775_807
+    counters = {
+        field: _optional_integer(payload.get(field), field, minimum=0, maximum=max_counter)
+        for field in ("bytes_sent", "bytes_received", "packets_sent", "packets_received")
+    }
+    network_interface = _optional_metadata(payload.get("network_interface"), "network_interface", maximum=64)
+    source_event_id = _optional_metadata(payload.get("source_event_id"), "source_event_id", maximum=160)
     protocol = payload.get("protocol")
     protocol = str(protocol).strip().lower() if protocol not in (None, "") else None
     if protocol is not None and protocol not in PROTOCOLS:
@@ -151,9 +184,14 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         "event_type": event_type,
         "source": source,
         "domain": domain,
+        "source_ip": source_ip,
+        "source_port": source_port,
         "destination_ip": destination_ip,
-        "destination_port": port,
+        "destination_port": destination_port,
         "protocol": protocol,
+        **counters,
+        "network_interface": network_interface,
+        "source_event_id": source_event_id,
         "app_name": app_name,
         "page_url": page_url,
         "search_engine": search_engine,

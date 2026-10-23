@@ -1,6 +1,6 @@
 # Prueba responsive de la interfaz
 
-Esta guía permite comprobar las cinco pantallas de NetSentinel en ventanas de distintos tamaños. El verificador usa Chromium y Playwright, levanta una instancia local temporal y escribe el informe fuera del código del producto.
+Esta guía permite comprobar las seis pantallas de NetSentinel en ventanas de distintos tamaños. El verificador usa Chromium y Playwright, levanta una instancia local temporal y escribe el informe fuera del código del producto.
 
 La prueba no hace descubrimiento de dispositivos, no ejecuta diagnósticos de red y no usa la base de datos habitual. Para la revisión visual, las capturas son opcionales y se guardan dentro de `.netsentinel-test-artifacts/responsive-ui/`.
 
@@ -57,7 +57,7 @@ python -m pytest -q
 python scripts/check_responsive_ui.py
 ```
 
-El verificador abre una instancia local temporal y recorre las cinco secciones —Inventario, Hallazgos, Monitorización, Herramientas y Actividad— en quince tamaños representativos, desde 320×640 hasta 1920×1080. Comprueba que las páginas carguen, que la sección activa sea única, que los tres temas aparezcan, que no se expanda horizontalmente toda la página y que el Inventario cambie a una columna cuando corresponde.
+El verificador abre una instancia local temporal y recorre las seis secciones —Inventario, Hallazgos, Monitorización, Herramientas, Actividad y Forense— en quince tamaños representativos, desde 320×640 hasta 1920×1080. Comprueba que las páginas carguen, que la sección activa sea única, que los tres temas aparezcan, que no se expanda horizontalmente toda la página y que el Inventario cambie a una columna cuando corresponde.
 
 La ejecución termina con código distinto de cero si encuentra fallos. El detalle queda en:
 
@@ -71,7 +71,7 @@ La ejecución termina con código distinto de cero si encuentra fallos. El detal
 python scripts/check_responsive_ui.py --screenshots
 ```
 
-Guarda una captura del Inventario para cada tamaño de la matriz y una captura de cada una de las cinco secciones en 1440×900. Abrí esas imágenes y revisá especialmente la cabecera, la navegación, el selector de temas, la segunda fila del Inventario, los márgenes y cualquier texto cortado.
+Guarda una captura del Inventario para cada tamaño de la matriz y una captura de cada una de las seis secciones en 1440×900. Abrí esas imágenes y revisá especialmente la cabecera, la navegación, el selector de temas, la segunda fila del Inventario, los márgenes y cualquier texto cortado.
 
 Para probar otros tamaños personalizados, usá el formato `ancho x alto`, separados por comas:
 
@@ -120,3 +120,6 @@ Si el puerto 8765 ya está ocupado, usá 8766 y abrí `http://127.0.0.1:8766`. N
 Guardá la fecha, el commit probado, el sistema operativo, la versión de Python, la matriz ejecutada y el resumen del informe. Si hay un fallo visual, vinculá la captura de ese tamaño y anotá el resultado esperado. No adjuntes bases de datos ni inventarios reales.
 
 La prueba automática ayuda a encontrar regresiones de tamaño y estructura; una revisión humana en pantalla sigue siendo necesaria para juzgar el equilibrio visual, la legibilidad y la facilidad de uso. Registrá el resultado final en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+
+
+En la rama integrada también se revisa la vista `/world-map`, incluida su navegación y sus filtros.

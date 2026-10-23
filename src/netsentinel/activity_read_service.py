@@ -76,8 +76,10 @@ def export_activity_csv(
     buffer = io.StringIO(newline="")
     fields = [
         "observed_at", "event_type", "device_id", "device_name", "ip_address", "source",
-        "domain", "page_url", "search_engine", "search_terms", "destination_ip",
-        "destination_port", "protocol", "app_name", "blocked", "email_provider",
+        "domain", "page_url", "search_engine", "search_terms", "source_ip",
+        "source_port", "destination_ip", "destination_port", "protocol",
+        "bytes_sent", "bytes_received", "packets_sent", "packets_received",
+        "network_interface", "source_event_id", "app_name", "blocked", "email_provider",
         "email_from", "email_to", "email_subject",
     ]
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
@@ -94,9 +96,17 @@ def export_activity_csv(
             "page_url": event["page_url"],
             "search_engine": event["search_engine"],
             "search_terms": event["search_terms"],
+            "source_ip": event.get("source_ip"),
+            "source_port": event.get("source_port"),
             "destination_ip": event["destination_ip"],
             "destination_port": event["destination_port"],
             "protocol": event["protocol"],
+            "bytes_sent": event.get("bytes_sent"),
+            "bytes_received": event.get("bytes_received"),
+            "packets_sent": event.get("packets_sent"),
+            "packets_received": event.get("packets_received"),
+            "network_interface": event.get("network_interface"),
+            "source_event_id": event.get("source_event_id"),
             "app_name": event["app_name"],
             "blocked": event["blocked"],
             "email_provider": event["email_provider"],

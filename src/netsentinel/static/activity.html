@@ -12,7 +12,7 @@
   <div class="app-header-content">
     <div class="app-header-brand-row">
       <div class="app-brand">
-        <div class="logo" aria-hidden="true">⌁</div>
+        <img class="app-brand-mark" src="/static/netsentinel-red.svg" alt="">
         <div class="app-brand-copy">
           <div class="eyebrow">Observabilidad local</div>
           <div class="app-brand-name">NetSentinel</div>
@@ -54,12 +54,20 @@
       </div>
       <div class="actions app-page-actions"><button id="refresh" type="button" class="quiet">↻ Actualizar</button></div>
     </div>
-    <nav class="primary-nav" aria-label="Navegación principal">
+    
+    <nav class="product-switcher" aria-label="Cambiar entre módulos NetSentinel">
+      <a class="product-link is-current" href="/" aria-current="true"><img src="/static/netsentinel-red.svg" alt="" width="24" height="24">NetSentinel Red</a>
+      <a class="product-link" href="/forensics"><img src="/static/netsentinel-forense.svg" alt="" width="24" height="24">NetSentinel Forense</a>
+    </nav>
+<nav class="primary-nav" aria-label="Navegación principal">
       <a class="nav-link" href="/">Inventario</a>
+      <a class="nav-link" href="/network">Mapa de red</a>
       <a class="nav-link" href="/findings">Hallazgos</a>
       <a class="nav-link" href="/monitors">Monitorización</a>
       <a class="nav-link" href="/tools">Herramientas</a>
       <a class="nav-link" aria-current="page" href="/activity">Actividad</a>
+      <a class="nav-link" href="/world-map">Mapa mundial</a>
+          <a class="nav-link" href="/guided-test">Prueba guiada</a>
     </nav>
   </div>
 </header>
@@ -98,8 +106,24 @@
 <div class="small">Esquema normalizado: <code>observed_at,event_type,domain,destination_ip,destination_port,protocol,app_name,blocked,page_url,search_engine,search_terms,email_provider,email_from,email_to,email_subject</code>. También se reconocen algunas cabeceras de Google Workspace (Date, Sender, Recipient, Subject or Message ID) y Microsoft 365 (receivedDateTime, senderAddress, recipientAddress, subject). El campo de Google puede contener un ID en vez del asunto. Correo solo desde exportaciones de auditoría autorizadas; se rechazan columnas de cuerpo y adjuntos.</div>
 <div class="actions import-actions"><button id="previewImport" type="button">Previsualizar CSV</button><button id="import" type="button">Importar metadatos</button></div><p id="importStatus" class="small" role="status"></p>
 <div id="previewPanel" class="section-gap" hidden><strong>Vista previa validada</strong><p id="previewSummary" class="small" role="status"></p><div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Evento</th><th>Dominio</th><th>Detalle normalizado</th><th>Resultado</th></tr></thead><tbody id="previewRows"></tbody></table></div><p class="small">La vista previa no guarda eventos. Se validan todas las filas y se muestran hasta las primeras 10. Revisá los metadatos antes de confirmar la importación.</p></div>
-
-</section></div>
+</section>
+<section class="panel section-gap" aria-labelledby="zeekImportTitle">
+  <h2 id="zeekImportTitle">Importar conexiones de Zeek (conn.log)</h2>
+  <p class="small">Importá un archivo <code>conn.log</code> de Zeek generado previamente desde una red propia o autorizada. Se admiten el TSV predeterminado de Zeek y JSON Lines. Esta acción no inicia captura ni se conecta a Zeek. Se admiten hasta 1.000 registros y 1 MB por archivo.</p>
+  <p class="small">NetSentinel conserva los bytes medidos a nivel IP cuando Zeek los aporta. Los contadores ausentes permanecen desconocidos; no se convierten en cero. Los bytes y paquetes enviados/recibidos se muestran desde la perspectiva del dispositivo elegido; si este aparece como respondedor de Zeek, los contadores se invierten. Las columnas Origen/Destino conservan el sentido original de <code>conn.log</code>. Las importaciones usan el origen <code>manual_import</code> y conservan el identificador original con prefijo <code>zeek:</code> para evitar duplicados.</p>
+  <div class="field"><label for="zeekDevice">Asociar al dispositivo</label><select id="zeekDevice"><option value="">Seleccioná dispositivo</option></select></div>
+  <div class="field"><label for="zeekFile">Archivo Zeek conn.log (TSV o JSON Lines)</label><input id="zeekFile" type="file" accept=".jsonl,.ndjson,.json,.log,application/x-ndjson,application/json,text/plain"></div>
+  <p class="small">El archivo puede contener conexiones de varios equipos. Para evitar atribuciones incorrectas por reutilización de IP, NetSentinel solo importará filas cuya IP de origen o destino esté dentro del intervalo histórico observado del dispositivo elegido y no tenga otro activo con un intervalo solapado para esa IP. Las filas fuera de ese intervalo o con propietario ambiguo se contabilizan como omitidas.</p>
+  <div class="actions import-actions"><button id="previewZeekImport" type="button">Previsualizar registros</button><button id="importZeek" type="button">Importar conexiones</button></div>
+  <p id="zeekImportStatus" class="small" role="status"></p>
+  <div id="zeekPreviewPanel" class="section-gap" hidden>
+    <strong>Vista previa de conexiones</strong>
+    <p id="zeekPreviewSummary" class="small" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Fecha/hora (UTC)</th><th>Origen</th><th>Destino</th><th>Protocolo</th><th>Bytes IP enviados/recibidos</th><th>Paquetes enviados/recibidos</th><th>Resultado</th></tr></thead><tbody id="zeekPreviewRows"></tbody></table></div>
+    <p class="small">La vista previa valida el archivo completo, muestra hasta los primeros 10 registros y no guarda eventos. Revisá el dispositivo asociado y los datos antes de confirmar.</p>
+  </div>
+</section>
+</div>
 <div id="activity-events" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
 <section class="panel section-gap"><div class="section-heading"><h2>Eventos</h2><div class="small">Ordenados por hora observada, más recientes primero</div></div>
 <div class="two">
@@ -113,7 +137,7 @@
 </div>
 <div class="actions"><button id="applyActivityFilters" type="button">Aplicar filtros</button><button id="clearActivityFilters" type="button">Limpiar</button><button id="exportActivityCsv" type="button">Exportar CSV filtrado</button></div>
 <p class="small">La tabla muestra hasta 500 eventos por consulta. La exportación incluye hasta 10.000 coincidencias y aplica neutralización de fórmulas para hojas de cálculo. Las fechas se interpretan en UTC.</p>
-<div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Dispositivo</th><th>Evento</th><th>Dominio</th><th>Página / búsqueda / correo</th><th>Destino</th><th>Fuente</th><th>Estado</th></tr></thead><tbody id="events"><tr><td colspan="8" class="empty">Cargando eventos…</td></tr></tbody></table></div><p class="small" id="scopeNote"></p></section>
+<div class="table-wrap"><table><thead><tr><th>Fecha/hora</th><th>Dispositivo</th><th>Evento</th><th>Dominio</th><th>Página / búsqueda / correo</th><th>Origen / destino / contadores</th><th>Fuente</th><th>Estado</th></tr></thead><tbody id="events"><tr><td colspan="8" class="empty">Cargando eventos…</td></tr></tbody></table></div><p class="small" id="scopeNote"></p></section>
 </div>
 <div id="activity-privacy" class="activity-tab-panel" data-tab-panel role="tabpanel" hidden>
 <section class="panel section-gap"><h2>Retención local</h2><div class="two"><div class="field"><label for="retention">Conservar eventos por</label><select id="retention"><option value="1">1 día</option><option value="3">3 días</option><option value="7" selected>7 días</option><option value="14">14 días</option><option value="30">30 días</option><option value="90">90 días</option></select></div><div class="field"><label>&nbsp;</label><button id="saveRetention" type="button">Guardar retención</button></div></div><p class="small">Los eventos antiguos se eliminan cuando se consulta o modifica el seguimiento. Las sesiones cerradas se depuran después de 90 días.</p></section>

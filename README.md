@@ -4,6 +4,8 @@
 
 NetSentinel reúne inventario de dispositivos, historial y monitorización en un panel web. Se ejecuta en tu computadora; no necesita una cuenta ni un servidor externo.
 
+El módulo **NetSentinel Forense** está en desarrollo como área separada. Esta primera entrega incorpora el registro de casos y una comparación de SHA-256 limitada a copias de trabajo locales designadas. Sigue en validación: no autentica la identidad del operador ni constituye, por sí sola, una cadena de custodia validada. El plan detalla los límites y los siguientes pasos.
+
 ## Primeros pasos
 
 1. **Iniciá NetSentinel.** En Windows, ejecutá `run-windows.bat`; en macOS, abrí `run-macos.command`; en Linux, ejecutá `./run.sh`. La [sección de instalación](#instalación-y-primer-inicio) explica cada opción.
@@ -24,6 +26,14 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Actividad y privacidad](#historial-y-telemetría-autorizada)
 - [Preguntas frecuentes](docs/FAQ.md)
 - [Seguimiento del proyecto](docs/PROJECT_STATUS.md) y [roadmap](docs/ROADMAP.md)
+- [NetSentinel Forense: alcance y etapas](docs/FORENSIC_MODE.md)
+- [Prueba manual de NetSentinel Forense](docs/FORENSIC_MANUAL_TEST.md)
+- [Matriz de preparación pericial y brechas de NetSentinel Forense](docs/FORENSIC_READINESS_MATRIX.md)
+- [Informe de examen: versiones, verificación y límites](docs/FORENSIC_REPORTS.md)
+- **Prueba guiada dentro de la aplicación:** abrí `/guided-test` con NetSentinel en marcha.
+- [Laboratorio consolidado de aceptación manual](docs/EXPERT_ACCEPTANCE_LAB.md): red, topología, Zeek, mapa mundial y Forense en una sola rama aislada.
+- [Escenarios sintéticos guiados](docs/MANUAL_TEST_SCENARIOS.md)
+- [Mapa mundial de IP](docs/WORLD_IP_MAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
 
 ## Qué podés hacer
@@ -32,6 +42,9 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - Consultar dispositivos con sus direcciones IP y MAC, buscar por cualquiera de sus direcciones IPv4/IPv6 y revisar la procedencia de cada observación.
 - Marcar dispositivos de confianza y agregarles un nombre o una nota.
 - Guardar un historial de lecturas y cambios observados.
+- Explorar topología LAN histórica basada en observaciones persistidas en `/network`, con selección de lecturas, filtros, detalle y procedencia; no representa tráfico vivo.
+- Importar metadatos Zeek (`conn.log`) en Actividad tras revisar una vista previa y confirmar explícitamente la importación.
+- Consultar el mapa mundial de IP públicas observadas en eventos guardados mediante la vista `/world-map`. Las coordenadas son aproximadas y requieren una base GeoLite2-City local válida; no se inventan ubicaciones cuando falta esa base.
 - Revisar **actividad y telemetría autorizada** en `/activity`: sesiones temporales por dispositivo, eventos de metadatos, importación de CSV y retención configurable. No captura tráfico automáticamente ni registra contraseñas.
 - Supervisar un host con ping, un puerto TCP o una URL HTTP/HTTPS.
 - Ejecutar un diagnóstico guiado que explica los resultados de red y sugiere qué revisar.
@@ -144,6 +157,19 @@ El backend por sí solo no ve todas las conexiones de otros equipos ni conoce la
 Los datos se guardan localmente en SQLite. Las notificaciones externas solo se intentan si configurás un webhook. No publiques inventarios, direcciones reales, credenciales ni tokens en incidencias.
 
 Leé la [política de seguridad](SECURITY.md) y la [guía técnica de seguridad](docs/SECURITY.md) antes de habilitar integraciones o supervisar sistemas compartidos. No reportes vulnerabilidades mediante issues públicos.
+
+## Laboratorio integrado de validación
+
+Con la aplicación en marcha, abrí **Prueba guiada** desde la navegación principal o entrá en `/guided-test`. Ahí se muestran los escenarios, los comandos copiables, las comprobaciones de API y los resultados esperados; el documento de escenarios amplía el recorrido.
+
+
+Esta rama de laboratorio reúne en una sola instalación el explorador histórico LAN, el importador Zeek, el mapa mundial de IP, el espacio NetSentinel Forense y los datos de prueba sintéticos.
+
+- **Mapa mundial:** abrí `/world-map`. La página siempre está disponible, pero los marcadores reales necesitan una base GeoLite2-City autorizada instalada localmente.
+- **Datos sintéticos:** seguí [los escenarios guiados](docs/MANUAL_TEST_SCENARIOS.md). El generador escribe archivos de ejemplo; el auxiliar de base prepara una base de prueba separada. La importación CSV se confirma desde Actividad, no automáticamente.
+- **Forense:** abrí `/forensics` y seguí [la prueba manual de Forense](docs/FORENSIC_MANUAL_TEST.md). El módulo sigue siendo experimental; los hashes y manifiestos no prueban por sí solos la identidad del operador ni reemplazan una cadena de custodia validada.
+
+Los datos sintéticos se identifican como tales y no deben confundirse con observaciones reales.
 
 ## Pruebas
 

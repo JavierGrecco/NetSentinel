@@ -29,3 +29,4 @@ oui.csv
 
 # Informes y capturas locales de comprobación visual
 .netsentinel-test-artifacts/
+/netsentinel-test-artifacts/

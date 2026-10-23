@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 from .database_storage import connect
+from .forensics_audit_integrity import audit_event_hash
 
 
 def initialize(path: Path | None = None, *, default_path_provider: Callable[[], Path] | None = None) -> None:
@@ -128,10 +129,18 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 received_at TEXT NOT NULL,
                 event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                 source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                source_event_id TEXT,
                 domain TEXT,
+                source_ip TEXT,
+                source_port INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL),
                 destination_ip TEXT,
                 destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
                 protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                bytes_sent INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL),
+                bytes_received INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL),
+                packets_sent INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL),
+                packets_received INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL),
+                network_interface TEXT,
                 app_name TEXT,
                 page_url TEXT,
                 search_engine TEXT,
@@ -182,10 +191,18 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                     received_at TEXT NOT NULL,
                     event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                     source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                    source_event_id TEXT,
                     domain TEXT,
+                    source_ip TEXT,
+                    source_port INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL),
                     destination_ip TEXT,
                     destination_port INTEGER CHECK (destination_port BETWEEN 1 AND 65535 OR destination_port IS NULL),
                     protocol TEXT CHECK (protocol IN ('tcp', 'udp', 'quic', 'icmp', 'other') OR protocol IS NULL),
+                    bytes_sent INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL),
+                    bytes_received INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL),
+                    packets_sent INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL),
+                    packets_received INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL),
+                    network_interface TEXT,
                     app_name TEXT,
                     page_url TEXT,
                     search_engine TEXT,
@@ -199,7 +216,9 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             """)
             core_columns = [
                 "id", "session_id", "device_id", "observed_at", "received_at", "event_type",
-                "source", "domain", "destination_ip", "destination_port", "protocol", "app_name",
+                "source", "source_event_id", "domain", "source_ip", "source_port",
+                "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
+                "packets_sent", "packets_received", "network_interface", "app_name",
             ]
             select_columns = [name if name in old_columns else "NULL" for name in core_columns]
             extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
@@ -214,9 +233,26 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             db.execute("ALTER TABLE activity_events_migrated RENAME TO activity_events")
         else:
             activity_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
-            for column in ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject"):
+            column_definitions = {
+                "page_url": "TEXT",
+                "search_engine": "TEXT",
+                "search_terms": "TEXT",
+                "email_provider": "TEXT",
+                "email_from": "TEXT",
+                "email_to": "TEXT",
+                "email_subject": "TEXT",
+                "source_event_id": "TEXT",
+                "source_ip": "TEXT",
+                "source_port": "INTEGER CHECK (source_port BETWEEN 1 AND 65535 OR source_port IS NULL)",
+                "bytes_sent": "INTEGER CHECK (bytes_sent BETWEEN 0 AND 9223372036854775807 OR bytes_sent IS NULL)",
+                "bytes_received": "INTEGER CHECK (bytes_received BETWEEN 0 AND 9223372036854775807 OR bytes_received IS NULL)",
+                "packets_sent": "INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL)",
+                "packets_received": "INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL)",
+                "network_interface": "TEXT",
+            }
+            for column, definition in column_definitions.items():
                 if column not in activity_columns:
-                    db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} TEXT")
+                    db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} {definition}")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC)")
         # Compatibility for existing v0.1 installations.
@@ -249,3 +285,201 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                       COALESCE(MIN(source), 'migration-v0.1')
                FROM observations GROUP BY device_id, ip_address"""
         )
+
+        # Tablas forenses aditivas: no modifican las tablas ni los datos de Red.
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_cases (
+                id TEXT PRIMARY KEY,
+                case_number TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                authority_reference TEXT NOT NULL,
+                objective TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                examiner TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_evidence (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_number TEXT NOT NULL,
+                label TEXT NOT NULL,
+                source_type TEXT NOT NULL CHECK (
+                    source_type IN ('disk_image', 'file_copy', 'browser_export', 'email_export', 'network_log', 'other')
+                ),
+                original_name TEXT,
+                source_description TEXT NOT NULL,
+                received_from TEXT NOT NULL,
+                received_by TEXT NOT NULL,
+                received_at_original TEXT NOT NULL,
+                received_timezone TEXT NOT NULL,
+                size_bytes INTEGER CHECK (size_bytes >= 0 OR size_bytes IS NULL),
+                reported_sha256 TEXT,
+                hash_source TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE (case_id, evidence_number),
+                CHECK (reported_sha256 IS NULL OR length(reported_sha256) = 64)
+            )
+        """)
+        # Migración aditiva: las recepciones antiguas no identificaban a la
+        # persona que quedó a cargo. Un valor vacío significa "no registrado"; no
+        # inferimos esa identidad a partir del operador ni de la fuente que entrega.
+        evidence_columns = {
+            str(row["name"]) for row in db.execute("PRAGMA table_info(forensic_evidence)")
+        }
+        if "received_by" not in evidence_columns:
+            db.execute(
+                "ALTER TABLE forensic_evidence ADD COLUMN received_by TEXT NOT NULL DEFAULT ''"
+            )
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_integrity_checks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_id TEXT NOT NULL REFERENCES forensic_evidence(id) ON DELETE RESTRICT,
+                checked_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                copy_confirmed INTEGER NOT NULL DEFAULT 1 CHECK (copy_confirmed = 1),
+                algorithm TEXT NOT NULL CHECK (algorithm = 'SHA-256'),
+                source_name TEXT NOT NULL,
+                expected_sha256 TEXT,
+                calculated_sha256 TEXT,
+                size_bytes INTEGER CHECK (size_bytes >= 0 OR size_bytes IS NULL),
+                status TEXT NOT NULL CHECK (status IN ('match', 'mismatch', 'failed')),
+                tool_version TEXT NOT NULL,
+                error_code TEXT,
+                error_message TEXT,
+                CHECK (expected_sha256 IS NULL OR length(expected_sha256) = 64),
+                CHECK (calculated_sha256 IS NULL OR length(calculated_sha256) = 64)
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                evidence_id TEXT REFERENCES forensic_evidence(id) ON DELETE RESTRICT,
+                occurred_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL,
+                result TEXT NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}'
+            )
+        """)
+
+        # Crear y rellenar la cadena solo durante la migración inicial. Si en una base
+        # ya migrada faltan filas de cadena, no las reconstruimos en cada arranque:
+        # la consulta debe poder señalar ese faltante como una posible alteración.
+        audit_chain_exists = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'forensic_audit_chain'"
+        ).fetchone() is not None
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_audit_chain (
+                audit_id INTEGER PRIMARY KEY REFERENCES forensic_audit(id) ON DELETE RESTRICT,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                previous_hash TEXT CHECK (previous_hash IS NULL OR length(previous_hash) = 64),
+                event_hash TEXT NOT NULL CHECK (length(event_hash) = 64)
+            )
+        """)
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_forensic_audit_chain_case ON forensic_audit_chain(case_id, audit_id)"
+        )
+        if not audit_chain_exists:
+            legacy_case_ids = db.execute(
+                "SELECT DISTINCT case_id FROM forensic_audit ORDER BY case_id"
+            ).fetchall()
+            for legacy_case in legacy_case_ids:
+                previous_hash = None
+                legacy_events = db.execute(
+                    """SELECT id, case_id, evidence_id, occurred_at, actor, action, result, details_json
+                       FROM forensic_audit WHERE case_id = ? ORDER BY id ASC""",
+                    (legacy_case["case_id"],),
+                ).fetchall()
+                for event in legacy_events:
+                    event_hash = audit_event_hash(
+                        case_id=event["case_id"],
+                        evidence_id=event["evidence_id"],
+                        occurred_at=event["occurred_at"],
+                        actor=event["actor"],
+                        action=event["action"],
+                        result=event["result"],
+                        details_json=event["details_json"],
+                        previous_hash=previous_hash,
+                    )
+                    db.execute(
+                        """INSERT INTO forensic_audit_chain
+                           (audit_id, case_id, previous_hash, event_hash)
+                           VALUES (?, ?, ?, ?)""",
+                        (event["id"], event["case_id"], previous_hash, event_hash),
+                    )
+                    previous_hash = event_hash
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_cases_updated ON forensic_cases(updated_at DESC)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_evidence_case ON forensic_evidence(case_id, created_at)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_integrity_evidence_time ON forensic_integrity_checks(evidence_id, checked_at DESC)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_forensic_audit_case_time ON forensic_audit(case_id, occurred_at DESC)")
+        # Las verificaciones de integridad también conservan su historial original.
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_integrity_no_update
+            BEFORE UPDATE ON forensic_integrity_checks
+            BEGIN SELECT RAISE(ABORT, 'forensic integrity history is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_integrity_no_delete
+            BEFORE DELETE ON forensic_integrity_checks
+            BEGIN SELECT RAISE(ABORT, 'forensic integrity history is append-only'); END
+        """)
+        # El historial de auditoría es de solo anexado desde la app y la propia base.
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_no_update
+            BEFORE UPDATE ON forensic_audit
+            BEGIN SELECT RAISE(ABORT, 'forensic audit is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_no_delete
+            BEFORE DELETE ON forensic_audit
+            BEGIN SELECT RAISE(ABORT, 'forensic audit is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_chain_no_update
+            BEFORE UPDATE ON forensic_audit_chain
+            BEGIN SELECT RAISE(ABORT, 'forensic audit chain is append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_audit_chain_no_delete
+            BEFORE DELETE ON forensic_audit_chain
+            BEGIN SELECT RAISE(ABORT, 'forensic audit chain is append-only'); END
+        """)
+
+        # Los informes se versionan como documentos inmutables. Una corrección crea
+        # una fila nueva que referencia la versión anterior; no se reemplaza el informe.
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS forensic_reports (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES forensic_cases(id) ON DELETE RESTRICT,
+                report_version INTEGER NOT NULL CHECK (report_version >= 1),
+                amends_report_id TEXT REFERENCES forensic_reports(id) ON DELETE RESTRICT,
+                created_at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status = 'draft_unsigned'),
+                report_sha256 TEXT NOT NULL CHECK (length(report_sha256) = 64),
+                report_json TEXT NOT NULL,
+                UNIQUE (case_id, report_version)
+            )
+        """)
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_forensic_reports_case_version "
+            "ON forensic_reports(case_id, report_version DESC)"
+        )
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_reports_no_update
+            BEFORE UPDATE ON forensic_reports
+            BEGIN SELECT RAISE(ABORT, 'forensic reports are append-only'); END
+        """)
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS forensic_reports_no_delete
+            BEFORE DELETE ON forensic_reports
+            BEGIN SELECT RAISE(ABORT, 'forensic reports are append-only'); END
+        """)

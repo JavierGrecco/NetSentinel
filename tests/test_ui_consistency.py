@@ -7,10 +7,13 @@ from pathlib import Path
 STATIC = Path("src/netsentinel/static")
 PAGE_NAMES = (
     "index.html",
+    "network.html",
     "findings.html",
     "monitors.html",
     "tools.html",
     "activity.html",
+    "geolocation.html",
+    "guided-test.html",
 )
 
 
@@ -23,7 +26,7 @@ def test_theme_card_styles_are_visible_and_keyboard_accessible():
     assert ".app-header-utilities .theme-option-card" in css
     assert "min-height: 48px" in css
     assert ".app-header-content > .primary-nav" in css
-    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(8, minmax(0, 1fr))" in css
     assert "min-height: 42px" in css
     assert ".app-section-title" in css
     assert "background: #101827" in css
@@ -46,6 +49,28 @@ def test_theme_options_are_unique_and_have_one_default_selection():
         assert len(ids) == len(set(ids)), f"{page_name} has duplicate theme control IDs"
         assert set(values) == {"dark", "medium", "light"}
         assert len(checked) == 1 and 'value="dark"' in checked[0]
+
+
+def test_each_page_uses_unique_html_ids():
+    """Los ID duplicados rompen los enlaces entre controles y JavaScript."""
+    for page_name in PAGE_NAMES:
+        html = (STATIC / page_name).read_text(encoding="utf-8")
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        duplicates = sorted({value for value in ids if ids.count(value) > 1})
+        assert not duplicates, f"{page_name} has duplicate HTML IDs: {duplicates}"
+
+
+def test_world_map_refresh_controls_are_both_wired_and_share_loading_state():
+    """Los dos botones de actualización deben responder y deshabilitarse juntos."""
+    html = (STATIC / "geolocation.html").read_text(encoding="utf-8")
+    script = (STATIC / "geolocation.js").read_text(encoding="utf-8")
+
+    assert html.count('class="quiet js-refresh-world-map"') == 2
+    assert 'id="refreshWorldMapTop"' in html
+    assert 'id="refreshWorldMap"' in html
+    assert 'document.querySelectorAll(".js-refresh-world-map").forEach((button) => {' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = true; });' in script
+    assert 'refreshButtons.forEach((button) => { button.disabled = false; });' in script
 
 
 def test_shared_theme_defines_one_page_and_control_scale():
@@ -83,6 +108,7 @@ def test_every_page_keeps_a_fixed_brand_and_a_distinct_section_heading():
         "monitors.html": "Monitorización",
         "tools.html": "Herramientas de red",
         "activity.html": "Actividad y telemetría",
+        "geolocation.html": "Mapa mundial de IP",
     }
 
     for page_name, section_title in expected_titles.items():
@@ -138,28 +164,68 @@ def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens()
     css = (STATIC / "styles.css").read_text(encoding="utf-8")
 
     assert '<div class="layout inventory-layout">' in html
+    assert '<div class="inventory-column inventory-primary-column">' in html
+    assert '<div class="inventory-column inventory-secondary-column">' in html
+
+    # El orden del documento sigue las dos columnas: Inventario y Diagnóstico,
+    # seguido de Actividad reciente e Historial de lecturas.
     panel_classes = (
         'class="panel inventory-panel"',
-        'class="panel activity-panel"',
         'class="panel diagnostics-panel"',
+        'class="panel activity-panel"',
         'class="panel scans-panel"',
     )
     positions = [html.index(panel_class) for panel_class in panel_classes]
-    assert positions == sorted(positions), "Dashboard panels must keep a useful reading order"
+    assert positions == sorted(positions), "Dashboard panels must keep a useful column reading order"
 
-    assert 'grid-template-areas:\n    "inventory activity"\n    "diagnostics scans";' in css
+    assert "grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);" in css
+    assert ".inventory-column {" in css
+    assert "flex-direction: column;" in css
+    assert "gap: 16px;" in css
     assert '@media (max-width: 1080px)' in css
-    assert 'grid-template-areas:\n      "inventory"\n      "activity"\n      "diagnostics"\n      "scans";' in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
 
     # The table must stay readable by scrolling within its own container.
     assert ".table-wrap{overflow:auto;width:100%}" in css
 
 
-
 def test_every_main_page_uses_the_shared_content_shell():
-    """Las cinco secciones comparten el mismo contenedor principal."""
+    """Las secciones principales comparten el mismo contenedor principal."""
     for page_name in PAGE_NAMES:
         html = (STATIC / page_name).read_text(encoding="utf-8")
         assert '<main class="wrap">' in html, (
             f"{page_name} must use the shared content shell"
         )
+
+def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
+    """El asistente conserva pruebas sintéticas, lectura de topología, Zeek y Forense."""
+    html = (STATIC / "guided-test.html").read_text(encoding="utf-8")
+    script = (STATIC / "guided-test.js").read_text(encoding="utf-8")
+    assert 'id="wizardStepTitle"' in html
+    assert 'id="wizardRecoveryDetails"' in html
+    assert 'id="wizardSummaryPanel"' in html
+    assert 'id: "topology"' in script
+    assert 'id: "zeek"' in script
+    assert 'id: "forensics-case"' in script
+    assert 'id: "forensics-hash"' in script
+    assert 'id: "forensics-safety"' in script
+    assert 'id: "forensics-manifests"' in script
+    assert 'id: "forensics-report"' in script
+    assert "seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology" in html
+    assert 'export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/' in html
+    assert 'id: "lab"' in script
+    assert 'id: "summary"' in script
+    assert "netsentinel.acceptance-wizard.v3" in script
+    assert 'id: "forensics-manifests"' in script
+    assert 'Registrar transferencia de custodia' in script
+    assert 'checkKey: "csv-events"' in script
+    assert 'checkKey: "csv-rejections"' in script
+    assert 'checkKey: "zeek-events"' in script
+    assert "async function checkCsvEvents()" in script
+    assert "async function checkCsvRejections()" in script
+    assert "async function checkZeekEvents()" in script
+    assert "zeek:CManualScenario101" in script
+    assert "no se inició un escaneo" in script.lower()
+    assert "wizardCopyReport" in script
+
+

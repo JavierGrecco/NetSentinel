@@ -11,14 +11,17 @@ from netsentinel.api import (
     activity_read as activity_read_api,
     activity_retention as activity_retention_api,
     activity_sessions as activity_sessions_api,
+    activity_zeek_import as activity_zeek_import_api,
     diagnostics as diagnostics_api,
     error_handling as error_handling_api,
     validation_errors,
     findings,
+    forensics,
     inventory,
     inventory_assets,
     inventory_discovery,
     inventory_exports,
+    inventory_topology,
     monitoring,
     monitoring_monitors,
     monitoring_reports,
@@ -89,8 +92,13 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.api.activity_read",
         "netsentinel.api.activity_retention",
         "netsentinel.api.activity_sessions",
+        "netsentinel.api.activity_zeek_import",
     }
     assert graph["netsentinel.api.activity_models"] == set()
+    assert graph["netsentinel.api.activity_zeek_import"] == {
+        "netsentinel.activity_tracking",
+        "netsentinel.api.activity_models",
+    }
     assert graph["netsentinel.api.activity_read"] == {"netsentinel.activity_tracking"}
     assert graph["netsentinel.api.activity_sessions"] == {
         "netsentinel.activity_tracking",
@@ -109,6 +117,21 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.api.activity_models",
     }
     assert graph["netsentinel.api.findings"] == {"netsentinel.findings_service"}
+    assert graph["netsentinel.api.forensics"] == {"netsentinel.forensics_service"}
+    assert graph["netsentinel.forensics_service"] == {
+        "netsentinel.config",
+        "netsentinel.forensics_audit_manifest",
+        "netsentinel.forensics_case_manifest",
+        "netsentinel.forensics_errors",
+        "netsentinel.forensics_integrity",
+        "netsentinel.forensics_repository",
+        "netsentinel.forensics_report",
+    }
+    assert graph["netsentinel.forensics_repository"] == {
+        "netsentinel.database_storage",
+        "netsentinel.forensics_audit_integrity",
+        "netsentinel.forensics_errors",
+    }
     assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
     assert graph["netsentinel.activity_repository"] == {
         "netsentinel.database",
@@ -146,6 +169,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_read_service",
         "netsentinel.activity_retention_service",
         "netsentinel.activity_session_service",
+        "netsentinel.activity_zeek_import_service",
     }
     assert graph["netsentinel.activity_retention_service"] == {"netsentinel.activity_repository"}
     assert "netsentinel.activity_event_service" in graph["netsentinel.activity_tracking"]
@@ -177,6 +201,16 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.csv_safety",
     }
     assert graph["netsentinel.activity_import_service"] == {"netsentinel.activity_repository"}
+    assert graph["netsentinel.activity_zeek_import_service"] == {
+        "netsentinel.activity_event_service",
+        "netsentinel.activity_repository",
+        "netsentinel.activity_retention_service",
+        "netsentinel.inventory_read_repository",
+    }
+    assert graph["netsentinel.geolocation_service"] == {
+        "netsentinel.config",
+        "netsentinel.geolocation_repository",
+    }
     assert graph["netsentinel.activity_event_service"] == {
         "netsentinel.activity_catalog",
         "netsentinel.activity_privacy",
@@ -195,7 +229,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.monitoring_export_service",
     }
     assert graph["netsentinel.database_storage"] == {"netsentinel.config"}
-    assert graph["netsentinel.database_schema"] == {"netsentinel.database_storage"}
+    assert graph["netsentinel.database_schema"] == {"netsentinel.database_storage", "netsentinel.forensics_audit_integrity"}
     assert graph["netsentinel.inventory_repository"] == {
         "netsentinel.database_storage",
         "netsentinel.events_repository",
@@ -329,6 +363,11 @@ def test_domain_and_persistence_modules_do_not_import_http_frameworks() -> None:
         "network_models.py",
         "error_reporting.py",
         "error_journal.py",
+        "forensics_integrity.py",
+        "forensics_service.py",
+        "forensics_repository.py",
+        "forensics_audit_integrity.py",
+        "forensics_case_manifest.py",
     }
     for name in expected:
         source = (package_root / name).read_text(encoding="utf-8")
@@ -514,6 +553,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         inventory_assets.router.routes,
         inventory_discovery.router.routes,
         inventory_exports.router.routes,
+        inventory_topology.router.routes,
     )
     paths = {route.path for routes in route_groups for route in routes}
     assert {
@@ -524,6 +564,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/scans",
         "/api/scans/compare",
         "/api/scans/{scan_id}/observations",
+        "/api/scans/{scan_id}/topology",
         "/api/devices/{device_id}/history",
         "/api/devices/{device_id}/addresses",
         "/api/scan",
@@ -534,8 +575,8 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert sum(len(routes) for routes in route_groups) == 16
-    assert len(paths) == 16
+    assert sum(len(routes) for routes in route_groups) == 17
+    assert len(paths) == 17
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
@@ -545,6 +586,11 @@ def test_inventory_router_has_only_declared_internal_dependencies() -> None:
         "netsentinel.api.inventory_assets",
         "netsentinel.api.inventory_discovery",
         "netsentinel.api.inventory_exports",
+        "netsentinel.api.inventory_topology",
+    }
+    assert graph["netsentinel.api.inventory_topology"] == {
+        "netsentinel.topology_graph",
+        "netsentinel.topology_service",
     }
     assert graph["netsentinel.api.inventory_assets"] == {
         "netsentinel.database",
@@ -657,10 +703,32 @@ def test_monitoring_repository_facade_reexports_historical_functions() -> None:
     assert database.record_monitor_check is monitoring_repository_compat.record_monitor_check
 
 
+def test_forensics_endpoints_belong_to_forensics_router() -> None:
+    """Los endpoints de casos y evidencia viven en el router forense."""
+    paths = {route.path for route in forensics.router.routes}
+    assert {
+        "/api/forensics/cases",
+        "/api/forensics/cases/{case_id}",
+        "/api/forensics/cases/{case_id}/close",
+        "/api/forensics/cases/{case_id}/evidence",
+        "/api/forensics/cases/{case_id}/audit",
+        "/api/forensics/cases/{case_id}/evidence/{evidence_id}/verify-hash",
+        "/api/forensics/cases/{case_id}/evidence/{evidence_id}/integrity-checks",
+    } <= paths
+
+
+def test_forensics_router_has_only_declared_internal_dependencies() -> None:
+    """El router usa el servicio de dominio, no la base de datos directamente."""
+    root = Path(__file__).resolve().parents[1]
+    violations, graph = check_architecture(root)
+    assert not violations, "\\n".join(violations)
+    assert graph["netsentinel.api.forensics"] == {"netsentinel.forensics_service"}
+
+
 def test_html_pages_belong_to_pages_router() -> None:
-    """Las cinco páginas HTML se sirven desde su router dedicado."""
+    """Las páginas HTML de los módulos registrados se sirven desde sus rutas dedicadas."""
     paths = {route.path for route in pages.router.routes}
-    assert paths == {"/", "/monitors", "/activity", "/findings", "/tools"}
+    assert paths == {"/", "/network", "/monitors", "/activity", "/findings", "/tools", "/forensics", "/world-map", "/guided-test"}
     assert all(not route.include_in_schema for route in pages.router.routes)
 
 

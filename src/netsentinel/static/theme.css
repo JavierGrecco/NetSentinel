@@ -985,7 +985,7 @@ html[data-theme] .app-section-heading-row .app-page-actions button {
 /* La navegación deja de estar atrapada en una columna lateral. */
 html[data-theme] .app-header-content > .primary-nav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   width: 100%;
@@ -1093,4 +1093,68 @@ html[data-theme] .app-header-content > .primary-nav .nav-link[aria-current="page
   html[data-theme] .app-header-utilities .theme-option-card {
     transition: none;
   }
+}
+
+
+/* Símbolo de marca compartido por las cabeceras de cada producto. */
+.app-brand-mark {
+  display: block;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  object-fit: contain;
+  border-radius: 14px;
+}
+@media (max-width: 560px) {
+  .app-brand-mark { width: 42px; height: 42px; flex-basis: 42px; }
+}
+
+/* Selector de producto: siempre visible y secundario a la navegación de la sección. */
+.product-switcher {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px 0 12px;
+  padding: 4px;
+  border: 1px solid var(--theme-line);
+  border-radius: 12px;
+  background: var(--theme-panel);
+}
+.product-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 5px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--theme-text);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.product-link img { display: block; width: 24px; height: 24px; flex: 0 0 24px; object-fit: contain; }
+.product-link:hover { border-color: var(--theme-accent); color: var(--theme-accent); }
+.product-link[aria-current="true"] {
+  background: var(--theme-info-bg);
+  border-color: var(--theme-accent-strong);
+  color: var(--theme-text);
+}
+html[data-theme] .product-link { color: var(--theme-text) !important; }
+html[data-theme] .product-link:hover { color: var(--theme-accent) !important; }
+html[data-theme] .product-link[aria-current="true"] {
+  background: var(--theme-info-bg) !important;
+  border-color: var(--theme-accent-strong) !important;
+  color: var(--theme-text) !important;
+}
+@media (max-width: 560px) {
+  .product-switcher { width: 100%; }
+  .product-link { flex: 1 1 auto; padding-inline: 7px; }
 }

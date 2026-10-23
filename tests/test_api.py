@@ -105,6 +105,43 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
         assert not (tmp_path / "netsentinel-errors.jsonl").exists()
 
 
+def test_scan_history_api_supports_stable_cursor_pagination(monkeypatch, tmp_path):
+    """Cada página continúa por la captura anterior sin repetir las ya devueltas."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    for octet in (31, 32, 33):
+        database.record_scan([
+            Neighbor(f"192.168.90.{octet}", f"02:00:00:00:90:{octet:02X}", "fixture0", "fixture-pagination"),
+        ])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        first_page = client.get("/api/scans", params={"limit": 2})
+        assert first_page.status_code == 200
+        first_items = first_page.json()
+        assert len(first_items) == 2
+        cursor = first_items[-1]
+        second_page = client.get(
+            "/api/scans",
+            params={
+                "limit": 2,
+                "before_started_at": cursor["started_at"],
+                "before_id": cursor["id"],
+            },
+        )
+        incomplete_cursor = client.get(
+            "/api/scans",
+            params={"limit": 2, "before_id": cursor["id"]},
+        )
+
+    assert second_page.status_code == 200
+    second_items = second_page.json()
+    assert len(second_items) == 1
+    assert {item["id"] for item in first_items}.isdisjoint(
+        {item["id"] for item in second_items}
+    )
+    assert incomplete_cursor.status_code == 422
+
+
 def test_scan_rejects_parallel_discovery_requests(monkeypatch, tmp_path):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
@@ -271,10 +308,12 @@ def test_security_headers_are_set(monkeypatch, tmp_path):
     ("route", "html_asset", "script_asset"),
     [
         ("/", "index.html", "index.js"),
+        ("/network", "network.html", "network.js"),
         ("/monitors", "monitors.html", "monitors.js"),
         ("/activity", "activity.html", "activity.js"),
         ("/tools", "tools.html", "tools.js"),
         ("/findings", "findings.html", "findings.js"),
+        ("/forensics", "forensics.html", "forensics.js"),
     ],
 )
 def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
@@ -286,6 +325,9 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     expected_scripts = {f"/static/{script_asset}", "/static/theme.js"}
     if route == "/":
+        expected_scripts.add("/static/scan-comparison.js")
+    if route == "/network":
+        expected_scripts.add("/static/cytoscape.min.js")
         expected_scripts.add("/static/topology.js")
         expected_scripts.add("/static/scan-comparison.js")
     if route in {"/monitors", "/activity"}:
@@ -335,10 +377,11 @@ def test_page_javascript_is_external_and_allowed_by_same_origin_csp(
 
 
 def test_shared_theme_and_task_focused_sections_are_present():
+    import re
     from pathlib import Path
 
     static = Path("src/netsentinel/static")
-    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html")
+    page_names = ("index.html", "findings.html", "monitors.html", "tools.html", "activity.html", "forensics.html")
     for page_name in page_names:
         html = (static / page_name).read_text(encoding="utf-8")
         assert 'id="themeSelect"' in html, f"{page_name} must expose the shared theme selector"
@@ -347,6 +390,8 @@ def test_shared_theme_and_task_focused_sections_are_present():
         assert 'value="dark"' in html and 'value="medium"' in html and 'value="light"' in html
         assert 'role="radiogroup" aria-label="Tema visual"' in html
         assert 'class="app-brand-name">NetSentinel</div>' in html
+        assert 'src="/static/netsentinel-red.svg"' in html
+        assert 'src="/static/netsentinel-forense.svg"' in html
         assert 'class="app-section-title"' in html
         assert 'class="app-section-description"' in html
         assert 'class="theme-option-card"' in html
@@ -376,6 +421,26 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "router_dns:" in activity_js and "router_flow:" in activity_js and "device_agent:" in activity_js
     assert "todavía no viene integrado" in activity_js
 
+    forensics_html = (static / "forensics.html").read_text(encoding="utf-8")
+    forensics_js = (static / "forensics.js").read_text(encoding="utf-8")
+    for identifier in ("forensicCaseForm", "forensicEvidenceForm", "forensicCaseList", "forensicAuditList"):
+        assert f'id="{identifier}"' in forensics_html
+    assert "source_description" in forensics_js
+    assert "reported_sha256" in forensics_js
+    assert "no verificado" in forensics_js
+    assert not re.search(r'<input[^>]+type="file"', forensics_html, re.IGNORECASE)
+    assert "credentials: \"same-origin\"" in forensics_js
+    assert 'name="received_at_original" type="text"' in forensics_html
+    assert 'name="received_at_local"' not in forensics_html
+    assert "currentLocalTimestampWithOffset" in forensics_js
+    assert "received_at_original: values.received_at_original.trim()" in forensics_js
+    assert "verify-hash" in forensics_js
+    assert "confirm_working_copy" in forensics_js
+    assert "Solo se consulta el nombre dentro de la carpeta forensics-working-copies" in forensics_js
+    assert 'pathInput.id = "forensic-copy-name-" + item.id' in forensics_js
+    assert 'pathInput.name = "source_name"' in forensics_js
+    assert 'source_name: pathInput.value.trim()' in forensics_js
+
     findings_js = (static / "findings.js").read_text(encoding="utf-8")
     assert "Marcar dispositivo como conocido" in findings_js
     assert "Solo marcar como revisado" in findings_js
@@ -383,11 +448,23 @@ def test_shared_theme_and_task_focused_sections_are_present():
     assert "Esto no equivale a una certificación de seguridad" in findings_js
 
 
+def test_forensic_brand_marks_are_served_as_local_svg_assets(monkeypatch, tmp_path):
+    """Los dos logos deben estar disponibles desde el paquete, sin CDN externo."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        for asset in ("netsentinel-red.svg", "netsentinel-forense.svg"):
+            response = client.get(f"/static/{asset}")
+            assert response.status_code == 200
+            assert "image/svg+xml" in response.headers["content-type"]
+            assert "<svg" in response.text
+            assert "<script" not in response.text.lower()
+
+
 def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
     import re
     from pathlib import Path
 
-    for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html"):
+    for asset in ("index.html", "monitors.html", "activity.html", "tools.html", "findings.html", "forensics.html"):
         content = Path("src/netsentinel/static", asset).read_text(encoding="utf-8")
         assert not re.search(r"\son[a-z]+\s*=", content, re.IGNORECASE), (
             f"{asset} contains an inline event handler incompatible with the local CSP policy"
@@ -402,6 +479,7 @@ def test_inline_event_handlers_are_not_reintroduced_in_application_pages():
         ("/activity", "activity.html"),
         ("/tools", "tools.html"),
         ("/findings", "findings.html"),
+        ("/forensics", "forensics.html"),
     ],
 )
 def test_application_pages_use_external_styles_without_inline_style(monkeypatch, tmp_path, route, asset):
@@ -655,7 +733,106 @@ def test_scan_comparison_endpoint_is_read_only_and_handles_invalid_pairs(monkeyp
     assert body["summary"]["address_changed"] == 1
     assert body["changes"][0]["baseline_addresses"] == ["192.168.5.4"]
     assert body["changes"][0]["comparison_addresses"] == ["192.168.5.5"]
+    assert body["changes"][0]["baseline_evidence"][0]["scan_id"] == first["scan_id"]
+    assert body["changes"][0]["baseline_evidence"][0]["ip_address"] == "192.168.5.4"
+    assert body["changes"][0]["baseline_evidence"][0]["observed_at"]
+    assert body["changes"][0]["baseline_evidence"][0]["source"] == "automatic-local-network"
+    assert body["changes"][0]["comparison_evidence"][0]["scan_id"] == second["scan_id"]
+    assert body["changes"][0]["comparison_evidence"][0]["ip_address"] == "192.168.5.5"
+    assert body["changes"][0]["comparison_evidence"][0]["observed_at"]
+    assert body["changes"][0]["comparison_evidence"][0]["source"] == "automatic-local-network"
     assert body["absence_note"]
     assert response.headers["cache-control"] == "no-store"
     assert same.status_code == 422
     assert missing.status_code == 404
+
+
+def test_events_api_can_filter_history_to_one_device(monkeypatch, tmp_path):
+    """Los eventos de un dispositivo no se mezclan con los de otro equipo."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([
+        Neighbor("192.168.50.10", "02:00:00:00:50:10", "fixture0", "fixture-events"),
+        Neighbor("192.168.50.20", "02:00:00:00:50:20", "fixture0", "fixture-events"),
+    ])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        devices = {
+            item["ip_address"]: item
+            for item in client.get("/api/devices").json()
+        }
+        first_id = devices["192.168.50.10"]["id"]
+        second_id = devices["192.168.50.20"]["id"]
+
+        all_events = client.get("/api/events?limit=50").json()
+        first_events = client.get(
+            "/api/events",
+            params={"device_id": first_id, "limit": 8},
+        )
+        second_events = client.get(
+            "/api/events",
+            params={"device_id": second_id, "limit": 8},
+        )
+
+    assert first_events.status_code == 200
+    assert second_events.status_code == 200
+    assert first_events.json()
+    assert second_events.json()
+    assert all(item["device_id"] == first_id for item in first_events.json())
+    assert all(item["device_id"] == second_id for item in second_events.json())
+    assert {item["device_id"] for item in all_events} == {first_id, second_id}
+
+
+def test_topology_api_returns_evidence_and_preserves_missing_scan_errors(monkeypatch, tmp_path):
+    """La API entrega un grafo documentado y distingue una lectura inexistente."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    scan = database.record_scan(
+        [Neighbor("192.168.56.20", "02:00:00:00:00:20", "en0", "fixture-topology")],
+        discovery={
+            "networks": [
+                {
+                    "network": "192.168.56.0/24",
+                    "interface": "en0",
+                    "local_address": "192.168.56.10",
+                    "range_limited": False,
+                }
+            ],
+            "scope": "Fixture sintética de prueba.",
+        },
+    )
+    scan_id = int(scan["scan_id"])
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get(f"/api/scans/{scan_id}/topology")
+        missing = client.get("/api/scans/999999/topology")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    graph = response.json()
+    assert graph["scan_id"] == str(scan_id)
+    assert graph["evidence_available"] is True
+    assert graph["network_scope_available"] is True
+    assert graph["stats"] == {
+        "observed_devices": 1,
+        "known_subnets": 1,
+        "observed_memberships": 1,
+        "unlinked_devices": 0,
+    }
+    subnet_node = next(node for node in graph["nodes"] if node["kind"] == "subnet")
+    assert subnet_node["local_address"] == "192.168.56.10"
+    assert subnet_node["range_limited"] is False
+    device_node = next(node for node in graph["nodes"] if node["kind"] == "device")
+    assert device_node["observations"] == [{
+        "ip_address": "192.168.56.20",
+        "sources": ["fixture-topology"],
+        "observed_at": [device_node["observations"][0]["observed_at"][0]],
+    }]
+    assert len(graph["edges"]) == 1
+    edge = graph["edges"][0]
+    assert edge["kind"] == "observed-subnet-membership"
+    assert edge["ip_address"] == "192.168.56.20"
+    assert edge["label"] == "192.168.56.20"
+    assert edge["sources"] == ["fixture-topology"]
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "No se encontró la lectura solicitada."

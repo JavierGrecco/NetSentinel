@@ -40,13 +40,31 @@ def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
 
 
 @router.get("/api/events")
-def events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
-    return database.get_events(limit=limit)
+def events(
+    limit: int = Query(default=50, ge=1, le=200),
+    device_id: int | None = Query(default=None, ge=1),
+) -> list[dict]:
+    """Lista los eventos recientes y permite ver solo los de un dispositivo."""
+    return database.get_events(limit=limit, device_id=device_id)
 
 
 @router.get("/api/scans")
-def scans(limit: int = Query(default=30, ge=1, le=100)) -> list[dict]:
-    return database.get_scans(limit=limit)
+def scans(
+    limit: int = Query(default=30, ge=1, le=100),
+    before_started_at: str | None = Query(default=None, min_length=1, max_length=64),
+    before_id: int | None = Query(default=None, ge=1),
+) -> list[dict]:
+    """Lista capturas recientes y permite pedir la página anterior con un cursor estable."""
+    if (before_started_at is None) != (before_id is None):
+        raise HTTPException(
+            status_code=422,
+            detail="Para cargar capturas anteriores se necesitan fecha e identificador de referencia.",
+        )
+    return database.get_scans(
+        limit=limit,
+        before_started_at=before_started_at,
+        before_id=before_id,
+    )
 
 @router.get("/api/scans/{scan_id}/observations")
 def scan_observations(scan_id: int) -> list[dict]:

@@ -63,6 +63,7 @@ def test_inline_script_hashing_handles_unusual_closing_tag_whitespace(closing_ta
         "/api/export/findings.json",
         "/api/export/data.json",
         "/api/export/backup.sqlite3",
+        "/world-map",
     ],
 )
 def test_local_pages_inventory_and_exports_are_never_cached(client, path):
@@ -143,11 +144,14 @@ def test_same_origin_dns_request_is_still_allowed(client, monkeypatch):
 @pytest.mark.parametrize(
     ("path", "expected_title", "expected_scripts"),
     [
-        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/topology.js", "/static/scan-comparison.js", "/static/index.js")),
+        ("/", "NetSentinel · Red local", ("/static/theme.js", "/static/scan-comparison.js", "/static/index.js")),
+        ("/network", "NetSentinel · Explorador de red", ("/static/theme.js", "/static/cytoscape.min.js", "/static/topology.js", "/static/scan-comparison.js", "/static/network.js")),
         ("/monitors", "NetSentinel · Monitorización", ("/static/theme.js", "/static/section-tabs.js", "/static/monitors.js")),
         ("/activity", "NetSentinel · Actividad y telemetría", ("/static/theme.js", "/static/section-tabs.js", "/static/activity.js")),
         ("/findings", "NetSentinel · Hallazgos", ("/static/theme.js", "/static/findings.js")),
         ("/tools", "Herramientas · NetSentinel", ("/static/theme.js", "/static/tools.js")),
+        ("/world-map", "NetSentinel · Mapa mundial de IP", ("/static/theme.js", "/static/geolocation.js")),
+        ("/guided-test", "NetSentinel · Asistente de pruebas", ("/static/theme.js", "/static/guided-test.js")),
     ],
 )
 def test_all_local_html_pages_preserve_csp_and_cache_protection(
@@ -197,6 +201,8 @@ def test_all_local_html_pages_preserve_csp_and_cache_protection(
         "/static/activity.js",
         "/static/findings.js",
         "/static/tools.js",
+        "/static/geolocation.js",
+        "/static/guided-test.js",
         "/static/theme.js",
         "/static/section-tabs.js",
     ],
@@ -213,3 +219,13 @@ def test_local_page_javascript_is_served_with_defensive_headers(client, asset):
     assert "script-src 'self'" in policy
     assert "'unsafe-inline'" not in policy
     assert "sha256-" not in policy
+
+
+
+def test_guided_test_stylesheet_is_served_with_defensive_headers(client):
+    """La nueva interfaz guiada debe servir su hoja de estilos local instalada."""
+    response = client.get("/static/guided-test.css")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert ".wizard-layout" in response.text and ".wizard-card" in response.text
+    assert_defensive_headers(response)

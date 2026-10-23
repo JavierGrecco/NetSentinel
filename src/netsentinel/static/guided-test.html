@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Asistente paso a paso para validar NetSentinel con resultados visibles y datos sintéticos aislados.">
+  <title>NetSentinel · Asistente de pruebas</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/guided-test.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="top app-header">
+    <div class="app-header-content">
+      <div class="app-header-brand-row">
+        <div class="app-brand">
+          <img class="app-brand-mark" src="/static/netsentinel-red.svg" alt="">
+          <div class="app-brand-copy">
+            <div class="eyebrow">Laboratorio de aceptación</div>
+            <div class="app-brand-name">NetSentinel</div>
+          </div>
+        </div>
+        <div class="app-header-utilities">
+          <div class="theme-control" role="group" aria-labelledby="themeControlLabel">
+            <div id="themeControlLabel" class="theme-control-label">Apariencia</div>
+            <div class="theme-options" role="radiogroup" aria-label="Tema visual">
+              <label class="theme-option">
+                <input id="themeSelect" name="themeSelect" type="radio" value="dark" checked>
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.9 13A8.7 8.7 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="theme-option-label">Oscuro</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectMedium" name="themeSelect" type="radio" value="medium">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" opacity=".2"/><path d="M12 3.5v17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Medio</span>
+                </span>
+              </label>
+              <label class="theme-option">
+                <input id="themeSelectLight" name="themeSelect" type="radio" value="light">
+                <span class="theme-option-card">
+                  <svg class="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.55 1.55m11.04 11.04 1.55 1.55M2 12h2.2m15.6 0H22M4.93 19.07l1.55-1.55M17.52 6.48l1.55-1.55" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="theme-option-label">Claro</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-section-heading-row">
+        <div class="app-section-heading">
+          <h1 class="app-section-title">Asistente de pruebas</h1>
+          <p class="app-section-description">Un paso por vez, con resultados visibles y una indicación clara de qué hacer después.</p>
+        </div>
+      </div>
+
+      <nav class="product-switcher" aria-label="Cambiar entre módulos NetSentinel">
+        <a class="product-link is-current" href="/" aria-current="true"><img src="/static/netsentinel-red.svg" alt="" width="24" height="24">NetSentinel Red</a>
+        <a class="product-link" href="/forensics"><img src="/static/netsentinel-forense.svg" alt="" width="24" height="24">NetSentinel Forense</a>
+      </nav>
+
+      <nav class="primary-nav" aria-label="Navegación principal">
+        <a class="nav-link" href="/">Inventario</a>
+        <a class="nav-link" href="/network">Mapa de red</a>
+        <a class="nav-link" href="/findings">Hallazgos</a>
+        <a class="nav-link" href="/monitors">Monitorización</a>
+        <a class="nav-link" href="/tools">Herramientas</a>
+        <a class="nav-link" href="/activity">Actividad</a>
+        <a class="nav-link" href="/world-map">Mapa mundial</a>
+        <a class="nav-link" aria-current="page" href="/guided-test">Asistente de pruebas</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="wizard-intro" aria-labelledby="wizardIntroTitle">
+    <div class="wizard-intro-copy">
+      <p class="wizard-kicker"><span class="wizard-live-dot" aria-hidden="true"></span> ENTORNO LOCAL · DATOS FICTICIOS</p>
+      <h2 id="wizardIntroTitle">Probemos el producto juntos</h2>
+      <p>El asistente mantiene esta guía abierta mientras cada módulo se abre en otra pestaña. Te muestra qué comprobar, qué resultado se espera y qué detectó la aplicación. Al final prepara un resumen para compartir.</p>
+    </div>
+    <div class="wizard-safety" role="note">
+      <strong><span aria-hidden="true">🔒</span> Sin escaneos automáticos</strong>
+      <p>Las comprobaciones automáticas de esta guía consultan datos locales en modo de lectura. El asistente <strong>no llama a <code>POST /api/scan</code></strong> ni inicia descubrimientos de red.</p>
+    </div>
+  </section>
+
+  <section class="wizard-layout" aria-label="Recorrido de validación">
+    <aside class="wizard-sidebar">
+      <section class="panel wizard-progress-panel" aria-labelledby="wizardProgressHeading">
+        <div class="wizard-progress-header">
+          <div>
+            <p class="wizard-kicker">TU RECORRIDO</p>
+            <h2 id="wizardProgressHeading">Progreso</h2>
+          </div>
+          <strong id="wizardProgressCount">0%</strong>
+        </div>
+        <div class="wizard-progress-track" id="wizardProgressBar" role="progressbar" aria-label="Progreso de la prueba" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="wizardProgressFill"></span>
+        </div>
+        <p id="wizardProgressText" class="wizard-muted">Todavía no empezaste. El asistente te irá indicando qué hacer.</p>
+        <ol id="wizardMilestones" class="wizard-milestones" aria-label="Fases de la prueba"></ol>
+      </section>
+
+      <details class="panel wizard-recovery" id="wizardRecoveryDetails">
+        <summary>¿Faltan los datos sintéticos?</summary>
+        <p>Esto solo es necesario si la comprobación inicial avisa que falta el dispositivo o la lectura sintética. No vuelvas a sembrar una base que ya contiene datos.</p>
+        <ol>
+          <li>Detené el servidor con <kbd>Ctrl+C</kbd> en la terminal donde corre.</li>
+          <li>Desde la raíz de esta copia del repositorio, ejecutá el bloque completo de abajo en una terminal y usá el nuevo servidor que arranque al final.</li>
+          <li>Cuando la terminal indique que el servidor está listo, volvé al navegador, recargá esta página y pulsá «Comprobar de nuevo». El recorrido debe permanecer en el paso de preparación.</li>
+        </ol>
+        <pre class="wizard-command"><code id="wizardRecoveryCommand">LAB_STAMP="$(date +%Y%m%d-%H%M%S)-$$"
+export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$LAB_STAMP"
+export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$LAB_STAMP"
+mkdir -p "$NETSENTINEL_DATA_DIR" "$(dirname "$SCENARIO_DIR")"
+python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
+python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology
+mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
+python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
+printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SCENARIO_DIR"
+./run.sh</code></pre>
+        <div class="wizard-recovery-actions">
+          <button type="button" id="wizardCopyRecovery" class="quiet">Copiar preparación</button>
+          <span id="wizardRecoveryStatus" class="wizard-muted" role="status" aria-live="polite"></span>
+        </div>
+      </details>
+
+      <button type="button" id="wizardRestart" class="quiet wizard-restart">Reiniciar el recorrido</button>
+    </aside>
+
+    <section class="panel wizard-card" aria-labelledby="wizardStepTitle">
+      <div class="wizard-step-header">
+        <div class="wizard-step-meta">
+          <span id="wizardStepNumber" class="wizard-step-number">00</span>
+          <span id="wizardStepPhase" class="wizard-step-phase">ANTES DE EMPEZAR</span>
+          <span id="wizardStepCounter" class="wizard-step-counter">Introducción</span>
+        </div>
+        <h2 id="wizardStepTitle" tabindex="-1">Vamos a validar NetSentinel paso a paso</h2>
+        <p id="wizardStepLead" class="wizard-step-lead">No tenés que recorrer la aplicación entera ni recordar una lista de tareas. El asistente te muestra una prueba a la vez.</p>
+      </div>
+
+      <div class="wizard-card-body">
+        <section class="wizard-explanation" aria-labelledby="wizardObjectiveHeading">
+          <h3 id="wizardObjectiveHeading">¿Qué vamos a comprobar?</h3>
+          <p id="wizardObjective">Primero comprobaremos que el laboratorio esté preparado y aislado.</p>
+        </section>
+
+        <section class="wizard-explanation" aria-labelledby="wizardWhyHeading">
+          <h3 id="wizardWhyHeading">¿Por qué importa?</h3>
+          <p id="wizardWhy">Si no sabemos qué datos se están usando, podríamos interpretar mal cualquier resultado.</p>
+        </section>
+
+        <section class="wizard-instructions-panel" aria-labelledby="wizardInstructionsHeading">
+          <h3 id="wizardInstructionsHeading">Qué tenés que hacer ahora</h3>
+          <ol id="wizardInstructions">
+            <li>Pulsá «Empezar» para abrir la primera comprobación.</li>
+          </ol>
+        </section>
+
+        <section class="wizard-expected-panel" aria-labelledby="wizardExpectedHeading">
+          <h3 id="wizardExpectedHeading">Resultado esperado</h3>
+          <p id="wizardExpected">Vas a ver el resultado aquí antes de pasar al siguiente paso.</p>
+        </section>
+
+        <section id="wizardReferencePanel" class="wizard-reference-panel" hidden aria-labelledby="wizardReferenceHeading">
+          <div class="wizard-automatic-header">
+            <h3 id="wizardReferenceHeading">Valores de referencia para completar el formulario</h3>
+            <button type="button" id="wizardCopyReferenceValues" class="quiet">Copiar valores</button>
+          </div>
+          <p id="wizardReferenceStatus" class="wizard-muted" role="status" aria-live="polite">Los valores son ficticios y solo deben usarse en este laboratorio.</p>
+          <dl id="wizardReferenceValues" class="wizard-reference-values"></dl>
+        </section>
+
+        <section id="wizardCommandPanel" class="wizard-command-panel" hidden aria-labelledby="wizardCommandHeading">
+          <div class="wizard-automatic-header">
+            <div>
+              <p class="wizard-kicker">COMANDO DE APOYO</p>
+              <h3 id="wizardCommandHeading">Cambiar la muestra sintética</h3>
+            </div>
+            <button type="button" id="wizardCopyCommand" class="quiet">Copiar comando</button>
+          </div>
+          <p id="wizardCommandDescription" class="wizard-muted"></p>
+          <pre class="wizard-command"><code id="wizardCommandText"></code></pre>
+          <p id="wizardCommandStatus" class="wizard-muted" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="wizardAutomaticPanel" class="wizard-automatic-panel" aria-labelledby="wizardAutomaticHeading" hidden>
+          <div class="wizard-automatic-header">
+            <div>
+              <p class="wizard-kicker">RESULTADO DE LA COMPROBACIÓN</p>
+              <h3 id="wizardAutomaticHeading">Resultado observado</h3>
+            </div>
+            <span id="wizardAutomaticBadge" class="wizard-result-badge">Pendiente</span>
+          </div>
+          <p id="wizardAutomaticSummary" class="wizard-automatic-summary"></p>
+          <ul id="wizardAutomaticDetails" class="wizard-check-results"></ul>
+        </section>
+
+        <section id="wizardSummaryPanel" class="wizard-summary-panel" hidden aria-labelledby="wizardSummaryHeading">
+          <div class="wizard-automatic-header">
+            <div>
+              <p class="wizard-kicker">CIERRE DEL RECORRIDO</p>
+              <h3 id="wizardSummaryHeading">Resumen de resultados</h3>
+            </div>
+            <span id="wizardSummaryBadge" class="wizard-result-badge">Pendiente</span>
+          </div>
+          <p id="wizardCompletionMessage" class="wizard-automatic-summary"></p>
+          <div id="wizardSummaryRows" class="wizard-summary-rows"></div>
+          <p class="wizard-summary-caveat">Este informe reúne resultados automáticos y observaciones declaradas por quien realizó la prueba. Completarlo no certifica el producto y no sustituye una revisión técnica.</p>
+        </section>
+
+        <section id="wizardActionPanel" class="wizard-action-panel" hidden>
+          <div class="wizard-action-copy">
+            <strong id="wizardActionTitle">Abrí el módulo que vamos a probar</strong>
+            <p id="wizardActionDescription">Se abrirá en otra pestaña. Cuando termines, volvé a esta guía.</p>
+          </div>
+          <a id="wizardActionLink" class="primary wizard-module-link" href="/activity" target="_blank" rel="noopener noreferrer">Abrir módulo en otra pestaña ↗</a>
+        </section>
+
+        <section id="wizardManualResultPanel" class="wizard-manual-result" aria-labelledby="wizardManualResultHeading" hidden>
+          <h3 id="wizardManualResultHeading">¿Qué resultado obtuviste?</h3>
+          <p>Elegí una opción después de observar el resultado en la otra pestaña. Esto guarda tu evaluación para el informe final; no marca automáticamente la prueba como correcta.</p>
+          <div class="wizard-outcome-buttons" role="group" aria-label="Resultado observado">
+            <button type="button" class="wizard-outcome is-pass" data-wizard-outcome="passed">Coincide con lo esperado</button>
+            <button type="button" class="wizard-outcome is-fail" data-wizard-outcome="failed">Encontré un fallo</button>
+            <button type="button" class="wizard-outcome is-blocked" data-wizard-outcome="blocked">No pude comprobarlo</button>
+          </div>
+          <p id="wizardManualOutcomeStatus" class="wizard-manual-outcome-status" role="status" aria-live="polite">Todavía no hay un resultado registrado para este paso.</p>
+        </section>
+
+        <section id="wizardNotesPanel" class="wizard-notes-panel" hidden>
+          <label for="wizardNotes">Nota opcional sobre lo que viste</label>
+          <textarea id="wizardNotes" rows="3" placeholder="Ej.: mostró 6 filas; la segunda importación reconoció los duplicados. No pegues IP, nombres ni información de tu red real."></textarea>
+          <p>La nota se guarda en este navegador y aparece en el resumen final. No se envía a un servicio externo.</p>
+        </section>
+
+        <p id="wizardMessage" class="wizard-message" role="status" aria-live="polite"></p>
+      </div>
+
+      <footer class="wizard-card-footer">
+        <button type="button" id="wizardPrevious" class="quiet">← Anterior</button>
+        <div class="wizard-footer-main-actions">
+          <button type="button" id="wizardStart" class="primary">Empezar la prueba →</button>
+          <button type="button" id="wizardRunCheck" class="primary" hidden>Comprobar ahora</button>
+          <button type="button" id="wizardCopyReport" class="quiet" hidden>Copiar informe</button>
+          <button type="button" id="wizardDownloadReport" class="quiet" hidden>Descargar informe .txt</button>
+          <button type="button" id="wizardNext" class="primary" hidden>Siguiente paso →</button>
+        </div>
+      </footer>
+      <p id="wizardFooterHint" class="wizard-footer-hint">La prueba no necesita escanear tu red ni usar datos reales.</p>
+    </section>
+  </section>
+
+  <footer class="footer">
+    <span>NetSentinel · Laboratorio de validación local</span>
+    <span><a href="https://github.com/JavierGrecco/NetSentinel/blob/qa/expert-acceptance-consolidated-2026-10/docs/EXPERT_ACCEPTANCE_LAB.md">Documentación técnica completa</a></span>
+  </footer>
+</main>
+<script src="/static/guided-test.js" defer></script>
+</body>
+</html>

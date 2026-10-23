@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_retention_service, activity_session_service
+from . import activity_deletion_service, activity_event_service, activity_filters, activity_import_service, activity_read_service, activity_retention_service, activity_session_service, activity_zeek_import_service
 from .activity_catalog import EVENT_SOURCES, EVENT_TYPES, PROTOCOLS, SESSION_SOURCES
 from .activity_session_service import InvalidCollectorToken
 from .activity_privacy import _domain, _email_address_list, _safe_page_url
@@ -82,6 +82,23 @@ def import_csv(device_id: int, csv_data: str, *, preview: bool = False) -> dict[
 def preview_csv(device_id: int, csv_data: str) -> dict[str, Any]:
     """Valida y muestra una vista previa de CSV sin almacenar los eventos."""
     return import_csv(device_id, csv_data, preview=True)
+
+
+def import_zeek_log(
+    device_id: int, log_data: str, *, preview: bool = False
+) -> dict[str, Any]:
+    """Delega la importación de Zeek JSON Lines o TSV al adaptador especializado."""
+    return activity_zeek_import_service.import_log(
+        device_id,
+        log_data,
+        normalize_event=normalize_event,
+        preview=preview,
+    )
+
+
+def preview_zeek_log(device_id: int, log_data: str) -> dict[str, Any]:
+    """Valida una exportación Zeek sin guardar datos."""
+    return import_zeek_log(device_id, log_data, preview=True)
 
 
 def update_retention(retention_days: int) -> dict[str, Any]:

@@ -355,7 +355,9 @@ def test_migrates_legacy_activity_events_without_losing_rows(tmp_path: Path):
 
     with database.connect(db) as connection:
         event = connection.execute(
-            """SELECT id, device_id, event_type, source, domain, page_url, email_subject
+            """SELECT id, device_id, event_type, source, domain, page_url, email_subject,
+                      source_ip, source_port, bytes_sent, bytes_received,
+                      packets_sent, packets_received, network_interface, source_event_id
                FROM activity_events WHERE id = 19"""
         ).fetchone()
         assert event is not None
@@ -367,18 +369,27 @@ def test_migrates_legacy_activity_events_without_losing_rows(tmp_path: Path):
             "domain": "legacy.example",
             "page_url": None,
             "email_subject": None,
+            "source_ip": None, "source_port": None, "bytes_sent": None, "bytes_received": None,
+            "packets_sent": None, "packets_received": None, "network_interface": None, "source_event_id": None,
         }
 
-        # La base migrada debe aceptar los tipos añadidos en versiones posteriores.
+        # La base migrada acepta campos adicionales y conserva los desconocidos como NULL.
         connection.execute(
             """INSERT INTO activity_events
-               (device_id, observed_at, received_at, event_type, source, page_url)
+               (device_id, observed_at, received_at, event_type, source, page_url,
+                source_ip, source_port, bytes_sent, packets_received, network_interface, source_event_id)
                VALUES (7, '2026-01-02T00:00:00+00:00', '2026-01-02T00:00:01+00:00',
-                       'page_visit', 'manual_import', 'https://example.com/')"""
+                       'page_visit', 'manual_import', 'https://example.com/',
+                       '192.0.2.7', 51514, 1200, 3, 'wan0', 'row-77')"""
         )
-        assert connection.execute(
-            "SELECT COUNT(*) FROM activity_events WHERE event_type = 'page_visit'"
-        ).fetchone()[0] == 1
+        inserted = connection.execute(
+            """SELECT source_ip, source_port, bytes_sent, packets_received, network_interface, source_event_id
+               FROM activity_events WHERE event_type = 'page_visit'"""
+        ).fetchone()
+        assert dict(inserted) == {
+            "source_ip": "192.0.2.7", "source_port": 51514, "bytes_sent": 1200,
+            "packets_received": 3, "network_interface": "wan0", "source_event_id": "row-77",
+        }
 
 
 def test_schema_initialization_rolls_back_when_the_initial_script_fails(tmp_path: Path):
@@ -718,9 +729,25 @@ def test_scan_comparison_uses_historical_observations_and_does_not_claim_disconn
     assert moved["status"] == "address_changed"
     assert moved["baseline_addresses"] == ["192.168.5.10"]
     assert moved["comparison_addresses"] == ["192.168.5.11"]
+    assert moved["baseline_evidence"] == [{
+        "scan_id": baseline["scan_id"],
+        "ip_address": "192.168.5.10",
+        "observed_at": moved["baseline_evidence"][0]["observed_at"],
+        "source": "automatic-local-network",
+    }]
+    assert moved["baseline_evidence"][0]["observed_at"]
+    assert moved["comparison_evidence"] == [{
+        "scan_id": comparison["scan_id"],
+        "ip_address": "192.168.5.11",
+        "observed_at": moved["comparison_evidence"][0]["observed_at"],
+        "source": "automatic-local-network",
+    }]
+    assert moved["comparison_evidence"][0]["observed_at"]
     not_seen_later = changes["AA:BB:CC:DD:EE:03"]
     assert not_seen_later["status"] == "only_in_baseline"
     assert not_seen_later["comparison_addresses"] == []
+    assert not_seen_later["baseline_evidence"]
+    assert not_seen_later["comparison_evidence"] == []
     assert "No demuestra" in result["absence_note"]
     assert "desconectado" not in not_seen_later["status"]
 
