@@ -13,7 +13,7 @@ def _stamp(value: datetime) -> str:
     return value.astimezone(timezone.utc).replace(microsecond=0).isoformat(timespec="seconds")
 
 
-def _database_with_zeek(monkeypatch, tmp_path, *, observed_at: datetime, source_id: str = "zeek:CZeekTest42", source: str = "manual_import"):
+def _database_with_zeek(monkeypatch, tmp_path, *, observed_at: datetime, source_id: str = "zeek:CZeekTest42", source: str = "manual_import", import_format: str = "zeek_conn_log"):
     monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
     database.initialize()
     stamp = _stamp(observed_at)
@@ -26,12 +26,12 @@ def _database_with_zeek(monkeypatch, tmp_path, *, observed_at: datetime, source_
         ).lastrowid
         db.execute(
             """INSERT INTO activity_events
-               (device_id, observed_at, received_at, event_type, source, source_event_id,
+               (device_id, observed_at, received_at, event_type, source, import_format, source_event_id,
                 source_ip, source_port, destination_ip, destination_port, protocol,
                 bytes_sent, bytes_received, packets_sent, packets_received)
-               VALUES (?, ?, ?, 'connection', ?, ?, ?, ?, ?, ?, 'tcp', 120, 240, 2, 3)""",
+               VALUES (?, ?, ?, 'connection', ?, ?, ?, ?, ?, ?, ?, 'tcp', 120, 240, 2, 3)""",
             (
-                device_id, stamp, _stamp(datetime.now(timezone.utc)), source, source_id,
+                device_id, stamp, _stamp(datetime.now(timezone.utc)), source, import_format, source_id,
                 "192.0.2.42", 51514, "198.51.100.10", 443,
             ),
         )
@@ -94,7 +94,7 @@ def test_zeek_context_query_matches_only_exact_monitor_ip_in_time_window(monkeyp
 def test_zeek_context_query_excludes_non_zeek_sources_and_out_of_window_records(monkeypatch, tmp_path):
     observed = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
     device_id, stamp = _database_with_zeek(
-        monkeypatch, tmp_path, observed_at=observed, source_id="csv:record-42"
+        monkeypatch, tmp_path, observed_at=observed, source_id="csv:record-42", import_format="csv"
     )
 
     contexts = [
