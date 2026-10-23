@@ -93,8 +93,7 @@ persona o equipo.
 
 ## Prueba B: mapa mundial de IP
 
-El mapa está integrado en `main`. No hace falta cambiar de rama; comprobá que
-la copia de trabajo use el commit de `origin/main` que vas a aceptar.
+El mapa también forma parte del checkout de la PR #200 usado para esta aceptación. Mantené la misma copia de trabajo y la misma base sintética durante todo el recorrido; registrá el SHA de esa copia para que el resultado quede asociado al código exacto probado.
 
 1. En Actividad, elegí el dispositivo **Dispositivo sintético de prueba** e
    importá `activity.csv`. Primero usá la vista previa; después confirmá la
@@ -122,7 +121,7 @@ El importador Zeek base está integrado en `main`. La correlación Hallazgos–Z
 el paso Zeek del asistente con detalle adicional; no instala Zeek, no inicia captura
 y no se conecta a un sensor. Para el recorrido principal, seguí `/guided-test`.
 
-1. Iniciá NetSentinel desde la copia de trabajo de `main` con una base de datos aislada.
+1. Iniciá NetSentinel desde la copia de trabajo de la PR #200 (mientras siga sin fusionarse) con la base de datos aislada que preparaste en el laboratorio experto.
 2. En Actividad, seleccioná **Dispositivo sintético de prueba**, cuya dirección
    debe coincidir con la opción --device-ip que usaste para crear la base y los archivos.
    No ejecutes descubrimientos ni cambies el inventario de tu red real para completar este escenario.
