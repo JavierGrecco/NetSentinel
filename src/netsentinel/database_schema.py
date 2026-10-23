@@ -129,6 +129,7 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 received_at TEXT NOT NULL,
                 event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                 source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                import_format TEXT NOT NULL DEFAULT 'unknown' CHECK (import_format IN ('unknown', 'csv', 'zeek_conn_log')),
                 source_event_id TEXT,
                 domain TEXT,
                 source_ip TEXT,
@@ -191,6 +192,7 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                     received_at TEXT NOT NULL,
                     event_type TEXT NOT NULL CHECK (event_type IN ('dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked', 'page_visit', 'search_query', 'email_metadata')),
                     source TEXT NOT NULL CHECK (source IN ('router_dns', 'router_flow', 'device_agent', 'manual_import')),
+                    import_format TEXT NOT NULL DEFAULT 'unknown' CHECK (import_format IN ('unknown', 'csv', 'zeek_conn_log')),
                     source_event_id TEXT,
                     domain TEXT,
                     source_ip TEXT,
@@ -216,11 +218,14 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             """)
             core_columns = [
                 "id", "session_id", "device_id", "observed_at", "received_at", "event_type",
-                "source", "source_event_id", "domain", "source_ip", "source_port",
+                "source", "import_format", "source_event_id", "domain", "source_ip", "source_port",
                 "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
                 "packets_sent", "packets_received", "network_interface", "app_name",
             ]
-            select_columns = [name if name in old_columns else "NULL" for name in core_columns]
+            select_columns = [
+                name if name in old_columns else ("'unknown'" if name == "import_format" else "NULL")
+                for name in core_columns
+            ]
             extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
             select_columns.extend(name if name in old_columns else "NULL" for name in extra_columns)
             select_columns.append("blocked" if "blocked" in old_columns else "0")
@@ -253,6 +258,24 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             for column, definition in column_definitions.items():
                 if column not in activity_columns:
                     db.execute(f"ALTER TABLE activity_events ADD COLUMN {column} {definition}")
+        # La etiqueta identifica el adaptador que guardó el registro, no una inferencia
+        # a partir de su contenido o de un ID que pudiera venir de un CSV.
+        activity_columns = {row[1] for row in db.execute("PRAGMA table_info(activity_events)")}
+        if "import_format" not in activity_columns:
+            db.execute(
+                "ALTER TABLE activity_events ADD COLUMN import_format TEXT NOT NULL DEFAULT 'unknown' "
+                "CHECK (import_format IN ('unknown', 'csv', 'zeek_conn_log'))"
+            )
+        # Los registros históricos con IDs zeek:* no prueban qué importador los creó.
+        # Se mantienen como unknown; el importador Zeek dedicado marca los nuevos registros.
+        db.execute(
+            """UPDATE activity_events
+               SET import_format = 'csv'
+               WHERE import_format = 'unknown'
+                 AND source = 'manual_import'
+                 AND (source_event_id IS NULL OR source_event_id NOT LIKE 'zeek:%')"""
+        )
+        db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_import_format_time ON activity_events(import_format, observed_at DESC, device_id)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_device_time ON activity_events(device_id, observed_at DESC)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_activity_events_observed_at ON activity_events(observed_at DESC)")
         # Compatibility for existing v0.1 installations.
