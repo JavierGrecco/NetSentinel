@@ -8,7 +8,7 @@ Cuando la vista Hallazgos reúne un evento del inventario o un incidente de disp
 
 - **Inventario:** solo consulta conexiones asignadas al mismo ID de dispositivo que figura en el evento y cuya hora observada cae dentro de una ventana de cinco minutos antes o después.
 - **Monitorización:** solo consulta conexiones donde la IP literal configurada en el objetivo del monitor coincide exactamente con la IP de origen o destino, cerca de la apertura o actualización del incidente. No resuelve nombres ni adivina equivalencias.
-- **Origen admisible:** registros con `source='manual_import'`, `event_type='connection'` y un identificador de origen con prefijo `zeek:`. Las conexiones importadas desde otra fuente no se mezclan.
+- **Origen admisible:** registros con `source='manual_import'`, `import_format='zeek_conn_log'`, `event_type='connection'` y un identificador de origen con prefijo `zeek:`. El formato se establece solo después de que el importador Zeek dedicado valida el archivo; una fila CSV no puede obtener esa etiqueta enviando un UID con apariencia de Zeek.
 - **Resultados:** se conservan el ID original del registro, la hora observada y recibida, el dispositivo asociado, los extremos de la conexión, el protocolo y los contadores que la fuente realmente informó. Un contador ausente sigue siendo desconocido; un cero real permanece cero.
 - **Límites:** hasta cinco registros por contexto y una ventana fija de ±300 segundos. La consulta agrupa contextos, parametriza valores y lee SQLite sin modificar los datos.
 - **Navegación:** cada conexión que lleva un identificador de origen enlaza a Actividad con el filtro por `source_event_id` exacto, y mantiene visible que la evidencia se importó.
@@ -23,7 +23,7 @@ Una proximidad temporal es **contexto para que una persona investigue**, no una 
 
 ## Privacidad, seguridad y retención
 
-La correlación usa únicamente filas ya guardadas. Respeta el mecanismo existente de retención de actividad; si la evidencia importada ya se eliminó, no reaparecerá. La vista no copia carga útil de paquetes, credenciales, contenido HTTPS ni PCAP. No se añade ningún colector ni se modifica la política de exportación por defecto.
+La correlación usa únicamente filas ya guardadas y marcadas por el importador dedicado. Respeta el mecanismo existente de retención de actividad; si la evidencia importada ya se eliminó, no reaparecerá. Los registros históricos con prefijo `zeek:` cuya ruta de importación no estaba registrada se conservan como `unknown` y no se atribuyen automáticamente a Zeek; al volver a importar el `conn.log` por la ruta dedicada, la nueva fila queda marcada de forma explícita. El histórico antiguo se conserva sin modificar. La vista no copia carga útil de paquetes, credenciales, contenido HTTPS ni PCAP. No se añade ningún colector ni se modifica la política de exportación por defecto.
 
 El filtro de Actividad exige un ID exacto de origen, lo valida como texto acotado y lo pasa como parámetro SQL. Se mantiene separado de los filtros de dispositivo, fuente, fecha y tipo.
 
