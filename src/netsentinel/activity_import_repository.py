@@ -71,7 +71,7 @@ def import_manual_events(
 
         duplicate_sql = (
             "SELECT 1 FROM activity_events "
-            "WHERE device_id = ? AND source = 'manual_import' AND import_format = ?"
+            "WHERE device_id = ? AND source = 'manual_import' AND (import_format = ? OR (import_format = 'unknown' AND ? = 'csv'))"
             + (" AND observed_at >= ?" if preview else "")
             + " AND " + " AND ".join(f"{field} IS ?" for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             + " LIMIT 1"
@@ -80,7 +80,7 @@ def import_manual_events(
         # Zeek usando un source_event_id que empiece por "zeek:".
         duplicate_source_id_sql = (
             "SELECT 1 FROM activity_events "
-            "WHERE device_id = ? AND source = 'manual_import' AND import_format = ? AND source_event_id = ?"
+            "WHERE device_id = ? AND source = 'manual_import' AND (import_format = ? OR (import_format = 'unknown' AND ? = 'csv')) AND source_event_id = ?"
             + (" AND observed_at >= ?" if preview else "")
             + " LIMIT 1"
         )
@@ -108,16 +108,16 @@ def import_manual_events(
                 seen_in_batch.add(identity)
                 if source_event_id:
                     params = (
-                        (device_id, import_format, source_event_id, cutoff)
+                        (device_id, import_format, import_format, source_event_id, cutoff)
                         if preview
-                        else (device_id, import_format, source_event_id)
+                        else (device_id, import_format, import_format, source_event_id)
                     )
                     duplicate = db.execute(duplicate_source_id_sql, params).fetchone()
                 else:
                     params = (
-                        (device_id, import_format, cutoff, *values)
+                        (device_id, import_format, import_format, cutoff, *values)
                         if preview
-                        else (device_id, import_format, *values)
+                        else (device_id, import_format, import_format, *values)
                     )
                     duplicate = db.execute(duplicate_sql, params).fetchone()
                 if duplicate:
