@@ -24,7 +24,7 @@ La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MON
 
 ## Validación automatizada
 
-**HEAD documental verificado:** [`60557638e89dcae377437263d74d2ff5e4ff9b1e`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e).
+**HEAD de referencia validado antes de esta actualización documental:** [`60557638e89dcae377437263d74d2ff5e4ff9b1e`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e). Esta revisión de estado se tramita por la [PR #190](https://github.com/JavierGrecco/NetSentinel/pull/190); sus checks específicos deben terminar antes de integrarla.
 
 Las tres ejecuciones de GitHub Actions terminaron correctamente sobre ese SHA:
 

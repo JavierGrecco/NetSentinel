@@ -1,7 +1,7 @@
 # Auditoría de ramas remotas — 22 de octubre de 2026
 
 **Último commit funcional revisado:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
-**HEAD documental auditado:** [`60557638`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e); CI 18/18, Security Analysis 2/2 y controles de cadena de suministro correctos en ese SHA.  
+**HEAD de referencia validado antes de esta actualización:** [`60557638`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e); CI 18/18, Security Analysis 2/2 y controles de cadena de suministro correctos en ese SHA. Esta actualización de auditoría se propone en la [PR #190](https://github.com/JavierGrecco/NetSentinel/pull/190).  
 **Rama canónica:** `main`
 
 ## Resumen de la auditoría
