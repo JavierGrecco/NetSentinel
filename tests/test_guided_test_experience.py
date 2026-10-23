@@ -34,6 +34,10 @@ def test_summary_allows_direct_review_without_restarting_the_wizard():
     assert "function jumpToStep(stepId)" in script
     assert "state.finishedAt = null" in script
     assert "Las respuestas y notas anteriores se conservaron" in script
+    assert 'id="wizardReturnToSummary"' in html
+    assert 'state.returnToSummary = returningFromCompletedSummary' in script
+    assert 'addEventListener("click", () => {' in script
+    assert "Resumen actualizado con los resultados y notas conservados" in script
 
 
 def test_phase_navigation_does_not_unlock_future_work_prematurely():

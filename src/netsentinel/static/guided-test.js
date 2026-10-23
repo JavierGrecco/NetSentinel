@@ -359,7 +359,7 @@
     ));
 
   function freshState() {
-    return { currentStep: 0, records: {}, finishedAt: null };
+    return { currentStep: 0, records: {}, finishedAt: null, returnToSummary: false };
   }
 
   function freshRecord() {
@@ -417,7 +417,8 @@
         currentStep: Number.isFinite(parsedStep)
           ? Math.max(0, Math.min(steps.length - 1, Math.floor(parsedStep))) : 0,
         records,
-        finishedAt: typeof saved.finishedAt === "string" && Number.isFinite(Date.parse(saved.finishedAt)) ? saved.finishedAt : null
+        finishedAt: typeof saved.finishedAt === "string" && Number.isFinite(Date.parse(saved.finishedAt)) ? saved.finishedAt : null,
+        returnToSummary: saved.returnToSummary === true
       };
     } catch (_) {
       return freshState();
@@ -770,6 +771,7 @@
     $("wizardNext").textContent = state.currentStep === steps.length - 2 ? "Ver resumen final →" : "Siguiente paso →";
     $("wizardCopyReport").hidden = step.type !== "summary";
     $("wizardDownloadReport").hidden = step.type !== "summary";
+    $("wizardReturnToSummary").hidden = step.type === "summary" || !state.returnToSummary;
     $("wizardFooterHint").textContent = step.type === "intro"
       ? "No hace falta marcar casillas. Empezá y seguí una indicación por vez."
       : step.type === "summary"
@@ -1127,6 +1129,9 @@
   function jumpToStep(stepId) {
     const targetIndex = steps.findIndex((step) => step.id === stepId && step.track);
     if (targetIndex < 1 || targetIndex >= steps.length - 1) return;
+    const returningFromCompletedSummary = steps[state.currentStep].type === "summary"
+      || Boolean(state.finishedAt) || state.returnToSummary;
+    state.returnToSummary = returningFromCompletedSummary;
     state.currentStep = targetIndex;
     // Si se vuelve a revisar una prueba, la fecha de cierre debe renovarse al terminar otra vez.
     state.finishedAt = null;
@@ -1148,7 +1153,10 @@
       return;
     }
     state.currentStep = Math.min(steps.length - 1, state.currentStep + 1);
-    if (steps[state.currentStep].type === "summary" && !state.finishedAt) state.finishedAt = new Date().toISOString();
+    if (steps[state.currentStep].type === "summary") {
+      if (!state.finishedAt) state.finishedAt = new Date().toISOString();
+      state.returnToSummary = false;
+    }
     saveState();
     renderStep();
     focusCurrentStepTitle();
@@ -1156,6 +1164,10 @@
   }
 
   function goBack() {
+    if (steps[state.currentStep].type === "summary") {
+      state.returnToSummary = true;
+      state.finishedAt = null;
+    }
     state.currentStep = Math.max(0, state.currentStep - 1);
     saveState();
     renderStep();
@@ -1196,6 +1208,25 @@
   $("wizardReviewNextIssue").addEventListener("click", () => {
     const firstIssue = trackedSteps.find((step) => recordFor(step).outcome !== "passed");
     if (firstIssue) jumpToStep(firstIssue.id);
+  });
+
+  $("wizardReturnToSummary").addEventListener("click", () => {
+    const missing = trackedSteps.find((step) => !recordFor(step).outcome);
+    if (missing) {
+      showMessage("Todavía falta registrar «" + missing.title + "». Completá ese paso antes de volver al resumen.", "warning");
+      return;
+    }
+    state.currentStep = steps.length - 1;
+    state.finishedAt = new Date().toISOString();
+    state.returnToSummary = false;
+    saveState();
+    renderStep();
+    focusCurrentStepTitle();
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+    });
+    showMessage("Resumen actualizado con los resultados y notas conservados.", "success");
   });
 
   $("wizardSummaryRows").addEventListener("click", (event) => {
