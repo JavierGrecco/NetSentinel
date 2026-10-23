@@ -187,11 +187,11 @@ def _seed_topology_fixture(data_dir: Path) -> None:
             # Hallazgo optativo y explícitamente ficticio para comprobar el enlace
             # con las conexiones Zeek importadas por la prueba guiada.
             correlation_device = db.execute(
-                "SELECT id FROM devices WHERE ip_address = ? ORDER BY id LIMIT 1",
+                "SELECT device_id FROM device_addresses WHERE ip_address = ? ORDER BY last_seen DESC LIMIT 1",
                 ("192.168.56.20",),
             ).fetchone()
             if correlation_device is None:
-                raise RuntimeError("No se encontró el activo sintético para la correlación Zeek.")
+                raise RuntimeError("No se encontró el historial IP del activo sintético para la correlación Zeek.")
             db.execute(
                 """INSERT INTO events
                    (event_type, severity, device_id, created_at, message, acknowledged)
@@ -199,7 +199,7 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 (
                     "new_device",
                     "warning",
-                    int(correlation_device["id"]),
+                    int(correlation_device["device_id"]),
                     datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                     "Fixture sintética: evento de laboratorio para validar correlación Zeek; no representa una observación real.",
                 ),
