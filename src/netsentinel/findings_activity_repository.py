@@ -131,6 +131,7 @@ def get_zeek_activity_contexts(
                      )
                     JOIN devices d ON d.id = e.device_id
                     WHERE e.source = 'manual_import'
+                      AND e.import_format = 'zeek_conn_log'
                       AND e.event_type = 'connection'
                       AND e.source_event_id LIKE 'zeek:%'
                 )
