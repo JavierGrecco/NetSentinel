@@ -51,6 +51,21 @@ def _normalized_source_event_id(value: str | None) -> str | None:
     return normalized
 
 
+_ALLOWED_IMPORT_FORMATS = frozenset({"unknown", "csv", "zeek_conn_log"})
+
+
+def _normalized_import_format(value: str | None) -> str | None:
+    """Acepta solo etiquetas de importación conocidas; nunca intenta inferirlas."""
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        raise ValueError("import_format debe ser texto.")
+    normalized = value.strip()
+    if normalized not in _ALLOWED_IMPORT_FORMATS:
+        raise ValueError("import_format debe ser unknown, csv o zeek_conn_log.")
+    return normalized
+
+
 def _build_event_filter(
     device_id: int | None,
     event_type: str | None,
@@ -58,6 +73,7 @@ def _build_event_filter(
     to_date: str | None,
     source: str | None,
     source_event_id: str | None = None,
+    import_format: str | None = None,
 ) -> tuple[str, tuple[Any, ...]]:
     """Construye solo predicados conocidos; los valores siempre van como parámetros."""
     clauses, params = activity_filters.activity_filter_values(
@@ -70,6 +86,10 @@ def _build_event_filter(
     if normalized_source_event_id is not None:
         clauses.append("e.source_event_id = ?")
         params.append(normalized_source_event_id)
+    normalized_import_format = _normalized_import_format(import_format)
+    if normalized_import_format is not None:
+        clauses.append("e.import_format = ?")
+        params.append(normalized_import_format)
     where_sql = "WHERE " + " AND ".join(clauses) if clauses else ""
     return where_sql, tuple(params)
 
@@ -82,11 +102,12 @@ def export_activity_csv(
     limit: int = 10000,
     source: str | None = None,
     source_event_id: str | None = None,
+    import_format: str | None = None,
 ) -> str:
     """Exporta hasta 10.000 filas filtradas como CSV seguro para hojas de cálculo."""
     normalized_device = _normalized_device_id(device_id)
     where_sql, filter_params = _build_event_filter(
-        normalized_device, event_type, from_date, to_date, source, source_event_id
+        normalized_device, event_type, from_date, to_date, source, source_event_id, import_format
     )
     events = activity_repository.get_activity_export_rows(
         where_sql=where_sql,
@@ -148,12 +169,15 @@ def get_activity(
     to_date: str | None = None,
     source: str | None = None,
     source_event_id: str | None = None,
+    import_format: str | None = None,
 ) -> dict[str, Any]:
     """Prepara el modelo de lectura; los filtros afectan a la lista de eventos."""
     normalized_device = _normalized_device_id(device_id)
     normalized_source_event_id = _normalized_source_event_id(source_event_id)
+    normalized_import_format = _normalized_import_format(import_format)
     event_filter, event_params = _build_event_filter(
-        normalized_device, event_type, from_date, to_date, source, normalized_source_event_id
+        normalized_device, event_type, from_date, to_date, source,
+        normalized_source_event_id, normalized_import_format
     )
     snapshot = activity_repository.get_activity_snapshot(
         device_id=normalized_device,
@@ -167,5 +191,6 @@ def get_activity(
         "activity_sources": sorted(EVENT_SOURCES | {"manual_import"}),
         "event_types": sorted(EVENT_TYPES),
         "focus_event_id": normalized_source_event_id,
+        "focus_import_format": normalized_import_format,
         "note": _ACTIVITY_NOTE,
     }
