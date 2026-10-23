@@ -1,48 +1,55 @@
 # Estado actual del proyecto
 
-**Actualizado:** 22 de octubre de 2026  
+**Actualizado:** 23 de octubre de 2026  
 **Rama canónica:** `main`  
-**Integración funcional:** [`f2f34a43`](https://github.com/JavierGrecco/NetSentinel/commit/f2f34a43fbbd88501782dda13baac6342b6ddcf4)  
-**Estado:** integración consolidada; aceptación local aún pendiente.
+**Última mejora funcional revisada:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
+**Estado:** integración consolidada; robustez de reintentos reforzada; aceptación local aún pendiente.
 
 ## Fuente única de trabajo
 
-La [PR #189](https://github.com/JavierGrecco/NetSentinel/pull/189) se integró mediante squash en `main`. Reúne en una sola versión el explorador LAN histórico, la importación controlada de Zeek, el mapa mundial con GeoIP local opcional, NetSentinel Forense y el asistente guiado de 12 pasos con datos sintéticos.
+La [PR #189](https://github.com/JavierGrecco/NetSentinel/pull/189) se integró mediante squash en `main`. Reúne el explorador LAN histórico, la importación controlada de Zeek, el mapa mundial con GeoIP local opcional, NetSentinel Forense y el asistente de aceptación de 12 pasos con datos sintéticos.
 
-Los cambios de esas funciones ya no deben buscarse en PR de integración separadas. Para preparar la siguiente prueba, usá [el laboratorio de aceptación](EXPERT_ACCEPTANCE_LAB.md) y [los escenarios sintéticos](MANUAL_TEST_SCENARIOS.md), ambos actualizados para trabajar desde `origin/main`.
+Los módulos funcionales deben tomarse desde `main`, no desde las ramas de integración antiguas. La guía para preparar la prueba desde `origin/main` es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); los archivos y casos de prueba están descritos en [MANUAL_TEST_SCENARIOS.md](MANUAL_TEST_SCENARIOS.md).
 
-## Estado de validación
+## Cambio funcional más reciente
 
-Sobre la cabeza integrada previa al merge (`a28dedb5c31345754f78b512fd6abcbbd0ca3ecb`) se registró:
+Se recuperó la protección de reintentos que existía en una rama antigua pero no había llegado al supervisor ya modularizado:
 
-- **CI:** 18/18 tareas correctas, incluida la suite Chromium responsive.
-- **Interfaz:** 135/135 comprobaciones automatizadas responsive correctas.
-- **Seguridad:** CodeQL y auditoría de dependencias correctos.
-- **Cadena de suministro:** detección de secretos, construcción del paquete, SBOM y manifiesto de integridad correctos. La firma de procedencia se omite en la ejecución de una PR.
+- Si una excepción inesperada impide completar la comprobación de un monitor, se aplica retroceso exponencial de 2, 4, 8 segundos y sucesivos, con un máximo de 60 segundos.
+- El retraso solo afecta al monitor que falla; los siguientes siguen ejecutándose.
+- El estado se borra cuando el monitor vuelve a funcionar, se desactiva o se elimina.
+- No se cambia el intervalo configurado ni se confunde una excepción inesperada con una respuesta de sonda que indica que el destino está caído.
 
-Ejecuciones previas al merge: [CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39875121099), [Security Analysis](https://github.com/JavierGrecco/NetSentinel/actions/runs/39875121139) y [Supply Chain Security](https://github.com/JavierGrecco/NetSentinel/actions/runs/39875121092).
+La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MONITORING.md](MONITORING.md).
 
-**Esto no valida todavía la sesión real en tu Mac.** Antes de probar, verificá que los workflows estén completos y correctos para el commit exacto de `main` que descargaste: cada commit nuevo necesita sus propios checks.
+## Validación automatizada
 
-## Corrección del control de secretos posterior al merge
+Sobre el commit funcional `91d5568a89ee8aa2cc6b8881a404bb69e96461c1`, en la última revisión:
 
-El primer workflow de cadena de suministro en `main` detectó como posible secreto el nombre de una preferencia de `localStorage` usado por la prueba responsive; no era una credencial. Se cambió el identificador en el script para evitar que esa preferencia parezca un secreto. La corrección solo se considera validada cuando los workflows del commit actual finalicen correctamente.
+- **Supply Chain Security:** correcto; detección de secretos, paquete, SBOM y manifiesto de integridad.
+- **Security Analysis:** correcto; auditoría de dependencias y CodeQL.
+- **CI multiplataforma y Chromium:** los trabajos restantes habían terminado correctamente o seguían en ejecución; no se observaba ningún fallo, pero faltaba confirmar el cierre del job de Python 3.13 en Ubuntu.
 
-## Puertas pendientes antes de considerar estable la versión 0.10.0
+Ejecuciones: [CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440216), [Security Analysis](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440226) y [Supply Chain Security](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440195).
 
-1. Ejecutar el recorrido guiado completo, usando solamente la base de datos y los archivos sintéticos de la guía. Registrar los 12 resultados, notas y SHA probado.
-2. Confirmar la experiencia real con teclado y lector de pantalla, legibilidad, navegación entre módulos y tamaños de escritorio/móvil.
-3. Revisar los informes, los errores recuperables y que fallos o pasos no comprobados nunca aparezcan como aprobados.
-4. Registrar resultados y evidencias en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), y abrir incidencias reproducibles para cualquier problema.
-5. Verificar por separado la protección de `main` y los checks requeridos; el seguimiento administrativo continúa en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+La prueba real en macOS, el teclado y el lector de pantalla siguen pendientes. Los checks automatizados no equivalen a una aceptación manual.
 
-La base GeoLite2-City no se descarga junto con las dependencias Python y requiere una instalación local autorizada. NetSentinel Forense sigue siendo experimental: un hash detecta cambios, pero no autentica por sí solo al operador ni crea una firma digital o un anclaje externo independiente.
+## Higiene del repositorio
 
-## Higiene de PR y ramas
+No hay PR abiertas de integración. La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) documenta las 174 referencias encontradas, las ramas duplicadas o reemplazadas y el contenido exclusivo recuperado a `main`.
 
-Las PR de integración #157, #171, #177, #183, #184 y #188 se cerraron como supersedidas por #189. Sus comentarios y commits siguen disponibles para auditoría. **Cerrar esas PR no borra sus ramas.**
+La limpieza lógica de PR está terminada, pero las ramas remotas no se han borrado físicamente. La auditoría separa las referencias asociadas a PR fusionadas de las ramas cerradas sin merge y de las que no tienen PR; no se deben eliminar en bloque sin comprobar el SHA actual de cada referencia.
 
-La enumeración de GitHub devolvió 174 ramas remotas. No se borraron referencias de rama en esta pasada, porque hacerlo sin comparar cada árbol contra `main` podría ocultar trabajo único. La limpieza física de ramas queda pendiente de una auditoría explícita de diferencias y de conservar cualquier cambio que no esté integrado. El alcance futuro se conserva en [FORENSIC_MODE_PROPOSAL.md](FORENSIC_MODE_PROPOSAL.md) como propuesta documental. No implica que los recolectores, categorías de artefactos o integraciones allí descritos estén implementados ni preparados para evidencia real.
+## Puertas pendientes antes de declarar estable la versión 0.10.0
+
+1. Cerrar CI, seguridad y cadena de suministro sobre el HEAD exacto que se usará para probar.
+2. Ejecutar el recorrido guiado completo usando solamente la base de datos y los archivos sintéticos de la guía; registrar los 12 resultados, las notas y el SHA probado.
+3. Revisar de forma real el teclado, el lector de pantalla, la claridad de las instrucciones, el cambio entre módulos y los tamaños de escritorio/móvil.
+4. Revisar el informe final y confirmar que los fallos y pasos no comprobados no aparecen como aprobados; registrar evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+5. Completar la eliminación controlada de ramas históricas según [BRANCH_AUDIT_2026-10.md](BRANCH_AUDIT_2026-10.md).
+6. Comprobar los ajustes de protección de `main`; el seguimiento administrativo continúa en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+
+GeoLite2-City no se descarga junto con las dependencias Python y necesita una instalación local autorizada. NetSentinel Forense sigue siendo experimental: un hash detecta cambios, pero no autentica por sí solo al operador ni crea una firma digital o un anclaje externo independiente.
 
 ## Documentación vigente
 
@@ -51,11 +58,8 @@ La enumeración de GitHub devolvió 174 ramas remotas. No se borraron referencia
 - [Matriz de validación](VALIDATION_MATRIX.md)
 - [Roadmap](ROADMAP.md)
 - [Arquitectura](ARCHITECTURE.md)
-- [Preparación manual en macOS](MACOS_MANUAL_TEST.md)
-- [Matriz de preparación forense](FORENSIC_READINESS_MATRIX.md)
-- [Propuesta estratégica de análisis forense — alcance futuro](FORENSIC_MODE_PROPOSAL.md)
-- [Mapa mundial de IP](WORLD_IP_MAP.md)
-- [Importación Zeek](ZEEK_CONNLOG_IMPORT.md)
+- [Seguimiento de ramas](BRANCH_AUDIT_2026-10.md)
 - [Explorador de topología LAN](NETWORK_OBSERVABILITY_CONSOLE.md)
-
-El seguimiento previo, con sus decisiones y evidencias históricas, se conserva en [PROJECT_STATUS_HISTORY_2026-10.md](PROJECT_STATUS_HISTORY_2026-10.md).
+- [Matriz de adopción de las referencias](REFERENCE_FEATURE_ADOPTION_MATRIX.md)
+- [Plan de reingeniería de referencia (decisiones históricas)](REFERENCE_REENGINEERING_PLAN.md)
+- [Alcance futuro de Forense](FORENSIC_MODE_PROPOSAL.md)
