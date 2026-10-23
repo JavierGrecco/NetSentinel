@@ -59,3 +59,6 @@ def test_findings_ui_uses_safe_text_rendering_and_no_store_fetches():
     assert 'JSON.stringify({acknowledged:true})' in script
     assert "DNS/TLS" in source
     assert "no demuestra identidad, ataque ni causa raíz" in source
+    assert "Conexiones Zeek en contexto temporal" in script
+    assert 'link.href = "/activity?"' in script
+    assert "related.notice" in script
