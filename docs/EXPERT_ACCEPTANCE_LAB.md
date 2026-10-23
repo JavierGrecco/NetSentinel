@@ -6,7 +6,7 @@
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
-El asistente reemplaza la lista de casillas dispersas por un recorrido de **12 pasos evaluables, uno por pantalla**. Explica qué se comprueba y por qué importa; abre el módulo necesario en otra pestaña sin cerrar la guía; muestra resultados de API en las pruebas automáticas de solo lectura; y permite registrar cada resultado como correcto, fallido o no comprobado. El cierre resume los estados y las notas, con opciones para copiar o descargar el informe. La guía no envía `POST /api/scan` ni inicia descubrimientos.
+El asistente reemplaza la lista de casillas dispersas por un recorrido de **12 pasos evaluables, uno por pantalla**. Explica qué se comprueba y por qué importa; abre el módulo necesario en otra pestaña sin cerrar la guía; muestra resultados de API en las pruebas automáticas de solo lectura; y permite registrar cada resultado como correcto, fallido o no comprobado. El progreso y las notas se guardan en el navegador, con un indicador visible y una señal cuando se recupera una sesión anterior. Las fases alcanzadas permiten volver a un paso sin reiniciar el recorrido; en el resumen, cada fila tiene una acción para revisar directamente ese paso y un acceso al primer pendiente o con incidencias. La guía no envía `POST /api/scan` ni inicia descubrimientos.
 
 ## Cobertura de aceptación
 

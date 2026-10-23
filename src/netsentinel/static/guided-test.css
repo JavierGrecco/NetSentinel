@@ -166,6 +166,28 @@
   color: var(--theme-good-text);
   border-color: var(--theme-info-line);
 }
+.wizard-milestone-button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wizard-milestone-button:disabled {
+  cursor: not-allowed;
+  opacity: .48;
+}
+.wizard-milestone-button:not(:disabled):hover .wizard-milestone-copy strong {
+  color: var(--theme-accent-strong);
+}
 .wizard-milestone-copy {
   display: grid;
   gap: 2px;
@@ -178,6 +200,20 @@
 .wizard-milestone-copy small {
   color: var(--theme-muted);
   font-size: 11px;
+}
+.wizard-save-status,
+.wizard-resume-notice {
+  margin: 8px 0 0;
+  color: var(--theme-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.wizard-save-status.is-error { color: var(--theme-bad-text); }
+.wizard-resume-notice {
+  padding: 9px 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 8px;
+  background: var(--theme-panel-alt);
 }
 .wizard-recovery { padding: 14px 16px; }
 .wizard-recovery summary {
@@ -566,6 +602,16 @@
   font-size: 11px;
   line-height: 1.5;
 }
+.wizard-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.wizard-summary-actions button {
+  min-height: 38px;
+  font-size: 12px;
+}
 .wizard-summary-rows {
   display: grid;
   gap: 7px;
@@ -623,6 +669,30 @@
   font-size: 11px;
   line-height: 1.6;
 }
+.wizard-summary-review {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 8px;
+  background: var(--theme-panel);
+  color: var(--theme-text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.wizard-summary-review:hover {
+  border-color: var(--theme-accent-strong);
+}
+.wizard-card button:focus-visible,
+.wizard-milestone-button:focus-visible,
+.wizard-summary-review:focus-visible,
+.wizard-module-link:focus-visible {
+  outline: 3px solid var(--theme-accent-strong);
+  outline-offset: 3px;
+}
 [hidden] { display: none !important; }
 
 @media (max-width: 1050px) {
@@ -640,6 +710,8 @@
 @media (max-width: 620px) {
   .wizard-intro-copy h2 { font-size: 25px; }
   .wizard-sidebar { display: flex; }
+  .wizard-summary-row { flex-wrap: wrap; }
+  .wizard-summary-review { align-self: flex-start; margin-left: 36px; }
   .wizard-step-meta { align-items: flex-start; }
   .wizard-step-counter { width: 100%; margin-left: 0; }
   .wizard-step-header { padding: 20px 17px; }
