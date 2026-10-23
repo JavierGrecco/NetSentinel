@@ -40,14 +40,20 @@ No hay PR abiertas de integración. La [auditoría de ramas](BRANCH_AUDIT_2026-1
 
 La limpieza lógica de PR está terminada, pero las ramas remotas no se han borrado físicamente. La auditoría separa las referencias asociadas a PR fusionadas de las ramas cerradas sin merge y de las que no tienen PR; no se deben eliminar en bloque sin comprobar el SHA actual de cada referencia.
 
+## Controles administrativos de GitHub
+
+La consulta del ruleset activo `rules` (ID `25281660`) mostró que tiene una regla de checks obligatorios, pero su lista está vacía; también requiere PR con cero aprobaciones y no incluye un patrón explícito en `ref_name` (`include: []`, `exclude: []`). El bypass está deshabilitado. El endpoint clásico de protección de ramas respondió 403 a la integración consultada, por lo que no se pudo confirmar ese estado por la vía alternativa.
+
+**Consecuencia:** no asumir que CI, seguridad y cadena de suministro son checks requeridos para fusionar. La configuración en Settings necesita revisión administrativa y una prueba real con una PR. La limpieza física de ramas queda en pausa hasta confirmar el alcance de la regla de borrado y comprobar los SHA candidatos. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73) y [auditoría de ramas](BRANCH_AUDIT_2026-10.md).
+
 ## Puertas pendientes antes de declarar estable la versión 0.10.0
 
 1. Cerrar CI, seguridad y cadena de suministro sobre el HEAD exacto que se usará para probar.
 2. Ejecutar el recorrido guiado completo usando solamente la base de datos y los archivos sintéticos de la guía; registrar los 12 resultados, las notas y el SHA probado.
 3. Revisar de forma real el teclado, el lector de pantalla, la claridad de las instrucciones, el cambio entre módulos y los tamaños de escritorio/móvil.
 4. Revisar el informe final y confirmar que los fallos y pasos no comprobados no aparecen como aprobados; registrar evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
-5. Completar la eliminación controlada de ramas históricas según [BRANCH_AUDIT_2026-10.md](BRANCH_AUDIT_2026-10.md).
-6. Comprobar los ajustes de protección de `main`; el seguimiento administrativo continúa en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+5. Corregir y verificar administrativamente el ruleset de `main` según [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73): patrón explícito y checks requeridos reales.
+6. Solo después de confirmar el alcance del ruleset, completar la eliminación controlada de ramas históricas según [BRANCH_AUDIT_2026-10.md](BRANCH_AUDIT_2026-10.md).
 
 GeoLite2-City no se descarga junto con las dependencias Python y necesita una instalación local autorizada. NetSentinel Forense sigue siendo experimental: un hash detecta cambios, pero no autentica por sí solo al operador ni crea una firma digital o un anclaje externo independiente.
 

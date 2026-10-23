@@ -49,6 +49,22 @@ Se compararon los árboles de las 21 referencias sin una PR fusionada asociada c
 
 La comparación de rutas no es lo mismo que declarar idénticos todos los archivos: ramas viejas contienen versiones anteriores de archivos compartidos. Por eso la limpieza debe basarse en el estado de las PR, el SHA remoto actual y la preservación de los cambios útiles, no en borrar todas las ramas por patrón.
 
+## Ruleset actual de GitHub: control pendiente
+
+Lectura directa del ruleset `rules` (ID `25281660`), consultado el 23 de octubre de 2026:
+
+- **Enforcement:** `active`.
+- **Reglas presentes:** `deletion`, `non_fast_forward`, `required_status_checks` y `pull_request`.
+- **Checks obligatorios configurados:** ninguno (`required_status_checks: []`).
+- **Aprobaciones requeridas:** 0.
+- **Patrón de referencias:** `include: []`, `exclude: []`; el alcance no queda expresado explícitamente en la respuesta consultada.
+- **Bypass:** sin actores; `current_user_can_bypass: never`.
+- La lectura del endpoint de protección clásica de `main` devolvió 403, por lo que no se pudo usar ese endpoint para verificar el estado clásico.
+
+El ruleset no demuestra por sí solo que CI y seguridad sean obligatorios antes de fusionar: la lista de checks está vacía. Antes de continuar con la poda física, una persona con permisos de administración debe configurar expresamente el alcance para `main`, elegir los contextos de CI/seguridad/cadena de suministro y comprobar el efecto de la regla de borrado. El seguimiento está en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
+
+**No se eliminó ninguna rama remota en esta auditoría.** La limpieza de PR y la auditoría de contenido están documentadas; la eliminación física sigue pendiente hasta resolver el alcance administrativo y comprobar el SHA remoto de cada rama candidata.
+
 ## Procedimiento seguro para la limpieza física
 
 1. Consultar una rama candidata y confirmar la PR que la fusionó o la PR posterior que la reemplazó.
