@@ -1,9 +1,11 @@
 # Estado actual del proyecto
 
-**Actualizado:** 22 de octubre de 2026 (Argentina/Córdoba)  
+**Actualizado:** 23 de octubre de 2026 (Argentina/Córdoba)  
 **Rama canónica:** `main`  
-**Última mejora funcional revisada:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
-**Estado:** integración consolidada; robustez de reintentos reforzada; aceptación local aún pendiente.
+**Último commit consultado en `main`:** [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95)  
+**Último cambio funcional de la guía:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
+**Última mejora de pruebas:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194), integrada en [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95).  
+**Estado:** integración consolidada; regresión interactiva del asistente comprobada en Chromium; aceptación manual y protección efectiva de `main` todavía pendientes.
 
 ## Fuente única de trabajo
 
@@ -11,7 +13,13 @@ La [PR #189](https://github.com/JavierGrecco/NetSentinel/pull/189) se integró m
 
 Los módulos funcionales deben tomarse desde `main`, no desde las ramas de integración antiguas. La guía para preparar la prueba desde `origin/main` es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); los archivos y casos de prueba están descritos en [MANUAL_TEST_SCENARIOS.md](MANUAL_TEST_SCENARIOS.md).
 
-## Cambio funcional más reciente
+## Cambio más reciente en la experiencia de aceptación
+
+La [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193) integró el asistente iterativo: navegación por fases alcanzadas, revisión directa de un paso desde el resumen, guardado y recuperación visible, y un desglose que separa correctos, fallidos, sin comprobar y pendientes. El commit de integración es [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).
+
+La [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) amplió el recorrido Chromium para probar la interacción real: revisar un paso desde su fila, cambiar su resultado, preservar una nota y volver al resumen sin reiniciar el asistente. Sus checks sobre el SHA de la PR terminaron correctamente: CI 18/18, Chromium 135/135, análisis de seguridad y cadena de suministro. El commit de merge en `main` es [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95).
+
+## Mejora anterior de monitorización
 
 Se recuperó la protección de reintentos que existía en una rama antigua pero no había llegado al supervisor ya modularizado:
 
@@ -24,15 +32,15 @@ La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MON
 
 ## Validación automatizada
 
-**Última referencia con matriz integral verde:** [`d25036e6fe189fc6dd338e224e2a03d3cb0c412d`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d).
+**Checks completos sobre el SHA de la PR #194** [`02bfbd73`](https://github.com/JavierGrecco/NetSentinel/commit/02bfbd733f67d67464d7d848816328e2da1565a4):
 
-- **CI:** 18/18 trabajos correctos, incluidos Python en Windows, macOS y Linux, y la comprobación de interfaz adaptable en Chromium. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358).
-- **Security Analysis:** 2/2 correctos; auditoría de dependencias y CodeQL. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271).
-- **Supply Chain Security:** detección de secretos y generación de wheel, SBOM y manifiesto de integridad correctas. La firma de procedencia se omite en ejecuciones que no corresponden a una publicación de release. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406).
+- **CI:** 18/18 trabajos correctos, incluida la matriz multiplataforma y Chromium con 135/135 comprobaciones. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943281106).
+- **Security Analysis:** 2/2 correctos. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943281170).
+- **Supply Chain Security:** detección de secretos y generación de paquete, SBOM y manifiesto de integridad correctas. La firma de procedencia se omite en ejecuciones que no corresponden a una publicación de release. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943281097).
 
-**Revisión posterior de solo documentación:** el contenido de la reconciliación en la [PR #191](https://github.com/JavierGrecco/NetSentinel/pull/191) también pasó sus checks: CI 18/18 ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547074)), Security Analysis 2/2 ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547141)) y Supply Chain Security correcta ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547143)). Esa PR modificó solo documentación; no cambió el código funcional.
+**Comprobaciones posteriores al merge:** en la consulta del 23/10/2026, los workflows de seguridad y cadena de suministro sobre el merge [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95) ya habían terminado correctamente. CI tenía 17/18 trabajos completados; el trabajo responsive Chromium seguía ejecutándose. [CI posterior al merge](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943667918), [seguridad](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943667935) y [cadena de suministro](https://github.com/JavierGrecco/NetSentinel/actions/runs/39943667953). Antes de la prueba local hay que volver a consultar Actions para el SHA vigente, no inferir un resultado final a partir de esta fotografía.
 
-Los checks automatizados no sustituyen la aceptación manual. La prueba real en macOS, el recorrido de los doce pasos con datos sintéticos, la evaluación con teclado/lector de pantalla y las observaciones visuales en escritorio y ventana estrecha siguen pendientes.
+Los checks automatizados no sustituyen la aceptación manual. El recorrido completo de doce pasos, la revisión visual, el teclado/lector de pantalla y las observaciones en escritorio y ventana estrecha siguen pendientes de registrar en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 ## Higiene del repositorio
 
@@ -44,7 +52,7 @@ La clasificación de ramas ya está reconciliada: 150 referencias coinciden exac
 
 La lectura del ruleset activo `rules` (ID `25281660`) muestra reglas de borrado, force-push, PR y checks obligatorios, pero la lista de checks está vacía; las aprobaciones requeridas son 0 y la condición `ref_name` devuelve `include: []`, `exclude: []`, sin declarar explícitamente el alcance esperado. No hay actores de bypass. Además, la API de ramas informa `protected: false` para `main`; el endpoint de protección clásica no estuvo disponible para la integración de revisión (403). Esto no permite afirmar que CI/seguridad sean requisitos de merge ni validar el alcance efectivo del ruleset. La administración debe resolverlo y probarlo antes de declarar completa la protección o eliminar referencias.
 
-**Consecuencia:** no asumir que CI, seguridad y cadena de suministro son checks requeridos para fusionar. La configuración en Settings necesita revisión administrativa y una prueba real con una PR. La limpieza física de ramas queda en pausa hasta confirmar el alcance de la regla de borrado y comprobar los SHA candidatos. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73) y [auditoría de ramas](BRANCH_AUDIT_2026-10.md).
+**Consecuencia:** la gobernanza de `main` sigue pendiente: no dar por hecho que CI, seguridad y cadena de suministro bloquean el merge. Se necesita un cambio administrativo en Settings y una prueba real con una PR. Mantener en pausa la limpieza de ramas hasta confirmar el alcance de las reglas y verificar cada SHA candidato. Seguimiento: [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195), [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73) y [auditoría de ramas](BRANCH_AUDIT_2026-10.md).
 
 ## Puertas pendientes antes de declarar estable la versión 0.10.0
 
@@ -52,7 +60,7 @@ La lectura del ruleset activo `rules` (ID `25281660`) muestra reglas de borrado,
 2. Ejecutar el recorrido guiado completo usando solamente la base de datos y los archivos sintéticos de la guía; registrar los 12 resultados, las notas y el SHA probado.
 3. Revisar de forma real el teclado, el lector de pantalla, la claridad de las instrucciones, el cambio entre módulos y los tamaños de escritorio/móvil.
 4. Revisar el informe final y confirmar que los fallos y pasos no comprobados no aparecen como aprobados; registrar evidencia en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
-5. Corregir y verificar administrativamente el ruleset de `main` según [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73): patrón explícito y checks requeridos reales.
+5. Corregir y verificar administrativamente el ruleset de `main` según [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195) y [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73): patrón explícito, checks requeridos reales y prueba de que se aplican a `main`.
 6. Solo después de confirmar el alcance del ruleset, completar la eliminación controlada de ramas históricas según [BRANCH_AUDIT_2026-10.md](BRANCH_AUDIT_2026-10.md).
 
 GeoLite2-City no se descarga junto con las dependencias Python y necesita una instalación local autorizada. NetSentinel Forense sigue siendo experimental: un hash detecta cambios, pero no autentica por sí solo al operador ni crea una firma digital o un anclaje externo independiente.
