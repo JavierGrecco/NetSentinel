@@ -1,4 +1,4 @@
-branch,head_sha_2026_10_23,classification,associated_prs,merged_pr_bases,exact_merged_head_matches,recommended_action,notes
+branch,head_sha_2026_10_22,classification,associated_prs,merged_pr_bases,exact_merged_head_matches,recommended_action,notes
 arch/close-boundary-policy-gaps,7bf0ff17badd07112e7f680acfc9c0b6413da0ff,CLOSED_UNMERGED_REVIEWED,#88 (closed),,,REVIEW_CONTENT_BEFORE_DELETE,PR cerradas sin merge. Ver BRANCH_AUDIT_2026-10.md para contenido preservado y motivo de cierre.
 arch/close-boundary-policy-gaps-v2,ae64eb9f22eb60fdcbf3b423334bfb43f147aca8,MERGED_TO_MAIN_HEAD_EXACT,#89 (merged into main),main,#89,CANDIDATE_AFTER_RULESET_ADMIN_REVIEW,HEAD actual coincide con la cabeza de origen de una PR fusionada directamente en main; verificar alcance del ruleset antes de borrar.
 chore/coordinate-codeql-dependabot,7407da69ff624c494cbe6d83d30a36995d1c5483,MERGED_TO_MAIN_HEAD_EXACT,#63 (merged into main),main,#63,CANDIDATE_AFTER_RULESET_ADMIN_REVIEW,HEAD actual coincide con la cabeza de origen de una PR fusionada directamente en main; verificar alcance del ruleset antes de borrar.

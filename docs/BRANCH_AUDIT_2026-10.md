@@ -1,6 +1,7 @@
-# Auditoría de ramas remotas — 23 de octubre de 2026
+# Auditoría de ramas remotas — 22 de octubre de 2026
 
-**HEAD de código revisado:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
+**Último commit funcional revisado:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
+**HEAD de referencia validado antes de esta actualización:** [`60557638`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e); CI 18/18, Security Analysis 2/2 y controles de cadena de suministro correctos en ese SHA. Esta actualización de auditoría se propone en la [PR #190](https://github.com/JavierGrecco/NetSentinel/pull/190).  
 **Rama canónica:** `main`
 
 ## Resumen de la auditoría
@@ -52,11 +53,11 @@ La comparación de rutas no es lo mismo que declarar idénticos todos los archiv
 
 ## Inventario exacto por rama
 
-El archivo [`BRANCH_CLEANUP_MANIFEST_2026-10.csv`](BRANCH_CLEANUP_MANIFEST_2026-10.csv) registra las 173 referencias fuera de `main`, el SHA observado el 23/10/2026, PR asociadas, coincidencia exacta con la cabeza de origen de PR fusionadas y acción recomendada. Es una fotografía de auditoría, no una orden de borrado: volvé a consultar el SHA de cada rama antes de cualquier eliminación.
+El archivo [`BRANCH_CLEANUP_MANIFEST_2026-10.csv`](BRANCH_CLEANUP_MANIFEST_2026-10.csv) registra las 173 referencias fuera de `main`, el SHA observado el 22/10/2026, PR asociadas, coincidencia exacta con la cabeza de origen de PR fusionadas y acción recomendada. Es una fotografía de auditoría, no una orden de borrado: volvé a consultar el SHA de cada rama antes de cualquier eliminación.
 
 ## Ruleset actual de GitHub: control pendiente
 
-Lectura directa del ruleset `rules` (ID `25281660`), consultado el 23 de octubre de 2026:
+Lectura directa del ruleset `rules` (ID `25281660`), consultado el 22 de octubre de 2026:
 
 - **Enforcement:** `active`.
 - **Reglas presentes:** `deletion`, `non_fast_forward`, `required_status_checks` y `pull_request`.
@@ -64,7 +65,7 @@ Lectura directa del ruleset `rules` (ID `25281660`), consultado el 23 de octubre
 - **Aprobaciones requeridas:** 0.
 - **Patrón de referencias:** `include: []`, `exclude: []`; el alcance no queda expresado explícitamente en la respuesta consultada.
 - **Bypass:** sin actores; `current_user_can_bypass: never`.
-- La lectura del endpoint de protección clásica de `main` devolvió 403, por lo que no se pudo usar ese endpoint para verificar el estado clásico.
+- La API de ramas informa `protected: false` para `main`, por lo que no declara protección clásica para la rama. El endpoint alternativo de protección clásica devolvió 403 a la integración de revisión. Esto es independiente del ruleset y no aclara por sí mismo el alcance de las reglas activas.
 
 El ruleset no demuestra por sí solo que CI y seguridad sean obligatorios antes de fusionar: la lista de checks está vacía. Antes de continuar con la poda física, una persona con permisos de administración debe configurar expresamente el alcance para `main`, elegir los contextos de CI/seguridad/cadena de suministro y comprobar el efecto de la regla de borrado. El seguimiento está en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73).
 
