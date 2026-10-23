@@ -100,10 +100,12 @@
           </div>
           <strong id="wizardProgressCount">0%</strong>
         </div>
-        <div class="wizard-progress-track" id="wizardProgressBar" role="progressbar" aria-label="Progreso de la prueba" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="wizard-progress-track" id="wizardProgressBar" role="progressbar" aria-label="Pasos evaluados" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 de 12 pasos con resultado">
           <span id="wizardProgressFill"></span>
         </div>
         <p id="wizardProgressText" class="wizard-muted">Todavía no empezaste. El asistente te irá indicando qué hacer.</p>
+        <p id="wizardSaveStatus" class="wizard-save-status">El avance y las notas se guardan en este navegador.</p>
+        <p id="wizardResumeNotice" class="wizard-resume-notice" hidden></p>
         <ol id="wizardMilestones" class="wizard-milestones" aria-label="Fases de la prueba"></ol>
       </section>
 
@@ -211,6 +213,9 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
             <span id="wizardSummaryBadge" class="wizard-result-badge">Pendiente</span>
           </div>
           <p id="wizardCompletionMessage" class="wizard-automatic-summary"></p>
+          <div class="wizard-summary-actions">
+            <button type="button" id="wizardReviewNextIssue" class="quiet" hidden>Revisar el primer paso pendiente o con incidencias</button>
+          </div>
           <div id="wizardSummaryRows" class="wizard-summary-rows"></div>
           <p class="wizard-summary-caveat">Este informe reúne resultados automáticos y observaciones declaradas por quien realizó la prueba. Completarlo no certifica el producto y no sustituye una revisión técnica.</p>
         </section>

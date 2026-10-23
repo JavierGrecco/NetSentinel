@@ -350,23 +350,73 @@
     }
   ];
 
-  const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Forense"];
+  const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Forense", "Cierre"];
   const trackedSteps = steps.filter((step) => step.track);
   let state = loadState();
+  const hasSavedProgress = state.currentStep > 0 || Boolean(state.finishedAt)
+    || Object.values(state.records).some((record) => record && (
+      Boolean(record.outcome) || Boolean(record.note) || Boolean(record.autoChecked)
+    ));
 
   function freshState() {
     return { currentStep: 0, records: {}, finishedAt: null };
   }
 
+  function freshRecord() {
+    return { outcome: null, note: "", opened: false, autoChecked: false, autoResult: null, checking: false };
+  }
+
+  function normalizeAutoResult(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const details = Array.isArray(value.details) ? value.details
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        label: typeof item.label === "string" ? item.label : "Detalle",
+        value: typeof item.value === "string" ? item.value : "",
+        ok: item.ok === true,
+        level: typeof item.level === "string" ? item.level : undefined
+      })) : [];
+    return {
+      ok: value.ok === true,
+      summary: typeof value.summary === "string" ? value.summary : "",
+      details,
+      checkedAt: typeof value.checkedAt === "string" ? value.checkedAt : null
+    };
+  }
+
+  function normalizeRecord(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return freshRecord();
+    const outcomes = ["passed", "failed", "blocked"];
+    return {
+      outcome: outcomes.includes(value.outcome) ? value.outcome : null,
+      note: typeof value.note === "string" ? value.note : "",
+      opened: value.opened === true,
+      autoChecked: value.autoChecked === true,
+      autoResult: normalizeAutoResult(value.autoResult),
+      // Si se recargó la página durante una petición, no dejar el botón bloqueado.
+      checking: false,
+      resultTimestamp: typeof value.resultTimestamp === "string" ? value.resultTimestamp : null
+    };
+  }
+
   function loadState() {
     try {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
-      if (!saved || typeof saved !== "object" || !saved.records || typeof saved.records !== "object") {
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)
+          || !saved.records || typeof saved.records !== "object" || Array.isArray(saved.records)) {
         return freshState();
       }
+      const records = {};
+      trackedSteps.forEach((step) => {
+        if (Object.prototype.hasOwnProperty.call(saved.records, step.id)) {
+          records[step.id] = normalizeRecord(saved.records[step.id]);
+        }
+      });
+      const parsedStep = Number(saved.currentStep);
       return {
-        currentStep: Math.max(0, Math.min(steps.length - 1, Number(saved.currentStep) || 0)),
-        records: saved.records,
+        currentStep: Number.isFinite(parsedStep)
+          ? Math.max(0, Math.min(steps.length - 1, Math.floor(parsedStep))) : 0,
+        records,
         finishedAt: typeof saved.finishedAt === "string" ? saved.finishedAt : null
       };
     } catch (_) {
@@ -377,16 +427,26 @@
   function saveState() {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const indicator = $("wizardSaveStatus");
+      if (indicator) {
+        indicator.textContent = "Guardado en este navegador";
+        indicator.classList.remove("is-error");
+      }
       return true;
     } catch (_) {
+      const indicator = $("wizardSaveStatus");
+      if (indicator) {
+        indicator.textContent = "No se pudo guardar. Descargá el informe antes de cerrar.";
+        indicator.classList.add("is-error");
+      }
       showMessage("El navegador no pudo guardar el progreso. Podés seguir durante esta visita; al final descargá el informe.", "warning");
       return false;
     }
   }
 
   function recordFor(step) {
-    if (!state.records[step.id]) {
-      state.records[step.id] = { outcome: null, note: "", opened: false, autoChecked: false, autoResult: null };
+    if (!state.records[step.id] || typeof state.records[step.id] !== "object" || Array.isArray(state.records[step.id])) {
+      state.records[step.id] = freshRecord();
     }
     return state.records[step.id];
   }
@@ -423,14 +483,21 @@
   }
 
   function updateProgress() {
-    const completed = trackedSteps.filter((step) => Boolean(recordFor(step).outcome)).length;
+    const outcomes = trackedSteps.map((step) => recordFor(step).outcome);
+    const completed = outcomes.filter(Boolean).length;
+    const passed = outcomes.filter((outcome) => outcome === "passed").length;
+    const failed = outcomes.filter((outcome) => outcome === "failed").length;
+    const blocked = outcomes.filter((outcome) => outcome === "blocked").length;
+    const pending = trackedSteps.length - completed;
     const percentage = Math.round((completed / trackedSteps.length) * 100);
+    const detail = completed + " de " + trackedSteps.length + " con resultado · "
+      + passed + " correctos · " + failed + " fallidos · " + blocked
+      + " sin comprobar · " + pending + " pendientes.";
     $("wizardProgressCount").textContent = percentage + "%";
     $("wizardProgressFill").style.width = percentage + "%";
     $("wizardProgressBar").setAttribute("aria-valuenow", String(percentage));
-    $("wizardProgressText").textContent = completed === trackedSteps.length
-      ? "Todos los pasos evaluables tienen un resultado registrado."
-      : completed + " de " + trackedSteps.length + " pasos evaluados. El asistente no adivina resultados manuales.";
+    $("wizardProgressBar").setAttribute("aria-valuetext", detail);
+    $("wizardProgressText").textContent = detail;
     renderMilestones();
   }
 
@@ -443,11 +510,44 @@
       const activeStep = steps[state.currentStep];
       const active = activeStep && activeStep.phase === phase;
       const li = makeNode("li", "wizard-milestone" + (active ? " is-current" : "") + (group.length && done === group.length ? " is-complete" : ""));
-      const symbol = makeNode("span", "wizard-milestone-symbol", done === group.length && group.length ? "✓" : String(group.findIndex((step) => !recordFor(step).outcome) + 1).padStart(2, "0"));
+      const nextInGroup = group.find((step) => recordFor(step).outcome !== "passed");
+      const symbolText = !group.length
+        ? (active ? "✓" : "—")
+        : done === group.length ? "✓"
+          : String(Math.max(1, group.findIndex((step) => !recordFor(step).outcome) + 1)).padStart(2, "0");
+      const symbol = makeNode("span", "wizard-milestone-symbol", symbolText);
       const textWrap = makeNode("span", "wizard-milestone-copy");
       textWrap.append(makeNode("strong", "", phase));
-      textWrap.append(makeNode("small", "", group.length ? done + " de " + group.length + " pruebas" : "Cierre e informe"));
-      li.append(symbol, textWrap);
+      textWrap.append(makeNode("small", "", group.length
+        ? done + " de " + group.length + " pruebas"
+        : "Resumen e informe"));
+
+      if (!group.length) {
+        li.append(symbol, textWrap);
+        container.append(li);
+        return;
+      }
+
+      const firstIndex = trackedSteps.findIndex((step) => step.id === group[0].id);
+      const prerequisitesMet = trackedSteps.slice(0, firstIndex)
+        .every((step) => Boolean(recordFor(step).outcome));
+      const button = makeNode("button", "wizard-milestone-button");
+      button.type = "button";
+      button.disabled = !prerequisitesMet && !active;
+      button.setAttribute("aria-label", phase + ": " + (done === group.length
+        ? "revisar esta fase"
+        : "ir al primer paso pendiente o con incidencias"));
+      if (active) button.setAttribute("aria-current", "step");
+      button.title = button.disabled
+        ? "Completá o registrá un resultado en los pasos anteriores para habilitar esta fase."
+        : "Abrir el primer paso pendiente o con incidencias de esta fase.";
+      button.append(symbol, textWrap);
+      button.addEventListener("click", () => {
+        const currentInGroup = group.find((step) => step.id === activeStep.id);
+        const target = currentInGroup || nextInGroup || group[0];
+        jumpToStep(target.id);
+      });
+      li.append(button);
       container.append(li);
     });
   }
@@ -590,6 +690,12 @@
       timeStyle: "short"
     }).format(finishedAt);
     $("wizardCompletionMessage").textContent = "PRUEBA GUIADA FINALIZADA · " + finishedText + ". " + summary;
+    const firstIssue = trackedSteps.find((step) => recordFor(step).outcome !== "passed");
+    const reviewNextIssue = $("wizardReviewNextIssue");
+    reviewNextIssue.hidden = !firstIssue;
+    reviewNextIssue.textContent = firstIssue && !recordFor(firstIssue).outcome
+      ? "Ir al primer paso pendiente"
+      : "Revisar el primer paso con incidencias";
     const rows = $("wizardSummaryRows");
     rows.replaceChildren();
     trackedSteps.forEach((step) => {
@@ -603,7 +709,11 @@
         copy.append(makeNode("small", "", record.autoResult.summary));
       }
       if (record.note) copy.append(makeNode("p", "wizard-summary-note", record.note));
-      row.append(icon, copy);
+      const reviewButton = makeNode("button", "wizard-summary-review", "Revisar paso");
+      reviewButton.type = "button";
+      reviewButton.dataset.wizardReviewStep = step.id;
+      reviewButton.setAttribute("aria-label", "Revisar paso: " + step.title);
+      row.append(icon, copy, reviewButton);
       rows.append(row);
     });
     showPanel("wizardSummaryPanel", true);
@@ -1014,6 +1124,22 @@
     }
   }
 
+  function jumpToStep(stepId) {
+    const targetIndex = steps.findIndex((step) => step.id === stepId && step.track);
+    if (targetIndex < 1 || targetIndex >= steps.length - 1) return;
+    state.currentStep = targetIndex;
+    // Si se vuelve a revisar una prueba, la fecha de cierre debe renovarse al terminar otra vez.
+    state.finishedAt = null;
+    saveState();
+    renderStep();
+    focusCurrentStepTitle();
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+    });
+    showMessage("Volviste a «" + steps[targetIndex].title + "». Las respuestas y notas anteriores se conservaron; podés ajustarlas según lo que observes.", "success");
+  }
+
   function advance() {
     const step = steps[state.currentStep];
     const record = step.track ? recordFor(step) : null;
@@ -1066,6 +1192,16 @@
   $("wizardNext").addEventListener("click", advance);
   $("wizardPrevious").addEventListener("click", goBack);
   $("wizardRunCheck").addEventListener("click", runCheck);
+
+  $("wizardReviewNextIssue").addEventListener("click", () => {
+    const firstIssue = trackedSteps.find((step) => recordFor(step).outcome !== "passed");
+    if (firstIssue) jumpToStep(firstIssue.id);
+  });
+
+  $("wizardSummaryRows").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-wizard-review-step]");
+    if (button) jumpToStep(button.dataset.wizardReviewStep);
+  });
 
   $("wizardActionLink").addEventListener("click", () => {
     const step = steps[state.currentStep];
@@ -1160,5 +1296,10 @@
     showMessage("Informe .txt descargado en tu computadora.", "success");
   });
 
+  const resumeNotice = $("wizardResumeNotice");
+  if (hasSavedProgress) {
+    resumeNotice.hidden = false;
+    resumeNotice.textContent = "Se recuperó un recorrido anterior de este navegador. Retomás en el paso guardado; podés volver a fases anteriores sin perder notas.";
+  }
   renderStep();
 })();
