@@ -2086,8 +2086,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             report_text = Path(report_path).read_text(encoding="utf-8") if report_path else ""
             for expected_text in (
                 "NetSentinel — Informe del asistente de aceptación",
-                "Resumen: 12 de 12 pasos con resultado registrado.",
-                "Correctos: 10 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
+                "Resumen: 13 de 13 pasos con resultado registrado.",
+                "Correctos: 11 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
                 "Resultado: Falló",
                 "Resultado: No pude comprobarlo",
             ):
