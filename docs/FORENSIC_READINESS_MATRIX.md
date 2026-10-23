@@ -1,6 +1,6 @@
 # Matriz de preparación pericial de NetSentinel Forense
 
-**Estado de esta rama:** laboratorio experimental. Esta matriz distingue una función que existe y tiene pruebas de una garantía forense que todavía no se puede afirmar. No es certificación, acreditación ni asesoramiento legal.
+**Estado en `main`:** módulo experimental con aceptación manual pendiente. Esta matriz distingue una función que existe y tiene pruebas de una garantía forense que todavía no se puede afirmar. No es certificación, acreditación ni asesoramiento legal.
 
 ## Referencias de trabajo
 

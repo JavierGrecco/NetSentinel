@@ -1,20 +1,24 @@
 # Prueba manual del explorador de red
 
-**Estado:** pendiente de completar por una persona usuaria antes de dar por cerrada la primera etapa.  
+**Estado:** pendiente de aceptación manual sobre la integración de `main` antes de dar por cerrada la primera etapa.  
 **Ruta:** `/network`  
-**Rama:** `feat/network-observability-console-2026-10`
+**Rama canónica:** `main`
 
 Estas pruebas verifican la experiencia del explorador, no demuestran que NetSentinel vea todo el tráfico de la red. No hace falta ejecutar pruebas contra redes ajenas ni instalar agentes.
 
 ## 1. Preparar la versión
 
-Actualizá la rama del proyecto:
+Prepará una copia de trabajo independiente de la rama actual, siguiendo estas instrucciones desde la raíz de tu checkout actual:
 
 ```bash
-git fetch origin
-git switch feat/network-observability-console-2026-10
-git pull --ff-only origin feat/network-observability-console-2026-10
+git fetch origin "refs/heads/main:refs/remotes/origin/main"
+git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/main
+cd ../NetSentinel-acceptance-lab
+git rev-parse HEAD
+git status --short
 ```
+
+Si `../NetSentinel-acceptance-lab` ya existe por la guía de aceptación experta, no crees otra; usá esa copia y confirmá que el commit sea el que vas a probar.
 
 En una terminal, iniciá NetSentinel con el lanzador normal de tu sistema. Abrí `http://127.0.0.1:8765/network` en el navegador.
 

@@ -2,7 +2,7 @@
 
 ## Estado y propósito
 
-En esta rama de laboratorio integrada, la pantalla `/world-map` se sirve junto con NetSentinel Red y NetSentinel Forense. `/api/geolocation/map` lista destinos observados y `/api/geolocation/lookup` enriquece direcciones que la persona usuaria ya resolvió manualmente. La rama sigue siendo experimental y no modifica `main`.
+La pantalla `/world-map` está integrada en `main` junto con NetSentinel Red y NetSentinel Forense. `/api/geolocation/map` lista destinos observados y `/api/geolocation/lookup` enriquece direcciones que la persona usuaria ya resolvió manualmente. La función es experimental y su aceptación manual todavía está pendiente.
 
 La vista muestra ubicaciones aproximadas de direcciones IP públicas que **ya existen como `destination_ip` en eventos guardados en la base local de NetSentinel**. No es un mapa de dispositivos LAN, no descubre IP externas y no captura conexiones o paquetes en vivo.
 
@@ -39,6 +39,6 @@ La cartografía mundial se incluye localmente en `src/netsentinel/static/world_1
 
 ## Integraciones todavía pendientes
 
-Esta primera entrega no incluye un colector de paquetes, actividad continua TCP/UDP/ICMP, NetFlow/IPFIX, integración automática con un router, un escaneo WAN/UPnP, threat intelligence ni reputación de IP. El importador específico de Zeek se mantiene en la [PR #177](https://github.com/JavierGrecco/NetSentinel/pull/177); hasta que se integre, el CSV de actividad ya existente permite importar IP destino que realmente vengan registradas en una fuente autorizada. Ninguna de estas vías convierte el mapa en un capturador en vivo.
+Esta primera entrega no incluye un colector de paquetes, actividad continua TCP/UDP/ICMP, NetFlow/IPFIX, integración automática con un router, un escaneo WAN/UPnP, threat intelligence ni reputación de IP. El importador específico de Zeek ya está integrado en `main`; sus límites, formato y procedimientos manuales están descritos en [ZEEK_CONNLOG_IMPORT.md](ZEEK_CONNLOG_IMPORT.md). También se puede importar CSV de actividad cuando contiene IP destino procedentes de una fuente autorizada. Ninguna de estas vías convierte el mapa en un capturador en vivo.
 
 Para avanzar, primero hay que validar el mapa con eventos sintéticos conocidos y una base GeoIP de prueba o autorizada, revisar la privacidad/retención y documentar el resultado de la ejecución local. Solo después conviene evaluar fuentes adicionales una por una.

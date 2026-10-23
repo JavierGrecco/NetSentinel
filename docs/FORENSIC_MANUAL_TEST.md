@@ -2,13 +2,13 @@
 
 **Objetivo:** revisar el flujo inicial en una instalación local con datos sintéticos, sin tocar evidencia real.
 
-**Estado:** guía preparada; la ejecución manual de esta nueva pantalla todavía debe registrarse. La prueba anterior de NetSentinel Red no cubre Forense.
+**Estado:** guía preparada; la ejecución manual de Forense todavía debe registrarse. La función está integrada en `main`, pero la prueba anterior de NetSentinel Red no cubre esta pantalla.
 
 ## Preparación
 
 Esta guía complementa la pantalla `/guided-test`. Si ya seguiste allí la preparación, **no vuelvas a sembrar la base, no cambies de `NETSENTINEL_DATA_DIR` y no arranques una segunda instancia de NetSentinel**.
 
-1. Usá la rama integrada `qa/integrated-map-forensics-scenarios-2026-10`. La preparación de la prueba guiada imprime el valor exacto de `NETSENTINEL_DATA_DIR`, crea `forensics-working-copies/netsentinel-forensic-sample.bin` con el contenido sintético `NetSentinel synthetic evidence v1` y muestra su SHA-256.
+1. Usá la copia de trabajo preparada desde `origin/main` según [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). La prueba guiada imprime el valor exacto de `NETSENTINEL_DATA_DIR`, crea `forensics-working-copies/netsentinel-forensic-sample.bin` con el contenido sintético `NetSentinel synthetic evidence v1` y muestra su SHA-256. No cambies a una rama QA antigua ni repitas la preparación si ya existe la muestra.
 2. Mantené abierta la terminal en la que ya se está ejecutando NetSentinel. En el navegador, abrí `http://127.0.0.1:8765/forensics`.
 3. Si el archivo sintético no existe, abrí una **segunda terminal** y usá la misma ruta que imprimió la preparación. En macOS o Linux:
 
@@ -26,7 +26,7 @@ Esta guía complementa la pantalla `/guided-test`. Si ya seguiste allí la prepa
 
 1. **Abrir un caso.** Usá `LAB-SINTETICO-001`, el título `Verificación de archivo sintético`, la referencia `AUTORIZACION-DE-PRUEBA`, el objetivo `Probar coincidencia y discrepancia SHA-256 de una muestra sintética.` y el alcance `Solo netsentinel-forensic-sample.bin en forensics-working-copies; sin evidencia real.` Indicá `Examinador sintético` como examinador y `Operador sintético de prueba` como persona que realiza la operación.
 2. **Registrar el elemento.** Usá la descripción breve `Muestra sintética de integridad`, seleccioná “Copia de archivo”, ingresá `netsentinel-forensic-sample.bin`, la descripción `Archivo artificial para validar el control de integridad; no es evidencia real.`, `Generador local de pruebas` como fuente que entrega y `Examinador sintético` como persona que recibe y queda a cargo. La hora y zona horaria del formulario se completan automáticamente; el tamaño es opcional. Pegá el SHA-256 que imprimió la preparación y escribí `SHA-256 calculado por el generador local al crear la muestra` como origen del hash informado.
-3. **Comprobar coincidencia.**** Abrí “Comparar con una copia de trabajo”, escribí solo el nombre `netsentinel-forensic-sample.bin`, sin ruta y marcá la confirmación de que es una copia autorizada, no el soporte original. La aplicación debería devolver **coincide**, mostrar tamaño y SHA-256 calculado y dejar una nueva entrada de auditoría.
+3. **Comprobar coincidencia.** Abrí “Comparar con una copia de trabajo”, escribí solo el nombre `netsentinel-forensic-sample.bin`, sin ruta y marcá la confirmación de que es una copia autorizada, no el soporte original. La aplicación debería devolver **coincide**, mostrar tamaño y SHA-256 calculado y dejar una nueva entrada de auditoría.
 4. **Comprobar diferencia.** En otra terminal, entrá en la misma carpeta `forensics-working-copies` y volvé a escribir el archivo con el texto `NetSentinel synthetic evidence v2`. Repetí la comprobación. Debería indicar que el hash no coincide, sin cambiar el valor declarado por la fuente.
 5. **Comprobar errores y nombres inválidos.** Desde la pantalla, intentá leer `missing-sample.bin` sin crearlo; después probá una ruta (por ejemplo, `../fuera.bin`) y un nombre con separadores. El error debe explicar el problema y dejar el intento fallido en el historial sin mostrar ni guardar la ruta completa ni el texto rechazado; para un nombre rechazado, el historial debe usar `[nombre rechazado]`. La pantalla bloquea nombres vacíos con la validación del navegador y limita el campo a 255 caracteres, así que esos dos casos no se envían desde la interfaz. Para probarlos, enviá una solicitud directa a la API o ejecutá las pruebas de esos casos en `tests/test_forensics_api.py`; el endpoint permite hasta 4096 caracteres para que el servicio pueda registrar un rechazo seguro. No esperes una entrada de auditoría para un valor que el navegador no llegó a enviar.
 6. **Registrar una transferencia de custodia.** En la tarjeta de evidencia, abrí “Registrar transferencia de custodia”. El remitente propuesto debe ser `Examinador sintético` (persona receptora indicada en el formulario de recepción); registrá como destinatario `Custodio sintético receptor`, método `Entrega presencial simulada`, motivo `Entrega autorizada para revisión del archivo sintético`, y una fecha/hora ISO-8601 con offset. Podés escribir `Embalaje sintético íntegro` como condición y `SELLO-LAB-001` como identificador ficticio de precinto. La operación debe aparecer en la auditoría con integridad válida y conservar destinatario, hora declarada, motivo y método en ambos manifiestos.
@@ -46,7 +46,7 @@ Consultá también la [matriz de preparación pericial](FORENSIC_READINESS_MATRI
 
 - Fecha y zona horaria:
 - Persona que hizo la prueba:
-- Commit exacto de la rama reconciliada:
+- Commit exacto de `main` probado:
 - Sistema operativo y versión:
 - Navegador y versión:
 - Resultado: aprobado / bloqueado:

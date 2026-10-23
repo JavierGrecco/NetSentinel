@@ -1,6 +1,6 @@
 # Importar registros de conexiones de Zeek
 
-**Estado:** primera versión del adaptador, aislada en la rama `feat/zeek-connlog-import-2026-10`.  
+**Estado:** primera versión del adaptador integrada en `main`; aceptación manual pendiente.  
 **Modalidad:** importación explícita de archivo; solo lectura de la fuente original.  
 **Límites:** 1 MB por petición y hasta 1000 registros.
 
