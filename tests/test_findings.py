@@ -207,12 +207,12 @@ def test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target(mon
                        120, 240, 2, 3)""",
             (
                 device_id, observed_at, observed_at, source_event_id,
-                "192.168.5.42", 51514, "198.51.100.42", 443,
+                "192.168.5.42", 51514, "192.168.5.99", 443,
             ),
         )
 
     monitor = database.create_monitor(
-        "Servicio sintético con IP literal", "tcp", "198.51.100.42:443"
+        "Servicio sintético con IP literal", "tcp", "192.168.5.99:443"
     )
     database.record_monitor_check(monitor["id"], "down", None, "Timeout sintético")
 
