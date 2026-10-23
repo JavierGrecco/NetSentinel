@@ -417,7 +417,7 @@
         currentStep: Number.isFinite(parsedStep)
           ? Math.max(0, Math.min(steps.length - 1, Math.floor(parsedStep))) : 0,
         records,
-        finishedAt: typeof saved.finishedAt === "string" ? saved.finishedAt : null
+        finishedAt: typeof saved.finishedAt === "string" && Number.isFinite(Date.parse(saved.finishedAt)) ? saved.finishedAt : null
       };
     } catch (_) {
       return freshState();

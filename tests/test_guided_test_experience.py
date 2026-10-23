@@ -14,11 +14,13 @@ def test_progress_is_local_and_resumed_sessions_are_explained():
     script = JS_PATH.read_text(encoding="utf-8")
 
     assert 'id="wizardSaveStatus"' in html
+    assert 'aria-live="polite"' in html[html.index('id="wizardSaveStatus"') - 50:html.index('id="wizardSaveStatus"') + 100]
     assert 'id="wizardResumeNotice"' in html
     assert "Guardado en este navegador" in script
     assert "Se recuperó un recorrido anterior de este navegador" in script
     assert "window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))" in script
     assert "checking: false" in script
+    assert "Number.isFinite(Date.parse(saved.finishedAt))" in script
 
 
 def test_summary_allows_direct_review_without_restarting_the_wizard():
