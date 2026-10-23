@@ -5,6 +5,8 @@
 
 Esta matriz distingue entre patrones que ya están implementados, trabajo pendiente y funciones que descartamos conscientemente. Los proyectos se inspeccionaron de forma estática; las notas sobre ellos no equivalen a una prueba de ejecución en nuestro entorno. Los módulos seleccionados se integraron en `main` mediante #189. Para el estado actual de CI y la aceptación manual, prevalece [PROJECT_STATUS.md](PROJECT_STATUS.md); la checklist local vive en [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md).
 
+Para comparar NetSentinel con herramientas especializadas de observabilidad, análisis de tráfico, monitorización empresarial y forense, y ver la estrategia priorizada que resulta de esa comparación, consultá el [análisis comparativo profundo del 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md).
+
 ## Del proyecto ossianericson/netsentinel
 
 | Patrón útil | Decisión en NetSentinel | Estado y evidencia |
