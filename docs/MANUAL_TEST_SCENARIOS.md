@@ -51,11 +51,14 @@ Con el entorno activado, generá los archivos de prueba:
     python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-test-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$NETSENTINEL_DATA_DIR"
-    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology --include-findings-correlation
     ./run.sh
 
 El primer comando genera los archivos locales. Después, el auxiliar de base
-crea un único activo ficticio en la base vacía; no ejecuta descubrimiento de red.
+crea un activo ficticio y, con `--include-topology`, una lectura LAN histórica de
+tres dispositivos. Con `--include-findings-correlation` agrega además un único
+hallazgo sintético explícito para probar la correlación. No inicia descubrimiento
+ni captura tráfico real.
 Generá los archivos antes de crear el activo para que las fechas sintéticas queden
 dentro del intervalo histórico. Usá la misma IP en ambos comandos. Para otra
 ejecución, elegí una carpeta de datos distinta.
@@ -146,7 +149,28 @@ la IP no corresponde al dispositivo seleccionado o el evento queda fuera del
 intervalo observado, puede omitirse. Eso es preferible a atribuirlo al equipo
 equivocado; no debilites esa validación para que el ejemplo aparezca.
 
-## Prueba D: explorador LAN con topología sintética (detalle complementario)
+## Prueba D: correlación de Hallazgos con conexiones Zeek
+
+Para este escenario, generá `zeek-conn.tsv` con el generador y usá una base
+nueva preparada con `--include-findings-correlation`. El registro añadido por el
+auxiliar dice explícitamente que es una fixture; no es una observación de red.
+
+1. En Actividad, seleccioná `192.168.56.20` y previsualizá `zeek-conn.tsv`.
+2. Confirmá la importación y verificá que la segunda importación reporte cero
+   registros nuevos y dos duplicados omitidos.
+3. Abrí Hallazgos. Localizá el mensaje `Fixture sintética: evento de laboratorio
+   para validar correlación Zeek` y revisá el UID, el activo y el intervalo.
+4. Abrí el enlace de una conexión relacionada. Actividad debe mostrar el filtro
+   exacto de UID y `zeek_conn_log`, y mantener el foco visible del registro.
+5. Confirmá que la interfaz presenta esto como contexto para investigar, no como
+   detección confirmada, causalidad ni prueba de intrusión.
+
+Los registros del ejemplo se generan dentro de la ventana temporal de ±300
+segundos. Como se generan unos 105 segundos antes del momento actual, si pasan
+más de dos minutos entre la generación y la importación, regenerá los archivos
+en una carpeta nueva; no modifiques la fecha de la evidencia guardada.
+
+## Prueba E: explorador LAN con topología sintética (detalle complementario)
 
 En la aceptación integrada, la preparación de `docs/EXPERT_ACCEPTANCE_LAB.md` ya
 crea la lectura sintética con tres activos. No vuelvas a ejecutar el auxiliar sobre
