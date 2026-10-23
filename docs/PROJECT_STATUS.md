@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-**Actualizado:** 23 de octubre de 2026  
+**Actualizado:** 22 de octubre de 2026 (Argentina/Córdoba)  
 **Rama canónica:** `main`  
 **Última mejora funcional revisada:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
 **Estado:** integración consolidada; robustez de reintentos reforzada; aceptación local aún pendiente.
@@ -24,15 +24,15 @@ La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MON
 
 ## Validación automatizada
 
-Sobre el commit funcional `91d5568a89ee8aa2cc6b8881a404bb69e96461c1`, en la última revisión:
+**HEAD documental verificado:** [`60557638e89dcae377437263d74d2ff5e4ff9b1e`](https://github.com/JavierGrecco/NetSentinel/commit/60557638e89dcae377437263d74d2ff5e4ff9b1e).
 
-- **Supply Chain Security:** correcto; detección de secretos, paquete, SBOM y manifiesto de integridad.
-- **Security Analysis:** correcto; auditoría de dependencias y CodeQL.
-- **CI multiplataforma y Chromium:** los trabajos restantes habían terminado correctamente o seguían en ejecución; no se observaba ningún fallo, pero faltaba confirmar el cierre del job de Python 3.13 en Ubuntu.
+Las tres ejecuciones de GitHub Actions terminaron correctamente sobre ese SHA:
 
-Ejecuciones: [CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440216), [Security Analysis](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440226) y [Supply Chain Security](https://github.com/JavierGrecco/NetSentinel/actions/runs/39877440195).
+- **CI:** 18/18 trabajos correctos, incluidos Python en Windows, macOS y Linux, y la comprobación de interfaz adaptable en Chromium. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879018894).
+- **Security Analysis:** 2/2 correctos; auditoría de dependencias y CodeQL. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879019093).
+- **Supply Chain Security:** detección de secretos y generación de wheel, SBOM y manifiesto de integridad correctas. La firma de procedencia se omitió porque esta ejecución no corresponde a una publicación de release. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879018893).
 
-La prueba real en macOS, el teclado y el lector de pantalla siguen pendientes. Los checks automatizados no equivalen a una aceptación manual.
+Esto demuestra el resultado automatizado de ese SHA; **no equivale a una aceptación manual** ni autoriza a declarar estable la versión. La prueba real en macOS, el recorrido de los doce pasos, el uso exclusivo de datos sintéticos y la evaluación manual con teclado/lector de pantalla siguen pendientes.
 
 ## Higiene del repositorio
 
@@ -42,7 +42,7 @@ La clasificación de ramas ya está reconciliada: 150 referencias coinciden exac
 
 ## Controles administrativos de GitHub
 
-La consulta del ruleset activo `rules` (ID `25281660`) mostró que tiene una regla de checks obligatorios, pero su lista está vacía; también requiere PR con cero aprobaciones y no incluye un patrón explícito en `ref_name` (`include: []`, `exclude: []`). El bypass está deshabilitado. El endpoint clásico de protección de ramas respondió 403 a la integración consultada, por lo que no se pudo confirmar ese estado por la vía alternativa.
+La lectura del ruleset activo `rules` (ID `25281660`) muestra reglas de borrado, force-push, PR y checks obligatorios, pero la lista de checks está vacía; las aprobaciones requeridas son 0 y la condición `ref_name` devuelve `include: []`, `exclude: []`, sin declarar explícitamente el alcance esperado. No hay actores de bypass. Además, la API de ramas informa `protected: false` para `main`; el endpoint de protección clásica no estuvo disponible para la integración de revisión (403). Esto no permite afirmar que CI/seguridad sean requisitos de merge ni validar el alcance efectivo del ruleset. La administración debe resolverlo y probarlo antes de declarar completa la protección o eliminar referencias.
 
 **Consecuencia:** no asumir que CI, seguridad y cadena de suministro son checks requeridos para fusionar. La configuración en Settings necesita revisión administrativa y una prueba real con una PR. La limpieza física de ramas queda en pausa hasta confirmar el alcance de la regla de borrado y comprobar los SHA candidatos. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73) y [auditoría de ramas](BRANCH_AUDIT_2026-10.md).
 

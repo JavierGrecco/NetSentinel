@@ -2,7 +2,7 @@
 
 Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de pruebas manuales para la versión 0.10.0 se coordina en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Todas las pruebas se consideran **pendientes de registrar** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
 
-> **Estado actual (23/10/2026):** topología, Zeek, mapa GeoIP y NetSentinel Forense están integrados en `main`. La matriz sigue pendiente de registrar la aceptación manual; la PR #157 ya no está abierta. Usá una copia de trabajo de `origin/main` y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado actual (22/10/2026):** topología, Zeek, mapa GeoIP y NetSentinel Forense están integrados en `main`. La matriz sigue pendiente de registrar la aceptación manual; la PR #157 ya no está abierta. Usá una copia de trabajo de `origin/main` y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
 ## Datos de cada sesión de pruebas
 
