@@ -418,3 +418,42 @@ def test_manual_import_deduplicates_by_source_event_id_when_metadata_changes(
         "domain": "dns.example",
         "bytes_sent": 120,
     }]
+
+
+def test_import_format_migration_keeps_legacy_rows_and_does_not_trust_zeek_prefix(monkeypatch, tmp_path):
+    """Una base previa conserva sus eventos; los IDs históricos zeek:* siguen sin atribución."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    now = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+    stamp = _iso(now)
+
+    with database.connect() as db:
+        device_id = _insert_device(db, now)
+        for import_format, source_event_id in (
+            ("zeek_conn_log", "zeek:legacy-uid"),
+            ("csv", "csv-record-legacy"),
+        ):
+            db.execute(
+                """INSERT INTO activity_events
+                   (device_id, observed_at, received_at, event_type, source,
+                    import_format, source_event_id, protocol)
+                   VALUES (?, ?, ?, 'connection', 'manual_import', ?, ?, 'tcp')""",
+                (device_id, stamp, stamp, import_format, source_event_id),
+            )
+        # Simulate an existing installation whose schema predates the new column.
+        db.execute("DROP INDEX IF EXISTS idx_activity_events_import_format_time")
+        db.execute("ALTER TABLE activity_events DROP COLUMN import_format")
+
+    database.initialize()
+
+    with database.connect() as db:
+        rows = db.execute(
+            """SELECT source_event_id, import_format
+               FROM activity_events
+               ORDER BY source_event_id"""
+        ).fetchall()
+
+    assert [(row["source_event_id"], row["import_format"]) for row in rows] == [
+        ("csv-record-legacy", "csv"),
+        ("zeek:legacy-uid", "unknown"),
+    ]
