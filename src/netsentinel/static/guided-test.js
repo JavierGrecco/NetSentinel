@@ -726,6 +726,14 @@
     $("wizardFooterHint").textContent = "El informe se genera en este navegador y no se envía a ningún servicio externo.";
   }
 
+  function reopenedLinkLabel(label) {
+    const suffix = /\s*↗$/.test(label) ? " ↗" : "";
+    const plain = label.replace(/\s*↗$/, "").trim();
+    if (plain.startsWith("Abrir ")) return "Volver a abrir " + plain.slice("Abrir ".length) + suffix;
+    if (plain.startsWith("Volver a ")) return "Volver a abrir " + plain.slice("Volver a ".length) + suffix;
+    return "Volver a abrir " + plain + suffix;
+  }
+
   function renderStep() {
     const step = steps[state.currentStep];
     const record = step.track ? recordFor(step) : { outcome: null, note: "", opened: false, autoChecked: false, autoResult: null };
@@ -750,12 +758,22 @@
     showPanel("wizardNotesPanel", false);
     showPanel("wizardSummaryPanel", false);
     if (step.link) {
+      const baseLinkLabel = step.linkLabel || "Abrir módulo en otra pestaña ↗";
       $("wizardActionLink").href = step.link;
-      $("wizardActionLink").textContent = step.linkLabel || "Abrir módulo en otra pestaña ↗";
-      $("wizardActionTitle").textContent = step.actionTitle || "Abrí el módulo que vamos a probar";
-      $("wizardActionDescription").textContent = step.actionDescription || (step.checkKey
-        ? "Ejecutá la comprobación de lectura y abrí el módulo. La guía seguirá abierta en esta pestaña."
-        : "Se abrirá en otra pestaña. Seguí los pasos indicados, después volvé acá y registrá el resultado.");
+      $("wizardActionLink").textContent = record.opened ? reopenedLinkLabel(baseLinkLabel) : baseLinkLabel;
+      $("wizardActionTitle").textContent = record.opened
+        ? "Módulo abierto en otra pestaña"
+        : step.actionTitle || "Abrí el módulo que vamos a probar";
+      const actionDescription = record.opened
+        ? step.checkAfterAction
+          ? "El módulo ya se abrió. Completá la acción indicada allí; al volver, pulsá «Comprobar ahora» antes de registrar el resultado."
+          : step.checkKey && !record.autoChecked
+            ? "El módulo ya se abrió. Al volver, pulsá «Comprobar ahora» y revisá el resultado antes de registrar tu observación."
+            : "El módulo ya se abrió. Podés volver a consultarlo; cuando termines, regresá aquí y registrá lo que viste."
+        : step.checkKey
+          ? "Ejecutá la comprobación de lectura y abrí el módulo. La guía seguirá abierta en esta pestaña."
+          : "Se abrirá en otra pestaña. Seguí los pasos indicados, después volvé acá y registrá el resultado.";
+      $("wizardActionDescription").textContent = step.actionDescription || actionDescription;
     }
 
     renderAutomaticResult(step, record);
@@ -1246,7 +1264,17 @@
         ? "Volvé a esta pestaña y pulsá «Comprobar ahora» para revisar los datos guardados."
         : "Volvé a esta pestaña, revisá los resultados automáticos y registrá el resultado."
       : "Volvé a esta pestaña cuando termines de revisar el módulo.";
-    showMessage("La guía queda abierta aquí. Cuando termines en la otra pestaña, volvé y elegí el resultado observado.", "success");
+    let returnMessage;
+    if (step.checkAfterAction) {
+      returnMessage = "La guía sigue abierta aquí. Completá la acción en la otra pestaña y, al volver, pulsá «Comprobar ahora» antes de registrar el resultado.";
+    } else if (step.checkKey && !record.autoChecked) {
+      returnMessage = "La guía sigue abierta aquí. Al volver, pulsá «Comprobar ahora» y revisá el resultado antes de registrar tu observación.";
+    } else if (step.checkKey && record.autoResult && !record.autoResult.ok) {
+      returnMessage = "La comprobación automática detectó una incidencia. Registrá el fallo o «No pude comprobarlo»; no se puede marcar como correcto.";
+    } else {
+      returnMessage = "La guía sigue abierta aquí. Cuando termines en la otra pestaña, volvé y registrá el resultado que observaste.";
+    }
+    showMessage(returnMessage, "success");
   });
 
   document.querySelectorAll("[data-wizard-outcome]").forEach((button) => {

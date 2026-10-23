@@ -38,6 +38,9 @@ def test_summary_allows_direct_review_without_restarting_the_wizard():
     assert 'state.returnToSummary = returningFromCompletedSummary' in script
     assert 'addEventListener("click", () => {' in script
     assert "Resumen actualizado con los resultados y notas conservados" in script
+    assert "function reopenedLinkLabel(label)" in script
+    assert 'record.opened ? reopenedLinkLabel(baseLinkLabel) : baseLinkLabel' in script
+    assert "pulsá «Comprobar ahora» antes de registrar el resultado" in script
 
 
 def test_phase_navigation_does_not_unlock_future_work_prematurely():
