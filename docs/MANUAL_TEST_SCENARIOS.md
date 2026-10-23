@@ -167,8 +167,8 @@ auxiliar dice explícitamente que es una fixture; no es una observación de red.
 
 Los registros del ejemplo se generan dentro de la ventana temporal de ±300
 segundos. Como se generan unos 105 segundos antes del momento actual, si pasan
-más de dos minutos entre la generación y la importación, regenerá los archivos
-en una carpeta nueva; no modifiques la fecha de la evidencia guardada.
+más de dos minutos entre la generación de los archivos y la preparación de la
+base, regenerá los archivos en una carpeta nueva; no modifiques la fecha guardada.
 
 ## Prueba E: explorador LAN con topología sintética (detalle complementario)
 
