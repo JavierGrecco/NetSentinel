@@ -7,14 +7,11 @@ Los archivos son artificiales. No representan una observación de NetSentinel,
 no demuestran actividad de una persona y no deben mezclarse con una instalación
 que contenga datos reales. El generador no accede a la red ni a SQLite.
 
-**Para la aceptación integrada en `main`**, prepará el entorno siguiendo
-[el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md) y recorré `/guided-test`.
-El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de
-rama ni repetir la preparación sobre una base que ya esté sembrada.
+**Para la aceptación de correlación antes del merge**, usá la rama de la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) indicada en [el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md), y recorré `/guided-test`. `main` todavía no incluye ese paso mientras la PR siga abierta. El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de rama ni repetir la preparación sobre una base que ya esté sembrada. Una vez fusionada la PR, repetí la verificación sobre el nuevo HEAD de `main`.
 
 ## Generar los archivos
 
-Desde la raíz del checkout de `main` que vas a probar:
+Desde la raíz del checkout del código que vas a probar (la rama de la PR #200 mientras la correlación todavía no esté fusionada):
 
     python scripts/generate_manual_scenarios.py
 
@@ -121,7 +118,7 @@ actual y no confirma la IP utilizada durante el evento de prueba.
 
 ## Prueba C: importación Zeek en Actividad (detalle complementario)
 
-El importador Zeek está integrado en `main`. Este procedimiento amplía
+El importador Zeek base está integrado en `main`. La correlación Hallazgos–Zeek está en la PR #200 hasta que se fusione. Este procedimiento amplía
 el paso Zeek del asistente con detalle adicional; no instala Zeek, no inicia captura
 y no se conecta a un sensor. Para el recorrido principal, seguí `/guided-test`.
 
