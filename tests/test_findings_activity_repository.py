@@ -122,3 +122,24 @@ def test_zeek_context_query_caps_the_number_of_contexts():
     ]
     with pytest.raises(ValueError, match="máximo de contextos"):
         findings_activity_repository.get_zeek_activity_contexts(contexts)
+
+
+@pytest.mark.parametrize("import_format", ["csv", "unknown"])
+def test_zeek_context_query_rejects_csv_or_legacy_rows_even_with_zeek_prefixed_id(
+    monkeypatch, tmp_path, import_format
+):
+    """An ID prefix is not proof that the dedicated Zeek parser created the row."""
+    observed = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+    device_id, stamp = _database_with_zeek(
+        monkeypatch,
+        tmp_path,
+        observed_at=observed,
+        source_id="zeek:CZeekTest42",
+        import_format=import_format,
+    )
+
+    rows = findings_activity_repository.get_zeek_activity_contexts([
+        _context(device_id=device_id, anchor_at=stamp),
+    ])
+
+    assert rows == []
