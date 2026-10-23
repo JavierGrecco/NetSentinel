@@ -24,6 +24,10 @@ Ejecuciones previas al merge: [CI](https://github.com/JavierGrecco/NetSentinel/a
 
 **Esto no valida todavía la sesión real en tu Mac.** Antes de probar, verificá que los workflows estén completos y correctos para el commit exacto de `main` que descargaste: cada commit nuevo necesita sus propios checks.
 
+## Corrección del control de secretos posterior al merge
+
+El primer workflow de cadena de suministro en `main` detectó como posible secreto el nombre de una preferencia de `localStorage` usado por la prueba responsive; no era una credencial. Se cambió el identificador en el script para evitar que esa preferencia parezca un secreto. La corrección solo se considera validada cuando los workflows del commit actual finalicen correctamente.
+
 ## Puertas pendientes antes de considerar estable la versión 0.10.0
 
 1. Ejecutar el recorrido guiado completo, usando solamente la base de datos y los archivos sintéticos de la guía. Registrar los 12 resultados, notas y SHA probado.

@@ -597,10 +597,10 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
 
         # Comprueba que el mapa se recupera de preferencias locales corruptas,
         # vuelve a guardar posiciones válidas y mantiene el límite de entradas.
-        position_key = "netsentinel-topology-positions-v1"
-        previous_positions = page.evaluate("(key) => localStorage.getItem(key)", position_key)
+        positions_storage_name = "netsentinel-topology-positions-v1"
+        previous_positions = page.evaluate("(key) => localStorage.getItem(key)", positions_storage_name)
         try:
-            page.evaluate("(key) => localStorage.setItem(key, '{malformed')", position_key)
+            page.evaluate("(key) => localStorage.setItem(key, '{malformed')", positions_storage_name)
             page.reload(wait_until="load", timeout=20000)
             page.wait_for_function(
                 "() => window.NetSentinelTopology && window.NetSentinelTopology.getGraphStats().deviceCount > 0",
@@ -618,7 +618,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     return false;
                   }
                 }""",
-                arg=position_key,
+                arg=positions_storage_name,
                 timeout=5000,
             )
             position_report = page.evaluate(
@@ -644,7 +644,7 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
                     return {valid: false, count: 0, positionsValid: false};
                   }
                 }""",
-                position_key,
+                positions_storage_name,
             )
             if not position_report.get("valid") or position_report.get("count", 0) == 0:
                 failures.append("el mapa no recupera ni vuelve a guardar posiciones después de preferencias corruptas")
@@ -657,10 +657,10 @@ def _topology_panel_failures(page, check_missing_evidence: bool = False) -> list
         finally:
             try:
                 if previous_positions is None:
-                    page.evaluate("(key) => localStorage.removeItem(key)", position_key)
+                    page.evaluate("(key) => localStorage.removeItem(key)", positions_storage_name)
                 else:
                     page.evaluate("(args) => localStorage.setItem(args.key, args.value)", {
-                        "key": position_key,
+                        "key": positions_storage_name,
                         "value": previous_positions,
                     })
                 page.reload(wait_until="load", timeout=20000)
