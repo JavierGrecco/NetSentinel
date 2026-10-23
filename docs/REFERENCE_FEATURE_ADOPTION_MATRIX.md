@@ -57,7 +57,7 @@ La reconstrucción de una lectura solo puede clasificar un equipo como «no vist
 2. **La ausencia no es una desconexión.** Solo clasificamos un equipo como “no visto en esta lectura” si alguna IP del inventario pertenece a una subred registrada y el descubrimiento de esa subred no figura como limitado. Los equipos fuera de alcance no se mezclan con esa lectura.
 3. **Cada relación tiene significado explícito.** `observed-subnet-membership` indica que una IP observada cae dentro de una subred registrada; no significa tráfico, conexión física ni un enlace directo.
 4. **Se distingue el dato de la ficha actual de la evidencia histórica.** Nombre, fabricante y confianza del registro de inventario pueden cambiar y no se presentan como si fueran un histórico inmutable.
-5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks solo valen para el SHA que ejecutaron. En la cabeza funcional `2dd378b8` del 20/10/2026, CI, Security y Supply Chain finalizaron correctamente; cualquier nuevo commit necesita sus propios checks. La PR permanece como borrador hasta completar además la revisión manual responsive, de teclado y de lector de pantalla.
+5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks solo valen para el SHA que ejecutaron. La integración #189 ya está fusionada en `main`; el estado de CI, Security y Supply Chain debe consultarse para el SHA exacto que vaya a probarse. La revisión manual responsive, de teclado y de lector de pantalla sigue pendiente.
 6. **Los validadores de alcance deben coincidir.** La interfaz y el servidor solo aceptan una subred si el rango completo está dentro de RFC 1918; una dirección privada al comienzo de un CIDR no vuelve privado todo el rango.
 
 ## Próximos pasos desde la integración en main
