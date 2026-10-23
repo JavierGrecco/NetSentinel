@@ -119,7 +119,7 @@
         }
         if (params.has("source_event_id")) {
           const link = node("a", "", "Abrir este registro en Actividad");
-          link.href = "/activity?" + params.toString();
+          link.href = "/activity?" + params.toString() + "#eventos";
           item.append(link);
         }
         records.append(item);
