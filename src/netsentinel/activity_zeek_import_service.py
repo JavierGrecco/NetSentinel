@@ -413,7 +413,9 @@ def import_log(
     for line_number, record in rows:
         try:
             mapped = _to_event(record, line_number)
-            normalized.append(normalizer(mapped, source_override="manual_import"))
+            normalized_event = normalizer(mapped, source_override="manual_import")
+            normalized_event["import_format"] = "zeek_conn_log"
+            normalized.append(normalized_event)
             source_line_numbers.append(line_number)
         except ValueError as exc:
             if str(exc).startswith(f"Fila {line_number}:"):
