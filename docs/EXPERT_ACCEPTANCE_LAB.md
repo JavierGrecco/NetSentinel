@@ -1,9 +1,10 @@
 # Laboratorio consolidado de aceptación para expertos
 
 **Rama canónica:** `main`  
-**Último commit consultado al actualizar esta guía (23/10/2026):** [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95).  
+**Último commit consultado al actualizar esta guía (23/10/2026):** [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1).  
 **Asistente iterativo:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
 **Regresión interactiva de Chromium:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194); CI 18/18 y navegador 135/135 correctos sobre el SHA de la PR. Las ejecuciones posteriores al merge se deben verificar de nuevo en [Actions](https://github.com/JavierGrecco/NetSentinel/actions).  
+**Análisis de producto:** [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198) añadió documentación estratégica, sin modificar el código del laboratorio.  
 **Estado:** laboratorio integrado; aceptación manual, revisión visual y de accesibilidad todavía pendientes.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.

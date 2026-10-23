@@ -11,9 +11,9 @@
 
 Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/branches/main` puede devolver `protected: false` cuando no hay una regla de protección clásica; para evaluar el estado real también hay que leer los Rulesets.
 
-**Última lectura verificada: 22/10/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene las reglas `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Sin embargo, la lista de checks obligatorios sigue vacía (`required_status_checks: []`); el patrón de referencias se devuelve como `include: []`, `exclude: []`; exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`; el endpoint alternativo de protección clásica respondió 403 a la integración de revisión.
+**Última lectura verificada: 23/10/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene las reglas `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Sin embargo, la lista de checks obligatorios sigue vacía (`required_status_checks: []`); el patrón de referencias se devuelve como `include: []`, `exclude: []`; exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`; el endpoint alternativo de protección clásica respondió 403 a la integración de revisión.
 
-**Bloqueo actual:** no asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
+**Bloqueo actual:** la verificación del 23/10/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. Seguimiento: [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195) y [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
 
 ### Configuración que debe quedar en el Ruleset
 
@@ -28,7 +28,7 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 ### Checks obligatorios para Pull Requests
 
-Seleccioná los siguientes **23 contextos**. Se nombran aquí por el nombre exacto de cada check, tal como aparece en las ejecuciones de Actions y en el check de GitHub Advanced Security.
+Seleccioná los siguientes **22 contextos verificados**. Se compararon con los check-runs de GitHub del commit de `main` `3625709cf08f2c51a5c34d14db0b1a58bf1802b1` el 23/10/2026. Los nombres pueden cambiar si se modifica un workflow; volvé a confirmarlos en una PR reciente antes de guardarlos.
 
 **CI — 18 checks**
 
@@ -56,9 +56,8 @@ Otras verificaciones de CI:
 - `Wheel metadata and static assets`
 - `Responsive UI / Chromium`
 
-**Seguridad — 3 checks**
+**Seguridad — 2 checks**
 
-- `CodeQL` — comprobación de GitHub Advanced Security que señala alertas nuevas en el cambio.
 - `CodeQL static analysis (Python)` — job que ejecuta el análisis estático.
 - `Audit Python dependencies` — revisión de dependencias contra avisos conocidos.
 
