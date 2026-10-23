@@ -48,7 +48,7 @@ def test_phase_navigation_does_not_unlock_future_work_prematurely():
     html = HTML_PATH.read_text(encoding="utf-8")
     css = CSS_PATH.read_text(encoding="utf-8")
 
-    assert 'const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Forense", "Cierre"]' in script
+    assert 'const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Hallazgos", "Forense", "Cierre"]' in script
     assert "const prerequisitesMet = trackedSteps.slice(0, firstIndex)" in script
     assert "button.disabled = !prerequisitesMet && !active" in script
     assert ".wizard-milestone-button:focus-visible" in css
