@@ -24,15 +24,15 @@ La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MON
 
 ## Validación automatizada
 
-**HEAD documental vigente:** [`d25036e6fe189fc6dd338e224e2a03d3cb0c412d`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d). La PR #190 se integró por merge normal después de aprobar sus checks. Las ejecuciones sobre el merge commit también terminaron correctamente: CI 18/18 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358)), Security Analysis 2/2 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271)) y Supply Chain Security ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406); detección de secretos y build/SBOM/manifiesto correctos, firma de procedencia omitida por no ser una publicación de release).
+**Última referencia con matriz integral verde:** [`d25036e6fe189fc6dd338e224e2a03d3cb0c412d`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d).
 
-Las tres ejecuciones de GitHub Actions terminaron correctamente sobre ese SHA:
+- **CI:** 18/18 trabajos correctos, incluidos Python en Windows, macOS y Linux, y la comprobación de interfaz adaptable en Chromium. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358).
+- **Security Analysis:** 2/2 correctos; auditoría de dependencias y CodeQL. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271).
+- **Supply Chain Security:** detección de secretos y generación de wheel, SBOM y manifiesto de integridad correctas. La firma de procedencia se omite en ejecuciones que no corresponden a una publicación de release. [Ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406).
 
-- **CI:** 18/18 trabajos correctos, incluidos Python en Windows, macOS y Linux, y la comprobación de interfaz adaptable en Chromium. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879018894).
-- **Security Analysis:** 2/2 correctos; auditoría de dependencias y CodeQL. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879019093).
-- **Supply Chain Security:** detección de secretos y generación de wheel, SBOM y manifiesto de integridad correctas. La firma de procedencia se omitió porque esta ejecución no corresponde a una publicación de release. [Ver ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39879018893).
+**Revisión posterior de solo documentación:** el contenido de la reconciliación en la [PR #191](https://github.com/JavierGrecco/NetSentinel/pull/191) también pasó sus checks: CI 18/18 ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547074)), Security Analysis 2/2 ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547141)) y Supply Chain Security correcta ([ejecución](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881547143)). Esa PR modificó solo documentación; no cambió el código funcional.
 
-Esto demuestra el resultado automatizado de ese SHA; **no equivale a una aceptación manual** ni autoriza a declarar estable la versión. La prueba real en macOS, el recorrido de los doce pasos, el uso exclusivo de datos sintéticos y la evaluación manual con teclado/lector de pantalla siguen pendientes.
+Los checks automatizados no sustituyen la aceptación manual. La prueba real en macOS, el recorrido de los doce pasos con datos sintéticos, la evaluación con teclado/lector de pantalla y las observaciones visuales en escritorio y ventana estrecha siguen pendientes.
 
 ## Higiene del repositorio
 

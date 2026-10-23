@@ -1,7 +1,7 @@
 # Auditoría de ramas remotas — 22 de octubre de 2026
 
 **Último commit funcional revisado:** [`91d5568a`](https://github.com/JavierGrecco/NetSentinel/commit/91d5568a89ee8aa2cc6b8881a404bb69e96461c1)  
-**HEAD documental vigente:** [`d25036e`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d); CI 18/18 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358)), Security Analysis 2/2 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271)) y controles de cadena de suministro correctos ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406); firma de procedencia omitida por no ser un release).  
+**Último commit con matriz integral registrada:** [`d25036e`](https://github.com/JavierGrecco/NetSentinel/commit/d25036e6fe189fc6dd338e224e2a03d3cb0c412d); CI 18/18 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175358)), Security Analysis 2/2 ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175271)) y Supply Chain Security correcta ([run](https://github.com/JavierGrecco/NetSentinel/actions/runs/39881175406); firma de procedencia omitida por no ser un release). La actualización posterior de solo documentación en la [PR #191](https://github.com/JavierGrecco/NetSentinel/pull/191) también pasó su matriz (CI 18/18, Security 2/2 y Supply Chain correcta).  
 **Rama canónica:** `main`
 
 ## Resumen de la auditoría
