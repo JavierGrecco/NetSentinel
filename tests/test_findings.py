@@ -200,10 +200,10 @@ def test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target(mon
     with database.connect() as db:
         db.execute(
             """INSERT INTO activity_events
-               (device_id, observed_at, received_at, event_type, source, source_event_id,
+               (device_id, observed_at, received_at, event_type, source, import_format, source_event_id,
                 source_ip, source_port, destination_ip, destination_port, protocol,
                 bytes_sent, bytes_received, packets_sent, packets_received)
-               VALUES (?, ?, ?, 'connection', 'manual_import', ?, ?, ?, ?, ?, 'tcp',
+               VALUES (?, ?, ?, 'connection', 'manual_import', 'zeek_conn_log', ?, ?, ?, ?, ?, 'tcp',
                        120, 240, 2, 3)""",
             (
                 device_id, observed_at, observed_at, source_event_id,
