@@ -1,18 +1,18 @@
 # Matriz de adopción de los proyectos de referencia
 
-**Actualizado:** 20 de octubre de 2026  
+**Actualizado:** 23 de octubre de 2026  
 **Objetivo:** mejorar NetSentinel sin importar afirmaciones de datos que las fuentes no permiten demostrar ni duplicar responsabilidades existentes.
 
-Esta matriz distingue entre patrones que ya están implementados, trabajo pendiente y funciones que descartamos conscientemente. Los proyectos se inspeccionaron de forma estática; las notas sobre ellos no equivalen a una prueba de ejecución en nuestro entorno.
+Esta matriz distingue entre patrones que ya están implementados, trabajo pendiente y funciones que descartamos conscientemente. Los proyectos se inspeccionaron de forma estática; las notas sobre ellos no equivalen a una prueba de ejecución en nuestro entorno. Los módulos seleccionados se integraron en `main` mediante #189. Para el estado actual de CI y la aceptación manual, prevalece [PROJECT_STATUS.md](PROJECT_STATUS.md); la checklist local vive en [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md).
 
 ## Del proyecto ossianericson/netsentinel
 
 | Patrón útil | Decisión en NetSentinel | Estado y evidencia |
 |---|---|---|
 | Separar modelo de topología, proyección del grafo y presentación | Adoptado; el modelo y la API son módulos del servidor, Cytoscape solo presenta | Implementado en `topology_model.py`, `topology_graph.py` y `api/inventory_topology.py`; la UI usa el contrato compartido |
-| Construir un grafo interactivo con zoom, foco, selección y filtros | Adoptado con controles y alternativa textual | Integrado en `/network`; pendiente aprobar CI de la revisión final y la revisión manual de accesibilidad |
+| Construir un grafo interactivo con zoom, foco, selección y filtros | Adoptado con controles y alternativa textual | Integrado en `/network` mediante #189, con pruebas automatizadas responsive. La revisión manual de teclado, lector de pantalla y usabilidad sigue pendiente; consultar `PROJECT_STATUS.md` para los checks del HEAD actual. |
 | Mantener contexto al elegir una captura histórica | Adoptado usando observaciones vinculadas al `scan_id` exacto | API `GET /api/scans/{scan_id}/topology`; el servicio no sustituye IP históricas por los últimos valores del inventario |
-| Posiciones y estado de presentación persistentes | Adoptar solo como preferencia de UI validada, separada de las mediciones | La UI guarda posiciones localmente; el verificador responsive prueba recuperación tras JSON corrupto, coordenadas válidas y límite de 1200 entradas. En la cabeza funcional `2dd378b8` del 20/10/2026, CI, Security y Supply Chain terminaron correctamente; la comprobación manual de arrastrar y recargar sigue siendo necesaria. Cualquier cambio posterior debe validarse en su propio SHA |
+| Posiciones y estado de presentación persistentes | Adoptar solo como preferencia de UI validada, separada de las mediciones | La UI guarda posiciones localmente; el verificador responsive prueba recuperación tras JSON corrupto, coordenadas válidas y límite de 1200 entradas. La prueba manual de arrastrar, recargar y confirmar persistencia sigue pendiente. Todo cambio nuevo se verifica sobre el SHA actual; ver `PROJECT_STATUS.md`. |
 | Comparar capturas y explicar cambios | Adoptar si ambas lecturas y sus alcances son comparables | NetSentinel ya tiene comparación de capturas; no se debe afirmar que un equipo desapareció si la lectura fue incompleta o sus redes no coinciden |
 | Métricas de red y mapa geográfico | No mezclarlas con el grafo LAN actual | La telemetría disponible es principalmente inventario/observaciones locales y monitorización configurada. No se asignará geolocalización pública a direcciones privadas ni se simulará tráfico |
 
@@ -27,7 +27,7 @@ Esta matriz distingue entre patrones que ya están implementados, trabajo pendie
 | Bloqueo de IP y acciones privilegiadas desde la interfaz | Fuera del alcance de esta integración | Una acción de cambio de red necesita autorización, límites, confirmación del servidor, auditoría y reversión antes de diseñarse |
 | Aplicación concentrada y procedencia/licencia no aclaradas | No reutilizar código literal hasta aclarar licencia y procedencia | La revisión actual confirma que el repositorio tiene cuatro archivos en la raíz, no incluye un archivo `LICENSE` y su README indica clonar `spiderxploit/netsentinel` en vez de `blacsecurity/netsentinel`. Tomamos ideas, no código. |
 
-## Hallazgos de la revisión actualizada (20 de octubre de 2026)
+## Hallazgos de la revisión de referencias (actualización de estado: 23 de octubre de 2026)
 
 ### Salud de las fuentes y errores visibles
 
@@ -60,11 +60,12 @@ La reconstrucción de una lectura solo puede clasificar un equipo como «no vist
 5. **Una prueba escrita no equivale a una prueba aprobada.** Los checks solo valen para el SHA que ejecutaron. En la cabeza funcional `2dd378b8` del 20/10/2026, CI, Security y Supply Chain finalizaron correctamente; cualquier nuevo commit necesita sus propios checks. La PR permanece como borrador hasta completar además la revisión manual responsive, de teclado y de lector de pantalla.
 6. **Los validadores de alcance deben coincidir.** La interfaz y el servidor solo aceptan una subred si el rango completo está dentro de RFC 1918; una dirección privada al comienzo de un CIDR no vuelve privado todo el rango.
 
-## Próxima secuencia
+## Próximos pasos desde la integración en main
 
-1. Mantener CI, Security y Supply Chain correctos para la cabeza exacta que se revisa. En la cabeza funcional `2dd378b8` del 20/10/2026, los tres finalizaron correctamente; volver a validarlos después de cualquier cambio.
-2. Probar el explorador en Chromium con lecturas con varias IP, subredes vacías, alcance desconocido, errores de API, filtros, teclado y móvil.
-3. Verificar persistencia de posiciones, preferencias de tema y recuperación tras datos locales inválidos.
-4. Revisar el resultado junto con las responsabilidades actuales para no mantener dos fuentes de verdad.
-5. Mantener la PR en borrador hasta completar los puntos anteriores.
-6. Después de cerrar la revisión visual, preparar un adaptador de solo lectura para una fuente real. Candidato inicial: importar archivos JSON Lines de `conn.log` de Zeek, exportados previamente desde una red autorizada. NetSentinel no iniciará captura ni instalará agentes para esta etapa. Antes de integrarlo, fijar límites de archivo y filas, validación de hora y direcciones, deduplicación por ID estable, vista previa sin escrituras y pruebas de error/recuperación usando registros sintéticos.
+1. Consultar en [Actions](https://github.com/JavierGrecco/NetSentinel/actions) los checks del SHA exacto de `main`; no usar una ejecución de una cabeza anterior como señal de aprobación.
+2. Ejecutar el asistente `/guided-test` con la base y los archivos sintéticos descritos en [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). Registrar los 12 resultados, el SHA y las incidencias.
+3. Revisar el explorador LAN en la lectura sintética; confirmar que los nodos, las relaciones y la procedencia se derivan de la API histórica y no implican tráfico en vivo.
+4. Probar teclado, lector de pantalla, persistencia de posiciones, estados vacíos, escritorio y ventana estrecha; registrar las observaciones en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+5. Validar CSV y Zeek primero con registros sintéticos; solo después, si corresponde, usar exportaciones reales autorizadas y sanitizadas. NetSentinel no inicia captura ni instala sensores.
+6. Resolver el alcance y los checks obligatorios del ruleset de `main` con la persona administradora en [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). No eliminar ramas mientras ese control siga pendiente.
+7. No reabrir PRs duplicadas para los módulos ya integrados. Las mejoras nuevas deben partir del `main` actualizado y entrar por una PR con sus checks y criterios de aceptación definidos.

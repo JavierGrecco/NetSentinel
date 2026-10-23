@@ -2,6 +2,12 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Consolida en `main` el explorador LAN histórico, la importación controlada de Zeek, el mapa mundial con GeoIP local opcional, NetSentinel Forense experimental y la prueba guiada de 12 pasos. Incluye generadores sintéticos y pruebas de integración; la aceptación manual en macOS y la revisión humana de accesibilidad siguen pendientes.
+
+- Refuerza el supervisor de Monitorización con retroceso exponencial para excepciones inesperadas aisladas por monitor (2, 4, 8… hasta 60 segundos). Otros monitores siguen ejecutándose; el estado de reintento se limpia tras recuperación, desactivación o eliminación del monitor.
+
+- Alinea las guías de aceptación, Forense, topología, Zeek y GeoIP con `main`. Se centraliza la checklist manual de Forense y se documenta la auditoría de ramas y el bloqueo administrativo del ruleset.
+
 - Amplía la regresión de respaldo SQLite para restaurar la copia en una ruta independiente, inicializar el esquema existente y comprobar mediante las funciones de NetSentinel la recuperación de inventario, direcciones, observaciones, lecturas, checks e incidentes de monitorización y eventos relacionados. Esto complementa, pero no reemplaza, la restauración manual de la versión candidata.
 
 - Agrega un verificador responsive reproducible con Playwright para las cinco pantallas y quince tamaños representativos. Comprueba carga, navegación, desbordamiento horizontal y distribución del Inventario; puede guardar capturas e informe JSON. Usa una base temporal sin ejecutar descubrimientos. CI incorpora una revisión de Chromium en Linux.
