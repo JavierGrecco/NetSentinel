@@ -2,10 +2,17 @@
 
 **Actualizado:** 23 de octubre de 2026 (Argentina/Córdoba)  
 **Rama canónica:** `main`  
-**Último commit consultado en `main`:** [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95)  
+**Último commit de `main` consultado en esta actualización:** [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1)  
 **Último cambio funcional de la guía:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
 **Última mejora de pruebas:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194), integrada en [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95).  
+**Última revisión estratégica:** [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198), integrada en [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1).  
 **Estado:** integración consolidada; regresión interactiva del asistente comprobada en Chromium; aceptación manual y protección efectiva de `main` todavía pendientes.
+
+## Revisión comparativa y siguiente mejora
+
+El [análisis comparativo de 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md) incorpora los dos NetSentinel de referencia y herramientas especializadas de observabilidad, análisis de tráfico, monitorización e inventario. La conclusión es priorizar la precisión, el contexto y la interoperabilidad en lugar de imitar la captura profunda de un SIEM/NDR. El documento es investigación estática; no agrega capacidades al runtime.
+
+La próxima línea funcional está definida en el [issue #197](https://github.com/JavierGrecco/NetSentinel/issues/197): correlacionar temporalmente evidencia de inventario, disponibilidad y registros Zeek autorizados, con límites explícitos y navegación a la fuente original. Queda subordinada a cerrar las puertas P0 de aceptación manual y gobernanza; no se ha implementado ni se considera aprobada.
 
 ## Fuente única de trabajo
 
@@ -31,6 +38,8 @@ Se recuperó la protección de reintentos que existía en una rama antigua pero 
 La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MONITORING.md](MONITORING.md).
 
 ## Validación automatizada
+
+**Fotografía posterior al merge documental #198:** sobre `3625709cf08f2c51a5c34d14db0b1a58bf1802b1`, en la consulta del 23/10/2026, CI llevaba 17/18 trabajos exitosos y el último trabajo de Python 3.12/macOS seguía activo ([CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706874)); Security Analysis terminó 2/2 ([seguridad](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706482)); Supply Chain Security terminó sin fallos, con 2 jobs aplicables correctos y la firma de procedencia omitida por no ser un release ([cadena de suministro](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706741)). Es una fotografía por SHA, no una aceptación manual ni un estado dinámico.
 
 **Checks completos sobre el SHA de la PR #194** [`02bfbd73`](https://github.com/JavierGrecco/NetSentinel/commit/02bfbd733f67d67464d7d848816328e2da1565a4):
 
