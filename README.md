@@ -4,7 +4,7 @@
 
 NetSentinel reúne inventario de dispositivos, historial y monitorización en un panel web. Se ejecuta en tu computadora; no necesita una cuenta ni un servidor externo.
 
-El módulo **NetSentinel Forense** está en desarrollo como área separada. Esta primera entrega incorpora el registro de casos y una comparación de SHA-256 limitada a copias de trabajo locales designadas. Sigue en validación: no autentica la identidad del operador ni constituye, por sí sola, una cadena de custodia validada. El plan detalla los límites y los siguientes pasos.
+El módulo **NetSentinel Forense** está integrado como área separada y sigue en validación experimental. Incluye el registro de casos y evidencia, auditoría, manifiestos, transferencias declaradas y comparación SHA-256 sobre copias de trabajo designadas. No autentica por sí solo la identidad del operador ni constituye una cadena de custodia validada; revisá sus límites antes de cualquier uso real.
 
 ## Primeros pasos
 
@@ -31,7 +31,7 @@ La búsqueda solo se ejecuta cuando la pedís y tiene límites para reducir el t
 - [Matriz de preparación pericial y brechas de NetSentinel Forense](docs/FORENSIC_READINESS_MATRIX.md)
 - [Informe de examen: versiones, verificación y límites](docs/FORENSIC_REPORTS.md)
 - **Prueba guiada dentro de la aplicación:** abrí `/guided-test` con NetSentinel en marcha.
-- [Laboratorio consolidado de aceptación manual](docs/EXPERT_ACCEPTANCE_LAB.md): red, topología, Zeek, mapa mundial y Forense en una sola rama aislada.
+- [Laboratorio consolidado de aceptación manual](docs/EXPERT_ACCEPTANCE_LAB.md): red, topología, Zeek, mapa mundial y Forense desde `main`, usando una copia de trabajo y datos sintéticos aislados.
 - [Escenarios sintéticos guiados](docs/MANUAL_TEST_SCENARIOS.md)
 - [Mapa mundial de IP](docs/WORLD_IP_MAP.md)
 - [Pruebas](#pruebas) y [documentación para mantenimiento](#documentación)
@@ -163,7 +163,7 @@ Leé la [política de seguridad](SECURITY.md) y la [guía técnica de seguridad]
 Con la aplicación en marcha, abrí **Prueba guiada** desde la navegación principal o entrá en `/guided-test`. Ahí se muestran los escenarios, los comandos copiables, las comprobaciones de API y los resultados esperados; el documento de escenarios amplía el recorrido.
 
 
-Esta rama de laboratorio reúne en una sola instalación el explorador histórico LAN, el importador Zeek, el mapa mundial de IP, el espacio NetSentinel Forense y los datos de prueba sintéticos.
+La integración consolidada en `main` reúne el explorador histórico LAN, el importador Zeek, el mapa mundial de IP, NetSentinel Forense y los datos de prueba sintéticos. No cambies a una rama QA antigua: prepará la prueba desde `origin/main` siguiendo el laboratorio de aceptación.
 
 - **Mapa mundial:** abrí `/world-map`. La página siempre está disponible, pero los marcadores reales necesitan una base GeoLite2-City autorizada instalada localmente.
 - **Datos sintéticos:** seguí [los escenarios guiados](docs/MANUAL_TEST_SCENARIOS.md). El generador escribe archivos de ejemplo; el auxiliar de base prepara una base de prueba separada. La importación CSV se confirma desde Actividad, no automáticamente.
@@ -193,7 +193,8 @@ python -m pytest
 - [Plan de implementación](docs/IMPLEMENTATION_PLAN.md)
 - [Dirección del producto y criterios de calidad empresarial](docs/PRODUCT_DIRECTION.md)
 - [Base local de fabricantes OUI](docs/OUI_DATABASE.md)
-- [Mantenimiento del repositorio](docs/GITHUB_SETUP.md)
+- [Mantenimiento del repositorio y reglas de integración](docs/GITHUB_SETUP.md)
+- [Auditoría de ramas remotas](docs/BRANCH_AUDIT_2026-10.md)
 - [Historial de cambios](CHANGELOG.md)
 
 ## Licencia

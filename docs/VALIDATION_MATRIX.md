@@ -2,6 +2,8 @@
 
 Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de pruebas manuales para la versión 0.10.0 se coordina en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Todas las pruebas se consideran **pendientes de registrar** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
 
+> **Estado actual (23/10/2026):** topología, Zeek, mapa GeoIP y NetSentinel Forense están integrados en `main`. La matriz sigue pendiente de registrar la aceptación manual; la PR #157 ya no está abierta. Usá una copia de trabajo de `origin/main` y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+
 ## Datos de cada sesión de pruebas
 
 - Fecha y zona horaria:
@@ -140,9 +142,9 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - **Entorno y commit exactos:** no registrados en el mensaje de confirmación.
 - **Pendiente:** esta confirmación no reemplaza los recorridos de instalación, persistencia, seguridad, extensión ni la matriz completa de Windows/macOS/Linux y Chrome/Edge.
 
-## NetSentinel Forense — primera entrega
+## NetSentinel Forense — checklist única integrada en main
 
-**Estado: pendiente de revisión manual propia.** La confirmación de uso local de NetSentinel Red no aprueba esta pantalla ni sus nuevas operaciones.
+**Estado: pendiente de revisión manual propia.** El código ya está en `main`; la integración automatizada no aprueba la experiencia real. Esta es la lista autoritativa de control manual en la matriz. La guía [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md) explica el procedimiento; no se debe llevar una segunda lista paralela por rama.
 
 - [ ] FOR-MAN-01 — Abrir/cerrar caso, listar datos y rechazar identificadores duplicados.
 - [ ] FOR-MAN-02 — Registrar recepción con timestamp ISO-8601 y offset explícito; rechazar timestamp sin offset.
@@ -150,11 +152,12 @@ El responsable del proyecto confirmó que las pruebas manuales locales del recor
 - [ ] FOR-MAN-04 — Comparar una copia sintética: coincidencia, diferencia y fallo de lectura; el hash declarado no se sobrescribe.
 - [ ] FOR-MAN-05 — Probar rutas y nombres no válidos; confirmar que se rechazan, que el intento queda en el historial con un marcador genérico y que el texto enviado/ruta privada no aparece en respuestas ni registros.
 - [ ] FOR-MAN-06 — Confirmar que la API bloquea nuevas recepciones/comprobaciones tras cerrar el caso y que el historial previo se mantiene.
-- [ ] FOR-MAN-07 — Confirmar la navegación Red/Forense, selección de temas, foco de teclado y lectura en ventana estrecha.
+- [ ] FOR-MAN-07 — Revisar navegación Red/Forense, temas, foco y teclado, ventana estrecha y escritorio; probar lector de pantalla disponible y adjuntar capturas sanitizadas.
+- [ ] FOR-MAN-10 — Descargar el manifiesto de auditoría y el expediente consolidado; verificar ambos con el verificador local, alterar una copia descartable y confirmar que el cambio se detecta. No presentar el digest como firma digital.
 - [ ] FOR-MAN-08 — En macOS/Linux, probar con permisos de carpeta inicialmente abiertos y confirmar que se restrinjan a `0700`; confirmar que un fallo al restringir permisos bloquea la lectura. En Windows, revisar el comportamiento bajo las ACL locales.
-- [ ] FOR-MAN-09 — Registrar dos transferencias consecutivas y confirmar continuidad del custodio; después intentar una transferencia con remitente incorrecto, caso cerrado y cadena de auditoría alterada. Los rechazos no deben añadir eventos ni ocultar el estado de integridad.
+- [ ] FOR-MAN-09 — Registrar dos transferencias consecutivas y confirmar continuidad del custodio; después intentar una transferencia con remitente incorrecto, caso cerrado y cadena de auditoría alterada. Los rechazos no deben añadir eventos ni ocultar el estado de integridad. Confirmar que ambos manifiestos incluyen las transferencias aceptadas.
 - [ ] FOR-MAN-11 — En una base anterior sin receptor inicial, confirmar que la migración conserva el receptor como desconocido y que no se permite transferir hasta reconciliar la recepción. No inferirlo desde el operador ni desde la fuente que entrega.
-- [ ] FOR-MAN-12 — Crear un borrador de informe, descargar JSON/Markdown, verificar el JSON con el verificador local y comprobar que una copia modificada falla. Crear una enmienda y confirmar que V1 permanece intacta.
+- [ ] FOR-MAN-12 — Crear un borrador sin firma, descargar JSON/Markdown, verificar el JSON con el verificador local y comprobar que una copia modificada falla. Confirmar alcance, procedimientos, resultados, limitaciones y disposición; crear una enmienda V2 y comprobar que V1 permanece intacta.
 
 **Registro de la revisión Forense:**
 - Fecha y zona horaria:
@@ -176,20 +179,7 @@ Añadir una fila por sesión; si falla, dejarlo como bloqueado y abrir/vincular 
 |---|---|---|---|---|---|
 | — | — | — | — | Pendiente de primera ejecución | — |
 
-## NetSentinel Forense — revisión manual pendiente (PR #157)
+## Compatibilidad con la lista histórica de Forense
 
-Usar un directorio de datos aislado y **archivos sintéticos**. No probar con evidencia real ni reutilizar datos de otra instalación. Seguir también la [guía manual de Forense](FORENSIC_MANUAL_TEST.md). Estas casillas solo se marcan con el resultado de una prueba real y la información del entorno arriba indicada.
+La segunda lista que anteriormente se mantenía bajo la PR #157 duplicaba controles del checklist anterior y ya no debe ejecutarse como una segunda lista independiente. Sus puntos adicionales están incorporados en la checklist única FOR-MAN-01–12 (especialmente auditoría/manifiestos, revisión visual y accesibilidad). La PR #157 está cerrada como reemplazada; la prueba se ejecuta desde `main`, y cada casilla permanece pendiente hasta registrar un resultado real.
 
-- [ ] **FOR-01 — Alta y trazabilidad:** crear un caso de prueba con referencia de autoridad, objetivo y alcance; comprobar que la operación y el nombre declarado del operador queden en la auditoría.
-- [ ] **FOR-02 — Metadatos sin copiar evidencia:** registrar una pieza sintética y comprobar que se guarden los metadatos declarados sin subir ni copiar el contenido original ni persistir rutas completas.
-- [ ] **FOR-03 — Hash correcto e incorrecto:** comparar una copia de trabajo con su SHA-256 de referencia correcto y con otro valor; confirmar que el resultado y el tamaño correspondan al archivo leído.
-- [ ] **FOR-04 — Entradas inseguras y errores:** probar una ruta absoluta, traversal, nombre no portable, archivo ausente y enlace simbólico cuando el sistema lo permita. Confirmar mensajes entendibles y que la auditoría no exponga la ruta completa ni el nombre rechazado.
-- [ ] **FOR-05 — Caso cerrado:** cerrar un caso y confirmar que no admita nuevas evidencias ni comparaciones, sin borrar el historial existente.
-- [ ] **FOR-06 — Auditoría alterada:** exportar el manifiesto solo de auditoría, comprobarlo con su verificador y modificar una copia de prueba del JSON para confirmar que detecta el cambio. No presentar el digest como firma digital.
-- [ ] **FOR-07 — Interfaz y accesibilidad:** navegar con teclado, probar foco y mensajes de estado, tema claro/oscuro, ventana estrecha y lector de pantalla disponible. Anotar navegador y versión.
-- [ ] **FOR-08 — Revisión visual real:** revisar la pantalla en escritorio y ventana estrecha y adjuntar capturas sanitizadas; la ejecución automática de Chromium no reemplaza esta revisión humana.
-- [ ] **FOR-09 — Manifiesto consolidado:** exportar el expediente con datos sintéticos; verificar el digest externo y la auditoría incluida; confirmar caso, elementos, checks y eventos; comprobar que la salida no contiene contenido binario ni rutas absolutas y que la cadena de auditoría inválida produce un resultado no aprobado.
-- [ ] **FOR-10 — Transferencia de custodia:** registrar una entrega con remitente, receptor, fecha/hora con offset, motivo y método; comprobar que aparece en auditoría y ambos manifiestos. Verificar que la continuidad se imponga y que una cadena rota no acepte nuevas transferencias.
-- [ ] **FOR-11 — Informe reproducible:** crear y verificar un borrador, revisar que incluya alcance, procedimientos, resultados, limitaciones, disposición y digest del snapshot; comprobar exportaciones JSON/Markdown, verificador local y creación de una enmienda sin sobrescribir V1. La firma y autorización auténtica siguen fuera de esta fase.
-
-**Registro de Forense:** commit exacto, sistema operativo y versión, versión de Python, navegador y versión, comandos utilizados, resultado de cada caso, problemas observados y enlaces a logs/capturas sanitizados. Todos los casos comienzan pendientes; no inferir aprobación manual a partir de CI.
