@@ -134,9 +134,11 @@ def build_scenarios(device_ip: str, now: datetime | None = None) -> dict[str, st
     ]
     activity_csv = _csv_text(activity_rows)
 
-    # Se conserva una IP pública conocida únicamente para probar el recorrido
-    # de enriquecimiento GeoIP. La relación dominio/IP es deliberadamente falsa.
-    base_ts = int(current.timestamp()) - 300
+    # Los eventos Zeek también se usan en el laboratorio de correlación de Hallazgos.
+    # Dejamos margen amplio dentro de la ventana fija de ±300 segundos, incluso si
+    # la persona genera los archivos y siembra la base con algunos minutos de diferencia.
+    # La IP pública de ejemplo solo ejercita GeoIP; no implica relación con un dominio.
+    base_ts = int(current.timestamp()) - 60
     zeek_records = [
         {
             "ts": base_ts - 45,

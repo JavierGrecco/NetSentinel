@@ -222,6 +222,10 @@ def test_generated_zeek_tsv_has_consistent_fields_and_preserves_unknown_values(
     assert len(rows) == 2
     assert all(len(row) == len(fields) for row in rows)
     indexes = {name: index for index, name in enumerate(fields)}
+    # La primera conexión debe estar dentro de la ventana ±300 s para correlación.
+    event_epoch = float(rows[0][indexes["ts"]])
+    event_age_seconds = datetime.now(timezone.utc).timestamp() - event_epoch
+    assert 0 <= event_age_seconds < 300
     assert rows[0][indexes["orig_ip_bytes"]] == "128"
     assert rows[1][indexes["orig_ip_bytes"]] == "-"
     assert rows[1][indexes["resp_ip_bytes"]] == "0"
@@ -285,6 +289,38 @@ def test_seed_creates_only_synthetic_inventory_in_new_database(tmp_path: Path) -
     assert scans == 0
     assert observations == 0
     assert events == 0
+
+
+def test_seed_can_add_explicitly_synthetic_findings_correlation_fixture(tmp_path: Path) -> None:
+    """La fixture de correlación es optativa, explícita y no simula una captura real."""
+    result = run_seed(
+        tmp_path,
+        "--device-ip",
+        "192.168.56.20",
+        "--include-findings-correlation",
+    )
+    assert result.returncode == 0, result.stderr
+    assert "hallazgo sintético explícito" in result.stdout
+
+    with sqlite3.connect(tmp_path / "netsentinel.sqlite3") as db:
+        row = db.execute(
+            """SELECT e.event_type, e.severity, e.device_id, e.created_at, e.message, d.ip_address
+               FROM events e JOIN devices d ON d.id = e.device_id"""
+        ).fetchone()
+        scans = db.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+        observations = db.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+
+    assert row is not None
+    assert row[0:2] == ("new_device", "warning")
+    assert row[2] > 0
+    assert row[4] == (
+        "Fixture sintética: evento de laboratorio para validar correlación Zeek; "
+        "no representa una observación real."
+    )
+    assert row[5] == "192.168.56.20"
+    assert row[3]
+    assert scans == 0
+    assert observations == 0
 
 
 def test_seed_can_add_explicitly_synthetic_topology_without_network_io(tmp_path: Path) -> None:

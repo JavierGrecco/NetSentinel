@@ -132,7 +132,8 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.forensics_audit_integrity",
         "netsentinel.forensics_errors",
     }
-    assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings"}
+    assert graph["netsentinel.findings_service"] == {"netsentinel.database", "netsentinel.findings", "netsentinel.findings_activity_repository"}
+    assert graph["netsentinel.findings_activity_repository"] == {"netsentinel.database"}
     assert graph["netsentinel.activity_repository"] == {
         "netsentinel.database",
         "netsentinel.activity_deletion_repository",

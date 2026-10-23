@@ -184,6 +184,26 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "UPDATE observations SET source = 'synthetic-test-fixture' "
                 "WHERE scan_id IN (SELECT id FROM scans WHERE source = 'synthetic-test-fixture')"
             )
+            # Hallazgo optativo y explícitamente ficticio para comprobar el enlace
+            # con las conexiones Zeek importadas por la prueba guiada.
+            correlation_device = db.execute(
+                "SELECT device_id FROM device_addresses WHERE ip_address = ? ORDER BY last_seen DESC LIMIT 1",
+                ("192.168.56.20",),
+            ).fetchone()
+            if correlation_device is None:
+                raise RuntimeError("No se encontró el historial IP del activo sintético para la correlación Zeek.")
+            db.execute(
+                """INSERT INTO events
+                   (event_type, severity, device_id, created_at, message, acknowledged)
+                   VALUES (?, ?, ?, ?, ?, 0)""",
+                (
+                    "new_device",
+                    "warning",
+                    int(correlation_device["device_id"]),
+                    datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                    "Fixture sintética: evento de laboratorio para validar correlación Zeek; no representa una observación real.",
+                ),
+            )
 
         monitor = database.create_monitor(
             "Monitor de prueba accesible",
@@ -1923,7 +1943,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "topología guardada" not in title.lower():
             failures.append("se perdió el contexto del paso de topología")
 
-        for index in range(10):
+        for index in range(11):
             if page.locator("#wizardNext").is_hidden():
                 failures.append("el asistente ocultó Siguiente antes de completar todos los pasos")
                 break
@@ -1960,9 +1980,9 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if page.locator("#wizardSummaryPanel").is_hidden():
             failures.append("no apareció el panel de resumen al finalizar el recorrido")
         else:
-            if page.locator(".wizard-summary-row").count() != 12:
+            if page.locator(".wizard-summary-row").count() != 13:
                 failures.append(
-                    f"el informe mostró {page.locator('.wizard-summary-row').count()} resultados en vez de 12"
+                    f"el informe mostró {page.locator('.wizard-summary-row').count()} resultados en vez de 13"
                 )
             summary = page.locator("#wizardCompletionMessage").inner_text()
             if "fallo" not in summary.lower() or "sin comprobar" not in summary.lower():
@@ -2066,8 +2086,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             report_text = Path(report_path).read_text(encoding="utf-8") if report_path else ""
             for expected_text in (
                 "NetSentinel — Informe del asistente de aceptación",
-                "Resumen: 12 de 12 pasos con resultado registrado.",
-                "Correctos: 10 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
+                "Resumen: 13 de 13 pasos con resultado registrado.",
+                "Correctos: 11 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
                 "Resultado: Falló",
                 "Resultado: No pude comprobarlo",
             ):
