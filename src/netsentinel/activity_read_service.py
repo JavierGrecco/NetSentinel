@@ -35,12 +35,29 @@ def _normalized_device_id(device_id: int | None) -> int | None:
     return normalized
 
 
+def _normalized_source_event_id(value: str | None) -> str | None:
+    """Valida un ID de origen usado como foco de lectura, sin interpretarlo como SQL."""
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        raise ValueError("source_event_id debe ser texto.")
+    normalized = value.strip()
+    if (
+        not normalized
+        or len(normalized) > 180
+        or any(ord(character) < 32 or ord(character) == 127 for character in normalized)
+    ):
+        raise ValueError("source_event_id está vacío, supera el límite o contiene caracteres de control.")
+    return normalized
+
+
 def _build_event_filter(
     device_id: int | None,
     event_type: str | None,
     from_date: str | None,
     to_date: str | None,
     source: str | None,
+    source_event_id: str | None = None,
 ) -> tuple[str, tuple[Any, ...]]:
     """Construye solo predicados conocidos; los valores siempre van como parámetros."""
     clauses, params = activity_filters.activity_filter_values(
@@ -49,6 +66,10 @@ def _build_event_filter(
     if device_id is not None:
         clauses.insert(0, "e.device_id = ?")
         params.insert(0, device_id)
+    normalized_source_event_id = _normalized_source_event_id(source_event_id)
+    if normalized_source_event_id is not None:
+        clauses.append("e.source_event_id = ?")
+        params.append(normalized_source_event_id)
     where_sql = "WHERE " + " AND ".join(clauses) if clauses else ""
     return where_sql, tuple(params)
 
@@ -60,11 +81,12 @@ def export_activity_csv(
     to_date: str | None = None,
     limit: int = 10000,
     source: str | None = None,
+    source_event_id: str | None = None,
 ) -> str:
     """Exporta hasta 10.000 filas filtradas como CSV seguro para hojas de cálculo."""
     normalized_device = _normalized_device_id(device_id)
     where_sql, filter_params = _build_event_filter(
-        normalized_device, event_type, from_date, to_date, source
+        normalized_device, event_type, from_date, to_date, source, source_event_id
     )
     events = activity_repository.get_activity_export_rows(
         where_sql=where_sql,
@@ -125,11 +147,13 @@ def get_activity(
     from_date: str | None = None,
     to_date: str | None = None,
     source: str | None = None,
+    source_event_id: str | None = None,
 ) -> dict[str, Any]:
     """Prepara el modelo de lectura; los filtros afectan a la lista de eventos."""
     normalized_device = _normalized_device_id(device_id)
+    normalized_source_event_id = _normalized_source_event_id(source_event_id)
     event_filter, event_params = _build_event_filter(
-        normalized_device, event_type, from_date, to_date, source
+        normalized_device, event_type, from_date, to_date, source, normalized_source_event_id
     )
     snapshot = activity_repository.get_activity_snapshot(
         device_id=normalized_device,
@@ -142,5 +166,6 @@ def get_activity(
         "sources": sorted(SESSION_SOURCES),
         "activity_sources": sorted(EVENT_SOURCES | {"manual_import"}),
         "event_types": sorted(EVENT_TYPES),
+        "focus_event_id": normalized_source_event_id,
         "note": _ACTIVITY_NOTE,
     }
