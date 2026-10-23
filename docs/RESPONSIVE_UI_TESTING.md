@@ -119,7 +119,7 @@ Si el puerto 8765 ya está ocupado, usá 8766 y abrí `http://127.0.0.1:8766`. N
 
 Guardá la fecha, el commit probado, el sistema operativo, la versión de Python, la matriz ejecutada y el resumen del informe. Si hay un fallo visual, vinculá la captura de ese tamaño y anotá el resultado esperado. No adjuntes bases de datos ni inventarios reales.
 
-La prueba automática ayuda a encontrar regresiones de tamaño y estructura; una revisión humana en pantalla sigue siendo necesaria para juzgar el equilibrio visual, la legibilidad y la facilidad de uso. Registrá el resultado final en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+La comprobación Chromium también recorre el asistente guiado e interactúa con él: registra resultados, llega al resumen, revisa un paso desde su fila, cambia un resultado, conserva una nota y vuelve al resumen sin reiniciar el recorrido. Una revisión humana en pantalla sigue siendo necesaria para juzgar el equilibrio visual, la legibilidad y la facilidad de uso. Registrá el resultado final en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 
 En la rama integrada también se revisa la vista `/world-map`, incluida su navegación y sus filtros.

@@ -1970,6 +1970,82 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             if page.locator("#wizardCopyReport").is_hidden() or page.locator("#wizardDownloadReport").is_hidden():
                 failures.append("el cierre no ofrece copiar o descargar el informe")
 
+        # Revisión iterativa real: cambiar desde el resumen y volver sin perder nota/estado.
+        try:
+            topology_rows = page.locator(".wizard-summary-row").filter(has_text="topología guardada")
+            if topology_rows.count() != 1:
+                failures.append("el resumen no permite identificar una única fila de topología para revisar")
+            else:
+                topology_row = topology_rows.first
+                original_outcome = topology_row.locator(".wizard-summary-outcome").inner_text().strip()
+                review_button = topology_row.locator(".wizard-summary-review")
+                if original_outcome != "Correcto":
+                    failures.append(f"el resultado inicial de topología no se conservó en el resumen: {original_outcome}")
+                if review_button.count() != 1:
+                    failures.append("la fila de topología no ofrece una única acción Revisar paso")
+                else:
+                    review_button.click()
+                    if "topología guardada" not in page.locator("#wizardStepTitle").inner_text().lower():
+                        failures.append("Revisar paso no regresó directamente a la prueba de topología")
+                    if not page.locator("#wizardReturnToSummary").is_visible():
+                        failures.append("al revisar desde el resumen no apareció la acción Volver al resumen")
+
+                    pass_button = page.locator('[data-wizard-outcome="passed"]')
+                    fail_button = page.locator('[data-wizard-outcome="failed"]')
+                    if pass_button.get_attribute("aria-pressed") != "true":
+                        failures.append("la revisión directa no conservó la selección del resultado anterior")
+                    if page.locator("#wizardNotes").input_value():
+                        failures.append("la topología tenía una nota inesperada antes de la prueba de persistencia")
+
+                    regression_note = "Nota de regresión: conservar el contexto al corregir."
+                    page.locator("#wizardNotes").fill(regression_note)
+                    fail_button.click()
+                    saved_state = page.evaluate(
+                        "() => JSON.parse(localStorage.getItem('netsentinel.acceptance-wizard.v3') || 'null')"
+                    ) or {}
+                    saved_record = (saved_state.get("records") or {}).get("topology") or {}
+                    if saved_record.get("outcome") != "failed":
+                        failures.append("el cambio de resultado durante la revisión no se guardó en localStorage")
+                    if saved_record.get("note") != regression_note:
+                        failures.append("la nota editada durante la revisión no se guardó en localStorage")
+
+                    page.locator("#wizardReturnToSummary").click()
+                    page.wait_for_function(
+                        "() => { const panel = document.querySelector('#wizardSummaryPanel'); return panel && !panel.hidden; }",
+                        timeout=4000,
+                    )
+                    topology_row = page.locator(".wizard-summary-row").filter(has_text="topología guardada").first
+                    if "Falló" not in topology_row.locator(".wizard-summary-outcome").inner_text():
+                        failures.append("el resumen no reflejó el resultado corregido a fallido")
+                    if regression_note not in topology_row.inner_text():
+                        failures.append("el resumen perdió la nota al regresar desde la revisión")
+
+                    topology_row.locator(".wizard-summary-review").click()
+                    if fail_button.get_attribute("aria-pressed") != "true":
+                        failures.append("la segunda revisión directa no restauró el resultado fallido registrado")
+                    if page.locator("#wizardNotes").input_value() != regression_note:
+                        failures.append("la segunda revisión no recuperó la nota registrada")
+                    pass_button.click()
+                    page.locator("#wizardReturnToSummary").click()
+                    page.wait_for_function(
+                        "() => { const panel = document.querySelector('#wizardSummaryPanel'); return panel && !panel.hidden; }",
+                        timeout=4000,
+                    )
+                    topology_row = page.locator(".wizard-summary-row").filter(has_text="topología guardada").first
+                    if "Correcto" not in topology_row.locator(".wizard-summary-outcome").inner_text():
+                        failures.append("el resumen no reflejó la corrección final a correcto")
+                    if regression_note not in topology_row.inner_text():
+                        failures.append("la nota no sobrevivió al ciclo completo de revisar, corregir y volver")
+                    saved_state = page.evaluate(
+                        "() => JSON.parse(localStorage.getItem('netsentinel.acceptance-wizard.v3') || 'null')"
+                    ) or {}
+                    if saved_state.get("returnToSummary") is not False:
+                        failures.append("el asistente no cerró el estado temporal de revisión al volver al resumen")
+                    if not saved_state.get("finishedAt"):
+                        failures.append("el asistente no renovó la fecha de cierre después de revisar el recorrido")
+        except Exception as exc:
+            failures.append(f"falló la regresión interactiva de revisar, corregir y volver al resumen: {exc}")
+
         page.reload(wait_until="load")
         if page.locator("#wizardSummaryPanel").is_hidden():
             failures.append("el asistente no conservó el cierre y el resumen al recargar")
