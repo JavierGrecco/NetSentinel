@@ -5,6 +5,8 @@
 **Proyecto propio:** [JavierGrecco/NetSentinel](https://github.com/JavierGrecco/NetSentinel)  
 **Estado:** análisis del código publicado y propuesta de evolución. No se instaló ni ejecutó el producto de referencia.
 
+> **Contexto vigente (23/10/2026):** este documento registra la investigación y las recomendaciones formuladas el 16/10. Después, los componentes seleccionados —explorador LAN, mapa GeoIP local, importación Zeek y sus pruebas— quedaron integrados en `main` mediante la consolidación #189. Para el estado actual, prevalecen [PROJECT_STATUS.md](PROJECT_STATUS.md) y [REFERENCE_FEATURE_ADOPTION_MATRIX.md](REFERENCE_FEATURE_ADOPTION_MATRIX.md).
+
 ## Resumen ejecutivo
 
 El proyecto de referencia tiene ideas visuales y de ingeniería que vale la pena estudiar, sobre todo en tres áreas: **mapa interactivo de relaciones de red, geolocalización de IP públicas y métricas históricas**. Su implementación usa un grafo Cytoscape.js, un mapa mundial con datos GeoLite2 y una base SQLite de series temporales. También resuelve detalles importantes como conservar la posición de los nodos, mostrar diferencias entre lecturas, evitar actualizaciones redundantes y detener tareas de fondo al ocultar una pantalla.
@@ -75,9 +77,9 @@ Las direcciones como `192.168.x.x`, `10.x.x.x` y `172.16.x.x`–`172.31.x.x` son
 
 La geometría del mapa no contiene datos de geolocalización: es cartografía local separada, incorporada desde el recurso GeoJSON de la referencia bajo su licencia MIT y atribuida en `THIRD_PARTY_NOTICES.md`. Para las coordenadas se requiere una base GeoLite2-City local autorizada; GeoLite2-ASN es opcional. No se descargan esas bases en segundo plano ni se envían IP a un geolocalizador externo.
 
-**Estado actualizado:** la rama `feat/ip-world-map-geoip-2026-10` implementa una primera vista `/world-map` separada del grafo LAN. Enriquecerá solo IP públicas que ya aparecen como `destination_ip` en eventos locales; las IP privadas/especiales se omiten, las IP sin coordenadas no reciben marcadores falsos y los dominios sin IP histórica no se resuelven retroactivamente; una consulta manual de DNS actual se muestra como una fuente distinta. La vista muestra país/ciudad aproximados, ASN cuando existe una base local, recuento de eventos registrados y hora del último evento.
+**Estado de implementación (actualización 23/10/2026):** la vista `/world-map` está integrada en `main` mediante la consolidación #189. Está separada del grafo LAN y muestra destinos que ya aparecen como `destination_ip` en eventos locales. Las IP privadas/especiales se omiten, las IP sin coordenadas no reciben marcadores falsos y los dominios sin IP histórica no se resuelven retroactivamente; una consulta manual de DNS actual queda diferenciada como fuente distinta. La vista muestra país/ciudad aproximados, ASN cuando existe una base local, recuento de eventos guardados y hora del último evento.
 
-Esta primera entrega **no** integra el mapa animado de tráfico TCP/UDP/ICMP, captura continua de paquetes, fuentes de exposición WAN ni inteligencia de amenazas. Esas funciones requieren adaptadores y fuentes observadas reales; no se simulan con tráfico generado. La rama aún no está fusionada en `main` y necesita pasar CI y revisión manual.
+Esta entrega no incorpora un mapa animado de tráfico TCP/UDP/ICMP, captura continua de paquetes, fuentes automáticas de exposición WAN ni inteligencia de amenazas. Esas funciones requieren adaptadores y fuentes observadas reales; no se simulan con tráfico generado. La aceptación manual de la vista sigue pendiente y se registra en [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md).
 
 ## 3. Métricas: primero aprovechar lo que nuestro proyecto ya sabe medir
 
