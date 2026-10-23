@@ -4,6 +4,11 @@
 
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "netsentinel.acceptance-wizard.v3";
+  const LEGACY_STEP_IDS = [
+    "welcome", "lab", "topology", "csv-preview", "csv-import", "csv-rejections",
+    "world-map", "zeek", "forensics-case", "forensics-hash", "forensics-safety",
+    "forensics-manifests", "forensics-report", "summary"
+  ];
   const DEVICE_IP = "192.168.56.20";
   const STATUS_TEXT = {
     passed: "Correcto",
@@ -184,10 +189,35 @@
       track: true
     },
     {
+      id: "findings-correlation",
+      type: "manual",
+      phase: "Hallazgos",
+      title: "8. Hallazgos: revisar el contexto de conexiones Zeek",
+      checkKey: "findings-correlation",
+      checkAfterAction: true,
+      actionTitle: "Abrí Hallazgos y compará el evento sintético con Actividad",
+      actionDescription: "Después de importar zeek-conn.tsv, abrí Hallazgos en otra pestaña. Buscá el hallazgo marcado como fixture sintética, revisá las conexiones relacionadas y abrí el enlace hacia Actividad. Volvé aquí y pulsá «Comprobar ahora».",
+      lead: "Esta comprobación une un evento sintético de inventario con conexiones Zeek importadas de forma explícita. No inicia captura ni consulta tráfico real.",
+      objective: "Verificar que Hallazgos muestra la evidencia importada del mismo activo dentro de la ventana temporal y permite volver al registro exacto de Actividad.",
+      why: "La correlación debe preservar UID y procedencia para que una persona pueda revisar la fuente. La proximidad temporal por sí sola no prueba una intrusión ni una causa raíz.",
+      instructions: [
+        "Abrí Hallazgos en otra pestaña y seleccioná la vista que incluye todos los estados.",
+        "Encontrá el evento cuyo mensaje comienza con «Fixture sintética: evento de laboratorio para validar correlación Zeek». No confundas esta fixture explícita con un evento de red real.",
+        "Comprobá que muestra una o más conexiones Zeek del dispositivo sintético y una diferencia temporal dentro de ±300 segundos.",
+        "Abrí el enlace de la conexión. En Actividad deben conservarse el UID Zeek exacto y el formato zeek_conn_log.",
+        "Volvé a esta guía y pulsá «Comprobar ahora». Revisá el UID, el intervalo y el aviso que explica que una coincidencia no demuestra causalidad."
+      ],
+      expected: "Hallazgos presenta al menos una conexión Zeek importada de forma explícita del mismo activo dentro de cinco minutos; el enlace filtra Actividad por UID y formato exactos; el mensaje no atribuye una causa ni declara un ataque.",
+      link: "/findings",
+      linkLabel: "Abrir Hallazgos en otra pestaña ↗",
+      needsManual: true,
+      track: true
+    },
+    {
       id: "forensics-case",
       type: "manual",
       phase: "Forense",
-      title: "8. Forense: abrir el caso y registrar la muestra",
+      title: "9. Forense: abrir el caso y registrar la muestra",
       lead: "A continuación se prueba un expediente artificial, con nombres y autorización ficticios. No uses evidencia real.",
       objective: "Comprobar que se puede registrar el alcance de un caso y los metadatos de recepción de un archivo sintético.",
       why: "Un registro útil necesita identificar el propósito, el alcance autorizado, quién declara la recepción y cuál es el origen del hash. El formulario no debe presentar esto como autenticidad ya comprobada.",
@@ -224,7 +254,7 @@
       id: "forensics-hash",
       type: "manual",
       phase: "Forense",
-      title: "9. Forense: comprobar coincidencia y discrepancia SHA-256",
+      title: "10. Forense: comprobar coincidencia y discrepancia SHA-256",
       lead: "Esta comprobación demuestra que el contenido cambió —o no— respecto del valor declarado. No demuestra por sí misma quién creó el archivo.",
       objective: "Obtener una coincidencia con la muestra inicial y una discrepancia después de cambiar solo la copia sintética de trabajo.",
       why: "El hash es una huella de contenido. Registrar una referencia y recalcular la copia en momentos distintos permite detectar modificaciones.",
@@ -247,7 +277,7 @@
       id: "forensics-safety",
       type: "manual",
       phase: "Forense",
-      title: "10. Forense: rechazar archivos y rutas inseguras",
+      title: "11. Forense: rechazar archivos y rutas inseguras",
       lead: "Esta prueba negativa verifica que el módulo no lea archivos inexistentes ni permita salir del directorio de copias de trabajo.",
       objective: "Comprobar el manejo de errores y la defensa frente a nombres que intentan subir a un directorio padre.",
       why: "Los errores deben permitir entender qué ocurrió sin filtrar rutas locales, y una ruta con «..» no debe permitir acceder a archivos ajenos al alcance.",
@@ -268,7 +298,7 @@
       id: "forensics-manifests",
       type: "manual",
       phase: "Forense",
-      title: "11. Forense: revisar auditoría y manifiestos",
+      title: "12. Forense: revisar auditoría y manifiestos",
       lead: "Ahora vamos a sacar el historial del módulo para revisar lo que quedó registrado fuera de la página.",
       objective: "Validar el traspaso sintético, el historial de operaciones, la integridad del registro y las dos exportaciones JSON.",
       why: "El expediente tiene que permitir reconstruir qué operaciones se declararon. Un digest ayuda a detectar cambios, pero sin firma y anclaje independientes no certifica la identidad de los autores.",
@@ -299,7 +329,7 @@
       id: "forensics-report",
       type: "manual",
       phase: "Forense",
-      title: "12. Forense: generar y verificar el informe",
+      title: "13. Forense: generar y verificar el informe",
       lead: "La última operación funcional crea un borrador reproducible. Debe quedar explícito que está sin firma y que solo describe datos sintéticos.",
       objective: "Crear un informe, exportarlo en JSON y Markdown y comprobar que el JSON conserva un digest verificable.",
       why: "El lector tiene que distinguir un borrador versionado de un informe firmado o aprobado. La verificación de integridad no autentica automáticamente al autor.",
@@ -350,7 +380,7 @@
     }
   ];
 
-  const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Forense", "Cierre"];
+  const phaseNames = ["Preparación", "Red", "Actividad", "Geolocalización", "Hallazgos", "Forense", "Cierre"];
   const trackedSteps = steps.filter((step) => step.track);
   let state = loadState();
   const hasSavedProgress = state.currentStep > 0 || Boolean(state.finishedAt)
@@ -359,7 +389,7 @@
     ));
 
   function freshState() {
-    return { currentStep: 0, records: {}, finishedAt: null, returnToSummary: false };
+    return { format_version: 4, currentStep: 0, records: {}, finishedAt: null, returnToSummary: false };
   }
 
   function freshRecord() {
@@ -413,9 +443,17 @@
         }
       });
       const parsedStep = Number(saved.currentStep);
+      const legacyState = saved.format_version !== 4;
+      const legacyIndex = Number.isFinite(parsedStep)
+        ? Math.max(0, Math.min(LEGACY_STEP_IDS.length - 1, Math.floor(parsedStep))) : 0;
+      const legacyStepId = LEGACY_STEP_IDS[legacyIndex];
+      const migratedIndex = steps.findIndex((step) => step.id === legacyStepId);
       return {
-        currentStep: Number.isFinite(parsedStep)
-          ? Math.max(0, Math.min(steps.length - 1, Math.floor(parsedStep))) : 0,
+        format_version: 4,
+        currentStep: legacyState
+          ? Math.max(0, migratedIndex)
+          : (Number.isFinite(parsedStep)
+            ? Math.max(0, Math.min(steps.length - 1, Math.floor(parsedStep))) : 0),
         records,
         finishedAt: typeof saved.finishedAt === "string" && Number.isFinite(Date.parse(saved.finishedAt)) ? saved.finishedAt : null,
         returnToSummary: saved.returnToSummary === true
@@ -427,6 +465,7 @@
 
   function saveState() {
     try {
+      state.format_version = 4;
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       const indicator = $("wizardSaveStatus");
       if (indicator) {
@@ -996,6 +1035,67 @@
     };
   }
 
+  async function checkFindingsCorrelation() {
+    const response = await getJson("/api/findings?state=all&limit=200");
+    const report = response.data && typeof response.data === "object" ? response.data : {};
+    const findings = Array.isArray(report.findings) ? report.findings : [];
+    const fixtureMessage = "Fixture sintética: evento de laboratorio para validar correlación Zeek; no representa una observación real.";
+    const finding = findings.find((item) =>
+      item
+      && item.source
+      && item.source.system === "inventory"
+      && item.evidence
+      && item.evidence.message === fixtureMessage
+    );
+    const related = finding && finding.related_activity && typeof finding.related_activity === "object"
+      ? finding.related_activity : {};
+    const records = Array.isArray(related.records) ? related.records : [];
+    const expectedIds = new Set(["zeek:CManualScenario101", "zeek:CManualScenario102"]);
+    const deviceId = finding && finding.asset ? Number(finding.asset.device_id) : NaN;
+    const match = records.find((item) =>
+      item
+      && expectedIds.has(String(item.source_event_id || ""))
+      && Number(item.device_id) === deviceId
+      && Number.isFinite(Number(item.time_delta_seconds))
+      && Math.abs(Number(item.time_delta_seconds)) <= 300
+    );
+    const notice = String(related.notice || related.message || "").trim();
+    const nonCausalNotice = /no demuestra|no prueba/i.test(notice);
+    const details = [
+      {
+        label: "API Hallazgos",
+        value: response.ok ? "HTTP " + response.status + " · consulta completada" : "HTTP " + response.status + " · no se pudo consultar",
+        ok: response.ok
+      },
+      {
+        label: "Evento sintético",
+        value: finding ? "Evento de fixture encontrado · activo ID " + deviceId : "No se encontró el evento de prueba; prepará la base con --include-findings-correlation",
+        ok: Boolean(finding)
+      },
+      {
+        label: "Conexión correlacionada",
+        value: match
+          ? String(match.source_event_id) + " · diferencia temporal " + Math.abs(Number(match.time_delta_seconds)) + " s · activo ID " + match.device_id
+          : "No se encontró un UID de la fixture del mismo activo dentro de ±300 segundos",
+        ok: Boolean(match) && related.status === "matched"
+      },
+      {
+        label: "Límite de interpretación",
+        value: notice || "La respuesta no incluye la nota de interpretación",
+        ok: nonCausalNotice
+      }
+    ];
+    const ok = response.ok && Boolean(finding) && related.status === "matched"
+      && Boolean(match) && nonCausalNotice;
+    return {
+      ok,
+      summary: ok
+        ? "Hallazgos conserva la procedencia Zeek, la identidad del activo y el intervalo temporal. La coincidencia es contexto investigativo, no una conclusión de amenaza."
+        : "No se pudo confirmar la correlación sintética completa. Revisá la importación Zeek, el activo elegido y la preparación de la fixture antes de marcar este paso como correcto.",
+      details
+    };
+  }
+
   async function checkMap() {
     const [mapResponse, worldResponse] = await Promise.all([
       getJson("/api/geolocation/map?limit=250"),
@@ -1044,6 +1144,7 @@
       else if (step.checkKey === "csv-events") result = await checkCsvEvents();
       else if (step.checkKey === "csv-rejections") result = await checkCsvRejections();
       else if (step.checkKey === "zeek-events") result = await checkZeekEvents();
+      else if (step.checkKey === "findings-correlation") result = await checkFindingsCorrelation();
       else throw new Error("No hay una comprobación asociada a este paso.");
       record.autoChecked = true;
       record.autoResult = {
