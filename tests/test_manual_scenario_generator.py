@@ -226,7 +226,7 @@ def test_generated_zeek_tsv_has_consistent_fields_and_preserves_unknown_values(
     event_epoch = float(rows[0][indexes["ts"]])
     event_age_seconds = datetime.now(timezone.utc).timestamp() - event_epoch
     assert 0 <= event_age_seconds < 300
-    assert rows[0][indexes["orig_ip_bytes"]] == "128
+    assert rows[0][indexes["orig_ip_bytes"]] == "128"
     assert rows[1][indexes["orig_ip_bytes"]] == "-"
     assert rows[1][indexes["resp_ip_bytes"]] == "0"
     assert rows[1][indexes["id.orig_h"]] == "192.168.56.20"
