@@ -7,14 +7,14 @@ Los archivos son artificiales. No representan una observación de NetSentinel,
 no demuestran actividad de una persona y no deben mezclarse con una instalación
 que contenga datos reales. El generador no accede a la red ni a SQLite.
 
-**Para la aceptación integrada de esta rama**, prepará el entorno siguiendo
+**Para la aceptación integrada en `main`**, prepará el entorno siguiendo
 [el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md) y recorré `/guided-test`.
 El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de
 rama ni repetir la preparación sobre una base que ya esté sembrada.
 
 ## Generar los archivos
 
-Desde la raíz del repositorio, en la rama que contiene este documento:
+Desde la raíz del checkout de `main` que vas a probar:
 
     python scripts/generate_manual_scenarios.py
 
@@ -60,8 +60,8 @@ Generá los archivos antes de crear el activo para que las fechas sintéticas qu
 dentro del intervalo histórico. Usá la misma IP en ambos comandos. Para otra
 ejecución, elegí una carpeta de datos distinta.
 Si el archivo SQLite ya existe, el auxiliar se detiene sin modificarlo. Al
-iniciar después la app desde otra worktree/branch, usá el entorno virtual de esa
-copia y mantené el mismo NETSENTINEL_DATA_DIR para que use la base de prueba.
+iniciar la app, usá el entorno virtual de esta misma copia de trabajo y mantené
+el mismo `NETSENTINEL_DATA_DIR` para que use la base de prueba.
 
 La base de prueba queda separada de la instalación normal. Al cerrar la prueba,
 guardá el resultado que necesitás y eliminá esa carpeta solamente cuando estés
@@ -93,7 +93,8 @@ persona o equipo.
 
 ## Prueba B: mapa mundial de IP
 
-El mapa está integrado en esta rama de laboratorio. **No cambies de rama.**
+El mapa está integrado en `main`. No hace falta cambiar de rama; comprobá que
+la copia de trabajo use el commit de `origin/main` que vas a aceptar.
 
 1. En Actividad, elegí el dispositivo **Dispositivo sintético de prueba** e
    importá `activity.csv`. Primero usá la vista previa; después confirmá la
@@ -117,11 +118,11 @@ actual y no confirma la IP utilizada durante el evento de prueba.
 
 ## Prueba C: importación Zeek en Actividad (detalle complementario)
 
-El importador Zeek está integrado en la rama consolidada. Este procedimiento amplía
+El importador Zeek está integrado en `main`. Este procedimiento amplía
 el paso Zeek del asistente con detalle adicional; no instala Zeek, no inicia captura
 y no se conecta a un sensor. Para el recorrido principal, seguí `/guided-test`.
 
-1. Iniciá la rama candidata con una base de datos aislada.
+1. Iniciá NetSentinel desde la copia de trabajo de `main` con una base de datos aislada.
 2. En Actividad, seleccioná **Dispositivo sintético de prueba**, cuya dirección
    debe coincidir con la opción --device-ip que usaste para crear la base y los archivos.
    No ejecutes descubrimientos ni cambies el inventario de tu red real para completar este escenario.
@@ -189,7 +190,7 @@ Para ejecutar toda la suite:
 
 ## Qué registrar
 
-Anotá el SHA exacto de la rama probada, el sistema operativo, la versión de
+Anotá el SHA exacto del commit probado, el sistema operativo, la versión de
 Python, las acciones realizadas y los resultados aprobados/fallidos. Compartí
 mensajes de error y capturas revisadas, pero no una base SQLite, inventario
 real, CSV de actividad real, secretos ni datos personales.

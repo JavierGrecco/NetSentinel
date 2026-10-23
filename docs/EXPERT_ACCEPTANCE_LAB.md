@@ -1,7 +1,8 @@
 # Laboratorio consolidado de aceptación para expertos
 
-**Rama aislada:** `qa/expert-acceptance-consolidated-2026-10`  
-**Estado:** candidata para pruebas manuales; no equivale a una versión estable ni está fusionada en `main`.
+**Rama canónica:** `main`  
+**Integración funcional:** `f2f34a43fbbd88501782dda13baac6342b6ddcf4`  
+**Estado:** laboratorio integrado; aceptación manual y revisión humana de accesibilidad pendientes.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
@@ -25,14 +26,17 @@ El asistente reemplaza la lista de casillas dispersas por un recorrido de **12 p
 Para no pisar tu rama actual ni ningún cambio local, creá una copia de trabajo separada. Desde tu checkout actual del repositorio:
 
 ```bash
-git fetch origin "refs/heads/qa/expert-acceptance-consolidated-2026-10:refs/remotes/origin/qa/expert-acceptance-consolidated-2026-10"
-git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/qa/expert-acceptance-consolidated-2026-10
+git fetch origin "refs/heads/main:refs/remotes/origin/main"
+git worktree add --detach ../NetSentinel-acceptance-lab refs/remotes/origin/main
 cd ../NetSentinel-acceptance-lab
+printf "Commit exacto que vas a probar: "
+git rev-parse HEAD
+git status --short
 ```
 
 Este modo deja intacta tu rama y tu directorio de trabajo actual. Si ya existe una carpeta `../NetSentinel-acceptance-lab`, elegí otro nombre de carpeta antes de ejecutar `git worktree add`.
 
-**Por qué se usa este `fetch`:** al indicar solo el nombre de la rama, Git puede dejar el commit en `FETCH_HEAD` sin crear la referencia local `origin/qa/...`. El refspec explícito crea o actualiza esa referencia remota y evita el error `fatal: invalid reference`.
+**Por qué se usa este `fetch`:** al indicar solo el nombre de la rama, Git puede dejar el commit en `FETCH_HEAD` sin crear la referencia local `origin/main`. El refspec explícito crea o actualiza `origin/main` y evita el error `fatal: invalid reference`. La copia de trabajo queda fijada al commit descargado, sin cambiar tu rama original.
 
 Si ya apareció ese error, el comando terminó; no hay un proceso bloqueado que necesite `Ctrl+C`. Volvé a ejecutar el bloque corregido desde la raíz del repositorio. Si Git informa que la carpeta de destino ya existe, revisá `git worktree list` o elegí otro nombre de carpeta; no borres una carpeta a ciegas.
 
@@ -74,7 +78,7 @@ El progreso y las notas se guardan solo en el navegador de esta máquina. El asi
 4. **Zeek.** En `/activity`, elegí el activo ficticio `192.168.56.20`, cargá `$SCENARIO_DIR/zeek-conn.tsv`, previsualizá y revisá atribución y contadores. Importá dos veces: la segunda debe mostrar 0 registros nuevos y 2 duplicados omitidos. Anotá cualquier atribución inesperada.
 5. **Mapa mundial.** En `/world-map`, revisá tabla, filtro, estados vacíos y mensajes de cobertura. Para comprobar marcadores geográficos se necesita una base GeoLite2-City autorizada y vigente instalada localmente; instalar el paquete Python no descarga esa base.
 6. **Forense.** Creá el caso con valores ficticios de la guía, registrá la muestra, compará el hash inicial, cambiá la copia de trabajo con el comando propuesto y repetí la comparación. Revisá transferencias, auditoría y manifiestos; creá también el informe sin firma, descargá JSON/Markdown y verificá el JSON desde una segunda terminal.
-7. **Cierre.** Recorré los enlaces entre Red/Forense, la navegación por teclado y los tamaños de escritorio/móvil. Anotá la versión de Python, SO, SHA de la rama, resultado observado y cualquier fallo.
+7. **Cierre.** Recorré los enlaces entre Red/Forense, la navegación por teclado y los tamaños de escritorio/móvil. Anotá la versión de Python, el SO, el SHA exacto probado (`git rev-parse HEAD`), el resultado observado y cualquier fallo.
 
 ## Pruebas automatizadas locales
 
@@ -85,7 +89,7 @@ python -m pytest -q
 python scripts/check_architecture_boundaries.py
 ```
 
-La prueba responsive requiere el navegador Playwright y una instancia de laboratorio. Seguí su ayuda antes de ejecutarla; no la apuntes a una aplicación que use datos personales. La CI del PR integrado debe validar esta misma cabeza antes de dar por aprobada la integración.
+La prueba responsive requiere el navegador Playwright y una instancia de laboratorio. Seguí su ayuda antes de ejecutarla; no la apuntes a una aplicación que use datos personales. Antes de probar, comprobá en Actions que CI, seguridad y cadena de suministro hayan finalizado correctamente para el commit exacto de `main` que descargaste. Los checks de la PR anterior no validan automáticamente commits posteriores.
 
 ## Límites que deben quedar visibles al experto
 
@@ -94,7 +98,7 @@ La prueba responsive requiere el navegador Playwright y una instancia de laborat
 - La geolocalización IP es aproximada, requiere datos locales y no identifica personas ni dispositivos exactos.
 - Los hashes detectan cambios de contenido, pero no autentican la identidad del operador. Los informes no tienen firma digital ni anclaje externo de auditoría.
 - Los datos sintéticos no sustituyen la validación con datos autorizados reales, revisión visual manual, pruebas de accesibilidad ni recuperación de copias de seguridad.
-- El laboratorio es una rama de aceptación: no publicar ni usar como versión estable sin revisar todos los checks de esta combinación y cerrar las brechas de la matriz forense.
+- El laboratorio ya está integrado en `main`, pero no es una versión estable ni está aprobado para uso operativo hasta cerrar la aceptación local y las brechas de la matriz forense.
 
 ## Limpieza
 
