@@ -55,6 +55,14 @@ def test_manual_acceptance_does_not_require_closing_the_module_tab_before_checki
     assert "No hace falta cerrar la otra" in script
 
 
+def test_wizard_reuses_one_module_tab_instead_of_opening_a_new_tab_for_every_step():
+    html = HTML_PATH.read_text(encoding="utf-8")
+
+    assert 'id="wizardActionLink"' in html
+    assert 'target="netsentinel-acceptance-module"' in html
+    assert 'target="_blank"' not in html
+
+
 def test_empty_activity_and_map_states_are_reported_as_missing_actions_not_product_failures():
     script = JS_PATH.read_text(encoding="utf-8")
 
