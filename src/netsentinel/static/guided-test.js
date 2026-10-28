@@ -1145,7 +1145,7 @@
       { label: "API del mapa", value: mapResponse.ok ? "HTTP " + mapResponse.status + " · servicio disponible" : "No disponible (HTTP " + mapResponse.status + ")", ok: mapResponse.ok },
       { label: "Cartografía incluida", value: worldResponse.ok ? "Recurso local cargado (HTTP " + worldResponse.status + ")" : "No se pudo cargar el archivo cartográfico", ok: worldResponse.ok },
       { label: "Eventos con IP destino", value: eventCount > 0 ? eventCount + " evento(s) disponibles para revisar" : "Todavía no hay eventos para mostrar; importá activity.csv en el paso CSV", ok: eventCount > 0, level: needsAction ? "warning" : undefined },
-      { label: "Base GeoLite2-City", value: cityStatus === "available" ? "Disponible: la interfaz puede ubicar las IP cubiertas" : "No disponible: la tabla debe conservar los destinos sin inventar ubicaciones", ok: cityStatus === "available", level: cityStatus === "available" ? undefined : "warning" }
+      { label: "Base GeoLite2-City", value: cityStatus === "available" ? "Disponible: la interfaz puede ubicar las IP cubiertas" : "No disponible: la tabla debe conservar los destinos sin inventar ubicaciones", ok: true, level: cityStatus === "available" ? undefined : "warning" }
     ];
     return {
       ok,

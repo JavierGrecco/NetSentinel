@@ -70,7 +70,7 @@ def test_empty_activity_and_map_states_are_reported_as_missing_actions_not_produ
     assert "Todavía no hay CSV válido importado" in script
     assert "Todavía no se encontró ningún registro Zeek de la prueba" in script
     assert "Todavía no hay eventos para mostrar; importá activity.csv" in script
-    assert 'ok: cityStatus === "available", level: cityStatus === "available" ? undefined : "warning"' in script
+    assert 'ok: true, level: cityStatus === "available" ? undefined : "warning"' in script
 
 
 def test_rechecking_a_manual_step_revokes_a_stale_pass_when_the_check_fails():
