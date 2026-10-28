@@ -73,6 +73,14 @@ def test_empty_activity_and_map_states_are_reported_as_missing_actions_not_produ
     assert 'ok: cityStatus === "available", level: cityStatus === "available" ? undefined : "warning"' in script
 
 
+def test_rechecking_a_manual_step_revokes_a_stale_pass_when_the_check_fails():
+    script = JS_PATH.read_text(encoding="utf-8")
+
+    assert 'else if (!result.ok && record.outcome === "passed")' in script
+    assert "record.outcome = null;" in script
+    assert "record.resultTimestamp = null;" in script
+
+
 def test_phase_navigation_does_not_unlock_future_work_prematurely():
     script = JS_PATH.read_text(encoding="utf-8")
     html = HTML_PATH.read_text(encoding="utf-8")

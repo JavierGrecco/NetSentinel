@@ -1190,6 +1190,10 @@
       if (step.type === "auto") {
         record.outcome = result.ok ? "passed" : "failed";
         record.resultTimestamp = new Date().toISOString();
+      } else if (!result.ok && record.outcome === "passed") {
+        // Una nueva comprobación no puede conservar un aprobado que acaba de contradecir.
+        record.outcome = null;
+        record.resultTimestamp = null;
       }
       saveState();
       renderStep();
