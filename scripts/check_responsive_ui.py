@@ -1639,6 +1639,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
     failures: list[str] = []
     scan_posts: list[str] = []
     popups = []
+    module_page = None
 
     def track_request(request) -> None:
         if request.method == "POST" and request.url.split("?", 1)[0].rstrip("/").endswith("/api/scan"):
@@ -1897,24 +1898,34 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
                 return
 
         def open_module_and_record(outcome: str = "passed") -> str:
+            nonlocal module_page
             title = page.locator("#wizardStepTitle").inner_text()
             link = page.locator("#wizardActionLink")
             if link.count() != 1 or not link.is_visible():
                 failures.append(f"el paso «{title}» no muestra el enlace a su módulo")
                 return title
-            with page.expect_popup(timeout=8000) as popup_info:
-                link.click()
-            popup = popup_info.value
-            popup.wait_for_load_state("load", timeout=10000)
-            expected_path = link.get_attribute("href")
-            if expected_path and not popup.url.endswith(expected_path):
-                failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
-            if expected_path == "/activity":
+
+            expected_path = link.get_attribute("href") or ""
+            if module_page is None or module_page.is_closed():
+                with page.expect_popup(timeout=8000) as popup_info:
+                    link.click()
+                module_page = popup_info.value
+                module_page.wait_for_load_state("load", timeout=10000)
+            else:
                 try:
-                    _exercise_activity_scenario(popup, title)
+                    with module_page.expect_navigation(wait_until="load", timeout=10000):
+                        link.click()
+                except Exception as exc:
+                    failures.append(f"no se pudo reutilizar la pestaña de módulo para «{title}»: {exc}")
+                    return title
+
+            if expected_path and not module_page.url.endswith(expected_path):
+                failures.append(f"el paso «{title}» abrió una dirección inesperada: {module_page.url}")
+            if expected_path.split("#", 1)[0] == "/activity":
+                try:
+                    _exercise_activity_scenario(module_page, title)
                 except Exception as exc:
                     failures.append(f"no se pudo completar la acción requerida en «{title}»: {exc}")
-            popup.close()
             if "topología guardada" not in title.lower():
                 if page.locator("#wizardRunCheck").is_visible():
                     page.locator("#wizardRunCheck").click()
