@@ -184,6 +184,26 @@ def _seed_topology_fixture(data_dir: Path) -> None:
                 "UPDATE observations SET source = 'synthetic-test-fixture' "
                 "WHERE scan_id IN (SELECT id FROM scans WHERE source = 'synthetic-test-fixture')"
             )
+            # Hallazgo optativo y explícitamente ficticio para comprobar el enlace
+            # con las conexiones Zeek importadas por la prueba guiada.
+            correlation_device = db.execute(
+                "SELECT device_id FROM device_addresses WHERE ip_address = ? ORDER BY last_seen DESC LIMIT 1",
+                ("192.168.56.20",),
+            ).fetchone()
+            if correlation_device is None:
+                raise RuntimeError("No se encontró el historial IP del activo sintético para la correlación Zeek.")
+            db.execute(
+                """INSERT INTO events
+                   (event_type, severity, device_id, created_at, message, acknowledged)
+                   VALUES (?, ?, ?, ?, ?, 0)""",
+                (
+                    "new_device",
+                    "warning",
+                    int(correlation_device["device_id"]),
+                    datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                    "Fixture sintética: evento de laboratorio para validar correlación Zeek; no representa una observación real.",
+                ),
+            )
 
         monitor = database.create_monitor(
             "Monitor de prueba accesible",
@@ -1619,6 +1639,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
     failures: list[str] = []
     scan_posts: list[str] = []
     popups = []
+    module_page = None
 
     def track_request(request) -> None:
         if request.method == "POST" and request.url.split("?", 1)[0].rstrip("/").endswith("/api/scan"):
@@ -1877,24 +1898,34 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
                 return
 
         def open_module_and_record(outcome: str = "passed") -> str:
+            nonlocal module_page
             title = page.locator("#wizardStepTitle").inner_text()
             link = page.locator("#wizardActionLink")
             if link.count() != 1 or not link.is_visible():
                 failures.append(f"el paso «{title}» no muestra el enlace a su módulo")
                 return title
-            with page.expect_popup(timeout=8000) as popup_info:
-                link.click()
-            popup = popup_info.value
-            popup.wait_for_load_state("load", timeout=10000)
-            expected_path = link.get_attribute("href")
-            if expected_path and not popup.url.endswith(expected_path):
-                failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
-            if expected_path == "/activity":
+
+            expected_path = link.get_attribute("href") or ""
+            if module_page is None or module_page.is_closed():
+                with page.expect_popup(timeout=8000) as popup_info:
+                    link.click()
+                module_page = popup_info.value
+                module_page.wait_for_load_state("load", timeout=10000)
+            else:
                 try:
-                    _exercise_activity_scenario(popup, title)
+                    with module_page.expect_navigation(wait_until="load", timeout=10000):
+                        link.click()
+                except Exception as exc:
+                    failures.append(f"no se pudo reutilizar la pestaña de módulo para «{title}»: {exc}")
+                    return title
+
+            if expected_path and not module_page.url.endswith(expected_path):
+                failures.append(f"el paso «{title}» abrió una dirección inesperada: {module_page.url}")
+            if expected_path.split("#", 1)[0] == "/activity":
+                try:
+                    _exercise_activity_scenario(module_page, title)
                 except Exception as exc:
                     failures.append(f"no se pudo completar la acción requerida en «{title}»: {exc}")
-            popup.close()
             if "topología guardada" not in title.lower():
                 if page.locator("#wizardRunCheck").is_visible():
                     page.locator("#wizardRunCheck").click()
@@ -1923,7 +1954,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if "topología guardada" not in title.lower():
             failures.append("se perdió el contexto del paso de topología")
 
-        for index in range(10):
+        for index in range(11):
             if page.locator("#wizardNext").is_hidden():
                 failures.append("el asistente ocultó Siguiente antes de completar todos los pasos")
                 break
@@ -1937,19 +1968,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             if not page.locator("#wizardActionLink").is_visible():
                 failures.append(f"el paso «{title}» no indica qué módulo abrir")
                 break
-            # CSV/Zeek posteriores a una acción deshabilitan esta comprobación hasta
-            # que el usuario abre el módulo y termina la importación indicada.
-            check_button = page.locator("#wizardRunCheck")
-            if check_button.is_visible() and check_button.is_enabled():
-                check_button.click()
-                page.wait_for_function(
-                    """() => {
-                      const panel = document.querySelector("#wizardAutomaticPanel");
-                      const badge = document.querySelector("#wizardAutomaticBadge");
-                      return panel && !panel.hidden && badge && badge.textContent;
-                    }""",
-                    timeout=8000,
-                )
+            # Comprobar después de la acción evita etiquetar como fallo la falta de
+            # datos previa y espera la respuesta que incluye la importación completada.
             open_module_and_record(outcome)
             if page.locator("#wizardNext").is_disabled():
                 break
@@ -1960,9 +1980,9 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
         if page.locator("#wizardSummaryPanel").is_hidden():
             failures.append("no apareció el panel de resumen al finalizar el recorrido")
         else:
-            if page.locator(".wizard-summary-row").count() != 12:
+            if page.locator(".wizard-summary-row").count() != 13:
                 failures.append(
-                    f"el informe mostró {page.locator('.wizard-summary-row').count()} resultados en vez de 12"
+                    f"el informe mostró {page.locator('.wizard-summary-row').count()} resultados en vez de 13"
                 )
             summary = page.locator("#wizardCompletionMessage").inner_text()
             if "fallo" not in summary.lower() or "sin comprobar" not in summary.lower():
@@ -2066,8 +2086,8 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             report_text = Path(report_path).read_text(encoding="utf-8") if report_path else ""
             for expected_text in (
                 "NetSentinel — Informe del asistente de aceptación",
-                "Resumen: 12 de 12 pasos con resultado registrado.",
-                "Correctos: 10 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
+                "Resumen: 13 de 13 pasos con resultado registrado.",
+                "Correctos: 11 · Fallidos: 1 · No comprobados: 1 · Pendientes: 0.",
                 "Resultado: Falló",
                 "Resultado: No pude comprobarlo",
             ):
