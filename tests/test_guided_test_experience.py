@@ -40,7 +40,8 @@ def test_summary_allows_direct_review_without_restarting_the_wizard():
     assert "Resumen actualizado con los resultados y notas conservados" in script
     assert "function reopenedLinkLabel(label)" in script
     assert 'record.opened ? reopenedLinkLabel(baseLinkLabel) : baseLinkLabel' in script
-    assert "pulsá «Comprobar ahora» antes de registrar el resultado" in script
+    assert "Después pulsá «Comprobar ahora»." in script
+    assert "no hace falta cerrar la otra" in script
 
 
 def test_manual_acceptance_does_not_require_closing_the_module_tab_before_checking():
