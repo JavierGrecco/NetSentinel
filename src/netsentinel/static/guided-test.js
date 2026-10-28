@@ -28,7 +28,7 @@
       why: "Una prueba útil no consiste solo en marcar casillas: tiene que demostrar qué se intentó, qué resultado apareció y qué quedó pendiente.",
       instructions: [
         "Primero validaremos la base de laboratorio y la lectura sintética.",
-        "Cuando haya que mirar otro módulo, se abrirá en una pestaña nueva. Esta guía quedará abierta en la pestaña actual.",
+        "Cuando haya que mirar otro módulo, se abrirá en una pestaña nueva. No cierres esta guía: volvé haciendo clic en su pestaña; no hace falta cerrar la otra ventana para que funcionen los controles.",
         "Al volver, elegí «Coincide con lo esperado», «Encontré un fallo» o «No pude comprobarlo». No hace falta memorizar nada.",
         "Al final podrás copiar o descargar el informe del recorrido."
       ],
@@ -82,14 +82,15 @@
       objective: "Confirmar que el importador interpreta correctamente el archivo y permite revisarlo antes de guardarlo.",
       why: "Una vista previa fiable evita persistir columnas interpretadas mal, datos sensibles o filas que no corresponden al dispositivo seleccionado.",
       instructions: [
-        "Abrí Actividad en otra pestaña y entrá en la sección «Importar».",
+        "Abrí Actividad en la pestaña nueva. No cierres esta guía ni la pestaña de Actividad: para volver, hacé clic en la pestaña de esta guía. La sección Resumen puede estar vacía; es normal porque todavía no importamos registros.",
+        "La pestaña se abrirá directamente en «Importar». Si no ocurre, elegí «Importar» en la barra de Actividad.",
         "En «Asociar al dispositivo», elegí «Dispositivo sintético de prueba» (192.168.56.20).",
-        "En «Archivo CSV», seleccioná activity.csv dentro de la carpeta SCENARIO_DIR que imprimió la terminal al preparar el laboratorio.",
+        "En «Archivo CSV», elegí activity.csv dentro de la carpeta indicada por SCENARIO_DIR en la terminal. En el selector de macOS, presioná ⌘⇧G, pegá la ruta completa de SCENARIO_DIR y presioná Intro.",
         "Pulsá «Previsualizar CSV». Leé el resumen y las filas: tienen que aparecer seis filas válidas. No pulses todavía «Importar metadatos».",
-        "Volvé a esta guía y anotá cualquier diferencia si la vista previa no muestra las seis filas."
+        "Volvé a esta guía haciendo clic en su pestaña (no hace falta cerrar Actividad) y anotá cualquier diferencia si la vista previa no muestra las seis filas."
       ],
       expected: "La vista previa presenta seis filas válidas y explica qué se importaría sin guardar todavía los eventos.",
-      link: "/activity",
+      link: "/activity#importar",
       linkLabel: "Abrir Actividad en otra pestaña ↗",
       needsManual: true,
       track: true
@@ -106,13 +107,13 @@
       objective: "Validar que los eventos se guarden una vez y que una nueva importación del mismo archivo no cree duplicados.",
       why: "Sin idempotencia, volver a importar un archivo puede inflar contadores y distorsionar el historial de actividad.",
       instructions: [
-        "En la pestaña de Actividad que ya abriste, confirmá «Importar metadatos». Leé cuántos eventos se importaron y cuántos se omitieron.",
+        "En la pestaña de Actividad que ya abriste, confirmá «Importar metadatos». Leé cuántos eventos se importaron y cuántos se omitieron. No hace falta volver a elegir el archivo si sigue seleccionado.",
         "Sin cambiar el dispositivo ni el archivo, pulsá «Previsualizar CSV» otra vez. Debe indicar 6 filas válidas, 0 nuevas y 6 duplicadas que se omitirían.",
         "Pulsá «Importar metadatos» una segunda vez. El resultado esperado es 0 eventos importados y 6 duplicados omitidos.",
-        "Revisá «Eventos» y volvé al asistente. Registrá el resultado observado; no marques correcto si los contadores no coinciden."
+        "Revisá «Eventos» y volvé a esta guía haciendo clic en su pestaña; no cierres Actividad. Registrá lo observado y no marques correcto si los contadores no coinciden."
       ],
       expected: "La primera importación guarda los seis eventos válidos; la repetición identifica los registros duplicados y no vuelve a contarlos como eventos nuevos.",
-      link: "/activity",
+      link: "/activity#importar",
       linkLabel: "Volver a Actividad en otra pestaña ↗",
       needsManual: true,
       track: true
@@ -130,13 +131,13 @@
       why: "Aceptar un archivo inválido o solo una parte puede guardar datos sensibles o cambiar silenciosamente el significado de las columnas.",
       instructions: [
         "En «Importar», elegí el mismo dispositivo sintético.",
-        "Previsualizá activity-invalid-sensitive.csv. El archivo debe rechazarse por la cabecera sensible.",
-        "Previsualizá activity-invalid-duplicate-header.csv. El archivo debe rechazarse por ambigüedad.",
+        "En «Archivo CSV», elegí activity-invalid-sensitive.csv. En el selector de macOS podés usar ⌘⇧G y pegar la ruta de SCENARIO_DIR. Pulsá «Previsualizar CSV»: debe rechazarse por la cabecera sensible.",
+        "Luego elegí activity-invalid-duplicate-header.csv y pulsá «Previsualizar CSV»: debe rechazarse por cabeceras duplicadas. No pulses «Importar metadatos» para ninguno de los archivos inválidos.",
         "Abrí «Eventos» y comprobá que ninguno de los lotes rechazados quedó importado. No hace falta borrar nada.",
-        "Volvé al asistente e indicá si los dos archivos se rechazaron sin escrituras parciales."
+        "Volvé a esta guía haciendo clic en su pestaña; no cierres Actividad. Indicá si los dos archivos se rechazaron sin escrituras parciales."
       ],
       expected: "Ambos CSV se rechazan con un mensaje entendible y no aparece ningún evento procedente de esos archivos inválidos.",
-      link: "/activity",
+      link: "/activity#importar",
       linkLabel: "Abrir Actividad en otra pestaña ↗",
       needsManual: true,
       track: true
@@ -151,7 +152,7 @@
       why: "La ubicación de una IP es aproximada. Un mapa atractivo no debe sugerir una localización exacta cuando la base de datos no puede respaldarla.",
       instructions: [
         "Pulsá «Comprobar ahora» y revisá el estado de la API, el número de eventos con IP destino y el estado de GeoLite2-City.",
-        "Abrí «Mapa mundial» en otra pestaña. Revisá mapa base, tabla de destinos y filtro.",
+        "Abrí «Mapa mundial» en la pestaña nueva. La API puede responder bien aunque no haya eventos para dibujar; la tabla y los marcadores solo tendrán contenido después de importar activity.csv. Volvé a esta guía desde la barra de pestañas; no cierres ninguna.",
         "Si GeoLite2-City figura como no disponible, comprobá que la interfaz explique esa limitación y no dibuje marcadores inventados. No necesitás instalar la base geográfica para validar ese estado vacío.",
         "Si la base está disponible, comprobá que los puntos correspondan a eventos guardados y que las IP sin coordenadas sigan en la tabla.",
         "Volvé a esta guía y registrá el resultado."
@@ -176,14 +177,14 @@
       why: "Los contadores ausentes no equivalen a cero, y una conexión solo debe atribuirse cuando el dispositivo y el intervalo temporal coinciden con los datos guardados.",
       instructions: [
         "En Actividad, abrí «Importar conexiones de Zeek (conn.log)».",
-        "Elegí «Dispositivo sintético de prueba» (192.168.56.20) y seleccioná zeek-conn.tsv dentro de SCENARIO_DIR.",
+        "Elegí «Dispositivo sintético de prueba» (192.168.56.20). Para encontrar zeek-conn.tsv, presioná ⌘⇧G en el selector de macOS, pegá la ruta completa indicada por SCENARIO_DIR en la terminal y elegí el archivo.",
         "Pulsá «Previsualizar registros». Revisá los UID, la hora, la IP de origen/destino y los contadores. Los campos marcados como ausentes deben permanecer desconocidos.",
         "Si la vista previa corresponde a la IP y al intervalo del activo, pulsá «Importar conexiones». Volvé a previsualizar el archivo: debe indicar 0 nuevas y 2 duplicadas.",
-        "Pulsá «Importar conexiones» una segunda vez. El resultado esperado es 0 registros importados y 2 duplicados omitidos; luego volvé a esta guía.",
+        "Pulsá «Importar conexiones» una segunda vez. El resultado esperado es 0 registros importados y 2 duplicados omitidos. Volvé a esta guía haciendo clic en su pestaña; no cierres Actividad.",
         "Anotá cualquier atribución, contador o cantidad inesperada."
       ],
       expected: "La vista previa explica filas aceptadas y omitidas; los contadores ausentes siguen como desconocidos y los UID repetidos no generan duplicados.",
-      link: "/activity",
+      link: "/activity#importar",
       linkLabel: "Abrir Actividad y Zeek en otra pestaña ↗",
       needsManual: true,
       track: true
@@ -196,7 +197,7 @@
       checkKey: "findings-correlation",
       checkAfterAction: true,
       actionTitle: "Abrí Hallazgos y compará el evento sintético con Actividad",
-      actionDescription: "Después de importar zeek-conn.tsv, abrí Hallazgos en otra pestaña. Buscá el hallazgo marcado como fixture sintética, revisá las conexiones relacionadas y abrí el enlace hacia Actividad. Volvé aquí y pulsá «Comprobar ahora».",
+      actionDescription: "Después de importar zeek-conn.tsv, abrí Hallazgos en otra pestaña. Buscá el hallazgo sintético, revisá las conexiones y abrí el enlace hacia Actividad. Volvé a esta guía haciendo clic en su pestaña; no hace falta cerrar Hallazgos. Pulsá «Comprobar ahora».",
       lead: "Esta comprobación une un evento sintético de inventario con conexiones Zeek importadas de forma explícita. No inicia captura ni consulta tráfico real.",
       objective: "Verificar que Hallazgos muestra la evidencia importada del mismo activo dentro de la ventana temporal y permite volver al registro exacto de Actividad.",
       why: "La correlación debe preservar UID y procedencia para que una persona pueda revisar la fuente. La proximidad temporal por sí sola no prueba una intrusión ni una causa raíz.",
@@ -640,14 +641,16 @@
     panel.hidden = !step.checkKey || !record.autoChecked || !result;
     if (!step.checkKey || !record.autoChecked || !result) return;
     const badge = $("wizardAutomaticBadge");
-    badge.textContent = result.ok ? "Comprobación correcta" : "Revisar";
-    badge.className = "wizard-result-badge " + (result.ok ? "is-success" : "is-error");
+    const needsAction = result.status === "needs_action";
+    badge.textContent = result.ok ? "Comprobación correcta" : needsAction ? "Falta una acción previa" : "Revisar";
+    badge.className = "wizard-result-badge " + (result.ok ? "is-success" : needsAction ? "is-warning" : "is-error");
     $("wizardAutomaticSummary").textContent = result.summary || "";
     const list = $("wizardAutomaticDetails");
     list.replaceChildren();
     (result.details || []).forEach((item) => {
-      const li = makeNode("li", "wizard-check-result " + (item.ok ? "is-success" : item.level === "warning" ? "is-warning" : "is-error"));
-      li.append(makeNode("span", "wizard-check-symbol", item.ok ? "✓" : item.level === "warning" ? "!" : "×"));
+      const warning = item.level === "warning" || needsAction;
+      const li = makeNode("li", "wizard-check-result " + (item.ok ? "is-success" : warning ? "is-warning" : "is-error"));
+      li.append(makeNode("span", "wizard-check-symbol", item.ok ? "✓" : warning ? "!" : "×"));
       const wrap = makeNode("span", "wizard-check-copy");
       wrap.append(makeNode("strong", "", item.label));
       wrap.append(makeNode("small", "", item.value));
@@ -660,9 +663,9 @@
   }
 
   function manualOutcomeReady(step, record) {
-    if (!step.needsManual || !record.opened) return false;
-    if (step.checkKey && !record.autoChecked) return false;
-    return true;
+    if (!step.needsManual) return false;
+    if (step.checkKey) return Boolean(record.autoChecked);
+    return Boolean(record.opened);
   }
 
   function renderManualResult(step, record) {
@@ -680,10 +683,15 @@
       const outcome = button.dataset.wizardOutcome;
       button.classList.toggle("is-selected", record.outcome === outcome);
       button.setAttribute("aria-pressed", record.outcome === outcome ? "true" : "false");
-      button.disabled = outcome === "passed" && step.checkKey && record.autoResult && !record.autoResult.ok;
+      button.disabled = outcome === "passed" && (
+        (step.needsManual && !record.opened) ||
+        (step.checkKey && record.autoResult && !record.autoResult.ok)
+      );
     });
     if (step.checkKey && record.autoResult && !record.autoResult.ok) {
-      $("wizardManualOutcomeStatus").textContent = "La comprobación automática detectó una incidencia. No se puede marcar este paso como correcto; registrá el fallo o indicá que no pudiste comprobarlo.";
+      $("wizardManualOutcomeStatus").textContent = record.autoResult.status === "needs_action"
+        ? "Todavía falta una acción para evaluar este paso. Seguí la indicación del resultado y pulsá «Comprobar de nuevo» después de completar la acción. No lo marques como correcto todavía."
+        : "La comprobación automática detectó una incidencia. No se puede marcar este paso como correcto; registrá el fallo o indicá que no pudiste comprobarlo.";
     }
   }
 
@@ -805,12 +813,12 @@
         : step.actionTitle || "Abrí el módulo que vamos a probar";
       const actionDescription = record.opened
         ? step.checkAfterAction
-          ? "El módulo ya se abrió. Completá la acción indicada allí; al volver, pulsá «Comprobar ahora» antes de registrar el resultado."
+          ? "El módulo ya se abrió. Completá la acción y volvé haciendo clic en la pestaña de esta guía; no hace falta cerrar la otra. Después pulsá «Comprobar ahora»."
           : step.checkKey && !record.autoChecked
-            ? "El módulo ya se abrió. Al volver, pulsá «Comprobar ahora» y revisá el resultado antes de registrar tu observación."
+            ? "El módulo ya se abrió. Volvé haciendo clic en esta pestaña, revisá el resultado y registrá tu observación; no hace falta cerrar la otra pestaña."
             : "El módulo ya se abrió. Podés volver a consultarlo; cuando termines, regresá aquí y registrá lo que viste."
         : step.checkKey
-          ? "Ejecutá la comprobación de lectura y abrí el módulo. La guía seguirá abierta en esta pestaña."
+          ? "Podés comprobar desde esta guía en cualquier momento. Para evaluar también la interfaz, abrí el módulo en otra pestaña y después volvé haciendo clic en esta pestaña; no hace falta cerrar ninguna."
           : "Se abrirá en otra pestaña. Seguí los pasos indicados, después volvé acá y registrá el resultado.";
       $("wizardActionDescription").textContent = step.actionDescription || actionDescription;
     }
@@ -821,7 +829,7 @@
     $("wizardPrevious").disabled = state.currentStep === 0;
     $("wizardStart").hidden = step.type !== "intro";
     $("wizardRunCheck").hidden = !step.checkKey;
-    $("wizardRunCheck").disabled = Boolean(record.checking) || Boolean(step.checkAfterAction && !record.opened);
+    $("wizardRunCheck").disabled = Boolean(record.checking);
     $("wizardRunCheck").textContent = record.checking ? "Comprobando…" : record.autoChecked ? "Comprobar de nuevo" : "Comprobar ahora";
     $("wizardNext").hidden = step.type === "intro" || step.type === "summary";
     $("wizardNext").disabled = !canAdvance(step, record);
@@ -970,15 +978,19 @@
     }
     const csvEvents = syntheticCsvEvents(snapshot.events);
     const ok = csvEvents.length === 6;
+    const needsAction = csvEvents.length === 0;
     return {
       ok,
+      status: ok ? "passed" : needsAction ? "needs_action" : "failed",
       summary: ok
         ? "Se encontraron los seis eventos identificables del CSV de prueba en la base local."
-        : "Se esperaban seis eventos sintéticos de activity.csv. Revisá si la importación se confirmó, si se eligió el activo correcto y si la fecha quedó dentro de la retención.",
+        : needsAction
+          ? "Todavía no hay eventos del CSV guardados. Esto no demuestra un fallo del importador: abrí Actividad, importá activity.csv y volvé a comprobar. Si todavía no encontrás el archivo, usá ⌘⇧G en el selector de macOS y pegá la ruta SCENARIO_DIR que imprimió la terminal."
+          : "Se esperaban seis eventos sintéticos de activity.csv, pero solo se encontró una parte. Revisá el dispositivo seleccionado, la confirmación de importación y la retención.",
       details: [
         { label: "Dispositivo consultado", value: snapshot.device.display_name + " · " + DEVICE_IP + " · ID " + snapshot.device.id, ok: true },
-        { label: "Eventos sintéticos del CSV", value: csvEvents.length + " de 6 encontrados", ok },
-        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+        { label: "Eventos sintéticos del CSV", value: csvEvents.length + " de 6 encontrados", ok, level: needsAction ? "warning" : undefined },
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: snapshot.totalEvents >= 6, level: snapshot.totalEvents < 6 ? "warning" : undefined }
       ]
     };
   }
@@ -995,15 +1007,19 @@
     const validCount = syntheticCsvEvents(snapshot.events).length;
     const sensitiveMarkerPresent = JSON.stringify(snapshot.events).includes("SYNTHETIC_BODY_MUST_BE_REJECTED");
     const ok = validCount === 6 && !sensitiveMarkerPresent;
+    const needsAction = validCount === 0 && !sensitiveMarkerPresent;
     return {
       ok,
+      status: ok ? "passed" : needsAction ? "needs_action" : "failed",
       summary: ok
-        ? "Los seis eventos válidos siguen presentes y no se encontró el marcador del archivo sensible entre los eventos guardados."
-        : "Hay un resultado inesperado: faltan eventos válidos o aparece un marcador que no debería importarse. Revisá la vista previa y el rechazo de los dos archivos inválidos.",
+        ? "Los seis eventos válidos siguen presentes y no se encontró el marcador del archivo sensible entre los eventos guardados. Antes de marcarlo correcto, confirmá que viste los mensajes de rechazo de ambos CSV; esta consulta solo verifica que el contenido sensible no se haya guardado."
+        : needsAction
+          ? "Todavía no hay CSV válido importado, así que no se puede concluir que el rechazo sea correcto. Importá primero activity.csv en el paso anterior y después probá los dos archivos inválidos."
+          : "Hay un resultado inesperado: faltan eventos válidos o aparece un marcador que no debería importarse. Revisá la vista previa y el rechazo de los dos archivos inválidos.",
       details: [
-        { label: "Eventos válidos del CSV", value: validCount + " de 6 encontrados", ok: validCount === 6 },
+        { label: "Eventos válidos del CSV", value: validCount + " de 6 encontrados", ok: validCount === 6, level: needsAction ? "warning" : undefined },
         { label: "Marcador de contenido sensible", value: sensitiveMarkerPresent ? "Detectado inesperadamente en los eventos" : "No aparece en los eventos guardados", ok: !sensitiveMarkerPresent },
-        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: snapshot.totalEvents >= 6, level: snapshot.totalEvents < 6 ? "warning" : undefined }
       ]
     };
   }
@@ -1021,16 +1037,20 @@
       ["zeek:CManualScenario101", "zeek:CManualScenario102"].includes(String(event.source_event_id || ""))
     );
     const ok = zeekEvents.length === 2;
+    const needsAction = zeekEvents.length === 0;
     return {
       ok,
+      status: ok ? "passed" : needsAction ? "needs_action" : "failed",
       summary: ok
         ? "La consulta local encontró los dos UID del conn.log sintético. Compará este recuento con la vista previa y la segunda importación."
-        : "No se encontraron los dos UID esperados del conn.log sintético. Confirmá que importaste el archivo correcto para el dispositivo seleccionado y repetí la vista previa.",
+        : needsAction
+          ? "Todavía no se encontró ningún registro Zeek de la prueba. Esto no demuestra que el importador falle: en Actividad → Importar, elegí zeek-conn.tsv, previsualizalo e importalo; después volvé y comprobá otra vez."
+          : "Se encontraron algunos registros Zeek, pero no están los dos UID esperados. Revisá el archivo, el dispositivo y el resultado de la importación.",
       details: [
         { label: "Dispositivo consultado", value: snapshot.device.display_name + " · " + DEVICE_IP + " · ID " + snapshot.device.id, ok: true },
-        { label: "UID Zeek esperados", value: zeekEvents.length + " de 2 encontrados", ok },
-        { label: "Identificadores observados", value: zeekEvents.map((event) => event.source_event_id).join(", ") || "Ninguno encontrado", ok },
-        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: true }
+        { label: "UID Zeek esperados", value: zeekEvents.length + " de 2 encontrados", ok, level: needsAction ? "warning" : undefined },
+        { label: "Identificadores observados", value: zeekEvents.map((event) => event.source_event_id).join(", ") || "Ninguno encontrado", ok, level: needsAction ? "warning" : undefined },
+        { label: "Total de eventos del dispositivo", value: String(snapshot.totalEvents), ok: snapshot.totalEvents >= 8, level: snapshot.totalEvents < 8 ? "warning" : undefined }
       ]
     };
   }
@@ -1087,11 +1107,21 @@
     ];
     const ok = response.ok && Boolean(finding) && related.status === "matched"
       && Boolean(match) && nonCausalNotice;
+    const needsAction = response.ok && Boolean(finding) && !match;
+    if (needsAction) {
+      details[2].level = "warning";
+      details[2].value = "La fixture Zeek todavía no aparece correlacionada. Confirmá que zeek-conn.tsv se haya importado para el dispositivo sintético y dentro de la ventana de ±300 segundos.";
+    }
     return {
       ok,
+      status: ok ? "passed" : needsAction || (response.ok && !finding) ? "needs_action" : "failed",
       summary: ok
         ? "Hallazgos conserva la procedencia Zeek, la identidad del activo y el intervalo temporal. La coincidencia es contexto investigativo, no una conclusión de amenaza."
-        : "No se pudo confirmar la correlación sintética completa. Revisá la importación Zeek, el activo elegido y la preparación de la fixture antes de marcar este paso como correcto.",
+        : needsAction
+          ? "El hallazgo sintético existe, pero no se encontró la conexión Zeek que debe acompañarlo. Importá zeek-conn.tsv en el paso anterior y volvé a comprobar; esto todavía no demuestra un defecto de correlación."
+          : response.ok && !finding
+            ? "No se encontró la fixture de Hallazgos en la base de prueba. Revisá que la preparación se ejecutara con --include-findings-correlation antes de investigar la correlación."
+            : "No se pudo confirmar la correlación sintética completa. Revisá el estado de la API, la importación Zeek, el activo elegido y la ventana temporal.",
       details
     };
   }
@@ -1108,18 +1138,24 @@
     const databases = map.databases || {};
     const cityStatus = databases.city_status || "sin estado";
     const eventCount = Number(summary.events_with_destination_ip || 0);
-    const ok = mapResponse.ok && worldResponse.ok;
+    const infrastructureOk = mapResponse.ok && worldResponse.ok;
+    const needsAction = infrastructureOk && eventCount === 0;
+    const ok = infrastructureOk && eventCount > 0;
     const details = [
-      { label: "API del mapa", value: mapResponse.ok ? "HTTP " + mapResponse.status + " · " + eventCount + " evento(s) con IP destino" : "No disponible (HTTP " + mapResponse.status + ")", ok: mapResponse.ok },
+      { label: "API del mapa", value: mapResponse.ok ? "HTTP " + mapResponse.status + " · servicio disponible" : "No disponible (HTTP " + mapResponse.status + ")", ok: mapResponse.ok },
       { label: "Cartografía incluida", value: worldResponse.ok ? "Recurso local cargado (HTTP " + worldResponse.status + ")" : "No se pudo cargar el archivo cartográfico", ok: worldResponse.ok },
-      { label: "Base GeoLite2-City", value: cityStatus === "available" ? "Disponible: la interfaz puede ubicar las IP cubiertas" : "No disponible: es válido mostrar la tabla sin inventar marcadores", ok: true, level: cityStatus === "available" ? "success" : "warning" }
+      { label: "Eventos con IP destino", value: eventCount > 0 ? eventCount + " evento(s) disponibles para revisar" : "Todavía no hay eventos para mostrar; importá activity.csv en el paso CSV", ok: eventCount > 0, level: needsAction ? "warning" : undefined },
+      { label: "Base GeoLite2-City", value: cityStatus === "available" ? "Disponible: la interfaz puede ubicar las IP cubiertas" : "No disponible: la tabla debe conservar los destinos sin inventar ubicaciones", ok: cityStatus === "available", level: cityStatus === "available" ? undefined : "warning" }
     ];
     return {
       ok,
+      status: ok ? "passed" : needsAction ? "needs_action" : "failed",
       details,
       summary: ok
-        ? "El servicio y el mapa base responden. El estado de GeoIP indica si hay cobertura geográfica real, no si el mapa debe inventar coordenadas."
-        : "La API o el recurso cartográfico falló. Revisá el detalle y marcá el paso como fallido si la interfaz tampoco funciona."
+        ? "El servicio y el mapa base responden y hay destinos guardados para revisar. La geolocalización sigue limitada a las IP cubiertas por GeoIP; sin GeoLite2-City, los destinos deben seguir visibles en la tabla sin coordenadas inventadas."
+        : needsAction
+          ? "La API y la cartografía responden, pero no hay eventos con IP destino. La pantalla vacía es esperable antes de importar activity.csv, pero no alcanza para evaluar la tabla ni los marcadores. Volvé al paso de importación CSV, completalo y después repetí esta comprobación."
+          : "La API o el recurso cartográfico falló. Revisá el detalle y marcá el paso como fallido si la interfaz tampoco funciona."
     };
   }
 
@@ -1127,11 +1163,7 @@
     const step = steps[state.currentStep];
     if (!step.checkKey) return;
     const record = recordFor(step);
-    if (step.checkAfterAction && !record.opened) {
-      showMessage("Primero abrí el módulo y completá la acción indicada. Después volvé aquí para comprobar el resultado.", "warning");
-      return;
-    }
-    record.checking = true;
+        record.checking = true;
     showMessage("Ejecutando una comprobación de lectura…");
     $("wizardRunCheck").disabled = true;
     $("wizardRunCheck").textContent = "Comprobando…";
@@ -1149,6 +1181,7 @@
       record.autoChecked = true;
       record.autoResult = {
         ok: Boolean(result.ok),
+        status: result.status || (result.ok ? "passed" : "failed"),
         summary: result.summary,
         details: result.details || [],
         checkedAt: new Date().toISOString()
@@ -1161,7 +1194,9 @@
       saveState();
       renderStep();
       if (result.ok) showMessage("Comprobación finalizada. Revisá los datos observados y seguí la indicación del paso.", "success");
-      else {
+      else if (result.status === "needs_action") {
+        showMessage(result.summary, "warning");
+      } else {
         showMessage("La comprobación encontró una condición que revisar. Abrí la ayuda de preparación si faltan datos sintéticos.", "error");
         if (step.id === "lab") $("wizardRecoveryDetails").open = true;
       }
@@ -1302,6 +1337,10 @@
       showMessage("Primero completá la comprobación automática, si la hay, y abrí el módulo en otra pestaña.", "warning");
       return;
     }
+    if (outcome === "passed" && step.needsManual && !record.opened) {
+      showMessage("Para marcarlo como correcto, abrí el módulo y revisá su interfaz. No hace falta cerrar la otra pestaña: volvé haciendo clic en esta guía.", "warning");
+      return;
+    }
     if (outcome === "passed" && step.checkKey && record.autoResult && !record.autoResult.ok) {
       showMessage("La comprobación automática encontró una incidencia: este paso no puede quedar registrado como correcto.", "error");
       return;
@@ -1367,7 +1406,7 @@
       : "Volvé a esta pestaña cuando termines de revisar el módulo.";
     let returnMessage;
     if (step.checkAfterAction) {
-      returnMessage = "La guía sigue abierta aquí. Completá la acción en la otra pestaña y, al volver, pulsá «Comprobar ahora» antes de registrar el resultado.";
+      returnMessage = "La guía sigue abierta aquí. Completá la acción en la otra pestaña y volvé haciendo clic en esta pestaña; no hace falta cerrar la otra. Después pulsá «Comprobar ahora».";
     } else if (step.checkKey && !record.autoChecked) {
       returnMessage = "La guía sigue abierta aquí. Al volver, pulsá «Comprobar ahora» y revisá el resultado antes de registrar tu observación.";
     } else if (step.checkKey && record.autoResult && !record.autoResult.ok) {

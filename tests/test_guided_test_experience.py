@@ -43,6 +43,27 @@ def test_summary_allows_direct_review_without_restarting_the_wizard():
     assert "pulsá «Comprobar ahora» antes de registrar el resultado" in script
 
 
+def test_manual_acceptance_does_not_require_closing_the_module_tab_before_checking():
+    script = JS_PATH.read_text(encoding="utf-8")
+
+    assert "if (step.checkKey) return Boolean(record.autoChecked);" in script
+    assert 'record.autoResult.status === "needs_action"' in script
+    assert 'Boolean(step.checkAfterAction && !record.opened)' not in script
+    assert 'link: "/activity#importar"' in script
+    assert "⌘⇧G" in script
+    assert "No hace falta cerrar la otra" in script
+
+
+def test_empty_activity_and_map_states_are_reported_as_missing_actions_not_product_failures():
+    script = JS_PATH.read_text(encoding="utf-8")
+
+    assert "Todavía no hay eventos del CSV guardados. Esto no demuestra un fallo del importador" in script
+    assert "Todavía no hay CSV válido importado" in script
+    assert "Todavía no se encontró ningún registro Zeek de la prueba" in script
+    assert "Todavía no hay eventos para mostrar; importá activity.csv" in script
+    assert 'ok: cityStatus === "available", level: cityStatus === "available" ? undefined : "warning"' in script
+
+
 def test_phase_navigation_does_not_unlock_future_work_prematurely():
     script = JS_PATH.read_text(encoding="utf-8")
     html = HTML_PATH.read_text(encoding="utf-8")
