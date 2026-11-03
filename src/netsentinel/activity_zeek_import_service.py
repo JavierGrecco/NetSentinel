@@ -127,18 +127,22 @@ def _validate_zeek_fields(fields: Any, line_number: int) -> None:
     if not missing and not suggestions:
         return
 
-    details: list[str] = []
     if missing:
-        details.append(
-            "faltan campos necesarios: " + ", ".join(sorted(missing))
-        )
-    if suggestions:
-        details.append(
-            "hay columnas con posibles errores tipográficos: "
-            + "; ".join(suggestions)
-            + "; no se aplicaron sugerencias"
-        )
-    raise ValueError(f"Fila {line_number}: el conn.log " + "; ".join(details) + ".")
+        message = "no contiene los campos necesarios: " + ", ".join(sorted(missing))
+        if suggestions:
+            message += (
+                ". También hay columnas con posibles errores tipográficos: "
+                + "; ".join(suggestions)
+                + "; no se aplicaron sugerencias"
+            )
+        raise ValueError(f"Fila {line_number}: el conn.log {message}.")
+
+    message = (
+        "contiene columnas con posibles errores tipográficos: "
+        + "; ".join(suggestions)
+        + "; no se aplicaron sugerencias"
+    )
+    raise ValueError(f"Fila {line_number}: el conn.log {message}.")
 _ZEEK_PORT_FIELDS = {"id.orig_p", "id.resp_p"}
 _ZEEK_COUNTER_FIELDS = {"orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts"}
 
