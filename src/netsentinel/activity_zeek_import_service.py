@@ -95,6 +95,19 @@ def _validate_zeek_fields(fields: Any, line_number: int) -> None:
             f"normalizar: {names}."
         )
 
+    unsafe = [
+        result for result in plan.headers
+        if result.status is HeaderStatus.UNSAFE_NAME
+    ]
+    if unsafe:
+        details = "; ".join(
+            f"{result.source_header!r}: {result.reason}"
+            for result in unsafe
+        )
+        raise ValueError(
+            f"Fila {line_number}: la cabecera Zeek contiene nombres no seguros: {details}."
+        )
+
     missing = missing_required_fields(plan, _REQUIRED_ZEEK_CANONICAL_FIELDS)
 
     # También revisar sugerencias cuando todos los campos requeridos están presentes:
@@ -123,7 +136,7 @@ def _validate_zeek_fields(fields: Any, line_number: int) -> None:
         details.append(
             "hay columnas con posibles errores tipográficos: "
             + "; ".join(suggestions)
-            + ". No se aplicaron sugerencias."
+            + "; no se aplicaron sugerencias"
         )
     raise ValueError(f"Fila {line_number}: el conn.log " + "; ".join(details) + ".")
 _ZEEK_PORT_FIELDS = {"id.orig_p", "id.resp_p"}

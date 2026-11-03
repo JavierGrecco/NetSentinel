@@ -481,3 +481,11 @@ def test_zeek_unknown_extension_without_a_safe_candidate_remains_ignored() -> No
 
     assert mapped["source_event_id"] == "zeek:CZeekFixture42"
     assert "vendor_extension_code" not in mapped
+
+
+def test_zeek_unsafe_optional_header_is_rejected() -> None:
+    record = _record()
+    record["vendor_рkts"] = 7  # Cyrillic small letter er is visually confusable with Latin p.
+
+    with pytest.raises(ValueError, match="nombres no seguros"):
+        importer._to_event(record, 1)
