@@ -28,6 +28,11 @@ El primer inicio necesita conexión a Internet para instalar las dependencias qu
 
 **Módulo experimental:** NetSentinel Forense dispone de una página y una primera base de trabajo para casos y evidencias. No constituye una cadena de custodia validada ni autentica por sí solo la identidad del operador. Sus límites están detallados en la [documentación de Forense](docs/FORENSIC_MODE.md).
 
+## Caso de estudio técnico
+
+El [caso de estudio de NetSentinel](docs/CASE_STUDY.md) explica el problema que aborda, las decisiones de diseño, la arquitectura implementada, cómo se verifica y qué limitaciones siguen abiertas.
+
+
 ## Arquitectura
 
 NetSentinel está construido como un monolito modular: FastAPI sirve la interfaz y la API local; SQLite conserva los datos; los servicios y repositorios separan las reglas de negocio de la persistencia. La extensión Chromium es un cliente opcional y separado del servidor.

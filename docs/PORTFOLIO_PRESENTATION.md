@@ -8,6 +8,8 @@ NetSentinel es una aplicación local-first para inventario, observabilidad y dia
 
 La propuesta central es la visibilidad operativa local, explicable y con límites claros. No debe presentarse como un SIEM, NDR, EDR, escáner integral de vulnerabilidades ni plataforma SOC.
 
+El relato técnico del proyecto está desarrollado en [CASE_STUDY.md](CASE_STUDY.md). Este documento fija criterios editoriales; el caso de estudio es la pieza que debe leer una persona evaluadora para entender el problema, las decisiones, la evidencia y los límites.
+
 ## Qué debe entender un visitante en el primer minuto
 
 1. **Qué es:** una herramienta local para conocer una red y comprobar servicios.
