@@ -236,6 +236,8 @@ def test_ambiguous_or_unknown_units_are_not_converted() -> None:
         Decimal("1e129"),
         Decimal("0e-129"),
         10**64,
+        1e129,
+        1e-129,
     ],
 )
 def test_extreme_numeric_precision_and_scale_are_rejected(value: object) -> None:
@@ -247,6 +249,11 @@ def test_extreme_numeric_scale_cannot_reach_integer_range_validation() -> None:
 
     assert result.status is FieldValueStatus.INVALID
     assert result.inspection.kind is ValueKind.INVALID
+
+
+@pytest.mark.parametrize("value", [1.25, 1e-128, 1e128])
+def test_finite_float_inside_numeric_limits_remains_inspectable(value: float) -> None:
+    assert inspect_value(value).kind is ValueKind.DECIMAL
 
 
 def test_numeric_unix_timestamp_candidate_is_not_inferred_from_magnitude() -> None:
