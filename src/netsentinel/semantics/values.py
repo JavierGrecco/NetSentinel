@@ -251,6 +251,11 @@ def inspect_value(value: Any) -> ValueInspection:
             return ValueInspection(ValueKind.INVALID, reason="La fecha ISO 8601 no es válida.")
 
     if _NUMBER.fullmatch(raw):
+        if len(raw) > MAX_MEASUREMENT_LENGTH:
+            return ValueInspection(
+                ValueKind.INVALID,
+                reason=f"El número supera el máximo de {MAX_MEASUREMENT_LENGTH} caracteres.",
+            )
         try:
             number = Decimal(raw)
         except InvalidOperation:

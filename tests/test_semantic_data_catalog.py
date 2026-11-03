@@ -108,6 +108,23 @@ def test_typo_is_a_suggestion_and_never_an_automatic_assignment() -> None:
     assert result.usable is False
 
 
+def test_custom_profile_can_reuse_a_builtin_name_without_inheriting_its_aliases() -> None:
+    profile = SourceProfile(
+        name="activity_csv",
+        description="Perfil aislado para esta prueba.",
+        aliases=MappingProxyType({"custom_address": "source_ip"}),
+        ignored_headers=MappingProxyType({}),
+        blocked_headers=MappingProxyType({}),
+        field_scopes=MappingProxyType({}),
+    )
+
+    result = resolve_headers(["custom_address", "src_ip"], profile)
+
+    assert result.headers[0].status is HeaderStatus.ALIAS
+    assert result.headers[0].field_name == "source_ip"
+    assert result.headers[1].status is HeaderStatus.UNKNOWN
+
+
 def test_close_candidates_are_reported_as_ambiguous() -> None:
     profile = SourceProfile(
         name="test_ambiguous",
@@ -187,6 +204,7 @@ def test_decimal_unit_conversion_preserves_precision_beyond_default_decimal_cont
 
 def test_oversized_values_are_rejected_before_expensive_parsing() -> None:
     assert parse_quantity("1" * 129).status is QuantityStatus.INVALID_NUMBER
+    assert inspect_value("1" * 129).kind is ValueKind.INVALID
     assert inspect_value("x" * 4097).kind is ValueKind.INVALID
 
 

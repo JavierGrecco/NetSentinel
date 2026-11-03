@@ -138,14 +138,12 @@ def resolve_headers(
     aproximadas nunca rellenan field_name y, por lo tanto, no pueden importarse por
     accidente. Dos columnas asignadas al mismo campo invalidan ambas asignaciones.
     """
-    profile = (
-        get_source_profile(source_profile)
-        if isinstance(source_profile, str)
-        else source_profile
-    )
-    aliases = _alias_index(profile.name) if profile.name in {
-        "activity_csv", "zeek_conn_log"
-    } else _compile_custom_aliases(profile)
+    if isinstance(source_profile, str):
+        profile = get_source_profile(source_profile)
+        aliases = _alias_index(profile.name)
+    else:
+        profile = source_profile
+        aliases = _compile_custom_aliases(profile)
     alias_map = dict(aliases)
     resolutions: list[HeaderResolution] = []
 
