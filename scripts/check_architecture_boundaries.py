@@ -200,6 +200,7 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.findings_service": {
         "netsentinel.database",
         "netsentinel.findings",
+        "netsentinel.findings_activity_repository",
     },
     "netsentinel.topology_service": {
         "netsentinel.database",
@@ -242,6 +243,9 @@ FACADE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
 }
 REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.findings_activity_repository": {
+        "netsentinel.database",
+    },
     "netsentinel.activity_repository": {
         "netsentinel.database",
         "netsentinel.activity_deletion_repository",

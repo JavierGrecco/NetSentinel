@@ -8,7 +8,7 @@
 
 Esta guía complementa la pantalla `/guided-test`. Si ya seguiste allí la preparación, **no vuelvas a sembrar la base, no cambies de `NETSENTINEL_DATA_DIR` y no arranques una segunda instancia de NetSentinel**.
 
-1. Usá la copia de trabajo preparada desde `origin/main` según [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). La prueba guiada imprime el valor exacto de `NETSENTINEL_DATA_DIR`, crea `forensics-working-copies/netsentinel-forensic-sample.bin` con el contenido sintético `NetSentinel synthetic evidence v1` y muestra su SHA-256. No cambies a una rama QA antigua ni repitas la preparación si ya existe la muestra.
+1. Usá la copia de trabajo preparada desde la rama de la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200), según [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). Esa rama incluye la correlación Hallazgos–Zeek que todavía no está en `main`. La prueba guiada imprime el valor exacto de `NETSENTINEL_DATA_DIR`, crea `forensics-working-copies/netsentinel-forensic-sample.bin` con el contenido sintético `NetSentinel synthetic evidence v1` y muestra su SHA-256. No cambies a una rama QA antigua ni repitas la preparación si ya existe la muestra.
 2. Mantené abierta la terminal en la que ya se está ejecutando NetSentinel. En el navegador, abrí `http://127.0.0.1:8765/forensics`.
 3. Si el archivo sintético no existe, abrí una **segunda terminal** y usá la misma ruta que imprimió la preparación. En macOS o Linux:
 
@@ -46,7 +46,7 @@ Consultá también la [matriz de preparación pericial](FORENSIC_READINESS_MATRI
 
 - Fecha y zona horaria:
 - Persona que hizo la prueba:
-- Commit exacto de `main` probado:
+- Commit exacto de la rama de la PR #200 probado:
 - Sistema operativo y versión:
 - Navegador y versión:
 - Resultado: aprobado / bloqueado:

@@ -7,14 +7,11 @@ Los archivos son artificiales. No representan una observación de NetSentinel,
 no demuestran actividad de una persona y no deben mezclarse con una instalación
 que contenga datos reales. El generador no accede a la red ni a SQLite.
 
-**Para la aceptación integrada en `main`**, prepará el entorno siguiendo
-[el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md) y recorré `/guided-test`.
-El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de
-rama ni repetir la preparación sobre una base que ya esté sembrada.
+**Para la aceptación de correlación antes del merge**, usá la rama de la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) indicada en [el laboratorio de aceptación experto](EXPERT_ACCEPTANCE_LAB.md), y recorré `/guided-test`. `main` todavía no incluye ese paso mientras la PR siga abierta. El resto de este documento detalla archivos y casos por módulo; no requiere cambiar de rama ni repetir la preparación sobre una base que ya esté sembrada. Una vez fusionada la PR, repetí la verificación sobre el nuevo HEAD de `main`.
 
 ## Generar los archivos
 
-Desde la raíz del checkout de `main` que vas a probar:
+Desde la raíz del checkout del código que vas a probar (la rama de la PR #200 mientras la correlación todavía no esté fusionada):
 
     python scripts/generate_manual_scenarios.py
 
@@ -51,11 +48,14 @@ Con el entorno activado, generá los archivos de prueba:
     python scripts/generate_manual_scenarios.py --device-ip 192.168.56.20
     export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-synthetic-test-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$NETSENTINEL_DATA_DIR"
-    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20
+    python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology --include-findings-correlation
     ./run.sh
 
 El primer comando genera los archivos locales. Después, el auxiliar de base
-crea un único activo ficticio en la base vacía; no ejecuta descubrimiento de red.
+crea un activo ficticio y, con `--include-topology`, una lectura LAN histórica de
+tres dispositivos. Con `--include-findings-correlation` agrega además un único
+hallazgo sintético explícito para probar la correlación. No inicia descubrimiento
+ni captura tráfico real.
 Generá los archivos antes de crear el activo para que las fechas sintéticas queden
 dentro del intervalo histórico. Usá la misma IP en ambos comandos. Para otra
 ejecución, elegí una carpeta de datos distinta.
@@ -93,8 +93,7 @@ persona o equipo.
 
 ## Prueba B: mapa mundial de IP
 
-El mapa está integrado en `main`. No hace falta cambiar de rama; comprobá que
-la copia de trabajo use el commit de `origin/main` que vas a aceptar.
+El mapa también forma parte del checkout de la PR #200 usado para esta aceptación. Mantené la misma copia de trabajo y la misma base sintética durante todo el recorrido; registrá el SHA de esa copia para que el resultado quede asociado al código exacto probado.
 
 1. En Actividad, elegí el dispositivo **Dispositivo sintético de prueba** e
    importá `activity.csv`. Primero usá la vista previa; después confirmá la
@@ -118,11 +117,11 @@ actual y no confirma la IP utilizada durante el evento de prueba.
 
 ## Prueba C: importación Zeek en Actividad (detalle complementario)
 
-El importador Zeek está integrado en `main`. Este procedimiento amplía
+El importador Zeek base está integrado en `main`. La correlación Hallazgos–Zeek está en la PR #200 hasta que se fusione. Este procedimiento amplía
 el paso Zeek del asistente con detalle adicional; no instala Zeek, no inicia captura
 y no se conecta a un sensor. Para el recorrido principal, seguí `/guided-test`.
 
-1. Iniciá NetSentinel desde la copia de trabajo de `main` con una base de datos aislada.
+1. Iniciá NetSentinel desde la copia de trabajo de la PR #200 (mientras siga sin fusionarse) con la base de datos aislada que preparaste en el laboratorio experto.
 2. En Actividad, seleccioná **Dispositivo sintético de prueba**, cuya dirección
    debe coincidir con la opción --device-ip que usaste para crear la base y los archivos.
    No ejecutes descubrimientos ni cambies el inventario de tu red real para completar este escenario.
@@ -146,7 +145,28 @@ la IP no corresponde al dispositivo seleccionado o el evento queda fuera del
 intervalo observado, puede omitirse. Eso es preferible a atribuirlo al equipo
 equivocado; no debilites esa validación para que el ejemplo aparezca.
 
-## Prueba D: explorador LAN con topología sintética (detalle complementario)
+## Prueba D: correlación de Hallazgos con conexiones Zeek
+
+Para este escenario, generá `zeek-conn.tsv` con el generador y usá una base
+nueva preparada con `--include-findings-correlation`. El registro añadido por el
+auxiliar dice explícitamente que es una fixture; no es una observación de red.
+
+1. En Actividad, seleccioná `192.168.56.20` y previsualizá `zeek-conn.tsv`.
+2. Confirmá la importación y verificá que la segunda importación reporte cero
+   registros nuevos y dos duplicados omitidos.
+3. Abrí Hallazgos. Localizá el mensaje `Fixture sintética: evento de laboratorio
+   para validar correlación Zeek` y revisá el UID, el activo y el intervalo.
+4. Abrí el enlace de una conexión relacionada. Actividad debe mostrar el filtro
+   exacto de UID y `zeek_conn_log`, y mantener el foco visible del registro.
+5. Confirmá que la interfaz presenta esto como contexto para investigar, no como
+   detección confirmada, causalidad ni prueba de intrusión.
+
+Los registros del ejemplo se generan dentro de la ventana temporal de ±300
+segundos. Como se generan unos 105 segundos antes del momento actual, si pasan
+más de dos minutos entre la generación de los archivos y la preparación de la
+base, regenerá los archivos en una carpeta nueva; no modifiques la fecha guardada.
+
+## Prueba E: explorador LAN con topología sintética (detalle complementario)
 
 En la aceptación integrada, la preparación de `docs/EXPERT_ACCEPTANCE_LAB.md` ya
 crea la lectura sintética con tres activos. No vuelvas a ejecutar el auxiliar sobre

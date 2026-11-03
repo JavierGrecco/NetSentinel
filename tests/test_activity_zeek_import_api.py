@@ -129,6 +129,7 @@ def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypat
         event = events[0]
         assert event["event_type"] == "connection"
         assert event["source"] == "manual_import"
+        assert event["import_format"] == "zeek_conn_log"
         assert event["source_event_id"] == "zeek:CZeekApi42"
         assert event["source_ip"] == "192.0.2.42"
         assert event["source_port"] == 51514
@@ -139,6 +140,15 @@ def test_zeek_preview_import_and_reimport_are_read_only_and_idempotent(monkeypat
         assert event["bytes_received"] == 197
         assert event["packets_sent"] == 2
         assert event["packets_received"] == 3
+
+        exported = client.get(
+            f"/api/activity/export.csv?device_id={selected_device}"
+            "&source_event_id=zeek%3ACZeekApi42&import_format=zeek_conn_log"
+        )
+        assert exported.status_code == 200
+        assert "import_format" in exported.text.splitlines()[0]
+        assert "zeek_conn_log" in exported.text
+
 
 
 def test_zeek_import_rejects_malformed_data_without_partial_writes(monkeypatch, tmp_path):
