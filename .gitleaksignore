@@ -28,3 +28,15 @@ f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generi
 76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:153
 76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:156
 76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:175
+# Falsos positivos del snapshot en el commit de merge documental de main.
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:20
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:130
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:138
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:145
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:146
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:147
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:149
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:151
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:153
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:156
+28a99a4b04690d6cd788240dea01b5135ce9a937:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:175
