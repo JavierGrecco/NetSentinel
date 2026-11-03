@@ -83,11 +83,11 @@ class SourceProfile:
 
 @dataclass(frozen=True, slots=True)
 class HeaderSuggestion:
-    """Candidato textual; nunca equivale a una asignación automática."""
+    """Candidato con una sola edición textual; nunca equivale a una asignación."""
 
     field_name: str
     matched_alias: str
-    score: float
+    edit_distance: int
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import Iterable
 
@@ -22,8 +21,6 @@ from .models import (
 MAX_HEADER_LENGTH = 128
 MAX_SOURCE_HEADERS = 256
 MIN_SUGGESTION_LENGTH = 4
-SUGGESTION_CUTOFF = 0.78
-AMBIGUITY_MARGIN = 0.06
 MAX_SUGGESTIONS = 3
 
 
@@ -82,31 +79,60 @@ def _alias_index(profile_name: str) -> tuple[tuple[str, str], ...]:
     return tuple(sorted(entries.items()))
 
 
+def _edit_distance_at_most_one(left: str, right: str) -> int | None:
+    """Devuelve 0/1 para una única inserción, eliminación o sustitución; si no, None."""
+    if left == right:
+        return 0
+    if abs(len(left) - len(right)) > 1:
+        return None
+
+    left_index = 0
+    right_index = 0
+    edits = 0
+    while left_index < len(left) and right_index < len(right):
+        if left[left_index] == right[right_index]:
+            left_index += 1
+            right_index += 1
+            continue
+
+        edits += 1
+        if edits > 1:
+            return None
+        if len(left) > len(right):
+            left_index += 1
+        elif len(right) > len(left):
+            right_index += 1
+        else:
+            left_index += 1
+            right_index += 1
+
+    if left_index < len(left) or right_index < len(right):
+        edits += 1
+    return edits if edits == 1 else None
+
+
 def _suggest(
     normalized: str,
     aliases: tuple[tuple[str, str], ...],
 ) -> tuple[HeaderSuggestion, ...]:
-    """Busca candidatos solo en el perfil activo; nunca confirma un typo."""
+    """Sugiere solo una edición de distancia; no asigna ni estima probabilidades."""
     if len(normalized) < MIN_SUGGESTION_LENGTH:
         return ()
 
     best_by_field: dict[str, HeaderSuggestion] = {}
     for alias, field_name in aliases:
-        if abs(len(alias) - len(normalized)) > max(3, len(normalized) // 3):
+        distance = _edit_distance_at_most_one(normalized, alias)
+        if distance != 1:
             continue
-        score = SequenceMatcher(None, normalized, alias, autojunk=False).ratio()
-        if score < SUGGESTION_CUTOFF:
-            continue
-        candidate = HeaderSuggestion(field_name, alias, score)
+
+        candidate = HeaderSuggestion(field_name, alias, distance)
         previous = best_by_field.get(field_name)
-        if previous is None or (candidate.score, candidate.matched_alias) > (
-            previous.score, previous.matched_alias
-        ):
+        if previous is None or candidate.matched_alias < previous.matched_alias:
             best_by_field[field_name] = candidate
 
     ranked = sorted(
         best_by_field.values(),
-        key=lambda item: (-item.score, item.field_name, item.matched_alias),
+        key=lambda item: (item.edit_distance, item.field_name, item.matched_alias),
     )
     return tuple(ranked[:MAX_SUGGESTIONS])
 
@@ -210,7 +236,7 @@ def resolve_headers(
                 reason="No hay un alias exacto ni una sugerencia segura en este perfil.",
             ))
             continue
-        if len(suggestions) > 1 and suggestions[0].score - suggestions[1].score < AMBIGUITY_MARGIN:
+        if len(suggestions) > 1:
             resolutions.append(HeaderResolution(
                 position, raw_header, key, HeaderStatus.AMBIGUOUS,
                 suggestions=suggestions,

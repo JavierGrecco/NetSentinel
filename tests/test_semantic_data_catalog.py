@@ -127,6 +127,13 @@ def test_custom_profile_can_reuse_a_builtin_name_without_inheriting_its_aliases(
     assert result.headers[1].status is HeaderStatus.UNKNOWN
 
 
+def test_typo_with_multiple_edits_is_not_suggested() -> None:
+    result = resolve_headers(["destionation_iq"], "activity_csv").headers[0]
+
+    assert result.status is HeaderStatus.UNKNOWN
+    assert result.suggestions == ()
+
+
 def test_close_candidates_are_reported_as_ambiguous() -> None:
     profile = SourceProfile(
         name="test_ambiguous",
