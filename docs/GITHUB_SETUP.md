@@ -28,7 +28,7 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 ### Checks obligatorios para Pull Requests
 
-Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `cf4164b2db208c9ae81abc8ff2d080f86f133c3a`, el 3/11/2026: aparecen 23 checks con resultado exitoso y 1 check omitido de forma esperada para firma de artefactos de release. Volvé a confirmar los nombres y resultados sobre el HEAD que vayas a integrar. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
+Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `37a2822baffc2af0fb8c64eee2ff0098f5585a77`, el 3/11/2026: aparecen 23 checks con resultado exitoso y 1 check omitido de forma esperada para firma de artefactos de release. Volvé a confirmar los nombres y resultados sobre el HEAD que vayas a integrar. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
 
 **CI — 18 checks**
 
