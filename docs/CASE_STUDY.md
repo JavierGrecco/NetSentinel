@@ -80,6 +80,27 @@ La configuración y los resultados deben evaluarse por commit. Una matriz config
 
 Puntos de entrada para revisar la implementación: [pruebas de límites arquitectónicos](../tests/test_architecture_boundaries.py), [pruebas de importación Zeek](../tests/test_activity_zeek_import_service.py), [pruebas de descubrimiento](../tests/test_local_discovery.py), [pruebas de monitorización](../tests/test_monitoring.py) y [pruebas de seguridad del navegador](../tests/test_security_headers.py).
 
+## Evidencia automatizada asociada a la revisión del 3 de noviembre de 2026
+
+La PR [#208](https://github.com/JavierGrecco/NetSentinel/pull/208), HEAD `96f4e2e49b325dfc1ef4469a725f2c458c9d0fc1`, completó sus controles aplicables sin fallos:
+
+| Control | Resultado observado | Alcance |
+|---|---:|---|
+| CI, seguridad y cadena de suministro | 23 aprobados; 1 omisión esperada | La firma de procedencia se omite en PR que no publican una release |
+| Suite Python | **855 pruebas aprobadas en 8,35 s** | Una ejecución de la matriz: Python 3.14 en Ubuntu |
+| Interfaz responsive con Chromium | **135/135 comprobaciones correctas** | Seis páginas en la matriz de viewports definida por el script |
+| CodeQL y auditoría de dependencias | Correctos | Análisis estático y dependencias del commit evaluado |
+| Detección de secretos | Correcta | Gitleaks sin hallazgos no exceptuados |
+| Paquete y cadena de suministro | Correctos | Wheel, SBOM y manifiesto de integridad generados |
+
+Ejecuciones asociadas a esa revisión:
+
+- [CI multiplataforma y responsive — run 41639881135](https://github.com/JavierGrecco/NetSentinel/actions/runs/41639881135).
+- [Análisis de seguridad — run 41639881145](https://github.com/JavierGrecco/NetSentinel/actions/runs/41639881145).
+- [Cadena de suministro — run 41639881114](https://github.com/JavierGrecco/NetSentinel/actions/runs/41639881114).
+
+La ejecución de CI para una Pull Request utiliza la referencia de merge de GitHub, es decir, comprueba la combinación de la rama de trabajo con su base en ese momento. Por eso estos números se presentan como evidencia de la revisión de la PR #208, no como un resultado manual ni como garantía permanente para cualquier instalación. Los 855 tests corresponden a una sola combinación de la matriz; las demás combinaciones validan compatibilidad, pero no se extrapola aquí el mismo tiempo de ejecución.
+
 ## Límites conocidos
 
 - **Desarrollo activo:** la versión publicada en el código es `0.10.0.dev0`. No se presenta como versión estable.
