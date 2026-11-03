@@ -44,7 +44,7 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
         "bytes_sent", ValueKind.INTEGER,
         "Contador de bytes enviados desde el origen; la capa de medición depende de la fuente.",
         dimension="data_size", canonical_unit="B",
-        semantic_scope="preserve source byte layer; do not mix IP and payload bytes"
+        semantic_scope="preserve source byte layer; do not mix IP and payload bytes",
         minimum=0, maximum=9_223_372_036_854_775_807,
     ),
     "bytes_received": FieldDefinition(
@@ -56,7 +56,7 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
     ),
     "packets_sent": FieldDefinition(
         "packets_sent", ValueKind.INTEGER, "Paquetes enviados desde el origen.",
-        dimension="count", canonical_unit="{packet}"
+        dimension="count", canonical_unit="{packet}",
         minimum=0, maximum=9_223_372_036_854_775_807,
     ),
     "packets_received": FieldDefinition(
