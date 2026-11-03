@@ -1,0 +1,18 @@
+# Falsos positivos históricos confirmados en pruebas, documentación y el snapshot de Git.
+# Los valores señalados son claves locales de preferencias o SHA-1 de commits, no credenciales.
+# Cada excepción se limita a commit, archivo, regla y línea exactos.
+f2f34a43fbbd88501782dda13baac6342b6ddcf4:scripts/check_responsive_ui.py:generic-api-key:600
+190bee27aec4655b5428fc4d7b2647df22b001fd:scripts/check_responsive_ui.py:generic-api-key:467
+2c7db3ce7b0e2d04b04b952bfa3d10dbfe014f42:docs/REPOSITORY_PRESENTATION_AUDIT.md:generic-api-key:43
+d2805a0a2d9048b9119cc223efc8c3dab0ecff04:docs/REPOSITORY_PRESENTATION_AUDIT.md:generic-api-key:43
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:20
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:129
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:137
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:144
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:145
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:146
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:148
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:150
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:152
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:155
+f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:174

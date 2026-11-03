@@ -1,18 +1,26 @@
 # Estado actual del proyecto
 
-**Actualizado:** 23 de octubre de 2026 (Argentina/Córdoba)  
-**Rama canónica:** `main`  
-**Último commit de `main` consultado en esta actualización:** [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1)  
-**Último cambio funcional de la guía:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
-**Última mejora de pruebas:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194), integrada en [`1f1a7fce`](https://github.com/JavierGrecco/NetSentinel/commit/1f1a7fce22d366ed4a584eaff336993a1a92fb95).  
-**Última revisión estratégica:** [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198), integrada en [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1).  
-**Estado:** integración consolidada; regresión interactiva del asistente comprobada en Chromium; aceptación manual y protección efectiva de `main` todavía pendientes.
+## Fotografía vigente — 3 de noviembre de 2026
+
+- **Rama canónica:** `main`, HEAD `299360f088f1eb92c766d29e448133ce3608142a`.
+- **Estado del producto:** desarrollo activo. No declarar la versión 0.10.0 estable hasta completar aceptación manual, recuperación de datos, revisión de accesibilidad y gobernanza.
+- **PR #209:** corrección de la guía de aceptación. HEAD `a0b69b09a86919b5d837ea081ecc6e7fed984180`; 23 checks exitosos y 1 omisión esperada para firma de release. Chromium pasó 135/135. Lista para revisión, aún no integrada.
+- **PR #208:** reorganización de presentación y documentación, más excepciones Gitleaks limitadas a fingerprints históricos. El HEAD consultado `c0483bf05bd060bf158f9a85ca648030afa7f1b0` completó 23 checks exitosos y 1 omisión esperada. Una última revisión editorial detectó inconsistencias en la guía de GitHub y en las cifras de la auditoría; se están corrigiendo antes de volver a validar el HEAD final.
+- **PR #200:** correlación temporal acotada de eventos Zeek con hallazgos. Continúa como Draft; el HEAD `996695e7fbd1f912af158b07ede332543ff4da98` completó 23 checks exitosos y 1 omisión esperada. No equivale a aceptación manual ni a integración en `main`.
+- **Ramas remotas:** 190 referencias: `main` y 189 adicionales. El CSV registra el nombre, SHA y clasificación de cada rama; es una fotografía y no una instrucción de borrado.
+- **PR abiertas:** diez: siete actualizaciones automatizadas de dependencias/acciones, #200 (funcionalidad en Draft), #208 (documentación) y #209 (corrección de la guía). No son diez funcionalidades de producto pendientes.
+- **Gobernanza:** el ruleset `rules` (ID `25281660`) está activo pero su condición `ref_name.include` está vacía, no exige checks y requiere cero aprobaciones. La API informa `protected: false` para `main`; no hay protección efectiva demostrada.
+- **Checks de `main`:** el historial asociado al SHA actual incluye 23 resultados exitosos, 3 omisiones y 4 fallos de ejecuciones anteriores: dos del escaneo de secretos por coincidencias históricas de nombres de claves locales de preferencias y dos de ejecuciones programadas de Dependabot. La matriz Python, CodeQL y la auditoría de dependencias de aplicación aparecen exitosas. La PR #208 añade excepciones acotadas y no globales para los falsos positivos; su escaneo de secretos pasó en el HEAD indicado arriba. No describir el conjunto histórico de `main` como totalmente verde.
+
+**Vigencia:** este resumen refleja consultas de GitHub realizadas el 3/11/2026. Los apartados posteriores conservan decisiones, validaciones y cronología anteriores; cuando contienen SHA o resultados antiguos, son evidencia histórica y no sustituyen el estado de las PR ni los checks del HEAD vigente.
+
+**Actualizado:** 3 de noviembre de 2026 (Argentina/Córdoba). La aceptación manual integral sigue pendiente.
 
 ## Revisión comparativa y siguiente mejora
 
 El [análisis comparativo de 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md) incorpora los dos NetSentinel de referencia y herramientas especializadas de observabilidad, análisis de tráfico, monitorización e inventario. La conclusión es priorizar la precisión, el contexto y la interoperabilidad en lugar de imitar la captura profunda de un SIEM/NDR. El documento es investigación estática; no agrega capacidades al runtime.
 
-La próxima línea funcional está definida en el [issue #197](https://github.com/JavierGrecco/NetSentinel/issues/197): correlacionar temporalmente evidencia de inventario, disponibilidad y registros Zeek autorizados, con límites explícitos y navegación a la fuente original. Queda subordinada a cerrar las puertas P0 de aceptación manual y gobernanza; no se ha implementado ni se considera aprobada.
+El primer tramo de esa línea está implementado en la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200): añade contexto temporal de registros Zeek importados expresamente a hallazgos de inventario y disponibilidad, con límites de consulta y atribución documentados. Sigue como Draft y no forma parte de `main`; su CI verde no reemplaza la aceptación manual ni autoriza a presentarlo como funcionalidad integrada.
 
 ## Fuente única de trabajo
 
@@ -37,7 +45,7 @@ Se recuperó la protección de reintentos que existía en una rama antigua pero 
 
 La regresión está cubierta en `tests/test_monitoring.py` y documentada en [MONITORING.md](MONITORING.md).
 
-## Validación automatizada
+## Historial de validación automatizada — hasta el 23/10/2026
 
 **Fotografía posterior al merge documental #198:** sobre `3625709cf08f2c51a5c34d14db0b1a58bf1802b1`, en la consulta del 23/10/2026, CI llevaba 17/18 trabajos exitosos y el último trabajo de Python 3.12/macOS seguía activo ([CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706874)); Security Analysis terminó 2/2 ([seguridad](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706482)); Supply Chain Security terminó sin fallos, con 2 jobs aplicables correctos y la firma de procedencia omitida por no ser un release ([cadena de suministro](https://github.com/JavierGrecco/NetSentinel/actions/runs/39970706741)). Es una fotografía por SHA, no una aceptación manual ni un estado dinámico.
 
@@ -53,9 +61,9 @@ Los checks automatizados no sustituyen la aceptación manual. El recorrido compl
 
 ## Higiene del repositorio
 
-No hay PR abiertas de integración. La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) documenta las 174 referencias encontradas, las ramas duplicadas o reemplazadas y el contenido exclusivo recuperado a `main`.
+La consulta del 3/11/2026 encontró **190 referencias remotas**: `main` y 189 ramas adicionales. La fotografía está en [BRANCH_SNAPSHOT_2026-11.csv](BRANCH_SNAPSHOT_2026-11.csv) y su clasificación en [BRANCH_AUDIT_2026-11.md](BRANCH_AUDIT_2026-11.md): 156 cabezas coinciden con PR fusionadas directamente a `main`, 2 se integraron mediante el laboratorio QA, 10 tienen PR abiertas, 15 corresponden a PR cerradas sin merge y 6 no tienen PR asociada.
 
-La clasificación de ramas ya está reconciliada: 150 referencias coinciden exactamente con heads de PR fusionadas directamente en `main`, 2 corresponden a PR apiladas en el laboratorio consolidado luego absorbido por #189, 15 están asociadas a PR cerradas sin merge y 6 no tienen PR. No se borró ninguna referencia. El ruleset no define los checks requeridos ni expresa explícitamente su alcance; la limpieza física queda en pausa hasta resolverlo administrativamente. Ver [auditoría completa](BRANCH_AUDIT_2026-10.md).
+Las diez PR abiertas se componen de siete actualizaciones automatizadas, #200 (correlación Zeek en Draft), #208 (presentación documental) y #209 (corrección de la guía). Las ramas de #208 y #209 deben conservarse hasta resolver sus PR. No se eliminó ninguna referencia en esta reorganización; la limpieza queda pausada hasta verificar la protección de `main` y revisar cada SHA candidato.
 
 ## Controles administrativos de GitHub
 

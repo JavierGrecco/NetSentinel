@@ -2,7 +2,23 @@
 
 > **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Estado vigente — 23 de octubre de 2026
+## Estado vigente — 3 de noviembre de 2026
+
+**Rama canónica:** `main`, HEAD consultado `299360f088f1eb92c766d29e448133ce3608142a`. El producto continúa en desarrollo activo; la aceptación manual integral y la protección efectiva de `main` siguen pendientes. La PR #209 completó 23 checks exitosos y 1 omisión esperada; la #208 completó el mismo resultado en su HEAD anterior y está incorporando las últimas correcciones editoriales antes de repetir CI.
+
+### Prioridad inmediata
+
+1. Completar la aceptación manual de los flujos principales con datos sintéticos aislados y registrar evidencia en `VALIDATION_MATRIX.md`.
+2. La corrección del asistente está implementada en la [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) y pasó 23/23 contextos de CI, incluida Chromium 135/135. No integrarla hasta resolver la protección efectiva de `main`; después, realizar un único recorrido manual aislado y registrar evidencia en `VALIDATION_MATRIX.md`.
+3. Corregir administrativamente el ruleset `rules`: incluir explícitamente `main` (o `~DEFAULT_BRANCH`), añadir los 23 checks verificados y probar que una PR queda bloqueada cuando falta uno o falla. Hoy `include: []`, `required_status_checks: []` y cero aprobaciones no proporcionan esa garantía.
+4. Integrar la corrección acotada de Gitleaks después de aprobar la PR #208; el escaneo pasó en un HEAD de la rama documental, pero `main` todavía no contiene la excepción. Revisar por separado los fallos del servicio programado de Dependabot.
+5. Reconciliar la auditoría de ramas: la consulta actual encontró 190 referencias remotas (189 fuera de `main`); no borrar ramas hasta verificar sus SHA actuales y la protección de la rama principal.
+
+La [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) permanece en borrador. Su HEAD consultado completó 23 checks exitosos y una omisión esperada de firma de procedencia; la aceptación manual sigue pendiente y el cambio no está integrado en `main`. La [PR #208](https://github.com/JavierGrecco/NetSentinel/pull/208) reorganiza la presentación y la documentación, además de acotar falsos positivos históricos de Gitleaks. Su HEAD `c0483bf05bd060bf158f9a85ca648030afa7f1b0` completó 23 checks exitosos y 1 omisión esperada; las correcciones editoriales de esta revisión requieren repetir CI sobre el HEAD final. La [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) corrige la entrada del asistente a Actividad → Importar y el test harness; terminó con 23 checks exitosos y 1 omisión esperada, incluidos 135/135 controles Chromium. Ninguna se integrará hasta resolver la protección efectiva de `main`.
+
+**Vigencia:** el bloque que sigue conserva el detalle histórico del 23 de octubre. Sus métricas, SHA y resultados no deben interpretarse como el estado actual. Para el estado vigente, prevalece `PROJECT_STATUS.md` y la evidencia vinculada a cada commit.
+
+## Registro histórico — 23 de octubre de 2026
 
 **Rama canónica:** `main`. La [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193) integró la guía de aceptación iterativa; la [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) amplió la regresión interactiva de Chromium. El último SHA de `main` consultado para esta actualización es [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1), que integra el análisis comparativo de la PR #198, sin cambios en el código de ejecución.
 

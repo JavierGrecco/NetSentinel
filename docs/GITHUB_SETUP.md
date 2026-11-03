@@ -11,9 +11,9 @@
 
 Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/branches/main` puede devolver `protected: false` cuando no hay una regla de protección clásica; para evaluar el estado real también hay que leer los Rulesets.
 
-**Última lectura verificada: 23/10/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene las reglas `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Sin embargo, la lista de checks obligatorios sigue vacía (`required_status_checks: []`); el patrón de referencias se devuelve como `include: []`, `exclude: []`; exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`; el endpoint alternativo de protección clásica respondió 403 a la integración de revisión.
+**Última lectura verificada: 3/11/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Pero la lista de checks sigue vacía (`required_status_checks: []`), la condición de ramas continúa con `include: []` y `exclude: []`, exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`. La documentación oficial de GitHub indica que al menos uno de los patrones `include` debe coincidir y permite usar `~DEFAULT_BRANCH`; el arreglo vacío no identifica `main`. Por lo tanto, el ruleset no demuestra protección efectiva de `main`.
 
-**Bloqueo actual:** la verificación del 23/10/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. Seguimiento: [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195) y [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
+**Bloqueo actual:** la verificación del 3/11/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. El ruleset está activo, pero no tiene patrón de inclusión que apunte a `main` ni contextos obligatorios. No equivale a una puerta de integración efectiva. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. Seguimiento: [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195) y [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
 
 ### Configuración que debe quedar en el Ruleset
 
@@ -28,7 +28,7 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 ### Checks obligatorios para Pull Requests
 
-Seleccioná los siguientes **22 contextos verificados**. Se compararon con los check-runs de GitHub del commit de `main` `3625709cf08f2c51a5c34d14db0b1a58bf1802b1` el 23/10/2026. Los nombres pueden cambiar si se modifica un workflow; volvé a confirmarlos en una PR reciente antes de guardarlos.
+Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `c0483bf05bd060bf158f9a85ca648030afa7f1b0`, el 3/11/2026: aparecen 23 checks con resultado exitoso y 1 check omitido de forma esperada para firma de artefactos de release. Volvé a confirmar los nombres y resultados sobre el HEAD que vayas a integrar. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
 
 **CI — 18 checks**
 
@@ -56,9 +56,10 @@ Otras verificaciones de CI:
 - `Wheel metadata and static assets`
 - `Responsive UI / Chromium`
 
-**Seguridad — 2 checks**
+**Seguridad — 3 checks**
 
-- `CodeQL static analysis (Python)` — job que ejecuta el análisis estático.
+- `CodeQL` — resultado de GitHub Advanced Security. Se publica al completar el análisis; puede aparecer después de otros jobs.
+- `CodeQL static analysis (Python)` — job de Actions que ejecuta el análisis estático.
 - `Audit Python dependencies` — revisión de dependencias contra avisos conocidos.
 
 **Cadena de suministro — 2 checks**
@@ -98,7 +99,7 @@ El repositorio incluye scripts/verify-sha256-manifest.sh para validar manifiesto
     gh attestation verify netsentinel-<version>-py3-none-any.whl --repo JavierGrecco/NetSentinel
     gh attestation verify netsentinel-sbom.cdx.json --repo JavierGrecco/NetSentinel
 
-Usar el nombre de los ficheros realmente descargados. Si se expone una credencial real, revocarla/rotarla de inmediato; borrar el texto en un commit posterior no vuelve segura la credencial.
+Usá los nombres de los ficheros realmente descargados. Estos comandos son opcionales y requieren GitHub CLI; no necesitás instalar `gh` para iniciar NetSentinel, desarrollar, ejecutar las pruebas locales ni completar el laboratorio de aceptación. Si se expone una credencial real, revocala/rotala de inmediato: borrar el texto en un commit posterior no vuelve segura la credencial.
 
 ## Dependencias y workflows
 
