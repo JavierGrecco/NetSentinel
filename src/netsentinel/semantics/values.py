@@ -189,6 +189,11 @@ def inspect_value(value: Any) -> ValueInspection:
     if isinstance(value, bool):
         return ValueInspection(ValueKind.BOOLEAN, normalized_preview=str(value).lower())
     if isinstance(value, int):
+        if abs(value) >= 10 ** MAX_NUMERIC_DIGITS:
+            return ValueInspection(
+                ValueKind.INVALID,
+                reason=f"La precisión numérica supera el máximo de {MAX_NUMERIC_DIGITS} dígitos.",
+            )
         return ValueInspection(ValueKind.INTEGER, normalized_preview=str(value))
     if isinstance(value, float):
         if not math.isfinite(value):
@@ -197,6 +202,15 @@ def inspect_value(value: Any) -> ValueInspection:
     if isinstance(value, Decimal):
         if not value.is_finite():
             return ValueInspection(ValueKind.INVALID, reason="El número debe ser finito.")
+        parts = value.as_tuple()
+        if (
+            len(parts.digits) > MAX_NUMERIC_DIGITS
+            or abs(parts.exponent) > MAX_NUMERIC_EXPONENT
+        ):
+            return ValueInspection(
+                ValueKind.INVALID,
+                reason="La precisión o escala numérica supera el límite admitido.",
+            )
         kind = ValueKind.INTEGER if value == value.to_integral_value() else ValueKind.DECIMAL
         return ValueInspection(kind, normalized_preview=str(value))
     if isinstance(value, (dict, list, tuple, set)):
@@ -218,6 +232,12 @@ def inspect_value(value: Any) -> ValueInspection:
         return ValueInspection(ValueKind.BOOLEAN, normalized_preview=lowered)
 
     quantity = parse_quantity(raw)
+    if quantity.status is QuantityStatus.INVALID_NUMBER and _NUMBER.fullmatch(raw):
+        return ValueInspection(
+            ValueKind.INVALID,
+            quantity=quantity,
+            reason=quantity.reason or "La precisión o escala numérica supera el límite admitido.",
+        )
     if quantity.status is QuantityStatus.EXPLICIT:
         return ValueInspection(
             ValueKind.MEASUREMENT,
@@ -272,6 +292,16 @@ def inspect_value(value: Any) -> ValueInspection:
             number = Decimal(raw)
         except InvalidOperation:
             return ValueInspection(ValueKind.INVALID, reason="El número no es válido.")
+        parts = number.as_tuple()
+        if (
+            len(parts.digits) > MAX_NUMERIC_DIGITS
+            or abs(parts.exponent) > MAX_NUMERIC_EXPONENT
+        ):
+            return ValueInspection(
+                ValueKind.INVALID,
+                quantity=quantity,
+                reason="La precisión o escala numérica supera el límite admitido.",
+            )
         kind = ValueKind.INTEGER if number == number.to_integral_value() else ValueKind.DECIMAL
         # Se conserva el texto original: clasificar un número no autoriza a usarlo
         # como puerto, bytes, paquetes, duración, identificador o timestamp Unix.
