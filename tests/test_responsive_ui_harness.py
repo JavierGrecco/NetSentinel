@@ -45,3 +45,15 @@ def test_custom_viewport_list_is_parsed_and_spaces_are_allowed():
 def test_invalid_viewport_values_are_rejected(value):
     with pytest.raises(ValueError):
         parse_viewports(value)
+
+
+
+def test_activity_page_links_recognize_tab_hash_fragments():
+    from scripts.check_responsive_ui import _is_activity_page_link
+
+    assert _is_activity_page_link("/activity")
+    assert _is_activity_page_link("/activity#importar")
+    assert _is_activity_page_link("/activity#eventos")
+    assert not _is_activity_page_link("/activity-other#importar")
+    assert not _is_activity_page_link("/guided-test")
+    assert not _is_activity_page_link(None)
