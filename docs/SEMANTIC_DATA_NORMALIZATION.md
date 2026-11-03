@@ -7,25 +7,25 @@
 
 ## Estado de implementación — 3 de noviembre de 2026
 
-La primera entrega está en [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212), rama `feat/semantic-data-registry-2026-11`. El HEAD actualmente en revisión es `f89c7654904ae9cd243a545477cbe2b610263151`. La implementación no se presenta como terminada ni como integrada en `main`.
+La primera entrega está en [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212), rama `feat/semantic-data-registry-2026-11`. El HEAD actualmente en revisión es `53692a68cc08b0ce72670f182d3e91b0ded2ddbc`. La implementación no se presenta como terminada ni como integrada en `main`.
 
 ### Ya implementado en la PR #212
 
 - Paquete puro `src/netsentinel/semantics/` con modelos, catálogo, perfiles de origen, resolver y utilidades de inspección.
 - 23 campos canónicos del contrato actual de Actividad y perfiles `activity_csv` y `zeek_conn_log`.
 - CSV utiliza el perfil compartido en lugar de mantener una segunda lista de alias. Se verificó paridad exacta respecto del importador anterior: 23/23 campos, 47/47 alias con el mismo destino, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
-- Zeek TSV/JSONL utiliza el perfil de origen para validar el esquema y señalar campos requeridos ausentes o con errores tipográficos, sin cambiar la interpretación específica de su timestamp Unix ni de los contadores.
+- Zeek TSV/JSONL utiliza el perfil de origen para validar el esquema, detectar campos requeridos ausentes, nombres inseguros y colisiones, y señalar errores tipográficos también en columnas opcionales. Las sugerencias no se aplican; las extensiones desconocidas sin candidato plausible siguen siendo ignoradas. No cambia la interpretación específica de su timestamp Unix ni de los contadores.
 - Las cabeceras duplicadas, inseguras o ambiguas se bloquean. Las sugerencias se limitan a una única inserción, eliminación o sustitución; varios candidatos se marcan como ambiguos. No hay autocorrección.
-- La inspección de valores diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido. La conversión de unidades requiere una unidad explícita, compatible y no ambigua.
+- La inspección de valores diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido. `parse_quantity` puede diagnosticar y calcular magnitudes con unidad explícita, compatible y no ambigua, pero esas conversiones todavía no se aplican a los valores importados ni se persisten.
 - El resolver limita las cabeceras a 256 y el análisis numérico limita la longitud y escala de entrada.
 - El verificador de arquitectura declara el grafo permitido para el paquete semántico y prohíbe que dependa de API, servicios, repositorios o infraestructura.
 
 ### Límites actuales — no declararlos resueltos
 
-- `inspect_field_value` es una utilidad tipada probada; no reemplaza la validación autoritativa de `activity_event_service.py`. Los importadores siguen usando sus validadores de dominio específicos.
+- `inspect_field_value` es una utilidad tipada probada; no reemplaza la validación autoritativa de `activity_event_service.py`. Los importadores siguen usando sus validadores de dominio específicos. Los enteros respetan ese contrato: solo se aceptan `int` o cadenas de dígitos; los puertos son 1–65535 y los contadores permiten cero.
 - Las sugerencias y errores de cabecera se comunican en el resultado de validación del preview. Todavía no hay una pantalla dedicada de mapeo interactivo ni una tabla visual de calidad por columna.
 - El catálogo aún no incluye todo el modelo objetivo de dominio, tipo de evento, política de agregación, cardinalidad, enriquecimiento y versionado de esquema.
-- No existe todavía una política completa de `not_applicable` frente a `not_reported` para todos los campos. No se agregan valores por defecto ni se convierte ausencia en cero.
+- No existe todavía una política completa de `not_applicable` frente a `not_reported` para todos los campos. Los campos numéricos opcionales del contrato conservan `None` cuando no se informan; no se convierten en cero. **Excepción heredada:** el normalizador actual convierte `blocked` ausente o vacío en `False` porque el modelo persistido es no nulo. El nuevo inspector puede distinguir `MISSING`/`EMPTY`, pero todavía no corrige esa pérdida de procedencia; no debe describirse como un `false` observado. Para resolverlo hace falta una evolución explícita del contrato y del almacenamiento, fuera de esta primera entrega.
 - Monitorización, Inventario y Forense no utilizan este catálogo. No se cambió SQLite, el contrato HTTP ni el esquema persistido.
 
 Los principios y objetivos de las secciones siguientes siguen siendo el destino de diseño. La PR #212 implementa solo una base común de Actividad/CSV/Zeek, no el modelo completo descrito en esta propuesta.
