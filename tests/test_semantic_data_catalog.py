@@ -173,8 +173,6 @@ def test_explicit_units_convert_only_within_their_declared_dimension(
     assert result.status is QuantityStatus.EXPLICIT
     assert result.dimension == expected_dimension
     assert result.canonical_unit == expected_unit
-    from decimal import Decimal
-
     assert result.normalized_value == Decimal(expected_value)
 
 
