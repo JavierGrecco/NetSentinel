@@ -198,6 +198,15 @@ def inspect_value(value: Any) -> ValueInspection:
     if isinstance(value, float):
         if not math.isfinite(value):
             return ValueInspection(ValueKind.INVALID, reason="El número debe ser finito.")
+        parts = Decimal(str(value)).as_tuple()
+        if (
+            len(parts.digits) > MAX_NUMERIC_DIGITS
+            or abs(parts.exponent) > MAX_NUMERIC_EXPONENT
+        ):
+            return ValueInspection(
+                ValueKind.INVALID,
+                reason="La precisión o escala numérica supera el límite admitido.",
+            )
         return ValueInspection(ValueKind.DECIMAL, normalized_preview=str(value))
     if isinstance(value, Decimal):
         if not value.is_finite():
