@@ -108,8 +108,8 @@
         "Revisá «Eventos» y volvé al asistente. Registrá el resultado observado; no marques correcto si los contadores no coinciden."
       ],
       expected: "La primera importación guarda los seis eventos válidos; la repetición identifica los registros duplicados y no vuelve a contarlos como eventos nuevos.",
-      link: "/activity",
-      linkLabel: "Volver a Actividad en otra pestaña ↗",
+      link: "/activity#importar",
+      linkLabel: "Abrir Actividad directamente en Importar ↗",
       needsManual: true,
       track: true
     },
@@ -179,8 +179,8 @@
         "Anotá cualquier atribución, contador o cantidad inesperada."
       ],
       expected: "La vista previa explica filas aceptadas y omitidas; los contadores ausentes siguen como desconocidos y los UID repetidos no generan duplicados.",
-      link: "/activity",
-      linkLabel: "Abrir Actividad y Zeek en otra pestaña ↗",
+      link: "/activity#importar",
+      linkLabel: "Abrir Actividad directamente en Importar ↗",
       needsManual: true,
       track: true
     },
