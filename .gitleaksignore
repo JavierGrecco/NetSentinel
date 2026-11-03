@@ -16,3 +16,15 @@ f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generi
 f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:152
 f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:155
 f562067b73f54ff2999bb0563b9d9512a99871ce:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:174
+# SHA-1 de refs históricas en el snapshot CSV: falsos positivos exactos del commit de auditoría.
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:20
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:130
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:138
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:145
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:146
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:147
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:149
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:151
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:153
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:156
+76af462b21199be9b6df767a852be5bdfb82d50f:docs/BRANCH_SNAPSHOT_2026-11.csv:generic-api-key:175
