@@ -1,9 +1,34 @@
 # Normalización semántica y reconocimiento seguro de datos
 
-- **Estado:** propuesta de arquitectura; todavía no implementada.
+- **Estado:** diseño de arquitectura con primera implementación parcial en la PR #212; todavía no integrada en `main`.
 - **Fecha:** 2026-11-03.
 - **Alcance:** interpretación de campos, alias, errores de tipeo, unidades, valores ausentes, calidad y preparación de métricas.
 - **Compatibilidad:** conservar los contratos actuales de Actividad, Zeek, Monitorización, Inventario y SQLite durante la primera etapa.
+
+## Estado de implementación — 3 de noviembre de 2026
+
+La primera entrega está en [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212), rama `feat/semantic-data-registry-2026-11`. El HEAD actualmente en revisión es `f89c7654904ae9cd243a545477cbe2b610263151`. La implementación no se presenta como terminada ni como integrada en `main`.
+
+### Ya implementado en la PR #212
+
+- Paquete puro `src/netsentinel/semantics/` con modelos, catálogo, perfiles de origen, resolver y utilidades de inspección.
+- 23 campos canónicos del contrato actual de Actividad y perfiles `activity_csv` y `zeek_conn_log`.
+- CSV utiliza el perfil compartido en lugar de mantener una segunda lista de alias. Se verificó paridad exacta respecto del importador anterior: 23/23 campos, 47/47 alias con el mismo destino, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
+- Zeek TSV/JSONL utiliza el perfil de origen para validar el esquema y señalar campos requeridos ausentes o con errores tipográficos, sin cambiar la interpretación específica de su timestamp Unix ni de los contadores.
+- Las cabeceras duplicadas, inseguras o ambiguas se bloquean. Las sugerencias se limitan a una única inserción, eliminación o sustitución; varios candidatos se marcan como ambiguos. No hay autocorrección.
+- La inspección de valores diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido. La conversión de unidades requiere una unidad explícita, compatible y no ambigua.
+- El resolver limita las cabeceras a 256 y el análisis numérico limita la longitud y escala de entrada.
+- El verificador de arquitectura declara el grafo permitido para el paquete semántico y prohíbe que dependa de API, servicios, repositorios o infraestructura.
+
+### Límites actuales — no declararlos resueltos
+
+- `inspect_field_value` es una utilidad tipada probada; no reemplaza la validación autoritativa de `activity_event_service.py`. Los importadores siguen usando sus validadores de dominio específicos.
+- Las sugerencias y errores de cabecera se comunican en el resultado de validación del preview. Todavía no hay una pantalla dedicada de mapeo interactivo ni una tabla visual de calidad por columna.
+- El catálogo aún no incluye todo el modelo objetivo de dominio, tipo de evento, política de agregación, cardinalidad, enriquecimiento y versionado de esquema.
+- No existe todavía una política completa de `not_applicable` frente a `not_reported` para todos los campos. No se agregan valores por defecto ni se convierte ausencia en cero.
+- Monitorización, Inventario y Forense no utilizan este catálogo. No se cambió SQLite, el contrato HTTP ni el esquema persistido.
+
+Los principios y objetivos de las secciones siguientes siguen siendo el destino de diseño. La PR #212 implementa solo una base común de Actividad/CSV/Zeek, no el modelo completo descrito en esta propuesta.
 
 ## 1. Decisión propuesta
 

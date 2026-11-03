@@ -2,32 +2,25 @@
 
 ## Fotografía vigente — 3 de noviembre de 2026
 
-- **Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`.
-- **Estado del producto:** desarrollo activo. No declarar la versión 0.10.0 estable hasta completar la aceptación manual integral, la recuperación de datos y la revisión de accesibilidad.
-- **PR #209 — navegación del laboratorio:** integrada mediante squash en [`ca9c4d9`](https://github.com/JavierGrecco/NetSentinel/commit/ca9c4d9644d99f98988475bf04692ef04373f743). Los accesos CSV/Zeek llevan a Actividad → Importar y las regresiones reconocen el fragmento de navegación.
-- **PR #210 — mantenimiento:** integrada mediante squash en [`d8b6a64`](https://github.com/JavierGrecco/NetSentinel/commit/d8b6a64214f8168d361fe62af38d37c728331575). Consolida siete actualizaciones revisadas; incluye fixtures MaxMind City/ASN y lectores reales en las pruebas multiplataforma.
-- **PR #208 — presentación profesional y documentación:** abierta, fuera de Draft. HEAD `979b3800f81c37e0b74d087cb5d49940f78fade8`; 19 checks exitosos, 1 omisión esperada y 4 jobs macOS en cola, sin fallos conocidos en la última consulta. No declarar la validación completa hasta que terminen los cuatro jobs. Este HEAD incluye la propuesta `docs/SEMANTIC_DATA_NORMALIZATION.md`, que no modifica el runtime. [Ejecución de CI](https://github.com/JavierGrecco/NetSentinel/actions/runs/41674600264).
-- **PR #200 — correlación Zeek en Hallazgos:** continúa como Draft. Su rama se actualizó sobre el `main` consolidado mediante `d341d4ca7ceb5354ec16c4508e47cdce2b8dfeb8`, que conserva el HEAD funcional anterior como segundo padre. La CI se relanzó para ese nuevo SHA y sigue en curso; los checks anteriores no lo validan. La aceptación manual integral continúa pendiente. [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200).
-- **Issue #211 — normalización semántica:** diseño documentado, todavía sin implementación funcional. La primera entrega prevista es un catálogo determinista para Actividad/CSV/Zeek, con alias por fuente, sugerencias seguras de errores de tipeo, unidades explícitas y estados diferenciados para ausencias y ambigüedades. [Especificación](SEMANTIC_DATA_NORMALIZATION.md) · [seguimiento](https://github.com/JavierGrecco/NetSentinel/issues/211).
-- **PR abiertas:** #208 (documentación) y #200 (funcionalidad en Draft). #209 y #210 ya están integradas.
-- **Ramas remotas:** la última auditoría contabilizó 188 referencias (incluida `main`). Los merges no eliminan automáticamente las ramas fuente; no se ha borrado ninguna en esta consolidación. El snapshot CSV es histórico y no debe utilizarse como inventario vivo.
-- **Higiene de ramas:** la auditoría previa identificó 156 ramas cuyo SHA coincidía exactamente con una PR fusionada, 2 integradas mediante QA, 15 PR cerradas sin merge y 6 sin PR asociada. Los siete cambios de Dependabot ya se consolidaron en #210; verificar cada referencia antes de incorporarla a un lote de limpieza.
-- **Gobernanza de GitHub:** la protección efectiva de `main` y el borrado automático de ramas quedan pospuestos para una revisión posterior, como decisión administrativa. No se presentan como requisito funcional de NetSentinel ni como bloqueo para seguir desarrollando. Mientras tanto, cada integración se realiza secuencialmente con comprobación explícita de SHA y CI.
-- **Checks posteriores al último merge:** sobre `d8b6a64214f8168d361fe62af38d37c728331575`, la última consulta encontró 17 checks exitosos, 1 omisión esperada y 5 jobs macOS en cola, sin fallos conocidos. No atribuir esos resultados a commits posteriores.
+- **Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`. Esta fotografía no implica que las PR abiertas estén integradas.
+- **Estado del producto:** desarrollo activo. No declarar 0.10.0 estable hasta completar la aceptación manual integral, la recuperación de datos y la revisión de accesibilidad.
+- **PR #209 — navegación del laboratorio:** integrada en `main` mediante squash en [`ca9c4d9`](https://github.com/JavierGrecco/NetSentinel/commit/ca9c4d9644d99f98988475bf04692ef04373f743). Los accesos de CSV/Zeek llevan a Actividad → Importar.
+- **PR #210 — mantenimiento de dependencias:** integrada en `main` mediante squash en [`d8b6a64`](https://github.com/JavierGrecco/NetSentinel/commit/d8b6a64214f8168d361fe62af38d37c728331575). Consolida siete actualizaciones revisadas e incorpora fixtures MaxMind City/ASN.
+- **PR #208 — presentación y documentación:** abierta, fuera de Draft. HEAD anterior `487dfe06cc9f14095b44881a169303d00e63968f`; último resultado observado: 21 checks exitosos, 1 omisión esperada, 1 job macOS cancelado y 1 job macOS en cola, sin fallos. Se está refrescando el estado documental en esta misma rama; no reutilizar esos resultados para el nuevo SHA. No modifica runtime.
+- **PR #212 — registro semántico para CSV/Zeek:** abierta, fuera de Draft. HEAD `f89c7654904ae9cd243a545477cbe2b610263151`, basada en el `main` consolidado. Última consulta: 17 checks exitosos, 1 omisión esperada, 1 en curso y 5 en cola, sin fallos. Ubuntu Python 3.10–3.14 pasó con 903 pruebas por versión; Windows Python 3.11–3.14, con 894 aprobadas y 9 omitidas por versión. Faltan Windows 3.10, Chromium y los cinco jobs macOS. [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212) · [issue #211](https://github.com/JavierGrecco/NetSentinel/issues/211).
+- **PR #200 — correlación Zeek en Hallazgos:** continúa como Draft. HEAD `f58af31afba49fe3232f1dd5ce013910fbc42be0`; la rama tiene como base el `main` consolidado `d8b6a64214f8168d361fe62af38d37c728331575). Última consulta: 22 checks exitosos, 1 omisión esperada y 1 job macOS en cola, sin fallos. Mantener Draft hasta actualizarla con #212, volver a validar el SHA final y realizar una sola aceptación manual integral. [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200).
+- **Issue #211 — normalización semántica:** dejó de ser solo una propuesta: la primera implementación está en revisión en #212. Su alcance actual es Actividad CSV/Zeek, no un motor universal de Monitorización, Inventario o Forense. La especificación detalla qué se implementó y qué queda pendiente.
+- **PR abiertas:** #208 (documentación), #212 (catálogo semántico) y #200 (correlación Zeek, Draft). #209 y #210 ya están integradas.
+- **Ramas remotas:** la última auditoría en vivo contabilizó 188 referencias, incluida `main`. No se borraron ramas en esta etapa. El snapshot CSV es histórico y no debe utilizarse como inventario vivo.
+- **Higiene de ramas:** la auditoría anterior identificó 156 ramas cuyo SHA coincidía exactamente con una PR fusionada, 2 integradas mediante QA, 15 PR cerradas sin merge y 6 sin PR asociada. Cada referencia debe volver a verificarse por SHA y contenido exclusivo antes de cualquier limpieza.
+- **Gobernanza de GitHub:** la protección efectiva de `main`, los checks obligatorios y el borrado automático de ramas se posponen para una revisión administrativa posterior. No se han modificado esos ajustes en esta etapa. La integración debe seguir siendo secuencial, con SHA y CI verificados.
+- **Aceptación manual:** pendiente. No se harán pruebas parciales repetidas. El recorrido completo se realizará una sola vez cuando #212 esté integrada y #200 haya incorporado esos cambios, con CI completa en el SHA final.
 
-**Vigencia:** fotografía de GitHub del 3/11/2026 (Argentina/Córdoba). Los resultados y SHA anteriores se conservan como evidencia histórica y no sustituyen la comprobación del HEAD actual.
+**Vigencia:** fotografía de GitHub del 3/11/2026 (Argentina/Córdoba). Para validar cualquier cambio, prevalece siempre el HEAD y los checks actuales de esa PR; este documento es una fotografía editorial.
 
-## Revisión comparativa y siguiente mejora
+## Revisión comparativa y dirección técnica
 
-El [análisis comparativo de 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md) prioriza precisión, contexto e interoperabilidad frente a imitar la captura profunda de un SIEM/NDR.
-
-La evolución inmediata de datos se sigue en el [issue #211](https://github.com/JavierGrecco/NetSentinel/issues/211). La especificación propone un registro semántico determinista y local, pero todavía no hay código ejecutable que lo implemente. La primera integración se hará después de consolidar las PR actuales y validar la correlación Zeek una sola vez sobre su HEAD actualizado.
-
-## Revisión comparativa y siguiente mejora
-
-El [análisis comparativo de 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md) incorpora los dos NetSentinel de referencia y herramientas especializadas de observabilidad, análisis de tráfico, monitorización e inventario. La conclusión es priorizar la precisión, el contexto y la interoperabilidad en lugar de imitar la captura profunda de un SIEM/NDR. El documento es investigación estática; no agrega capacidades al runtime.
-
-El primer tramo de esa línea está implementado en la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200): añade contexto temporal de registros Zeek importados expresamente a hallazgos de inventario y disponibilidad, con límites de consulta y atribución documentados. Sigue como Draft y no forma parte de `main`; su CI verde no reemplaza la aceptación manual ni autoriza a presentarlo como funcionalidad integrada.
+El [análisis comparativo de 23/10/2026](COMPETITIVE_ANALYSIS_2026-10-23.md) prioriza precisión, contexto e interoperabilidad frente a imitar la captura profunda de un SIEM/NDR. La línea actual refuerza la calidad de los datos y la trazabilidad de su interpretación antes de ampliar la captura o el alcance operativo.
 
 ## Fuente única de trabajo
 
