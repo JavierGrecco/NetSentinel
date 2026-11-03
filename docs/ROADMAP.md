@@ -4,19 +4,26 @@
 
 ## Estado vigente — 3 de noviembre de 2026
 
-**Rama canónica:** `main`, HEAD consultado `299360f088f1eb92c766d29e448133ce3608142a`. El producto continúa en desarrollo activo; la aceptación manual integral y la protección efectiva de `main` siguen pendientes. La PR #209 completó 23 checks exitosos y 1 omisión esperada; la #208 completó el mismo resultado en su HEAD anterior y está incorporando las últimas correcciones editoriales antes de repetir CI.
+**Rama canónica:** `main`, HEAD consultado `299360f088f1eb92c766d29e448133ce3608142a`. El producto continúa en desarrollo activo; aceptación manual, recuperación de datos, accesibilidad y protección efectiva de `main` siguen pendientes.
 
 ### Prioridad inmediata
 
-1. Completar la aceptación manual de los flujos principales con datos sintéticos aislados y registrar evidencia en `VALIDATION_MATRIX.md`.
-2. La corrección del asistente está implementada en la [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) y pasó 23/23 contextos de CI, incluida Chromium 135/135. No integrarla hasta resolver la protección efectiva de `main`; después, realizar un único recorrido manual aislado y registrar evidencia en `VALIDATION_MATRIX.md`.
-3. Corregir administrativamente el ruleset `rules`: incluir explícitamente `main` (o `~DEFAULT_BRANCH`), añadir los 23 checks verificados y probar que una PR queda bloqueada cuando falta uno o falla. Hoy `include: []`, `required_status_checks: []` y cero aprobaciones no proporcionan esa garantía.
-4. Integrar la corrección acotada de Gitleaks después de aprobar la PR #208; el escaneo pasó en un HEAD de la rama documental, pero `main` todavía no contiene la excepción. Revisar por separado los fallos del servicio programado de Dependabot.
-5. Reconciliar la auditoría de ramas: la consulta actual encontró 190 referencias remotas (189 fuera de `main`); no borrar ramas hasta verificar sus SHA actuales y la protección de la rama principal.
+1. Corregir administrativamente el ruleset `rules`: incluir explícitamente `main` (o `~DEFAULT_BRANCH`), añadir los 23 checks verificados y probar que una PR queda bloqueada si falta un check o falla. Hoy `include: []`, `required_status_checks: []` y cero aprobaciones no proporcionan esa garantía.
+2. Revisar e integrar la corrección del asistente de la [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) después de resolver la protección de `main`; pasó 23 checks y Chromium 135/135. Luego ejecutar una única aceptación guiada sobre el SHA integrado y registrar los resultados reales.
+3. Revisar e integrar la presentación de la [PR #208](https://github.com/JavierGrecco/NetSentinel/pull/208): el HEAD consultado `cf4164b2db208c9ae81abc8ff2d080f86f133c3a` completó 23 checks exitosos y 1 omisión esperada. El README, la arquitectura, el índice de investigación y la guía están ordenados; no cambia el runtime.
+4. Revisar la actualización de dependencias de la [PR #210](https://github.com/JavierGrecco/NetSentinel/pull/210). El HEAD `5f7332cf13c0834ddc46e15d4bd446c316bd504f` completó 23 checks exitosos y 1 omisión esperada. La actualización mayor de la dependencia opcional `maxminddb` está acompañada de pruebas de lectura con fixtures City/ASN; mantenerla separada de los cambios funcionales.
+5. Mantener la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) como Draft hasta completar revisión y aceptación del contexto temporal Zeek. Su CI verde no significa que la función esté integrada o aceptada.
+6. Reconciliar la auditoría de ramas antes de cualquier limpieza: la consulta posterior a la consolidación encuentra 188 referencias remotas (`main` + 187), mientras que el CSV conserva el snapshot histórico de 190. No borrar ramas hasta verificar cada SHA y la protección efectiva de la rama principal.
 
-La [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) permanece en borrador. Su HEAD consultado completó 23 checks exitosos y una omisión esperada de firma de procedencia; la aceptación manual sigue pendiente y el cambio no está integrado en `main`. La [PR #208](https://github.com/JavierGrecco/NetSentinel/pull/208) reorganiza la presentación y la documentación, conserva la investigación como referencia secundaria y añade 26 excepciones exactas de Gitleaks para falsos positivos identificados. Tras detectar 11 SHA del inventario en la consolidación, el job de secretos pasó sobre el commit de corrección `40a6e04d78d481f77aee1064e25d74ffd9c983d4`; la CI del HEAD definitivo debe terminar antes de habilitar la revisión. La [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) corrige la entrada del asistente a Actividad → Importar y el test harness; terminó con 23 checks exitosos y 1 omisión esperada, incluidos 135/135 controles Chromium. Ninguna se integrará hasta resolver la protección efectiva de `main`.
+La [PR #208](https://github.com/JavierGrecco/NetSentinel/pull/208) organiza la presentación profesional, conserva la investigación como referencia secundaria y añade 26 excepciones exactas de Gitleaks para falsos positivos identificados. El HEAD documental consultado completó CI, Chromium, seguridad y cadena de suministro: 23 checks exitosos y una omisión esperada de firma de release.
 
-**Vigencia:** el bloque que sigue conserva el detalle histórico del 23 de octubre. Sus métricas, SHA y resultados no deben interpretarse como el estado actual. Para el estado vigente, prevalece `PROJECT_STATUS.md` y la evidencia vinculada a cada commit.
+La [PR #209](https://github.com/JavierGrecco/NetSentinel/pull/209) corrige la entrada del asistente a Actividad → Importar y el test harness; terminó con 23 checks exitosos y 1 omisión esperada, incluidos 135/135 controles Chromium.
+
+La [PR #210](https://github.com/JavierGrecco/NetSentinel/pull/210) agrupa siete actualizaciones de dependencias y acciones que antes estaban propuestas por separado. Su CI combinada incluye pruebas multiplataforma del extra GeoIP y completó 23 checks exitosos y 1 omisión esperada. Las tres PR (#208, #209 y #210) están abiertas y listas para revisión; ninguna debe integrarse mientras la protección efectiva de `main` siga sin resolverse.
+
+**PR abiertas consultadas:** #200 (Draft), #208 (documentación), #209 (corrección funcional) y #210 (mantenimiento). Las siete actualizaciones originales #201–#207 ya están representadas en #210 y no se deben contar como siete líneas de producto pendientes.
+
+**Vigencia:** el bloque siguiente conserva el detalle histórico del 23 de octubre. Sus métricas, SHA y resultados no deben interpretarse como el estado actual. Para el estado vigente, prevalece `PROJECT_STATUS.md` y la evidencia vinculada a cada commit.
 
 ## Registro histórico — 23 de octubre de 2026
 

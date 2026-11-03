@@ -7,7 +7,7 @@
 
 ## Inventario
 
-Se encontraron **190 ramas remotas**: `main` y **189 ramas adicionales**. La consulta se actualizó después de abrir la PR #209; su rama activa queda incluida en el snapshot. La auditoría del 22/10/2026 registraba 174 ramas incluyendo `main`; la consulta actual registra 190, un aumento neto de 16.
+La fotografía inicial registra **190 ramas remotas**: `main` y **189 ramas adicionales**. Ese corte se tomó después de abrir la PR #209 y antes de consolidar las actualizaciones de mantenimiento en la PR #210. La auditoría del 22/10/2026 registraba 174 ramas incluyendo `main`; el corte inicial del 3/11 registró 190, un aumento neto de 16. Las cifras y la distribución que siguen describen ese corte, no un inventario vivo.
 
 Distribución por prefijo de las 189 ramas fuera de `main`:
 
@@ -43,7 +43,22 @@ Distribución por prefijo de las 189 ramas fuera de `main`:
 
 El CSV [BRANCH_SNAPSHOT_2026-11.csv](BRANCH_SNAPSHOT_2026-11.csv) registra cada nombre, SHA, prefijo, clasificación, PR asociadas y acción recomendada. Es una fotografía del 3/11, no una instrucción de borrado. La fila de `docs/portfolio-presentation-2026-11` conserva el SHA observado al capturar el inventario; la rama fue consolidada posteriormente para revisar esta PR y su SHA actual ya no coincide con esa fotografía. No uses ese campo como referencia viva ni como motivo para borrar la rama.
 
-## Pull requests abiertas
+## Reconciliación posterior a la consolidación — 3 de noviembre de 2026
+
+Una consulta posterior a la apertura de la PR #210 devuelve **188 ramas remotas**: `main` y **187 ramas adicionales**. Tres referencias de Dependabot incluidas en el snapshot inicial ya no aparecen en el listado actual. Esta diferencia no se interpreta como una autorización para borrar otras ramas ni se ejecutó una limpieza masiva. El CSV conserva correctamente la fotografía histórica de 190 referencias; no debe actualizarse a mano para simular un inventario en tiempo real.
+
+La consulta actual devuelve **cuatro PR abiertas**:
+
+| PR | Tipo | Estado consultado |
+|---|---|---|
+| [#208](https://github.com/JavierGrecco/NetSentinel/pull/208) | Presentación, documentación y excepciones Gitleaks acotadas | Abierta, lista para revisión; 23 checks exitosos y 1 omisión esperada |
+| [#209](https://github.com/JavierGrecco/NetSentinel/pull/209) | Corrección del acceso directo a Actividad → Importar y del test harness | Abierta, lista para revisión; 23 checks exitosos y 1 omisión esperada |
+| [#210](https://github.com/JavierGrecco/NetSentinel/pull/210) | Consolidación de siete actualizaciones de dependencias y acciones | Abierta, lista para revisión; 23 checks exitosos y 1 omisión esperada |
+| [#200](https://github.com/JavierGrecco/NetSentinel/pull/200) | Correlación temporal de contexto Zeek en hallazgos | Abierta, Draft |
+
+Las siete actualizaciones originales #201–#207 se agruparon para revisión conjunta en #210; no deben seguir contabilizándose como siete PR abiertas ni como siete funcionalidades pendientes. Los resultados de checks corresponden a los SHA de cada PR y no validan automáticamente un merge posterior.
+
+## Pull requests abiertas en la fotografía inicial
 
 Se encontraron **10 PR abiertas**:
 
