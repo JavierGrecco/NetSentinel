@@ -139,3 +139,48 @@ def test_csv_import_rejects_duplicate_headers_after_alias_normalization(monkeypa
             "observed_at,date,event_type\n2026-10-14T10:00:00Z,2026-10-14,dns_query\n",
             normalize_event=lambda payload, **kwargs: payload,
         )
+
+
+
+def test_csv_import_suggests_a_typo_without_applying_the_mapping(monkeypatch) -> None:
+    """Una cabecera parecida genera una sugerencia, pero no se usa para importar."""
+    def unexpected_repository_call(*args, **kwargs):
+        raise AssertionError("No debe acceder a la persistencia con una cabecera no resuelta.")
+
+    monkeypatch.setattr(
+        importer.activity_repository,
+        "require_device_exists",
+        unexpected_repository_call,
+    )
+
+    with pytest.raises(ValueError) as error:
+        importer.import_csv(
+            42,
+            "observed_at,event_type,destionation_ip\n"
+            "2026-10-14T10:00:00Z,connection,198.51.100.8\n",
+            normalize_event=lambda payload, **kwargs: payload,
+        )
+
+    assert "destionation_ip" in str(error.value)
+    assert "destination_ip" in str(error.value)
+    assert "no se asignó automáticamente" in str(error.value)
+
+
+def test_csv_import_rejects_confusable_header_names_before_repository_access(monkeypatch) -> None:
+    """Un carácter Unicode visualmente parecido no debe transformarse en un alias ASCII."""
+    def unexpected_repository_call(*args, **kwargs):
+        raise AssertionError("No debe acceder a persistencia con una cabecera confusable.")
+
+    monkeypatch.setattr(
+        importer.activity_repository,
+        "require_device_exists",
+        unexpected_repository_call,
+    )
+
+    with pytest.raises(ValueError, match="no seguros"):
+        importer.import_csv(
+            42,
+            "observed_at,event_type,іd.orig_h\n"
+            "2026-10-14T10:00:00Z,connection,192.0.2.9\n",
+            normalize_event=lambda payload, **kwargs: payload,
+        )

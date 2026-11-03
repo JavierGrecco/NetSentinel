@@ -186,12 +186,17 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
     },
     "netsentinel.activity_zeek_import_service": {
         "netsentinel.activity_event_service",
         "netsentinel.activity_repository",
         "netsentinel.activity_retention_service",
         "netsentinel.inventory_read_repository",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
     },
     "netsentinel.geolocation_service": {
         "netsentinel.config",
@@ -223,6 +228,29 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "netsentinel.monitoring_export_service": {
         "netsentinel.csv_safety",
         "netsentinel.monitoring_repository",
+    },
+}
+
+# The semantic registry is a pure leaf package. It may depend only on its own
+# models/catalog/resolver/value modules and must never import application,
+# transport, persistence, or infrastructure code.
+SEMANTICS_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
+    "netsentinel.semantics": {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.resolver",
+        "netsentinel.semantics.values",
+    },
+    "netsentinel.semantics.models": set(),
+    "netsentinel.semantics.catalog": {
+        "netsentinel.semantics.models",
+    },
+    "netsentinel.semantics.resolver": {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+    },
+    "netsentinel.semantics.values": {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
     },
 }
 # Compatibility facades may coordinate domain services, but must not grow
@@ -489,6 +517,22 @@ def check_architecture(root: Path) -> tuple[list[str], dict[str, set[str]]]:
             if dependency not in (allowed or set()):
                 violations.append(
                     f"{source} imports {dependency}, which is not an allowed service dependency."
+                )
+
+    # The semantic package is an explicitly closed dependency boundary.
+    for source in sorted(graph):
+        if source != "netsentinel.semantics" and not source.startswith("netsentinel.semantics."):
+            continue
+        allowed = SEMANTICS_ALLOWED_INTERNAL_IMPORTS.get(source)
+        if allowed is None:
+            violations.append(
+                f"{source} has internal dependencies but no explicit semantic-package allow-list."
+            )
+            continue
+        for dependency in sorted(graph[source]):
+            if dependency not in allowed:
+                violations.append(
+                    f"{source} imports {dependency}, which is outside the pure semantic package."
                 )
 
     # Keep compatibility facades thin and prevent them from importing storage directly.

@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from . import activity_event_service, activity_repository, activity_retention_service, inventory_read_repository
+from .semantics.models import HeaderStatus
+from .semantics.resolver import missing_required_fields, resolve_headers
 
 EventNormalizer = Callable[..., dict[str, Any]]
 
@@ -77,6 +79,47 @@ def _parse_json_line(raw_line: str, line_number: int) -> dict[str, Any] | None:
 _REQUIRED_ZEEK_FIELDS = {
     "ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto",
 }
+_REQUIRED_ZEEK_CANONICAL_FIELDS = {
+    "observed_at", "source_event_id", "source_ip", "source_port",
+    "destination_ip", "destination_port", "protocol",
+}
+
+
+def _validate_zeek_fields(fields: Any, line_number: int) -> None:
+    """Usa el perfil Zeek para detectar campos faltantes, typos y colisiones."""
+    plan = resolve_headers(fields, "zeek_conn_log")
+    if plan.collisions:
+        names = ", ".join(collision.field_name for collision in plan.collisions)
+        raise ValueError(
+            f"Fila {line_number}: la cabecera Zeek contiene campos duplicados tras "
+            f"normalizar: {names}."
+        )
+
+    missing = missing_required_fields(plan, _REQUIRED_ZEEK_CANONICAL_FIELDS)
+    if not missing:
+        return
+
+    suggestions = []
+    for result in plan.headers:
+        if result.status not in {HeaderStatus.SUGGESTION, HeaderStatus.AMBIGUOUS}:
+            continue
+        if not result.suggestions:
+            continue
+        candidates = ", ".join(
+            f"{candidate.field_name} (alias Zeek {candidate.matched_alias})"
+            for candidate in result.suggestions
+        )
+        suggestions.append(f"{result.source_header!r} podría corresponder a {candidates}")
+
+    detail = ""
+    if suggestions:
+        detail = " Sugerencias aproximadas, no aplicadas: " + "; ".join(suggestions) + "."
+    raise ValueError(
+        f"Fila {line_number}: el conn.log no contiene los campos necesarios: "
+        + ", ".join(sorted(missing))
+        + "."
+        + detail
+    )
 _ZEEK_PORT_FIELDS = {"id.orig_p", "id.resp_p"}
 _ZEEK_COUNTER_FIELDS = {"orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts"}
 
@@ -178,11 +221,7 @@ def _parse_zeek_tsv(log_data: str) -> list[tuple[int, dict[str, Any]]]:
         raise ValueError("El archivo no contiene una cabecera Zeek válida.")
     if len(set(fields)) != len(fields):
         raise ValueError("La cabecera Zeek contiene nombres de campo repetidos.")
-    missing = sorted(_REQUIRED_ZEEK_FIELDS - set(fields))
-    if missing:
-        raise ValueError(
-            "El conn.log no contiene los campos necesarios: " + ", ".join(missing) + "."
-        )
+    _validate_zeek_fields(fields, 1)
     if field_types is not None and len(field_types) != len(fields):
         raise ValueError("La cantidad de tipos de la cabecera Zeek no coincide con sus campos.")
     return rows
@@ -251,6 +290,7 @@ def _protocol(value: str) -> str:
 
 def _to_event(record: dict[str, Any], line_number: int) -> dict[str, Any]:
     """Mapea únicamente campos de conexión documentados por Zeek."""
+    _validate_zeek_fields(record.keys(), line_number)
     timestamp = _timestamp_from_zeek(record.get("ts"), line_number)
     uid = _required_text(record, "uid", line_number, maximum=155)
     source_ip = _required_text(record, "id.orig_h", line_number, maximum=64)
