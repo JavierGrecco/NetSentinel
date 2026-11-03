@@ -214,6 +214,21 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.semantics.models",
         "netsentinel.semantics.resolver",
     }
+    assert graph["netsentinel.semantics"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.resolver",
+        "netsentinel.semantics.values",
+    }
+    assert graph["netsentinel.semantics.models"] == set()
+    assert graph["netsentinel.semantics.catalog"] == {"netsentinel.semantics.models"}
+    assert graph["netsentinel.semantics.resolver"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+    }
+    assert graph["netsentinel.semantics.values"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+    }
     assert graph["netsentinel.geolocation_service"] == {
         "netsentinel.config",
         "netsentinel.geolocation_repository",
