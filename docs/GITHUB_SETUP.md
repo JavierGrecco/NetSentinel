@@ -13,7 +13,7 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 **Última lectura verificada: 3/11/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Pero la lista de checks sigue vacía (`required_status_checks: []`), la condición de ramas continúa con `include: []` y `exclude: []`, exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`. La documentación oficial de GitHub indica que al menos uno de los patrones `include` debe coincidir y permite usar `~DEFAULT_BRANCH`; el arreglo vacío no identifica `main`. Por lo tanto, el ruleset no demuestra protección efectiva de `main`.
 
-**Bloqueo actual:** la verificación del 3/11/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. El ruleset está activo, pero no tiene patrón de inclusión que apunte a `main` ni contextos obligatorios. No equivale a una puerta de integración efectiva. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. Seguimiento: [issue #195](https://github.com/JavierGrecco/NetSentinel/issues/195) y [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-10.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
+**Bloqueo actual:** la verificación del 3/11/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. El ruleset está activo, pero no tiene patrón de inclusión que apunte a `main` ni contextos obligatorios. No equivale a una puerta de integración efectiva. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. El conector de revisión utilizado para este trabajo permite consultar reglas, pero no modificarlas; por eso este paso sigue siendo administrativo. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-11.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
 
 ### Configuración que debe quedar en el Ruleset
 
@@ -28,7 +28,7 @@ Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/br
 
 ### Checks obligatorios para Pull Requests
 
-Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `63b689f90ccfe15a145fc352926583f2ebe7dc06`, el 3/11/2026: aparecen 23 checks con resultado exitoso y 1 check omitido de forma esperada para firma de artefactos de release. Volvé a confirmar los nombres y resultados sobre el HEAD que vayas a integrar. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
+Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `d9368dc8de2bfa175a5bd8c82c8d343a44c7a1ca`, el 3/11/2026: aparecen 23 checks exitosos y 1 omisión esperada para firma de artefactos de release. La matriz incluyó 855 pruebas Python 3.14/Ubuntu y 135/135 comprobaciones Chromium. La rama recibió después una sincronización documental; no traslades estos resultados a un SHA posterior sin comprobar sus propios checks. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
 
 **CI — 18 checks**
 
@@ -79,6 +79,19 @@ No añadas `Sign release artifact provenance` como requisito para PR: se ejecuta
 
 Si cambian los nombres de job o workflows, actualizá los contextos requeridos. Antes de completar la tarea, comprobá los nombres disponibles en una PR reciente y volvé a verificar el efecto de la regla desde GitHub.
 
+## Reducir y ordenar las ramas
+
+La consulta del 3/11/2026 devolvió **188 ramas remotas**: `main` y 187 adicionales. Hay **cuatro PR abiertas** (#208, #209, #210 y #200); las otras 184 referencias no corresponden a PR abiertas. Ese dato no autoriza a borrarlas: la auditoría `BRANCH_AUDIT_2026-11.md` distingue ramas integradas, PR cerradas sin merge y referencias sin PR.
+
+Para evitar que el inventario vuelva a crecer:
+
+1. En **Settings → General → Pull Requests**, activar **Automatically delete head branches**. Así GitHub elimina la rama fuente al fusionar una PR.
+2. No abrir una rama nueva para corregir documentación o sincronizar estado si puede hacerse en una PR existente.
+3. Mantener como máximo una PR funcional principal en Draft; no duplicar el mismo trabajo en varias ramas.
+4. Para la limpieza histórica, usar `BRANCH_AUDIT_2026-11.md`, verificar de nuevo el SHA remoto y comprobar que no haya contenido exclusivo antes de eliminar.
+5. Limpiar por lotes pequeños y volver a contar las ramas después de cada lote. No borrar por prefijo, antigüedad ni nombre.
+
+La opción de borrado automático no sustituye la protección de `main`; ambas configuraciones son independientes.
 ## Política de versiones
 
 La versión se define en src/netsentinel/__init__.py. pyproject.toml la obtiene mediante metadatos dinámicos y no debe mantener una segunda versión manual.
