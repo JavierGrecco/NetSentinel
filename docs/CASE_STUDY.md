@@ -88,7 +88,7 @@ La PR [#208](https://github.com/JavierGrecco/NetSentinel/pull/208), HEAD `96f4e2
 |---|---:|---|
 | CI, seguridad y cadena de suministro | 23 aprobados; 1 omisión esperada | La firma de procedencia se omite en PR que no publican una release |
 | Suite Python | **855 pruebas aprobadas en 8,35 s** | Una ejecución de la matriz: Python 3.14 en Ubuntu |
-| Interfaz responsive con Chromium | **135/135 comprobaciones correctas** | Seis páginas en la matriz de viewports definida por el script |
+| Interfaz responsive con Chromium | **135/135 comprobaciones correctas** | Nueve vistas por 15 tamaños de ventana (320×640 a 1920×1080) |
 | CodeQL y auditoría de dependencias | Correctos | Análisis estático y dependencias del commit evaluado |
 | Detección de secretos | Correcta | Gitleaks sin hallazgos no exceptuados |
 | Paquete y cadena de suministro | Correctos | Wheel, SBOM y manifiesto de integridad generados |
