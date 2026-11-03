@@ -57,6 +57,11 @@ class Viewport:
         return f"{self.width}x{self.height}"
 
 
+def _is_activity_page_link(value: str | None) -> bool:
+    """Reconoce la página Actividad aunque el enlace seleccione una pestaña por hash."""
+    return bool(value) and urlsplit(value).path == "/activity"
+
+
 def parse_viewports(value: str) -> tuple[Viewport, ...]:
     """Convierte 'ancho x alto' en una lista validada de tamaños de ventana."""
     viewports: list[Viewport] = []
@@ -1889,7 +1894,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
             expected_path = link.get_attribute("href")
             if expected_path and not popup.url.endswith(expected_path):
                 failures.append(f"el paso «{title}» abrió una dirección inesperada: {popup.url}")
-            if expected_path == "/activity":
+            if _is_activity_page_link(expected_path):
                 try:
                     _exercise_activity_scenario(popup, title)
                 except Exception as exc:
