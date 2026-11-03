@@ -68,3 +68,18 @@ def test_acceptance_guide_documents_iteration_and_local_resume():
     guide = GUIDE_PATH.read_text(encoding="utf-8")
     assert "un indicador visible" in guide
     assert "cada fila tiene una acción para revisar directamente ese paso" in guide
+    assert "Actividad → Importar" in guide
+    assert "antes de la primera importación puede estar vacío" in guide
+
+
+def test_guided_activity_steps_open_the_import_tab_directly():
+    script = JS_PATH.read_text(encoding="utf-8")
+    html = (ROOT / "src/netsentinel/static/activity.html").read_text(encoding="utf-8")
+
+    # CSV preview/import/rejection and Zeek all use the same, explicit tab deep link.
+    assert script.count('link: "/activity#importar"') == 4
+    assert script.count('linkLabel: "Abrir Actividad directamente en Importar ↗"') == 4
+    assert "El resumen puede estar vacío antes de importar los datos sintéticos; eso es normal." in script
+    assert 'data-tab-hash="importar"' in html
+    assert '<script src="/static/section-tabs.js" defer></script>' in html
+
