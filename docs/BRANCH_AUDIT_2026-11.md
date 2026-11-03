@@ -41,7 +41,7 @@ Distribución por prefijo de las 189 ramas fuera de `main`:
 | Sin PR asociada | 6 | No se encontró una PR cuyo nombre y HEAD coincidan exactamente con la referencia actual. | Revisar árbol y commits manualmente. |
 | **Total** | **189** | | |
 
-El CSV [BRANCH_SNAPSHOT_2026-11.csv](BRANCH_SNAPSHOT_2026-11.csv) registra cada nombre, SHA, prefijo, clasificación, PR asociadas y acción recomendada. Es una fotografía del 3/11, no una instrucción de borrado.
+El CSV [BRANCH_SNAPSHOT_2026-11.csv](BRANCH_SNAPSHOT_2026-11.csv) registra cada nombre, SHA, prefijo, clasificación, PR asociadas y acción recomendada. Es una fotografía del 3/11, no una instrucción de borrado. La fila de `docs/portfolio-presentation-2026-11` conserva el SHA observado al capturar el inventario; la rama fue consolidada posteriormente para revisar esta PR y su SHA actual ya no coincide con esa fotografía. No uses ese campo como referencia viva ni como motivo para borrar la rama.
 
 ## Pull requests abiertas
 
@@ -50,7 +50,7 @@ Se encontraron **10 PR abiertas**:
 | PR | Tipo | Estado |
 |---|---|---|
 | [#209](https://github.com/JavierGrecco/NetSentinel/pull/209) | Corrección del asistente: Actividad → Importar y test harness | 23/23 checks requeribles; pendiente de integración |
-| [#208](https://github.com/JavierGrecco/NetSentinel/pull/208) | Presentación y documentación; allowlist exacta de Gitleaks | 23 checks exitosos + 1 omisión esperada en HEAD previo; revisión editorial final en curso |
+| [#208](https://github.com/JavierGrecco/NetSentinel/pull/208) | Presentación y documentación; README, arquitectura y auditorías | Gitleaks pasó tras acotar 11 fingerprints del CSV; CI final en curso |
 | [#200](https://github.com/JavierGrecco/NetSentinel/pull/200) | Correlación temporal de contexto Zeek en hallazgos | Draft |
 | [#201–#207](https://github.com/JavierGrecco/NetSentinel/pulls) | Siete actualizaciones automatizadas de dependencias y GitHub Actions | Abiertas |
 
