@@ -447,3 +447,37 @@ def test_zeek_jsonl_typo_in_required_field_is_suggested_before_mapping() -> None
 
     assert "source_ip" in str(error.value)
     assert "id.orig_hh" in str(error.value)
+
+
+def test_zeek_optional_counter_typo_is_reported_even_when_required_fields_exist() -> None:
+    record = _record()
+    record["resp_pkt"] = record.pop("resp_pkts")
+
+    with pytest.raises(ValueError) as error:
+        importer._to_event(record, 1)
+
+    message = str(error.value).lower()
+    assert "errores tipográficos" in message
+    assert "resp_pkt" in message
+    assert "packets_received" in message
+    assert "no se aplicaron" in message
+
+
+def test_zeek_tsv_optional_counter_typo_is_not_silently_discarded() -> None:
+    log_data = _zeek_tsv(_record()).replace("resp_pkts", "resp_pkt", 1)
+
+    with pytest.raises(ValueError) as error:
+        importer._parse_zeek_tsv(log_data)
+
+    assert "resp_pkt" in str(error.value)
+    assert "packets_received" in str(error.value)
+
+
+def test_zeek_unknown_extension_without_a_safe_candidate_remains_ignored() -> None:
+    record = _record()
+    record["vendor_extension_code"] = "opaque-value"
+
+    mapped = importer._to_event(record, 1)
+
+    assert mapped["source_event_id"] == "zeek:CZeekFixture42"
+    assert "vendor_extension_code" not in mapped

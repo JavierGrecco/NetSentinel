@@ -96,9 +96,9 @@ def _validate_zeek_fields(fields: Any, line_number: int) -> None:
         )
 
     missing = missing_required_fields(plan, _REQUIRED_ZEEK_CANONICAL_FIELDS)
-    if not missing:
-        return
 
+    # También revisar sugerencias cuando todos los campos requeridos están presentes:
+    # una errata en un contador opcional no debe quedar descartada silenciosamente.
     suggestions = []
     for result in plan.headers:
         if result.status not in {HeaderStatus.SUGGESTION, HeaderStatus.AMBIGUOUS}:
@@ -111,15 +111,21 @@ def _validate_zeek_fields(fields: Any, line_number: int) -> None:
         )
         suggestions.append(f"{result.source_header!r} podría corresponder a {candidates}")
 
-    detail = ""
+    if not missing and not suggestions:
+        return
+
+    details: list[str] = []
+    if missing:
+        details.append(
+            "faltan campos necesarios: " + ", ".join(sorted(missing))
+        )
     if suggestions:
-        detail = " Sugerencias aproximadas, no aplicadas: " + "; ".join(suggestions) + "."
-    raise ValueError(
-        f"Fila {line_number}: el conn.log no contiene los campos necesarios: "
-        + ", ".join(sorted(missing))
-        + "."
-        + detail
-    )
+        details.append(
+            "hay columnas con posibles errores tipográficos: "
+            + "; ".join(suggestions)
+            + ". No se aplicaron sugerencias."
+        )
+    raise ValueError(f"Fila {line_number}: el conn.log " + "; ".join(details) + ".")
 _ZEEK_PORT_FIELDS = {"id.orig_p", "id.resp_p"}
 _ZEEK_COUNTER_FIELDS = {"orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts"}
 
