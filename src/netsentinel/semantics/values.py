@@ -370,8 +370,10 @@ def inspect_field_value(field_name: str, value: Any) -> FieldValueCheck:
     elif definition.value_kind is ValueKind.INTEGER:
         valid = inspection.kind is ValueKind.INTEGER
         if valid and definition.minimum is not None and definition.maximum is not None:
-            numeric = int(value)
-            if not definition.minimum <= numeric <= definition.maximum:
+            # Comparar como Decimal evita excepciones para representaciones como
+            # "443.0" o "4.43e2" que son enteras por valor, pero no por sintaxis.
+            numeric = Decimal(str(value))
+            if not Decimal(definition.minimum) <= numeric <= Decimal(definition.maximum):
                 valid = False
                 reason = f"El valor debe estar entre {definition.minimum} y {definition.maximum}."
     elif definition.value_kind is ValueKind.IP_ADDRESS:
