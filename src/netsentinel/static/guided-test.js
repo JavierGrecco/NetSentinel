@@ -74,6 +74,7 @@
       phase: "Actividad",
       title: "3. CSV: revisar antes de importar",
       lead: "La primera prueba de Actividad comprueba la vista previa. Todavía no queremos escribir los eventos en la base.",
+      actionDescription: "Vas a entrar directamente en Actividad → Importar. El resumen puede estar vacío antes de importar los datos sintéticos; eso es normal. En esta pantalla elegí el dispositivo ficticio y el archivo activity.csv que generaste para el laboratorio.",
       objective: "Confirmar que el importador interpreta correctamente el archivo y permite revisarlo antes de guardarlo.",
       why: "Una vista previa fiable evita persistir columnas interpretadas mal, datos sensibles o filas que no corresponden al dispositivo seleccionado.",
       instructions: [
@@ -84,8 +85,8 @@
         "Volvé a esta guía y anotá cualquier diferencia si la vista previa no muestra las seis filas."
       ],
       expected: "La vista previa presenta seis filas válidas y explica qué se importaría sin guardar todavía los eventos.",
-      link: "/activity",
-      linkLabel: "Abrir Actividad en otra pestaña ↗",
+      link: "/activity#importar",
+      linkLabel: "Abrir Actividad directamente en Importar ↗",
       needsManual: true,
       track: true
     },
@@ -131,8 +132,8 @@
         "Volvé al asistente e indicá si los dos archivos se rechazaron sin escrituras parciales."
       ],
       expected: "Ambos CSV se rechazan con un mensaje entendible y no aparece ningún evento procedente de esos archivos inválidos.",
-      link: "/activity",
-      linkLabel: "Abrir Actividad en otra pestaña ↗",
+      link: "/activity#importar",
+      linkLabel: "Abrir Actividad directamente en Importar ↗",
       needsManual: true,
       track: true
     },
