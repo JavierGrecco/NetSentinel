@@ -71,6 +71,8 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
 
 Abrí [http://127.0.0.1:8765/guided-test](http://127.0.0.1:8765/guided-test). Pulsá **Empezar la prueba** y seguí la pantalla actual: primero ejecutá las comprobaciones de lectura; cuando se indique, abrí el módulo en la pestaña nueva, completá exactamente esa acción y volvé a la guía. Elegí **Coincide con lo esperado**, **Encontré un fallo** o **No pude comprobarlo**; añadí una nota cuando haya alguna diferencia. No se puede avanzar sin registrar un resultado en el paso actual.
 
+En los pasos de CSV y Zeek, el enlace abre directamente **Actividad → Importar** en la pestaña nueva (`/activity#importar`). No empieces por Resumen: antes de la primera importación puede estar vacío porque todavía no hay eventos locales. En Importar, elegí el dispositivo sintético y el archivo del directorio `SCENARIO_DIR`; la guía permanece abierta en la otra pestaña.
+
 El progreso y las notas se guardan solo en el navegador de esta máquina. El asistente no adivina el resultado de acciones manuales: el resumen final distingue éxitos declarados, fallos y pasos sin comprobar. Completar el recorrido no equivale a certificar el producto ni sustituye revisión técnica.
 
 ## Orden sugerido para la prueba manual
