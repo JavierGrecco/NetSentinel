@@ -57,6 +57,11 @@ class Viewport:
         return f"{self.width}x{self.height}"
 
 
+def _is_activity_page_link(value: str | None) -> bool:
+    """Reconoce Actividad aunque el enlace seleccione una pestaña mediante hash."""
+    return bool(value) and urlsplit(value).path == "/activity"
+
+
 def parse_viewports(value: str) -> tuple[Viewport, ...]:
     """Convierte 'ancho x alto' en una lista validada de tamaños de ventana."""
     viewports: list[Viewport] = []
