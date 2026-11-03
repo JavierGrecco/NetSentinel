@@ -368,12 +368,20 @@ def inspect_field_value(field_name: str, value: Any) -> FieldValueCheck:
         if isinstance(value, int) and not isinstance(value, bool) and value in (0, 1):
             valid = True
     elif definition.value_kind is ValueKind.INTEGER:
-        valid = inspection.kind is ValueKind.INTEGER
+        # El contrato autoritativo acepta int de Python o cadenas de dígitos.
+        # No aceptar floats, Decimal ni notación decimal/exponencial aunque su
+        # valor matemático sea entero: el importador actual los rechaza.
+        valid = (
+            (isinstance(value, int) and not isinstance(value, bool))
+            or (
+                isinstance(value, str)
+                and raw_text is not None
+                and re.fullmatch(r"[0-9]+", raw_text) is not None
+            )
+        )
         if valid and definition.minimum is not None and definition.maximum is not None:
-            # Comparar como Decimal evita excepciones para representaciones como
-            # "443.0" o "4.43e2" que son enteras por valor, pero no por sintaxis.
-            numeric = Decimal(str(value))
-            if not Decimal(definition.minimum) <= numeric <= Decimal(definition.maximum):
+            numeric = int(value)
+            if not definition.minimum <= numeric <= definition.maximum:
                 valid = False
                 reason = f"El valor debe estar entre {definition.minimum} y {definition.maximum}."
     elif definition.value_kind is ValueKind.IP_ADDRESS:
