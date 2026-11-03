@@ -27,7 +27,7 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
     ),
     "source_port": FieldDefinition(
         "source_port", ValueKind.INTEGER, "Puerto de transporte del extremo de origen.",
-        dimension="port", canonical_unit="1", minimum=0, maximum=65535,
+        dimension="port", canonical_unit="1", minimum=0, maximum=65535, minimum=0, maximum=65535,
     ),
     "destination_ip": FieldDefinition(
         "destination_ip", ValueKind.IP_ADDRESS, "Dirección IP del extremo de destino.",
@@ -44,6 +44,7 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
         dimension="data_size", canonical_unit="B",
         semantic_scope="preserve source byte layer; do not mix IP and payload bytes",
         minimum=0, maximum=9_223_372_036_854_775_807,
+        minimum=0, maximum=9_223_372_036_854_775_807,
     ),
     "bytes_received": FieldDefinition(
         "bytes_received", ValueKind.INTEGER,
@@ -54,6 +55,7 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
     "packets_sent": FieldDefinition(
         "packets_sent", ValueKind.INTEGER, "Paquetes enviados desde el origen.",
         dimension="count", canonical_unit="{packet}",
+        minimum=0, maximum=9_223_372_036_854_775_807,
         minimum=0, maximum=9_223_372_036_854_775_807,
     ),
     "packets_received": FieldDefinition(
