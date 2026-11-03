@@ -10,7 +10,8 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, localcontext
 from typing import Any
 
-from .models import QuantityStatus, ValueKind
+from .catalog import get_field_definition
+from .models import FieldValueStatus, QuantityStatus, ValueKind
 
 
 MAX_MEASUREMENT_LENGTH = 128
@@ -54,6 +55,17 @@ class ValueInspection:
     normalized_preview: str | None = None
     timezone_aware: bool | None = None
     quantity: QuantityInspection | None = None
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FieldValueCheck:
+    """Contrasta la forma observada con el tipo/rango del campo ya identificado."""
+
+    field_name: str
+    status: FieldValueStatus
+    expected_kind: ValueKind | None
+    inspection: ValueInspection
     reason: str | None = None
 
 
@@ -266,3 +278,77 @@ def inspect_value(value: Any) -> ValueInspection:
         return ValueInspection(kind, normalized_preview=raw, quantity=quantity)
 
     return ValueInspection(ValueKind.TEXT, quantity=quantity if quantity.status is not QuantityStatus.INVALID_NUMBER else None)
+
+
+
+def inspect_field_value(field_name: str, value: Any) -> FieldValueCheck:
+    """Valida un valor según un campo conocido sin inferir el rol desde su contenido.
+
+    La forma observada no cambia el significado del campo. Por ejemplo, un entero
+    no se convierte en timestamp Unix por su magnitud; los contadores siguen
+    dependiendo de la semántica y la capa de medición declaradas por la fuente.
+    """
+    definition = get_field_definition(field_name)
+    inspection = inspect_value(value)
+    if definition is None:
+        return FieldValueCheck(
+            field_name, FieldValueStatus.UNKNOWN_FIELD, None, inspection,
+            "El campo no existe en el catálogo semántico.",
+        )
+    if value is None:
+        return FieldValueCheck(
+            field_name, FieldValueStatus.MISSING, definition.value_kind, inspection,
+            "La fuente no informó este campo.",
+        )
+    if inspection.kind is ValueKind.EMPTY:
+        return FieldValueCheck(
+            field_name, FieldValueStatus.EMPTY, definition.value_kind, inspection,
+            "El campo llegó vacío; no equivale a un cero observado.",
+        )
+    if inspection.kind is ValueKind.INVALID:
+        return FieldValueCheck(
+            field_name, FieldValueStatus.INVALID, definition.value_kind, inspection,
+            inspection.reason or "El valor no es válido.",
+        )
+    if inspection.kind is ValueKind.AMBIGUOUS_MEASUREMENT:
+        return FieldValueCheck(
+            field_name, FieldValueStatus.AMBIGUOUS, definition.value_kind, inspection,
+            inspection.reason or "La unidad declarada es ambigua.",
+        )
+
+    valid = False
+    reason: str | None = None
+    raw_text = value.strip() if isinstance(value, str) else None
+
+    if definition.value_kind is ValueKind.TEXT:
+        valid = isinstance(value, str)
+    elif definition.value_kind is ValueKind.BOOLEAN:
+        valid = inspection.kind is ValueKind.BOOLEAN
+        if raw_text is not None and raw_text.casefold() in {"yes", "no", "1", "0"}:
+            valid = True
+        if isinstance(value, int) and not isinstance(value, bool) and value in (0, 1):
+            valid = True
+    elif definition.value_kind is ValueKind.INTEGER:
+        valid = inspection.kind is ValueKind.INTEGER
+        if valid and definition.minimum is not None and definition.maximum is not None:
+            numeric = int(value)
+            if not definition.minimum <= numeric <= definition.maximum:
+                valid = False
+                reason = f"El valor debe estar entre {definition.minimum} y {definition.maximum}."
+    elif definition.value_kind is ValueKind.IP_ADDRESS:
+        valid = inspection.kind is ValueKind.IP_ADDRESS
+    elif definition.value_kind is ValueKind.MAC_ADDRESS:
+        valid = inspection.kind is ValueKind.MAC_ADDRESS
+    elif definition.value_kind is ValueKind.TIMESTAMP:
+        valid = inspection.kind is ValueKind.TIMESTAMP
+
+    return FieldValueCheck(
+        field_name=field_name,
+        status=FieldValueStatus.VALID if valid else FieldValueStatus.TYPE_MISMATCH,
+        expected_kind=definition.value_kind,
+        inspection=inspection,
+        reason=reason or (
+            None if valid else
+            f"El campo espera {definition.value_kind.value}, pero el valor tiene forma {inspection.kind.value}."
+        ),
+    )

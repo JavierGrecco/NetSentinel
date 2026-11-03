@@ -9,13 +9,14 @@ import pytest
 
 from netsentinel.semantics.catalog import get_source_profile
 from netsentinel.semantics.models import (
+    FieldValueStatus,
     HeaderStatus,
     QuantityStatus,
     SourceProfile,
     ValueKind,
 )
 from netsentinel.semantics.resolver import missing_required_fields, normalize_header, resolve_headers
-from netsentinel.semantics.values import inspect_value, parse_quantity
+from netsentinel.semantics.values import inspect_field_value, inspect_value, parse_quantity
 
 
 def test_header_normalization_supports_bom_camel_case_accents_and_zeek_paths() -> None:
@@ -226,3 +227,52 @@ def test_numeric_unix_timestamp_candidate_is_not_inferred_from_magnitude() -> No
     assert value.timezone_aware is None
     assert value.quantity is not None
     assert value.quantity.status is QuantityStatus.NO_UNIT
+
+
+
+def test_resolver_caps_source_columns_before_fuzzy_matching() -> None:
+    with pytest.raises(ValueError, match="más de 256 columnas"):
+        resolve_headers(["unknown"] * 257, "activity_csv")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_status"),
+    [
+        ("source_ip", "192.0.2.10", FieldValueStatus.VALID),
+        ("source_ip", "not-an-ip", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "443", FieldValueStatus.VALID),
+        ("source_port", "70000", FieldValueStatus.TYPE_MISMATCH),
+        ("bytes_sent", "0", FieldValueStatus.VALID),
+        ("bytes_sent", None, FieldValueStatus.MISSING),
+        ("bytes_sent", "", FieldValueStatus.EMPTY),
+        ("blocked", "yes", FieldValueStatus.VALID),
+        ("blocked", "2", FieldValueStatus.TYPE_MISMATCH),
+        ("observed_at", "2026-11-03T12:00:00Z", FieldValueStatus.VALID),
+        ("observed_at", "1793728800", FieldValueStatus.TYPE_MISMATCH),
+    ],
+)
+def test_field_value_validation_uses_declared_semantics_without_role_guessing(
+    field: str,
+    value: object,
+    expected_status: FieldValueStatus,
+) -> None:
+    result = inspect_field_value(field, value)
+
+    assert result.status is expected_status
+    assert result.expected_kind is not None
+
+
+def test_unmapped_field_value_shape_does_not_create_a_semantic_assignment() -> None:
+    result = inspect_field_value("unmapped_counter", "1500")
+
+    assert result.status is FieldValueStatus.UNKNOWN_FIELD
+    assert result.inspection.kind is ValueKind.INTEGER
+    assert result.expected_kind is None
+
+
+def test_measurement_with_ambiguous_unit_remains_ambiguous_in_field_context() -> None:
+    result = inspect_field_value("bytes_sent", "12 KB")
+
+    assert result.status is FieldValueStatus.AMBIGUOUS
+    assert result.inspection.quantity is not None
+    assert result.inspection.quantity.normalized_value is None

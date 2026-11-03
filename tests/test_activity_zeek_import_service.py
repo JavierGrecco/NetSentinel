@@ -435,7 +435,7 @@ def test_zeek_tsv_typo_in_required_header_is_suggested_but_not_mapped() -> None:
     assert "no contiene los campos necesarios" in str(error.value)
     assert "id.orig_hh" in str(error.value)
     assert "source_ip" in str(error.value)
-    assert "no se" not in str(error.value).lower() or "sugerencias" in str(error.value).lower()
+    assert "sugerencias aproximadas, no aplicadas" in str(error.value).lower()
 
 
 def test_zeek_jsonl_typo_in_required_field_is_suggested_before_mapping() -> None:

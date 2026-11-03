@@ -42,6 +42,16 @@ class QuantityStatus(str, Enum):
     INVALID_NUMBER = "invalid_number"
 
 
+class FieldValueStatus(str, Enum):
+    MISSING = "missing"
+    EMPTY = "empty"
+    VALID = "valid"
+    TYPE_MISMATCH = "type_mismatch"
+    INVALID = "invalid"
+    AMBIGUOUS = "ambiguous"
+    UNKNOWN_FIELD = "unknown_field"
+
+
 @dataclass(frozen=True, slots=True)
 class FieldDefinition:
     """Significado estable de un campo interno."""
@@ -53,6 +63,8 @@ class FieldDefinition:
     canonical_unit: str | None = None
     semantic_scope: str | None = None
     sensitive: bool = False
+    minimum: int | None = None
+    maximum: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -20,6 +20,7 @@ from .models import (
 
 
 MAX_HEADER_LENGTH = 128
+MAX_SOURCE_HEADERS = 256
 MIN_SUGGESTION_LENGTH = 4
 SUGGESTION_CUTOFF = 0.78
 AMBIGUITY_MARGIN = 0.06
@@ -138,6 +139,13 @@ def resolve_headers(
     aproximadas nunca rellenan field_name y, por lo tanto, no pueden importarse por
     accidente. Dos columnas asignadas al mismo campo invalidan ambas asignaciones.
     """
+    header_list = tuple(headers)
+    if len(header_list) > MAX_SOURCE_HEADERS:
+        raise ValueError(
+            f"El archivo contiene más de {MAX_SOURCE_HEADERS} columnas; "
+            "revisá el esquema antes de importarlo."
+        )
+
     if isinstance(source_profile, str):
         profile = get_source_profile(source_profile)
         aliases = _alias_index(profile.name)
@@ -147,7 +155,7 @@ def resolve_headers(
     alias_map = dict(aliases)
     resolutions: list[HeaderResolution] = []
 
-    for position, raw_header in enumerate(headers):
+    for position, raw_header in enumerate(header_list):
         key, unsafe_reason = normalize_header(raw_header)
         if unsafe_reason:
             resolutions.append(HeaderResolution(
