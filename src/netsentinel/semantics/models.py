@@ -65,6 +65,8 @@ class SourceProfile:
     ignored_headers: Mapping[str, str]
     blocked_headers: Mapping[str, str]
     field_scopes: Mapping[str, str]
+    blocked_tokens: tuple[str, ...] = ()
+    block_message_without_id_or_subject: bool = False
 
 
 @dataclass(frozen=True, slots=True)

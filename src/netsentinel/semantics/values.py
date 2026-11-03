@@ -7,10 +7,16 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 from typing import Any
 
 from .models import QuantityStatus, ValueKind
+
+
+MAX_MEASUREMENT_LENGTH = 128
+MAX_INSPECTED_VALUE_LENGTH = 4096
+MAX_NUMERIC_DIGITS = 64
+MAX_NUMERIC_EXPONENT = 128
 
 
 _NUMBER = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
@@ -79,6 +85,13 @@ _AMBIGUOUS_UNITS = {
 }
 
 
+def _multiply_exact(value: Decimal, factor: Decimal) -> Decimal:
+    """Multiplica con precisión suficiente para no redondear conversiones válidas."""
+    with localcontext() as context:
+        context.prec = max(50, len(value.as_tuple().digits) + len(factor.as_tuple().digits) + 8)
+        return value * factor
+
+
 def parse_quantity(value: str) -> QuantityInspection:
     """Convierte solo magnitudes con unidad explícita y dimensionalmente reconocida.
 
@@ -91,6 +104,11 @@ def parse_quantity(value: str) -> QuantityInspection:
             reason="La magnitud debe recibirse como texto.",
         )
     raw = value.strip()
+    if len(raw) > MAX_MEASUREMENT_LENGTH:
+        return QuantityInspection(
+            QuantityStatus.INVALID_NUMBER, None,
+            reason=f"La magnitud supera el máximo de {MAX_MEASUREMENT_LENGTH} caracteres.",
+        )
     match = _MEASUREMENT.fullmatch(raw)
     if not match:
         return QuantityInspection(
@@ -108,6 +126,15 @@ def parse_quantity(value: str) -> QuantityInspection:
         return QuantityInspection(
             QuantityStatus.INVALID_NUMBER, None,
             reason="NaN e Infinity no son magnitudes admitidas.",
+        )
+    number_parts = number.as_tuple()
+    if (
+        len(number_parts.digits) > MAX_NUMERIC_DIGITS
+        or abs(number_parts.exponent) > MAX_NUMERIC_EXPONENT
+    ):
+        return QuantityInspection(
+            QuantityStatus.INVALID_NUMBER, None,
+            reason="La precisión o escala numérica supera el límite admitido.",
         )
 
     unit = match.group("unit").strip()
@@ -139,7 +166,7 @@ def parse_quantity(value: str) -> QuantityInspection:
         source_unit=unit,
         dimension=definition.dimension,
         canonical_unit=definition.canonical_unit,
-        normalized_value=number * definition.factor,
+        normalized_value=_multiply_exact(number, definition.factor),
     )
 
 
@@ -169,6 +196,11 @@ def inspect_value(value: Any) -> ValueInspection:
     raw = value.strip()
     if not raw:
         return ValueInspection(ValueKind.EMPTY)
+    if len(raw) > MAX_INSPECTED_VALUE_LENGTH:
+        return ValueInspection(
+            ValueKind.INVALID,
+            reason=f"El valor supera el máximo de {MAX_INSPECTED_VALUE_LENGTH} caracteres.",
+        )
     lowered = raw.casefold()
     if lowered in {"true", "false"}:
         return ValueInspection(ValueKind.BOOLEAN, normalized_preview=lowered)

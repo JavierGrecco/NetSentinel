@@ -110,6 +110,22 @@ def _suggest(
     return tuple(ranked[:MAX_SUGGESTIONS])
 
 
+def missing_required_fields(
+    plan: HeaderResolutionPlan,
+    required_fields: Iterable[str],
+) -> tuple[str, ...]:
+    """Devuelve campos obligatorios que no tienen una cabecera mapeada y utilizable.
+
+    Una sugerencia, una colisión o un nombre desconocido no cuentan como presencia.
+    """
+    present = {
+        result.field_name
+        for result in plan.headers
+        if result.usable and result.field_name is not None
+    }
+    return tuple(sorted(set(required_fields) - present))
+
+
 def resolve_headers(
     headers: Iterable[str | None],
     source_profile: str | SourceProfile,
@@ -143,10 +159,22 @@ def resolve_headers(
             continue
 
         assert key is not None
-        if key in profile.blocked_headers:
+        blocked_reason = profile.blocked_headers.get(key)
+        if blocked_reason is None:
+            parts = set(key.split("_"))
+            if profile.blocked_tokens and parts.intersection(profile.blocked_tokens):
+                blocked_reason = "El nombre de columna apunta a contenido sensible que no se importa."
+            elif (
+                profile.block_message_without_id_or_subject
+                and "message" in parts
+                and "id" not in parts
+                and "subject" not in parts
+            ):
+                blocked_reason = "No se importan mensajes completos ni sus cuerpos."
+        if blocked_reason is not None:
             resolutions.append(HeaderResolution(
                 position, raw_header, key, HeaderStatus.BLOCKED,
-                reason=profile.blocked_headers[key],
+                reason=blocked_reason,
             ))
             continue
         if key in profile.ignored_headers:

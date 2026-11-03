@@ -13,7 +13,7 @@ from netsentinel.semantics.models import (
     SourceProfile,
     ValueKind,
 )
-from netsentinel.semantics.resolver import normalize_header, resolve_headers
+from netsentinel.semantics.resolver import missing_required_fields, normalize_header, resolve_headers
 from netsentinel.semantics.values import inspect_value, parse_quantity
 
 
@@ -63,6 +63,32 @@ def test_zeek_conn_profile_preserves_field_direction_and_ip_byte_semantics() -> 
         "bytes_received", "packets_sent", "packets_received",
     ]
     assert all(item.usable for item in plan.headers)
+
+
+def test_sensitive_csv_headers_are_blocked_including_compound_names() -> None:
+    plan = resolve_headers(
+        ["messageBody", "requestBody", "authorization", "user", "trace_message", "messageId", "messageSubject"],
+        "activity_csv",
+    )
+
+    assert [item.status for item in plan.headers] == [
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.IGNORED,
+        HeaderStatus.ALIAS,
+    ]
+
+
+def test_missing_required_fields_are_reported_even_when_typos_are_suggested() -> None:
+    plan = resolve_headers(["timestamp", "destionation_ip"], "activity_csv")
+
+    assert missing_required_fields(plan, {"observed_at", "event_type", "destination_ip"}) == (
+        "destination_ip",
+        "event_type",
+    )
 
 
 def test_zeek_payload_bytes_are_blocked_instead_of_mapped_to_ip_bytes() -> None:
@@ -147,7 +173,23 @@ def test_explicit_units_convert_only_within_their_declared_dimension(
     assert result.status is QuantityStatus.EXPLICIT
     assert result.dimension == expected_dimension
     assert result.canonical_unit == expected_unit
-    assert result.normalized_value == pytest.approx(float(expected_value))
+    from decimal import Decimal
+
+    assert result.normalized_value == Decimal(expected_value)
+
+
+def test_decimal_unit_conversion_preserves_precision_beyond_default_decimal_context() -> None:
+    raw = "123456789012345678901234567890 kB"
+
+    result = parse_quantity(raw)
+
+    assert result.status is QuantityStatus.EXPLICIT
+    assert result.normalized_value == Decimal("123456789012345678901234567890000")
+
+
+def test_oversized_values_are_rejected_before_expensive_parsing() -> None:
+    assert parse_quantity("1" * 129).status is QuantityStatus.INVALID_NUMBER
+    assert inspect_value("x" * 4097).kind is ValueKind.INVALID
 
 
 def test_ambiguous_or_unknown_units_are_not_converted() -> None:
