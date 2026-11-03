@@ -2,7 +2,24 @@
 
 > **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Estado vigente — 23 de octubre de 2026
+## Estado vigente — 3 de noviembre de 2026
+
+**Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`. El producto continúa en desarrollo activo; no declarar 0.10.0 estable hasta completar la aceptación manual integral y las comprobaciones de recuperación de datos.
+
+### Prioridad inmediata — terminar la consolidación sin repetir pruebas manuales
+
+1. **Cerrar #208 — presentación y documentación.** HEAD actual `979b3800f81c37e0b74d087cb5d49940f78fade8`: 19 checks correctos, 1 omisión esperada y cuatro jobs macOS en cola, sin fallos conocidos. Esperar el resultado del SHA exacto antes de fusionar. La PR incorpora 26 excepciones Gitleaks limitadas a fingerprints exactos y la especificación de normalización semántica. Después del merge, volver a comprobar Supply Chain Security sobre el nuevo `main`.
+2. **Completar #200 — correlación Zeek.** La rama ya se actualizó sobre `d8b6a64214f8168d361fe62af38d37c728331575` en el commit `d341d4ca7ceb5354ec16c4508e47cdce2b8dfeb8`. Mantener Draft mientras corre CI y hasta la aceptación manual. La actualización conserva las mejoras de #209 en los archivos compartidos y los cambios de #210 en dependencias. Verificar el nuevo HEAD, no reutilizar checks del commit anterior.
+3. **Hacer una sola aceptación manual integral.** Cuando #200 tenga CI completa y #208 esté integrada, ejecutar el recorrido de 13 pasos de [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md) sobre el SHA consolidado. Registrar sistema, Python, navegador, SHA y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). No dividir la prueba en varias rondas parciales.
+4. **Integrar #200 después de la aceptación.** Resolver únicamente incidencias reales encontradas; no ampliar el alcance durante la aceptación. Si hay cambios de código, volver a validar el SHA resultante.
+5. **Comenzar #211 — catálogo semántico.** Implementar primero modelos, catálogo versionado y resolución exacta/contextual; agregar sugerencias fuzzy sin autocorrección silenciosa. Integrar luego CSV y Zeek sin cambiar su significado actual. Mantener fuera del primer incremento los cambios de esquema amplios, el muestreo de evidencia y la IA externa. Criterios y pruebas están en [SEMANTIC_DATA_NORMALIZATION.md](SEMANTIC_DATA_NORMALIZATION.md).
+6. **Revisar gobernanza y limpieza de ramas más adelante.** La protección de `main`, los checks obligatorios, el borrado automático de ramas y la limpieza histórica siguen siendo buenas prácticas recomendadas, pero el usuario decidió posponer esta configuración. No bloquear la evolución funcional por estas tareas administrativas. No borrar ramas por prefijo o antigüedad; verificar SHA y contenido exclusivo antes de cada lote.
+
+**Estado consultado:** #209 se integró en `ca9c4d9644d99f98988475bf04692ef04373f743`; #210 se integró en `d8b6a64214f8168d361fe62af38d37c728331575`. #208 sigue abierta con cuatro jobs macOS pendientes en su HEAD; #200 sigue en Draft y su nueva cabeza está en validación. No abrir ramas paralelas ni declarar un merge validado antes de que concluyan sus controles.
+
+**Vigencia:** el bloque histórico siguiente conserva datos del 23 de octubre. Para el estado vigente prevalecen `PROJECT_STATUS.md` y los checks del SHA exacto.
+
+## Registro histórico — 23 de octubre de 2026
 
 **Rama canónica:** `main`. La [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193) integró la guía de aceptación iterativa; la [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) amplió la regresión interactiva de Chromium. El último SHA de `main` consultado para esta actualización es [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1), que integra el análisis comparativo de la PR #198, sin cambios en el código de ejecución.
 
