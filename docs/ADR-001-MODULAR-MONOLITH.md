@@ -1,6 +1,6 @@
 # ADR-001: aplicación modular con despliegue único y límites estrictos
 
-- **Estado:** Propuesta para revisión.
+- **Estado:** Adoptada como dirección arquitectónica; implementación en evolución (3 de noviembre de 2026).
 - **Fecha:** 2026-10-13.
 - **Alcance:** organización interna del backend Python y sus contratos con la API, la interfaz y las fuentes de datos.
 - **No cambia:** el modo local de ejecución, el servidor en loopback, SQLite ni el comportamiento funcional de la versión actual.
@@ -13,9 +13,18 @@ El código ya tiene módulos dedicados, pero las responsabilidades siguen concen
 
 La modularización debe preparar el crecimiento, no añadir complejidad operacional al usuario.
 
-## Decisión propuesta
+## Decisión adoptada
 
 Adoptar una **aplicación modular de despliegue único**. En esta decisión, *monolito* describe solo el artefacto de instalación y el proceso principal; no significa que cada módulo sea un bloque grande ni que pueda depender libremente de los demás. La distribución puede ser una, mientras los módulos internos siguen siendo pequeños, cohesionados, testeables y protegidos por contratos explícitos. Se conserva SQLite local y se diseña el interior para que componentes que lo justifiquen puedan separarse más adelante.
+
+La decisión se adopta como dirección de diseño para el producto actual. **No implica que toda la migración esté terminada.** La implementación ya separa routers, servicios y repositorios en varios dominios, y CI verifica un conjunto explícito de dependencias. Persisten fachadas de compatibilidad y puntos de composición que deben reducirse con cambios acotados, manteniendo los contratos existentes.
+
+**Estado de implementación — 3 de noviembre de 2026:**
+- Implementado: routers agrupados por capacidad en Inventario, Actividad, Monitorización, Herramientas y otros dominios.
+- Implementado: servicios y repositorios especializados para operaciones de Actividad, Monitorización, topología, geolocalización y Forense.
+- Implementado: verificación estática de ciclos y dependencias permitidas mediante `scripts/check_architecture_boundaries.py`, ejecutada en CI.
+- En evolución: reducir las fachadas de compatibilidad y las concentraciones de responsabilidades sin romper API, persistencia ni experiencia local.
+- Pendiente de estabilización: completar aceptación manual, backup/restauración y revisión de los flujos críticos sobre el commit que se publique.
 
 ### Responsabilidad de cada capa
 
@@ -53,23 +62,11 @@ La estructura definitiva se ajustará al extraer código; no se crearán paquete
 
 Un módulo presta servicio a otros mediante funciones o interfaces tipadas dentro del proceso. Los clientes externos usan la API; **no se hacen llamadas HTTP entre módulos internos**. La abstracción adicional solo se justifica donde exista variación real —por ejemplo, varias fuentes de descubrimiento— y se implementa como adaptador pequeño, no como cargador genérico de plugins.
 
-## Qué aprendemos de herramientas maduras
+## Investigación considerada
 
-Estas referencias no son equivalentes uno a uno a NetSentinel, pero enseñan patrones útiles:
+La decisión se contrastó con herramientas de inventario, monitorización, análisis de tráfico y arquitecturas modulares. La investigación completa, las referencias originales y la separación entre patrones estudiados y decisiones propias están centralizadas en [RESEARCH_INDEX.md](RESEARCH_INDEX.md). Este ADR registra la decisión de NetSentinel; no pretende atribuirle implementación, autoría ni equivalencia con esos productos.
 
-- **Fing** prioriza el descubrimiento sencillo, el reconocimiento de dispositivos y una experiencia de inicio rápida, con aplicaciones de escritorio y agentes opcionales para seguimiento continuo. Para NetSentinel, la lección es que separar internamente no debe añadir pasos al usuario; los agentes deben responder a una necesidad real de continuidad y cobertura. [Referencia](https://www.fing.com/scan/)
-- **Angry IP Scanner** documenta un núcleo de escaneo desacoplado, un mediador entre la interfaz y los recolectores, y *fetchers* seleccionables o ampliables mediante plugins. Es un ejemplo especialmente cercano de extensibilidad por adaptadores. La lección es definir interfaces intercambiables para recolectar datos, pero no crear un cargador de plugins hasta que tengamos múltiples implementaciones reales. [Referencia](https://angryip.org/documentation/)
-- **Auvik** separa un colector instalado en la red del servicio de gestión central y contempla más de un colector para segmentos aislados o continuidad operativa. Esa separación responde a despliegues multi-sede; no es motivo para convertir ahora NetSentinel en un producto remoto. [Arquitectura y seguridad](https://www.auvik.com/system-security/) · [Cuándo desplegar colectores](https://support.auvik.com/hc/en-us/articles/217099526-When-and-how-to-deploy-additional-Auvik-collectors)
-- **Wazuh** separa agente, servidor de análisis, indexador y panel. La lección es dividir recolección, procesamiento, almacenamiento y visualización cuando tienen responsabilidades diferentes; no exige replicar esa arquitectura distribuida en una app local. [Referencia](https://documentation.wazuh.com/current/getting-started/architecture.html)
-- **Zeek** separa el motor de eventos que describe lo observado de la política que interpreta esos eventos. NetSentinel puede aplicar el mismo principio: preservar la evidencia y su procedencia separadas de la conclusión o recomendación. [Referencia](https://docs.zeek.org/en/current/about/architecture.html)
-- **Suricata** ofrece salidas estructuradas como EVE JSON para alertas, anomalías y metadatos. Un contrato de salida estable hace posible añadir consumidores sin acoplarlos al código interno que detecta. [Referencia](https://docs.suricata.io/en/suricata-8.0.2/output/eve/eve-json-output.html)
-- **Zabbix** define papeles distintos para servidor, base de datos, interfaz, proxy y agente. El proxy es opcional y sirve a entornos que necesitan distribuir la recolección. [Referencia](https://www.zabbix.com/documentation/7.2/en/manual/introduction/overview)
-- **Prometheus** usa exportadores para adaptar sistemas que no están instrumentados directamente. [Referencia](https://prometheus.io/docs/instrumenting/exporters/)
-- **LibreNMS** recomienda escalar gradualmente: optimizar una instalación estable y separar servicios o añadir pollers cuando la carga lo pide. [Referencia](https://docs.librenms.org/Extensions/Distributed-Poller/)
-- **Apache Fineract** hace visibles las dependencias entre módulos y genera métricas de arquitectura a nivel de paquete y capacidad funcional. Para NetSentinel tomamos la práctica aplicable —medir y verificar las fronteras continuamente— sin copiar su complejidad de construcción Java. [Referencia](https://github.com/apache/fineract/blob/develop/build.gradle)
-- **Spring Modulith** verifica que los módulos no formen ciclos y que el acceso desde otro módulo se haga por las APIs declaradas. Nuestro verificador Python sigue la misma intención mediante análisis AST y listas explícitas de dependencias permitidas. [Verificación](https://docs.spring.io/spring-modulith/reference/verification.html)
-
-La conclusión no es copiar esos sistemas: es mantener módulos cohesionados, contratos estables y una experiencia de uso sencilla, separando procesos solo cuando la escala, el aislamiento o el despliegue lo justifiquen.
+La referencia externa sirvió para evaluar alternativas, no para copiar arquitecturas distribuidas ni incorporar código sin procedencia y licencia verificadas.
 
 ## Opciones consideradas
 
@@ -105,16 +102,10 @@ La versión 0.10.0 debe seguir priorizando las puertas de estabilización y la v
 
 Esta decisión no incorpora colas, Redis, un bus de eventos, Kubernetes, un servidor remoto ni microservicios. Tampoco autoriza captura de contenido de correo o navegación, apertura de la API a la red ni cambios automáticos de la configuración del router.
 
-## Referencias técnicas
+## Fuentes y trazabilidad
 
-- [Microsoft — Architecture styles and trade-offs](https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/)
-- [Martin Fowler — Microservice trade-offs and strong module boundaries](https://martinfowler.com/articles/microservice-trade-offs.html)
-- [Spring Modulith — Verifying application module structure](https://docs.spring.io/spring-modulith/reference/verification.html)
-- [Apache Fineract — Module architecture metrics](https://github.com/apache/fineract/blob/develop/build.gradle)
+- [Índice de investigación, fuentes y decisiones propias](RESEARCH_INDEX.md).
+- [Vista general de arquitectura](ARCHITECTURE_OVERVIEW.md).
+- [Arquitectura implementada y reglas de dependencia](ARCHITECTURE.md).
+- [Verificador de límites arquitectónicos](../scripts/check_architecture_boundaries.py).
 
-- [Wazuh — Architecture](https://documentation.wazuh.com/current/getting-started/architecture.html)
-- [Zeek — Architecture](https://docs.zeek.org/en/current/about/architecture.html)
-- [Suricata — EVE JSON output](https://docs.suricata.io/en/suricata-8.0.2/output/eve/eve-json-output.html)
-- [Zabbix — Overview and architecture](https://www.zabbix.com/documentation/7.2/en/manual/introduction/overview)
-- [Prometheus — Exporters and integrations](https://prometheus.io/docs/instrumenting/exporters/)
-- [LibreNMS — Distributed polling and gradual scaling](https://docs.librenms.org/Extensions/Distributed-Poller/)

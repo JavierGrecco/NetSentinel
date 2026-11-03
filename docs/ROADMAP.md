@@ -2,7 +2,25 @@
 
 > **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Estado vigente — 23 de octubre de 2026
+## Estado vigente — 3 de noviembre de 2026
+
+**Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`. El producto continúa en desarrollo activo; no declarar 0.10.0 estable hasta completar la aceptación manual integral y las comprobaciones de recuperación de datos.
+
+### Prioridad inmediata
+
+1. **Cerrar #208 — documentación profesional.** Actualizar y validar la fotografía documental del estado actual. El último SHA anterior tuvo 21 checks correctos, 1 omisión esperada, 1 cancelación de un job macOS y otro job en cola; la nueva cabeza documental debe completar su propia matriz. La PR no modifica runtime.
+2. **Cerrar #212 — primera entrega semántica.** Validar el SHA exacto `f89c7654904ae9cd243a545477cbe2b610263151` y atender cualquier fallo real. Ubuntu Python 3.10–3.14 ya ejecutó 903 pruebas aprobadas por versión; Windows 3.11–3.14, 894 aprobadas y 9 omitidas por versión. Faltan Windows 3.10, Chromium y los cinco jobs macOS. La implementación mantiene los contratos HTTP y de persistencia actuales.
+3. **Actualizar #200 sobre el resultado integrado de #212.** La rama de correlación Zeek comparte archivos de importación y arquitectura con #212. Una vez que #212 esté integrada, actualizar #200 sobre el nuevo `main`, conservar su trabajo exclusivo y resolver los archivos compartidos en una única actualización. Mantener Draft y validar solo el SHA resultante.
+4. **Hacer una sola aceptación manual integral.** Cuando #212 esté integrada y #200 tenga CI completa sobre su cabeza actualizada, ejecutar el recorrido de 13 pasos de [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). Incluir importación CSV/Zeek, correlación Hallazgos → Actividad, recuperación de datos, accesibilidad y revisión visual. Registrar sistema, Python, navegador, SHA y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). No dividir la prueba en rondas parciales.
+5. **Integrar #200 después de la aceptación.** Corregir solo incidencias reales encontradas en el recorrido. Volver a validar cualquier SHA que cambie y no declarar disponible una función antes de su integración.
+6. **Completar el registro semántico en etapas pequeñas.** Tras la primera etapa de cabeceras y valores, evaluar una vista previa explicativa con columnas desconocidas, ausentes, vacías, bloqueadas y ambiguas. Luego ampliar a otros dominios únicamente cuando existan contratos de campos y eventos. No introducir autocorrección, IA externa ni cambios masivos de SQLite.
+7. **Revisar gobernanza y limpieza de ramas más adelante.** La protección de `main`, los checks obligatorios, el borrado automático de ramas y la limpieza histórica siguen pospuestos por decisión del usuario. No bloquear el trabajo funcional por esta tarea administrativa. No borrar ramas por prefijo o antigüedad; verificar SHA y contenido exclusivo antes de cada lote.
+
+**Integraciones confirmadas:** #209 se integró en `ca9c4d9644d99f98988475bf04692ef04373f743`; #210 se integró en `d8b6a64214f8168d361fe62af38d37c728331575`. #208, #212 y #200 continúan abiertas. La aceptación manual se hará una sola vez sobre el conjunto funcional consolidado, no entre merges parciales.
+
+**Vigencia:** el bloque histórico siguiente conserva decisiones del 23 de octubre. Para el estado actual prevalecen `PROJECT_STATUS.md` y los checks del SHA exacto.
+
+## Registro histórico — 23 de octubre de 2026
 
 **Rama canónica:** `main`. La [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193) integró la guía de aceptación iterativa; la [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) amplió la regresión interactiva de Chromium. El último SHA de `main` consultado para esta actualización es [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1), que integra el análisis comparativo de la PR #198, sin cambios en el código de ejecución.
 
