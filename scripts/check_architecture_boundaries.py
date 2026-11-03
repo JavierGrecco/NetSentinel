@@ -186,12 +186,17 @@ SERVICE_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
     "netsentinel.activity_import_service": {
         "netsentinel.activity_repository",
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
     },
     "netsentinel.activity_zeek_import_service": {
         "netsentinel.activity_event_service",
         "netsentinel.activity_repository",
         "netsentinel.activity_retention_service",
         "netsentinel.inventory_read_repository",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
     },
     "netsentinel.geolocation_service": {
         "netsentinel.config",

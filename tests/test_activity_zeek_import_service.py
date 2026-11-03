@@ -418,3 +418,32 @@ def test_zeek_import_rejects_bad_record_before_repository_write(monkeypatch):
     invalid = _record(**{"id.orig_h": "invalid-ip"})
     with pytest.raises(ValueError, match="Fila 1"):
         importer.import_log(1, _jsonl(invalid))
+
+
+
+def test_zeek_tsv_typo_in_required_header_is_suggested_but_not_mapped() -> None:
+    """Una cabecera Zeek casi correcta se informa sin sustituirla automáticamente."""
+    log_data = _zeek_tsv(_record()).replace(
+        "#fields ts\tuid\tid.orig_h",
+        "#fields ts\tuid\tid.orig_hh",
+        1,
+    )
+
+    with pytest.raises(ValueError) as error:
+        importer._parse_zeek_tsv(log_data)
+
+    assert "no contiene los campos necesarios" in str(error.value)
+    assert "id.orig_hh" in str(error.value)
+    assert "source_ip" in str(error.value)
+    assert "no se" not in str(error.value).lower() or "sugerencias" in str(error.value).lower()
+
+
+def test_zeek_jsonl_typo_in_required_field_is_suggested_before_mapping() -> None:
+    record = _record()
+    record["id.orig_hh"] = record.pop("id.orig_h")
+
+    with pytest.raises(ValueError) as error:
+        importer._to_event(record, 1)
+
+    assert "source_ip" in str(error.value)
+    assert "id.orig_hh" in str(error.value)
