@@ -182,3 +182,86 @@ def test_findings_exclude_duplicate_monitor_events_before_applying_source_limit(
     ]
     assert report["summary"]["returned"] == 1
     assert report["findings"][0]["evidence"]["event_type"] == "new_device"
+
+
+def test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target(monkeypatch, tmp_path):
+    """Una conexión importada puede aportar contexto, conservando IDs y límites."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([Neighbor("192.168.5.42", "AA:BB:CC:DD:EE:42", "en0")])
+    inventory_event = next(
+        item for item in database.get_events(limit=20)
+        if item["event_type"] == "new_device"
+    )
+    device_id = inventory_event["device_id"]
+    observed_at = inventory_event["created_at"]
+    source_event_id = "zeek:CZeekFindingsFixture42"
+
+    with database.connect() as db:
+        db.execute(
+            """INSERT INTO activity_events
+               (device_id, observed_at, received_at, event_type, source, import_format, source_event_id,
+                source_ip, source_port, destination_ip, destination_port, protocol,
+                bytes_sent, bytes_received, packets_sent, packets_received)
+               VALUES (?, ?, ?, 'connection', 'manual_import', 'zeek_conn_log', ?, ?, ?, ?, ?, 'tcp',
+                       120, 240, 2, 3)""",
+            (
+                device_id, observed_at, observed_at, source_event_id,
+                "192.168.5.42", 51514, "192.168.5.99", 443,
+            ),
+        )
+
+    monitor = database.create_monitor(
+        "Servicio sintético con IP literal", "tcp", "192.168.5.99:443"
+    )
+    database.record_monitor_check(monitor["id"], "down", None, "Timeout sintético")
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/findings?state=active")
+        activity = client.get(
+            f"/api/activity?device_id={device_id}&source_event_id={source_event_id}&import_format=zeek_conn_log"
+        )
+
+    assert response.status_code == 200
+    report = response.json()
+    asset_finding = next(
+        item for item in report["findings"] if item["id"] == f"event:{inventory_event['id']}"
+    )
+    assert asset_finding["related_activity"]["status"] == "matched"
+    assert asset_finding["related_activity"]["window_seconds"] == 300
+    assert asset_finding["related_activity"]["records"][0]["source_event_id"] == source_event_id
+    assert asset_finding["related_activity"]["records"][0]["activity_id"] > 0
+    assert asset_finding["related_activity"]["records"][0]["bytes_sent"] == 120
+    assert "no demuestra" in asset_finding["related_activity"]["notice"].lower()
+
+    incident_id = database.get_incidents(status="open")[0]["id"]
+    incident_finding = next(
+        item for item in report["findings"] if item["id"] == f"incident:{incident_id}"
+    )
+    assert incident_finding["related_activity"]["status"] == "matched"
+    assert incident_finding["related_activity"]["records"][0]["source_event_id"] == source_event_id
+
+    assert activity.status_code == 200
+    activity_payload = activity.json()
+    assert activity_payload["focus_event_id"] == source_event_id
+    assert activity_payload["focus_import_format"] == "zeek_conn_log"
+    assert [row["source_event_id"] for row in activity_payload["events"]] == [source_event_id]
+    assert [row["import_format"] for row in activity_payload["events"]] == ["zeek_conn_log"]
+
+
+def test_findings_do_not_resolve_monitor_hostnames_for_zeek_context(monkeypatch, tmp_path):
+    """La correlación inicial solo usa IP literal; un nombre no se resuelve por detrás."""
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    monitor = database.create_monitor("Host sintético", "tcp", "service.example.test:443")
+    database.record_monitor_check(monitor["id"], "down", None, "Timeout sintético")
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/api/findings?state=active")
+
+    assert response.status_code == 200
+    incident = next(
+        item for item in response.json()["findings"] if item["category"] == "availability"
+    )
+    assert incident["related_activity"]["status"] == "not_available"
+    assert "IP literal" in incident["related_activity"]["message"]

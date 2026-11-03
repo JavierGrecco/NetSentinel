@@ -100,7 +100,7 @@
           </div>
           <strong id="wizardProgressCount">0%</strong>
         </div>
-        <div class="wizard-progress-track" id="wizardProgressBar" role="progressbar" aria-label="Pasos evaluados" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 de 12 pasos con resultado">
+        <div class="wizard-progress-track" id="wizardProgressBar" role="progressbar" aria-label="Pasos evaluados" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 de 13 pasos con resultado">
           <span id="wizardProgressFill"></span>
         </div>
         <p id="wizardProgressText" class="wizard-muted">Todavía no empezaste. El asistente te irá indicando qué hacer.</p>
@@ -122,7 +122,7 @@ export NETSENTINEL_DATA_DIR="$HOME/.netsentinel-guided-test-$LAB_STAMP"
 export SCENARIO_DIR="$PWD/netsentinel-test-artifacts/manual-scenarios-$LAB_STAMP"
 mkdir -p "$NETSENTINEL_DATA_DIR" "$(dirname "$SCENARIO_DIR")"
 python scripts/generate_manual_scenarios.py --output-dir "$SCENARIO_DIR" --device-ip 192.168.56.20
-python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology
+python scripts/seed_manual_test_database.py --device-ip 192.168.56.20 --include-topology --include-findings-correlation
 mkdir -p "$NETSENTINEL_DATA_DIR/forensics-working-copies"
 python -c 'from pathlib import Path; import os, hashlib; p=Path(os.environ["NETSENTINEL_DATA_DIR"])/"forensics-working-copies"/"netsentinel-forensic-sample.bin"; p.write_bytes(b"NetSentinel synthetic evidence v1"); print("SHA-256:", hashlib.sha256(p.read_bytes()).hexdigest())'
 printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SCENARIO_DIR"
@@ -225,7 +225,7 @@ printf "NETSENTINEL_DATA_DIR=%s\nSCENARIO_DIR=%s\n" "$NETSENTINEL_DATA_DIR" "$SC
             <strong id="wizardActionTitle">Abrí el módulo que vamos a probar</strong>
             <p id="wizardActionDescription">Se abrirá en otra pestaña. Cuando termines, volvé a esta guía.</p>
           </div>
-          <a id="wizardActionLink" class="primary wizard-module-link" href="/activity" target="_blank" rel="noopener noreferrer">Abrir módulo en otra pestaña ↗</a>
+          <a id="wizardActionLink" class="primary wizard-module-link" href="/activity" target="netsentinel-acceptance-module">Abrir módulo en otra pestaña ↗</a>
         </section>
 
         <section id="wizardManualResultPanel" class="wizard-manual-result" aria-labelledby="wizardManualResultHeading" hidden>
