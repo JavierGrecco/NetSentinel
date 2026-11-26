@@ -1,6 +1,21 @@
-# Estado actual del proyecto
+# Estado del proyecto — NetSentinel
 
-## Fotografía vigente — 3 de noviembre de 2026
+**Corte de portfolio:** 26 de noviembre de 2026  \
+**Rama canónica:** `main` · HEAD documental `d3ebfacd9f01253651ce9f0a6ef5fc9b64541528` (actualización de presentación; no modifica el runtime).
+
+## Situación verificada — 26 de noviembre de 2026
+
+- **Estado del producto:** desarrollo activo. No se declara una versión estable; la aceptación manual integral y la comprobación efectiva de las reglas de integración de `main` siguen pendientes.
+- **PR #212 — registro semántico CSV/Zeek:** abierta y no integrada. Sus ejecuciones visibles de CI, análisis de seguridad y cadena de suministro terminaron correctamente sobre el HEAD de esa PR (`ab012b2`), pero la rama conserva como base un SHA anterior de `main`; requiere actualizarse y volver a validarse antes de considerar su integración.
+- **PR #200 — correlación de contexto Zeek:** abierta en Draft y no integrada. También requiere actualizar su base y completar las validaciones previstas.
+- **PR #208 — presentación profesional:** integrada; no debe aparecer como una PR abierta.
+- **Mantenimiento:** hay PRs abiertas de Dependabot para FastAPI (#215), CodeQL Actions (#213), Playwright (#217) y MaxMindDB (#218). No se consideran integradas hasta su merge.
+- **Alcance:** las funciones de #212 y #200 que todavía están en PR no se deben atribuir a `main`. La descripción pública del README se limita a las capacidades que figuran en la rama canónica.
+- **Evidencia:** los checks automatizados aprobados corresponden a sus SHA concretos. No sustituyen la aceptación manual, pruebas de instalación/recuperación ni revisión de accesibilidad.
+
+La fotografía detallada que sigue se conserva como **registro histórico del 3 de noviembre de 2026**. Sus listados de ramas, PR y ejecuciones no representan el estado vivo actual.
+
+## Histórico: fotografía de main — 3 de noviembre de 2026
 
 - **Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`. Esta fotografía no implica que las PR abiertas estén integradas.
 - **Estado del producto:** desarrollo activo. No declarar 0.10.0 estable hasta completar la aceptación manual integral, la recuperación de datos y la revisión de accesibilidad.
