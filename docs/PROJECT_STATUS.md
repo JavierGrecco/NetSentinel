@@ -1,7 +1,7 @@
 # Estado del proyecto — NetSentinel
 
 **Corte de portfolio:** 26 de noviembre de 2026  \
-**Rama canónica:** `main` · HEAD documental `d3ebfacd9f01253651ce9f0a6ef5fc9b64541528` (actualización de presentación; no modifica el runtime).
+**Rama canónica:** `main` · último commit documental de este corte: [`8df3f765`](https://github.com/JavierGrecco/NetSentinel/commit/8df3f765414b3bf0d875e6063f4964cbf0e9a14a) (actualiza este estado y el README; no modifica el runtime).
 
 ## Situación verificada — 26 de noviembre de 2026
 
