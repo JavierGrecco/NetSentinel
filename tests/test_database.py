@@ -817,3 +817,47 @@ def test_scan_comparison_ignores_devices_outside_shared_subnets(tmp_path: Path):
         "total_devices": 1,
     }
     assert result["changes"] == []
+
+
+def test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown(tmp_path: Path):
+    """Una base anterior conserva su booleano y etiqueta la procedencia como desconocida."""
+    import sqlite3
+
+    db = tmp_path / "legacy-activity.sqlite3"
+    with sqlite3.connect(db) as legacy:
+        legacy.execute(
+            """CREATE TABLE activity_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id INTEGER NOT NULL,
+                observed_at TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK (event_type IN (
+                    'dns_query', 'connection', 'tls_sni', 'app_usage', 'blocked',
+                    'page_visit', 'search_query', 'email_metadata'
+                )),
+                source TEXT NOT NULL,
+                blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
+            )"""
+        )
+        legacy.executemany(
+            """INSERT INTO activity_events
+               (device_id, observed_at, received_at, event_type, source, blocked)
+               VALUES (1, '2026-11-27T10:00:00+00:00', '2026-11-27T10:01:00+00:00',
+                       'connection', 'manual_import', ?)""",
+            [(0,), (1,)],
+        )
+
+    database.initialize(db)
+    database.initialize(db)  # La migración debe ser idempotente.
+
+    with sqlite3.connect(db) as migrated:
+        migrated.row_factory = sqlite3.Row
+        rows = migrated.execute(
+            "SELECT blocked, blocked_observation FROM activity_events ORDER BY id"
+        ).fetchall()
+
+    assert [row["blocked"] for row in rows] == [0, 1]
+    assert [row["blocked_observation"] for row in rows] == [
+        "legacy_unknown",
+        "legacy_unknown",
+    ]

@@ -103,6 +103,79 @@ def test_csv_preview_normalizes_rows_and_delegates_without_writing(monkeypatch) 
     assert "no se guardó ningún evento" in result["note"]
 
 
+def test_csv_import_preview_preserves_blocked_observation_states(monkeypatch) -> None:
+    """El CSV diferencia ausencia de cabecera, celda vacía y false explícito."""
+    from datetime import datetime, timezone
+
+    from netsentinel.activity_event_service import normalize_event
+
+    captured: list[dict[str, Any]] = []
+
+    def require_device(device_id: int) -> None:
+        assert device_id == 42
+
+    def import_events(device_id, events, line_numbers, *, now, preview):
+        captured.extend(events)
+        return {
+            "imported": len(events),
+            "skipped_duplicates": 0,
+            "preview_dispositions": ["new"] * len(events),
+        }
+
+    monkeypatch.setattr(importer.activity_repository, "require_device_exists", require_device)
+    monkeypatch.setattr(importer.activity_repository, "import_manual_events", import_events)
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    importer.import_csv(
+        42,
+        "observed_at,event_type,destination_ip\n"
+        f"{timestamp},connection,192.0.2.10\n",
+        normalize_event=normalize_event,
+        preview=True,
+    )
+    assert captured[-1]["blocked"] == 0
+    assert captured[-1]["blocked_observation"] == "missing"
+
+    importer.import_csv(
+        42,
+        "observed_at,event_type,destination_ip,blocked\n"
+        f"{timestamp},connection,192.0.2.11,\n"
+        f"{timestamp},connection,192.0.2.12,false\n",
+        normalize_event=normalize_event,
+        preview=True,
+    )
+    assert [event["blocked_observation"] for event in captured[-2:]] == [
+        "empty",
+        "reported_false",
+    ]
+
+
+def test_csv_import_round_trips_exported_blocked_observation(monkeypatch) -> None:
+    """La columna de procedencia exportada puede volver a importarse sin inferencias."""
+    from datetime import datetime, timezone
+
+    from netsentinel.activity_event_service import normalize_event
+
+    captured: list[dict[str, Any]] = []
+    monkeypatch.setattr(importer.activity_repository, "require_device_exists", lambda _device_id: None)
+
+    def import_events(device_id, events, line_numbers, *, now, preview):
+        captured.extend(events)
+        return {"imported": len(events), "skipped_duplicates": 0, "preview_dispositions": ["new"] * len(events)}
+
+    monkeypatch.setattr(importer.activity_repository, "import_manual_events", import_events)
+    timestamp = datetime.now(timezone.utc).isoformat()
+    importer.import_csv(
+        42,
+        "observed_at,event_type,destination_ip,blocked,blocked_observation\n"
+        f"{timestamp},connection,192.0.2.13,0,legacy_unknown\n",
+        normalize_event=normalize_event,
+        preview=True,
+    )
+    assert captured[0]["blocked"] == 0
+    assert captured[0]["blocked_observation"] == "legacy_unknown"
+
+
 def test_csv_import_rejects_sensitive_columns_before_accessing_device(monkeypatch) -> None:
     """Un CSV con cuerpo de mensaje se rechaza antes de acceder a la persistencia."""
     def unexpected_repository_call(*args, **kwargs):

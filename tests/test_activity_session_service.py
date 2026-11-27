@@ -69,6 +69,8 @@ def test_session_service_stores_only_token_hash_and_accepts_valid_event(
     assert event["packets_received"] == 3
     assert event["network_interface"] == "lan0"
     assert event["source_event_id"] == "router-record-42"
+    assert event["blocked"] == 0
+    assert event["blocked_observation"] == "missing"
 
     with pytest.raises(InvalidCollectorToken, match="token de recopilación"):
         activity_session_service.ingest_event(

@@ -68,6 +68,10 @@ FIELD_DEFINITIONS: Mapping[str, FieldDefinition] = MappingProxyType({
     "source_event_id": FieldDefinition("source_event_id", ValueKind.TEXT, "Identificador de origen preservado."),
     "app_name": FieldDefinition("app_name", ValueKind.TEXT, "Nombre de aplicación declarado por la fuente."),
     "blocked": FieldDefinition("blocked", ValueKind.BOOLEAN, "Indicador explícito de bloqueo."),
+    "blocked_observation": FieldDefinition(
+        "blocked_observation", ValueKind.TEXT,
+        "Procedencia declarada del indicador blocked; diferencia valor informado, ausencia, vacío y legado desconocido.",
+    ),
     "page_url": FieldDefinition(
         "page_url", ValueKind.TEXT, "URL saneada asociada a una visita.",
         sensitive=True,

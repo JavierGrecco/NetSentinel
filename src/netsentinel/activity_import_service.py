@@ -25,7 +25,7 @@ CSV_PREVIEW_FIELDS = (
     "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
     "packets_sent", "packets_received", "network_interface", "source_event_id",
     "app_name", "page_url", "search_engine", "search_terms",
-    "email_provider", "email_from", "email_to", "email_subject", "blocked",
+    "email_provider", "email_from", "email_to", "email_subject", "blocked", "blocked_observation",
 )
 def _normalized_csv_header(value: str | None) -> str:
     """Conserva el helper histórico usando la normalización semántica compartida."""

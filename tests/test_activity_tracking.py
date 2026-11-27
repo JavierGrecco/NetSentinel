@@ -222,6 +222,13 @@ def test_csv_import_and_rejects_sensitive_columns(client):
     payload = client.get(f"/api/activity?device_id={selected}").json()
     assert payload["events"][0]["source"] == "manual_import"
     assert payload["events"][0]["domain"] == "example.com"
+    assert payload["events"][0]["blocked"] == 0
+    assert payload["events"][0]["blocked_observation"] == "reported_false"
+
+    exported = client.get(f"/api/activity/export.csv?device_id={selected}")
+    assert exported.status_code == 200
+    exported_rows = list(csv.DictReader(io.StringIO(exported.text.lstrip("\ufeff"))))
+    assert exported_rows[0]["blocked_observation"] == "reported_false"
 
     forbidden = (
         "observed_at,event_type,domain,password\n"
@@ -230,6 +237,38 @@ def test_csv_import_and_rejects_sensitive_columns(client):
     rejected = client.post("/api/activity/import", json={"device_id": selected, "csv_data": forbidden})
     assert rejected.status_code == 422
     assert "privacidad" in rejected.json()["detail"].lower()
+
+
+def test_csv_import_distinguishes_missing_and_empty_blocked_values(client):
+    selected = device_id(client)
+    stamp = datetime.now(timezone.utc).isoformat()
+
+    missing_csv = (
+        "observed_at,event_type,destination_ip\n"
+        f"{stamp},connection,192.0.2.31\n"
+    )
+    missing = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": missing_csv},
+    )
+    assert missing.status_code == 200, missing.text
+
+    empty_csv = (
+        "observed_at,event_type,destination_ip,blocked\n"
+        f"{stamp},connection,192.0.2.32,\n"
+    )
+    empty = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": empty_csv},
+    )
+    assert empty.status_code == 200, empty.text
+
+    events = client.get(f"/api/activity?device_id={selected}").json()["events"]
+    by_ip = {event["destination_ip"]: event for event in events}
+    assert by_ip["192.0.2.31"]["blocked"] == 0
+    assert by_ip["192.0.2.31"]["blocked_observation"] == "missing"
+    assert by_ip["192.0.2.32"]["blocked"] == 0
+    assert by_ip["192.0.2.32"]["blocked_observation"] == "empty"
 
 
 def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):

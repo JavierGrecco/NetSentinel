@@ -34,7 +34,7 @@ def ingest_family_activity(body: ActivityEventIngest) -> dict:
     """Guarda metadatos limitados solo durante una sesión activa."""
     try:
         return activity_tracking.ingest_event(
-            body.session_id, body.device_id, body.collector_token, body.model_dump(exclude={"collector_token"})
+            body.session_id, body.device_id, body.collector_token, body.model_dump(exclude={"collector_token"}, exclude_unset=True)
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

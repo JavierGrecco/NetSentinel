@@ -43,7 +43,7 @@ class ActivityEventIngest(BaseModel):
     email_from: str | None = Field(default=None, max_length=1500)
     email_to: str | None = Field(default=None, max_length=1500)
     email_subject: str | None = Field(default=None, max_length=200)
-    blocked: bool = False
+    blocked: bool | None = None
 
 
 class ActivityCSVImport(BaseModel):

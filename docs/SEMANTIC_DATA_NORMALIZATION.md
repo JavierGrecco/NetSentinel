@@ -3,7 +3,7 @@
 - **Estado:** primera entrega integrada en main mediante [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212), squash commit [956ceb4](https://github.com/JavierGrecco/NetSentinel/commit/956ceb442fe21aae3d965e55c1b13d3a7baa2060).
 - **Fecha de estado:** 2026-11-27.
 - **Alcance implementado:** perfiles CSV/Zeek, alias exactos por fuente, normalización conservadora de cabeceras, sugerencias de una edición sin autocorrección, colisiones, inspección tipada de valores y análisis de magnitudes con unidades explícitas.
-- **Compatibilidad:** conserva los contratos HTTP y el esquema SQLite de la primera integración; el paquete semántico sigue siendo una dependencia pura sin acceso a API, servicios, repositorios o infraestructura.
+- **Compatibilidad:** la primera integración (#212) conservó los contratos HTTP y el esquema SQLite; la ampliación de Actividad de [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222) agrega procedencia de `blocked` con migración aditiva. El paquete semántico sigue siendo una dependencia pura sin acceso a API, servicios, repositorios o infraestructura.
 
 ## Estado de implementación — 27 de noviembre de 2026
 
@@ -12,8 +12,8 @@ La primera entrega de PR #212 está integrada en main mediante el commit 956ceb4
 ### Implementado
 
 - Paquete puro src/netsentinel/semantics/ con modelos inmutables, catálogo canónico, perfiles de origen, resolver de cabeceras e inspección de valores.
-- 23 campos canónicos del contrato actual de Actividad y perfiles activity_csv y zeek_conn_log.
-- CSV utiliza el perfil compartido; paridad comprobada: 23/23 campos, 47/47 alias, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
+- 24 campos canónicos previstos para el contrato de Actividad tras integrar PR #222 (incluido `blocked_observation`), con perfiles `activity_csv` y `zeek_conn_log`.
+- CSV utiliza el perfil compartido; paridad comprobada en main antes de PR #222: 23/23 campos, 47/47 alias; el catálogo de esta rama agrega un campo canónico y su alias exacto, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
 - Zeek TSV/JSONL utiliza el perfil para validar el esquema y señalar campos requeridos ausentes o con errores tipográficos, sin alterar la interpretación específica de su timestamp Unix ni de sus contadores.
 - Cabeceras duplicadas, inseguras o ambiguas bloqueadas. Las sugerencias aproximadas no se asignan ni importan automáticamente.
 - La inspección diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido.
@@ -24,7 +24,7 @@ La primera entrega de PR #212 está integrada en main mediante el commit 956ceb4
 
 - inspect_field_value es una utilidad tipada; no reemplaza la validación autoritativa de activity_event_service.py.
 - parse_quantity permite calcular conversiones explícitas, pero todavía no transforma ni persiste automáticamente valores importados.
-- El campo heredado blocked sigue reduciendo ausencia/vacío a false en el contrato/persistencia actual. La corrección compatible está separada en [issue #220](https://github.com/JavierGrecco/NetSentinel/issues/220); no asumir que el inspector semántico resuelve ese problema de almacenamiento.
+- La corrección de procedencia del campo `blocked` está implementada en [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222), pendiente de CI y aceptación antes de integrarse. El inspector tipado no sustituye esa migración ni reconstruye la procedencia de filas históricas.
 - Todavía no existe una pantalla dedicada de mapeo interactivo ni una tabla visual de calidad por columna.
 - El catálogo no se ha ampliado a Monitorización, Inventario o Forense.
 - No hay IA externa, autocorrección fuzzy ni modificación de captura/frecuencia de sondas.

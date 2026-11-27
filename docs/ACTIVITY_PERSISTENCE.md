@@ -25,12 +25,31 @@ Los repositorios no conocen FastAPI ni generan respuestas HTTP. Los servicios no
 
 ## Reglas que no se deben perder
 
-- **Los cambios deben ser compatibles.** La fachada conserva las funciones usadas por los servicios y por las pruebas existentes. No se cambia el esquema SQLite ni los formatos de respuesta en esta extracción.
+- **Los cambios deben ser compatibles.** La fachada conserva las funciones usadas por los servicios y por las pruebas existentes. Los cambios de esquema deben ser aditivos, transaccionales y acompañados por migraciones probadas; los contratos HTTP existentes se mantienen compatibles.
 - **Las consultas deben tener alcance.** Los filtros se construyen con predicados conocidos y los valores siempre se pasan como parámetros SQL. No concatenar datos del usuario dentro de una consulta.
 - **La vista previa no escribe.** La importación real bloquea la escritura antes de comprobar duplicados y persistir el lote.
 - **El borrado requiere confirmación.** Se vuelve a contar la selección dentro de la transacción para detectar si cambió desde la vista previa.
 - **Las fechas se normalizan a UTC.** Las operaciones que comparten una transacción reciben la conexión del servicio; las operaciones completas pueden abrir su propia conexión.
 - **No se mezclan reglas de negocio con SQL.** La validación de eventos y archivos, los mensajes para usuarios y los contratos de API permanecen en sus servicios.
+
+## Procedencia del indicador de bloqueo
+
+El booleano heredado `blocked` se conserva como contrato compatible (0/1), pero ya no es la única información disponible. Cada evento también expone `blocked_observation`:
+
+| Estado | Significado |
+| --- | --- |
+| `reported_true` | La fuente informó explícitamente un valor verdadero. |
+| `reported_false` | La fuente informó explícitamente un valor falso. |
+| `missing` | La fuente no incluyó el campo. |
+| `empty` | El campo se incluyó, pero llegó vacío o nulo. |
+| `event_type_blocked` | El propio tipo de evento indica un bloqueo y no se informó un booleano contradictorio. |
+| `legacy_unknown` | El registro proviene de una base anterior cuya procedencia no puede reconstruirse. |
+
+La migración agrega la columna dentro de la inicialización transaccional de SQLite y asigna `legacy_unknown` a las filas existentes. Conserva el valor histórico de `blocked`; no lo reinterpreta como una declaración explícita. En eventos nuevos, `event_type=blocked` aporta evidencia positiva cuando el campo está ausente o vacío; si la misma fila declara explícitamente `blocked=false`, la validación la rechaza por contradicción.
+
+La API mantiene el booleano `blocked` y expone el estado adicional en cada evento. La ingesta conserva si la propiedad fue omitida o enviada explícitamente. El importador y exportador CSV preservan `blocked_observation`; Zeek no aporta ese campo y, por eso, sus conexiones se etiquetan como `missing`. La interfaz presenta `No bloqueado` separado de los estados `No informado`.
+
+`legacy_unknown` es intencional: no se puede reconstruir retrospectivamente si un booleano histórico en cero fue informado por la fuente o agregado por el valor por defecto de versiones anteriores.
 
 ## Dónde hacer un cambio
 
