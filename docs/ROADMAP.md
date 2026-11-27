@@ -2,23 +2,38 @@
 
 > **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Estado vigente — 3 de noviembre de 2026
+## Estado vigente — 27 de noviembre de 2026
 
-**Rama canónica:** `main`, HEAD `d8b6a64214f8168d361fe62af38d37c728331575`. El producto continúa en desarrollo activo; no declarar 0.10.0 estable hasta completar la aceptación manual integral y las comprobaciones de recuperación de datos.
+**Rama canónica:** `main`, HEAD `591efceb6cbc6f08f039dbb6c1c1c78f7598bd7c`. El último corte de CI, seguridad y supply chain sobre ese SHA terminó correctamente. El producto continúa en desarrollo activo; la release 0.10.0 sigue bloqueada por aceptación manual integral, recuperación de datos y verificación efectiva de las reglas de integración.
 
-### Prioridad inmediata
+**Seguimiento temporal:** [issue #219 — ejecución del plan integral](https://github.com/JavierGrecco/NetSentinel/issues/219). Sirve para asignación y coordinación entre integrantes; contiene checklists M0–M7 y reglas de traspaso. Debe cerrarse al finalizar; el plan técnico duradero vive en [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), y este documento sigue siendo la fuente única del orden/prioridad y estado.
 
-1. **Cerrar #208 — documentación profesional.** Actualizar y validar la fotografía documental del estado actual. El último SHA anterior tuvo 21 checks correctos, 1 omisión esperada, 1 cancelación de un job macOS y otro job en cola; la nueva cabeza documental debe completar su propia matriz. La PR no modifica runtime.
-2. **Cerrar #212 — primera entrega semántica.** Validar el SHA exacto `f89c7654904ae9cd243a545477cbe2b610263151` y atender cualquier fallo real. Ubuntu Python 3.10–3.14 ya ejecutó 903 pruebas aprobadas por versión; Windows 3.11–3.14, 894 aprobadas y 9 omitidas por versión. Faltan Windows 3.10, Chromium y los cinco jobs macOS. La implementación mantiene los contratos HTTP y de persistencia actuales.
-3. **Actualizar #200 sobre el resultado integrado de #212.** La rama de correlación Zeek comparte archivos de importación y arquitectura con #212. Una vez que #212 esté integrada, actualizar #200 sobre el nuevo `main`, conservar su trabajo exclusivo y resolver los archivos compartidos en una única actualización. Mantener Draft y validar solo el SHA resultante.
-4. **Hacer una sola aceptación manual integral.** Cuando #212 esté integrada y #200 tenga CI completa sobre su cabeza actualizada, ejecutar el recorrido de 13 pasos de [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md). Incluir importación CSV/Zeek, correlación Hallazgos → Actividad, recuperación de datos, accesibilidad y revisión visual. Registrar sistema, Python, navegador, SHA y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). No dividir la prueba en rondas parciales.
-5. **Integrar #200 después de la aceptación.** Corregir solo incidencias reales encontradas en el recorrido. Volver a validar cualquier SHA que cambie y no declarar disponible una función antes de su integración.
-6. **Completar el registro semántico en etapas pequeñas.** Tras la primera etapa de cabeceras y valores, evaluar una vista previa explicativa con columnas desconocidas, ausentes, vacías, bloqueadas y ambiguas. Luego ampliar a otros dominios únicamente cuando existan contratos de campos y eventos. No introducir autocorrección, IA externa ni cambios masivos de SQLite.
-7. **Revisar gobernanza y limpieza de ramas más adelante.** La protección de `main`, los checks obligatorios, el borrado automático de ramas y la limpieza histórica siguen pospuestos por decisión del usuario. No bloquear el trabajo funcional por esta tarea administrativa. No borrar ramas por prefijo o antigüedad; verificar SHA y contenido exclusivo antes de cada lote.
+### Prioridad inmediata — M0
 
-**Integraciones confirmadas:** #209 se integró en `ca9c4d9644d99f98988475bf04692ef04373f743`; #210 se integró en `d8b6a64214f8168d361fe62af38d37c728331575`. #208, #212 y #200 continúan abiertas. La aceptación manual se hará una sola vez sobre el conjunto funcional consolidado, no entre merges parciales.
+1. **PR #212 — núcleo semántico CSV/Zeek.** Está abierta, basada en el SHA antiguo `d8b6a642`, con HEAD `ab012b216f7ed634b84904c3215025c6b9ba3cb9`. Sus workflows visibles de CI, seguridad y supply chain pasaron sobre ese HEAD el 3/11, pero no validan el `main` actual ni una actualización posterior. Actualizar/revisar contra `591efceb`, volver a ejecutar la matriz completa y resolver explícitamente la distinción entre dato ausente, vacío y false; no convertir ausencia en falso sin conservar procedencia.
+2. **PR #200 — correlación temporal Zeek en Hallazgos.** Está abierta en Draft, basada en `d8b6a642`, con HEAD `f58af31afba49fe3232f1dd5ce013910fbc42be0`. Actualizarla después de integrar #212, conservar únicamente los cambios exclusivos, revisar conflictos en los archivos compartidos y completar checks. La correlación temporal no prueba causalidad ni causa raíz.
+3. **Mantenimiento:** revisar #213 (CodeQL Actions), #215 (FastAPI), #217 (Playwright) y #218 (MaxMindDB) una por una, verificando compatibilidad y checks del SHA exacto. Integrar o cerrar según evidencia; no dejar PRs de dependencias obsoletas abiertas.
+4. **Gobernanza de main:** la rama aparece actualmente como `protected: false`. El ruleset activo ID `25281660` no declara checks obligatorios ni aprobaciones requeridas. Confirmar alcance efectivo en Settings y corregirlo: CI, análisis de seguridad y supply chain deben ser bloqueantes cuando corresponda. No considerar la existencia de un ruleset como prueba de protección efectiva.
+5. **Higiene de ramas:** el listado consultado contiene 193 referencias remotas incluida `main`. Auditar por SHA, PR asociada y trabajo exclusivo; no borrar por nombre o antigüedad. La limpieza se realiza por lotes verificados.
+6. **Aceptar 0.10.0:** consolidar el laboratorio con una única cantidad oficial de pasos (la documentación vigente menciona 12 y 13); completar instalación limpia, flujos principales, respaldo/restauración, accesibilidad, revisión visual y matriz multiplataforma. Registrar SHA, sistema, navegador, resultado y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). No declarar estabilidad basándose solo en CI.
 
-**Vigencia:** el bloque histórico siguiente conserva decisiones del 23 de octubre. Para el estado actual prevalecen `PROJECT_STATUS.md` y los checks del SHA exacto.
+**PRs abiertas observadas en este corte:** #218, #217, #215, #213, #212 y #200. #212 y #200 son las PR funcionales principales; las otras cuatro son mantenimiento. El número de branches e issues es una fotografía de la consulta del 27/11, no un valor permanente.
+
+### Dirección posterior a la estabilización
+
+7. **M1 — NetSentinel Red:** reforzar identidad estable de activos, procedencia y frescura; separar relaciones de topología observadas/importadas/inferidas; cerrar el ciclo monitorización → hallazgo → investigación → informe; integrar DNS/TLS persistidos solo con contratos, retención y migraciones adecuados.
+8. **M2 — Conocimiento de infraestructura:** primer laboratorio SNMPv3 de solo lectura con PySNMP + SNMPSim; después interfaces, estados/contadores y, si hay soporte real, LLDP/CDP/BRIDGE-MIB/VLAN. No habilitar SNMP SET ni almacenar secretos en el inventario.
+9. **M3 — Forense confiable:** antes de analizar evidencia real, completar autenticación/roles, recepción y custodios, separación original/adquisición/copia de análisis, anclaje externo de auditoría, backup/restauración, pruebas sintéticas y revisión independiente.
+10. **M4 — Análisis estático:** ClamAV como escáner externo, YARA-X como motor preferido de reglas nuevas, Androguard en versión publicada reproducible y MobSF como servicio externo opcional. Ejecutar parsers en workers aislados; analizar copias verificadas, no originales. CAPE y análisis dinámico quedan en laboratorio posterior.
+11. **M5 — Inteligencia de amenazas:** CIRCL hashlookup primero; evaluar MalwareBazaar, ThreatFox y URLhaus. VirusTotal solo como proveedor opcional, preferentemente consulta por SHA-256 sin subida de archivos; Public API para usos no comerciales/académicos permitidos, no para servicios comerciales sin autorización.
+12. **M6 — Acceso remoto:** primero perfiles OpenSSH sin secretos; después elegir un proveedor por necesidad real (Guacamole para gateway web RDP/VNC/SSH, MeshCentral para gestión de endpoints o ShellHub para SSH centralizado Linux). Nexo/Teleport/RustDesk quedan como alternativas, no dependencias obligatorias.
+13. **M7 — Empresarial:** multiusuario, sitios, colectores autenticados, PostgreSQL, API e integraciones solo cuando necesidades de adopción y operación lo justifiquen.
+
+Los detalles técnicos, los límites de seguridad y la política de licencias se mantienen en [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). No duplicar aquí un backlog paralelo.
+
+**Puerta común:** ningún cambio se considera disponible hasta estar integrado en `main`, pasar checks aplicables sobre el SHA integrado y tener la aceptación manual correspondiente documentada. Las hipótesis no se presentan como hechos; la evidencia, procedencia y limitaciones deben ser visibles.
+
+**Vigencia:** fotografía consultada el 27/11/2026. Para el estado de una PR o workflow prevalecen siempre su HEAD y los checks actuales de ese SHA, no las referencias históricas de este documento.
 
 ## Registro histórico — 23 de octubre de 2026
 
