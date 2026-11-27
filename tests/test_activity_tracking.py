@@ -331,6 +331,8 @@ def test_blocked_provenance_csv_export_import_round_trip_preserves_all_states(cl
     for address, (blocked, observation) in expected.items():
         assert by_ip[address]["blocked"] == blocked
         assert by_ip[address]["blocked_observation"] == observation
+        assert by_ip[address]["device_id"] == second
+        assert by_ip[address]["source"] == "manual_import"
 
 def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):
     selected = device_id(client)
