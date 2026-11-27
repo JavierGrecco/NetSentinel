@@ -16,6 +16,8 @@ from .activity_retention_repository import cleanup, get_retention_days
 
 _ACTIVITY_READ_FILTER_CLAUSES = frozenset({
     "e.device_id = ?",
+    "e.source_event_id = ?",
+    "e.import_format = ?",
     "event_type = ?",
     "source = ?",
     "observed_at >= ?",

@@ -34,7 +34,7 @@ def test_header_normalization_rejects_confusable_unicode_and_controls() -> None:
 
 def test_activity_csv_resolves_existing_aliases_and_ignores_known_metadata() -> None:
     plan = resolve_headers(
-        ["receivedDateTime", "senderAddress", "recipientAddress", "src_ip", "interface", "size", "device_id", "device_name", "ip_address", "source"],
+        ["receivedDateTime", "senderAddress", "recipientAddress", "src_ip", "interface", "size", "device_id", "device_name", "ip_address", "source", "import_format"],
         "activity_csv",
     )
 
@@ -49,11 +49,13 @@ def test_activity_csv_resolves_existing_aliases_and_ignores_known_metadata() -> 
         HeaderStatus.IGNORED,
         HeaderStatus.IGNORED,
         HeaderStatus.IGNORED,
+        HeaderStatus.IGNORED,
     ]
     assert [item.field_name for item in plan.headers[:5]] == [
         "observed_at", "email_from", "email_to", "source_ip", "network_interface",
     ]
     assert plan.headers[5].field_name is None
+    assert plan.headers[10].field_name is None
 
 
 def test_zeek_conn_profile_preserves_field_direction_and_ip_byte_semantics() -> None:

@@ -398,7 +398,8 @@ jobs:
 
   responsive-ui:
     name: Responsive UI / Chromium
-    runs-on: ubuntu-latest
+    # Playwright's --with-deps is pinned to Ubuntu LTS after ubuntu-latest apt feed 403.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout

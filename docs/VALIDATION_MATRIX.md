@@ -2,7 +2,7 @@
 
 Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Las pruebas automatizadas y las sesiones humanas se registran por separado; una ejecución CI no se presenta como si una persona hubiera probado una instalación local.
 
-> **Estado vigente — 27/11/2026:** `main` está en `a0f4a7e`; la funcionalidad integrada más reciente es el núcleo semántico CSV/Zeek (#212). #222 cubrió BPR-01–BPR-08 mediante pruebas automatizadas sobre el SHA `893e57ce`; su integración está pendiente. #200 sigue en Draft y añade correlación Hallazgos–Zeek; el laboratorio integrado tiene 12 pasos y llegará a 13 cuando #200 se integre. La aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado vigente — 27/11/2026:** `main` integra el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
 ## Aceptación funcional automatizada — procedencia de `blocked` (PR #222)
 
@@ -86,6 +86,7 @@ Marcar cada tarea solo después de completar el recorrido en ese sistema y regis
 - [ ] UI-08 — Ejecutar `python scripts/check_responsive_ui.py --screenshots`; verificar las seis páginas en los quince tamaños predeterminados, revisar el informe JSON y abrir las capturas. Registrar SO, navegador, commit y fallos; la prueba automática no sustituye la valoración visual humana.
 - [ ] UI-09 — Con dos capturas sintéticas o de prueba autorizadas, comparar una subred compartida, una captura con errores/alcance limitado y otra sin la misma subred. Confirmar que los cambios de IP y los equipos no observados se distinguen, que las fuentes/avisos se muestran y que la interfaz no presenta la ausencia como desconexión.
 - [ ] UI-10 — Abrir el historial de un monitor con comprobaciones correctas, fallidas sin latencia y períodos sin registros. Verificar que el gráfico distingue cada estado, conserva los huecos temporales y aclara que un intervalo vacío no confirma una caída. Abrir «Ver detalle por intervalo» con teclado; comprobar que cada fecha, latencia y recuento se entiende sin hover y está disponible para lector de pantalla. Revisar también la exportación CSV del mismo período.
+- [ ] UI-11 — En una base sintética preparada con `--include-findings-correlation`, importar `zeek-conn.tsv` y revisar Hallazgos. Comprobar una coincidencia del mismo activo dentro de ±300 segundos, la conservación de UID/formato en el enlace a Actividad y la advertencia de que la coincidencia no prueba causalidad ni intrusión.
 
 **Evidencia interfaz:** fecha/versión/commit, temas probados, páginas visitadas, resultado y fallos observados.
 
