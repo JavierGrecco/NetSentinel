@@ -155,6 +155,16 @@ jobs:
               f"found {actions!r}"
           )
 
+          language_match = re.search(r"^\\s*languages:\\s*(.+)$", workflow, re.MULTILINE)
+          assert language_match is not None, "CodeQL must declare its analyzed languages."
+          languages = {item.strip() for item in language_match.group(1).split(",")}
+          required_languages = {"python", "javascript-typescript", "actions"}
+          missing_languages = required_languages - languages
+          assert not missing_languages, (
+              "CodeQL coverage must include Python, JavaScript/TypeScript and GitHub Actions; "
+              f"missing {sorted(missing_languages)}"
+          )
+
           dependabot = Path(".github/dependabot.yml").read_text(encoding="utf-8")
           assert "codeql-actions:" in dependabot and '"github/codeql-action/*"' in dependabot, (
               "Dependabot must group CodeQL actions so init/analyze are upgraded together."
