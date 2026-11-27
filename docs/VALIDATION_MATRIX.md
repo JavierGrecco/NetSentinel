@@ -17,6 +17,8 @@ Todas estas comprobaciones siguen **pendientes** hasta ejecutarse sobre la aplic
 - [ ] BPR-07 — Mostrar un histórico con `blocked=1` y `legacy_unknown` como bloqueado con procedencia desconocida; no como no informado.
 - [ ] BPR-08 — Backup/restauración de la base migrada: conservar booleanos y estados de procedencia.
 
+**Cobertura automatizada asociada (no equivale a aceptación manual):** BPR-01–BPR-04 y BPR-07 se ejercitan en la regresión Chromium `scripts/check_responsive_ui.py`; BPR-05 en `test_blocked_provenance_csv_export_import_round_trip_preserves_all_states`; BPR-06 y BPR-08 en `test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown`. CI debe pasar en el HEAD probado y las casillas manuales permanecen pendientes hasta completar la sesión local.
+
 **Registro BPR:** commit exacto / sistema / navegador / fecha y zona horaria / resultado por caso / evidencia sanitizada / issue de cualquier fallo.
 
 ## Datos de cada sesión de pruebas

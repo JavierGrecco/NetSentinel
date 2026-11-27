@@ -4,7 +4,7 @@
 - **Corte:** 27 de noviembre de 2026.
 - **Implementado en `main`:** perfiles CSV/Zeek, alias exactos por fuente, resolución conservadora de cabeceras, sugerencias sin autocorrección, control de colisiones, inspección tipada y análisis de magnitudes con unidades explícitas.
 - **Contrato actual en `main`:** 23 campos canónicos; la distinción entre `blocked` ausente, vacío y false aún no está integrada.
-- **Evolución en revisión:** PR #222, vinculada a issue #220, agrega `blocked_observation` como campo canónico adicional, migración SQLite aditiva, conservación de procedencia en CSV y presentación diferenciada. En esa rama el catálogo proyectado alcanza 24 campos. No describir ese campo como disponible hasta integrar la PR.
+- **Evolución en revisión:** PR #222, vinculada a issue #220, agrega `blocked_observation` como campo canónico adicional, migración SQLite aditiva, conservación de procedencia en CSV y presentación diferenciada. En esa rama el catálogo proyectado alcanza 24 campos. No describir ese campo como disponible hasta integrar la PR. También reconoce cuatro metadatos de su propia exportación (`device_id`, `device_name`, `ip_address`, `source`) como ignorados explícitos, elevando de 27 a 31 las cabeceras conocidas ignoradas en esa rama; no se mapean al activo ni a la fuente importada.
 - **Compatibilidad:** el diseño mantiene el booleano heredado y separa la procedencia del valor. El paquete semántico sigue siendo puro y no depende de API, servicios, repositorios ni infraestructura.
 
 ## Estado de implementación — 27 de noviembre de 2026

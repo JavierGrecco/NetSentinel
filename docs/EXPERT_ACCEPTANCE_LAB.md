@@ -3,7 +3,7 @@
 **Corte de documentación:** 27/11/2026.  
 **Rama canónica:** `main`, HEAD `295a74e16986516d6f3d5d4b3214b59d186a6e81`.  
 **Estado del laboratorio:** el asistente integrado en `main` tiene 12 pasos evaluables. La [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) añade el paso `findings-correlation`; cuando #200 se integre, el recorrido final tendrá 13 pasos.  
-**Cambios de procedencia:** la [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222) añade a la aceptación CSV los casos de `blocked` ausente, vacío y false explícito. Permanece en Draft hasta ejecutar esta extensión manualmente y registrar evidencia.  
+**Cambios de procedencia:** la [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222) amplía la aceptación CSV con `blocked` ausente/vacío/false explícito, eventos de tipo bloqueado, estados históricos y reimportación del CSV exportado en otro dispositivo. Incluye regresiones automatizadas para API, UI, exportación/reimportación y backup/restauración, pero permanece en Draft hasta completar BPR-01–BPR-08 manualmente y registrar evidencia.  
 **Estado general:** la aceptación manual, la revisión visual y la accesibilidad siguen pendientes; no inferir resultados manuales desde CI.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
