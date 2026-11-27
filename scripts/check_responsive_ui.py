@@ -1818,7 +1818,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
     popups = []
     module_page = None
 
-    def track_request(request) -> None
+    def track_request(request) -> None:
         if request.method == "POST" and request.url.split("?", 1)[0].rstrip("/").endswith("/api/scan"):
             scan_posts.append(request.url)
 
