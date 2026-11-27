@@ -228,4 +228,10 @@ def test_guided_acceptance_lab_covers_topology_zeek_and_isolated_setup():
     assert "no se inició un escaneo" in script.lower()
     assert "wizardCopyReport" in script
 
+def test_legacy_positive_blocked_events_remain_visible_with_unknown_provenance():
+    """Un booleano heredado verdadero no se oculta por falta de procedencia histórica."""
+    script = (STATIC / "activity.js").read_text(encoding="utf-8")
 
+    assert 'status==="legacy_unknown"&&e.blocked' in script
+    assert "Bloqueado (registro histórico; procedencia desconocida)" in script
+    assert "No informado (registro histórico)" in script
