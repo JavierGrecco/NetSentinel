@@ -94,7 +94,11 @@ def parse_manifest(body: str):
         if left not in rows or right not in rows:
             raise CleanupError(f"Par A2 incompleto: {left} / {right}")
     a1 = [x for x in rows.values() if x["class"] == "A1"]
-    if len(a1) != 163 or any(not x["pr"] or not x["merge_prefix"] for x in a1):
+    a2 = [x for x in rows.values() if x["class"] == "A2"]
+    b = [x for x in rows.values() if x["class"] == "B"]
+    if len(a1) != 163 or len(a2) != 4 or len(b) != 23:
+        raise CleanupError(f"Clases inesperadas en manifiesto: A1={len(a1)}, A2={len(a2)}, B={len(b)}.")
+    if any(not x["pr"] or not x["merge_prefix"] for x in a1):
         raise CleanupError("Las 163 filas A1 deben incluir PR y prefijo de merge válidos.")
     return rows, pairs
 
