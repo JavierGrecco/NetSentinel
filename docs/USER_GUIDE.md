@@ -82,6 +82,16 @@ Usá el nombre y la marca **De confianza** como referencias operativas que asign
 
 La separación entre una ficha estable de activo y sus identificadores observados (MAC, IP, hostname e interfaz), con procedencia e intervalos, forma parte de la evolución pendiente de NetSentinel Red.
 
+## Fichas lógicas de activos
+
+El inventario conserva cada registro técnico y su historial. Cuando dos registros con MAC diferentes pertenecen al mismo equipo según una comprobación que realizaste, podés agruparlos manualmente en una **ficha lógica** desde el botón **Agrupar** de cualquiera de ellos.
+
+Elegí una ficha existente o creá una nueva y escribí el motivo de la asociación. La aplicación es local y todavía no tiene usuarios ni roles, por lo que el registro conserva el motivo y la hora, pero no atribuye la acción a una persona identificada. La asociación se etiqueta como manual; no es una verificación automática del equipo físico.
+
+Un registro técnico puede pertenecer a una sola ficha lógica vigente, y una ficha puede agrupar varios registros. Cambiar o quitar una asociación cierra el vínculo anterior y conserva su motivo y sus fechas en el historial. Las MAC, IP, observaciones, eventos y registros originales no se fusionan ni se reescriben. La exportación JSON v5 incluye las fichas y todo el historial de asociaciones; la copia SQLite también los conserva.
+
+Usá una justificación basada en evidencia que hayas comprobado (por ejemplo, una etiqueta o número de serie). No agrupes registros solo porque comparten una IP, MAC o nombre DNS; esos valores pueden cambiar o reutilizarse. Las fichas lógicas son una organización operativa manual, no una prueba de identidad ni de propiedad. En esta entrega no se ofrece borrar fichas ni el historial de asociaciones.
+
 ## Herramientas DNS
 
 Las consultas DNS A/AAAA por nombre y PTR inverso por IP están disponibles en `/tools` y en las acciones del inventario. Se ejecutan solo cuando las solicitás y no cambian la configuración de red. Cada consulta de nombre o PTR tiene un límite estricto de 3 segundos en un proceso hijo terminable, para que un resolvedor del sistema bloqueado no retenga indefinidamente una solicitud del panel. La consulta A/AAAA acepta nombres de host, no URLs ni direcciones IP literales. La API ofrece `GET /api/tools/dns/lookup?hostname=example.com` y `GET /api/devices/{device_id}/dns-reverse`. Los resultados indican resolución, no identidad verificada; la detección de DNS local puede ser parcial según el sistema operativo, las VPN y el split DNS.

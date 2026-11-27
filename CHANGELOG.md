@@ -2,6 +2,8 @@
 
 ## Próxima versión — 0.10.0 (en desarrollo)
 
+- Incorpora fichas lógicas para agrupar manualmente registros del inventario, con motivo e historial de asociaciones. No fusiona filas ni afirma identidad física verificada. La exportación JSON se versiona a v5 para incluir fichas y vínculos históricos.
+
 - Consolida en `main` el explorador LAN histórico, la importación controlada de Zeek, el mapa mundial con GeoIP local opcional, NetSentinel Forense experimental y la prueba guiada de 12 pasos. Incluye generadores sintéticos y pruebas de integración; la aceptación manual en macOS y la revisión humana de accesibilidad siguen pendientes.
 
 - Refuerza el supervisor de Monitorización con retroceso exponencial para excepciones inesperadas aisladas por monitor (2, 4, 8… hasta 60 segundos). Otros monitores siguen ejecutándose; el estado de reintento se limpia tras recuperación, desactivación o eliminación del monitor.

@@ -55,11 +55,17 @@ def export_json(path: Path | None = None) -> str:
         ).fetchall()]
         activity_events = [dict(row) for row in db.execute("SELECT * FROM activity_events ORDER BY id").fetchall()]
         activity_settings = [dict(row) for row in db.execute("SELECT * FROM activity_settings ORDER BY id").fetchall()]
+        assets = [dict(row) for row in db.execute("SELECT * FROM assets ORDER BY id").fetchall()]
+        asset_device_links = [dict(row) for row in db.execute(
+            "SELECT * FROM asset_device_links ORDER BY linked_at, id"
+        ).fetchall()]
     payload = {
         "generated_at": utc_now(),
-        "format": "netsentinel-data-export-v4",
+        "format": "netsentinel-data-export-v5",
         "restorable_backup": False,
         "devices": devices,
+        "assets": assets,
+        "asset_device_links": asset_device_links,
         "addresses": addresses,
         "events": events,
         "scans": scans,
@@ -109,9 +115,15 @@ def export_csv(path: Path | None = None) -> str:
     fields = [
         "id", "display_name", "ip_address", "addresses", "address_count",
         "mac_address", "manufacturer", "mac_locally_administered",
+        "asset_id", "asset_display_name", "asset_linked_at", "asset_link_reason",
         "interface", "trusted", "first_seen", "last_seen", "notes",
     ]
     for device in rows:
+        asset = device.pop("asset", None) or {}
+        device["asset_id"] = asset.get("id", "")
+        device["asset_display_name"] = asset.get("display_name", "")
+        device["asset_linked_at"] = asset.get("linked_at", "")
+        device["asset_link_reason"] = asset.get("link_reason", "")
         addresses = device.get("addresses") or []
         device["address_count"] = len(addresses)
         device["addresses"] = "; ".join(

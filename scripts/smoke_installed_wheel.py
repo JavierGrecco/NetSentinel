@@ -224,7 +224,7 @@ def _run_smoke(wheel_path: Path) -> None:
             if status != 200:
                 raise RuntimeError(f"Initial data export returned HTTP {status}.")
             export = json.loads(body.decode("utf-8"))
-            if export.get("format") != "netsentinel-data-export-v4":
+            if export.get("format") != "netsentinel-data-export-v5":
                 raise RuntimeError(
                     f"Unexpected initial export format: {export.get('format')!r}."
                 )

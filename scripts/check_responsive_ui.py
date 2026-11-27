@@ -380,6 +380,59 @@ def _inventory_identity_caution_failures(page) -> list[str]:
     return failures
 
 
+def _inventory_asset_grouping_failures(page) -> list[str]:
+    """Recorre creación, asociación y retiro de una ficha lógica en datos locales sintéticos."""
+    failures: list[str] = []
+    try:
+        trigger = page.locator("button[data-asset]").first
+        if trigger.count() < 1:
+            return ["el inventario no ofrece la acción para agrupar un registro"]
+        device_id = trigger.get_attribute("data-asset")
+        if not device_id:
+            return ["la acción de agrupación no identifica el registro seleccionado"]
+
+        trigger.click()
+        page.locator("#assetDialog").wait_for(state="visible", timeout=3000)
+        page.locator("#assetSelect").select_option("__new__")
+        page.locator("#assetNewName").fill("Grupo lógico de prueba")
+        page.locator("#assetNewNotes").fill("Fixture local; no representa un equipo real.")
+        page.locator("#assetReason").fill(
+            "Fixture sintética para validar la asociación manual de inventario."
+        )
+        page.locator("#assetForm button[type='submit']").click()
+        page.wait_for_function(
+            "document.querySelector('#assetDialog') && !document.querySelector('#assetDialog').open",
+            timeout=5000,
+        )
+        page.wait_for_function(
+            """(id) => {
+                const row = document.querySelector('tr:has(button[data-asset="' + id + '"])');
+                return row && row.querySelector('[data-asset-label]')?.textContent.includes('Grupo lógico de prueba');
+            }""",
+            arg=device_id,
+            timeout=5000,
+        )
+
+        row = page.locator(f'tr:has(button[data-asset="{device_id}"])')
+        row.locator("button[data-asset]").click()
+        page.locator("#assetSelect").select_option("")
+        page.locator("#assetReason").fill(
+            "Fixture sintética: retirar el vínculo después de validar el flujo."
+        )
+        page.locator("#assetForm button[type='submit']").click()
+        page.wait_for_function(
+            """(id) => {
+                const row = document.querySelector('tr:has(button[data-asset="' + id + '"])');
+                return row && row.querySelector('[data-asset-label]')?.textContent.includes('Sin ficha lógica asignada');
+            }""",
+            arg=device_id,
+            timeout=5000,
+        )
+    except Exception as exc:
+        failures.append(f"el recorrido de fichas lógicas no terminó correctamente: {exc}")
+    return failures
+
+
 def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
     """Comprueba que el inventario cambie de cuadrícula sin solapar paneles."""
     boxes = page.evaluate(
@@ -2445,6 +2498,7 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
                                 if viewport == Viewport(1440, 900):
                                     case_failures.extend(_inventory_identity_caution_failures(page))
+                                    case_failures.extend(_inventory_asset_grouping_failures(page))
                             if path in {"/", "/network"} and viewport == Viewport(1440, 900):
                                 case_failures.extend(_scan_comparison_failures(page))
                             if path == "/network":
