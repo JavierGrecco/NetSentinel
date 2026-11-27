@@ -21,7 +21,8 @@ PRIVATE_FRAGMENT = "must-not-leak-this-fragment"
 
 def _synthetic_response(blocked_requests: list[str]):
     """Return a route handler that only fulfils synthetic sites and records blocked requests."""
-    def handle(route, request) -> None:
+    def handle(route) -> None:
+        request = route.request
         parsed = urlsplit(request.url)
         if parsed.scheme not in {"http", "https"}:
             # Browser-internal and extension resources never use the external network.
