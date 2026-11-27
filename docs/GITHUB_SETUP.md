@@ -17,7 +17,7 @@
 - Están presentes las reglas de PR, bloqueo de borrado y bloqueo de force-push, pero las reglas solo se aplican a refs que coinciden con las condiciones.
 - La API clásica de branch protection devolvió 403 para esta integración, por lo que no se afirma que exista una protección clásica adicional.
 
-La documentación de GitHub especifica que una condición de ref debe incluir al menos un patrón y permite `~DEFAULT_BRANCH` o `refs/heads/main` para seleccionar la rama principal ([documentación de rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository); [API de reglas](https://docs.github.com/en/rest/repos/rules)). Una persona con permisos de administración debe corregir y verificar este punto en Settings. El conector de trabajo utilizado aquí puede consultar el ruleset, pero no modificarlo.
+La documentación de GitHub exige que un patrón de inclusión alcance las refs que se desean proteger y permite `~DEFAULT_BRANCH` o `refs/heads/main` para seleccionar la rama principal ([documentación de rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository); [API de reglas](https://docs.github.com/en/rest/repos/rules)). Una persona con permisos de administración debe corregir y verificar este punto en Settings. La integración utilizada aquí puede consultar el ruleset, pero no modificarlo.
 
 ### Configuración que debe quedar en el Ruleset
 
@@ -84,19 +84,18 @@ No añadas `Sign release artifact provenance` como requisito de PR: se ejecuta �
 
 ## Eliminar ramas fusionadas sin acumular ramas activas
 
-El workflow `.github/workflows/delete-merged-head-branch.yml` elimina automáticamente la rama fuente cuando una PR se fusiona a `main`, siempre que:
+El workflow `.github/workflows/delete-merged-head-branch.yml` se ejecuta cuando una PR dirigida a `main` se cierra y solo elimina la rama fuente cuando GitHub confirma que la PR fue fusionada y que:
 
-- la PR esté realmente fusionada (no solo cerrada);
-- la rama fuente pertenezca a este mismo repositorio;
-- no sea `main`;
-- ninguna otra PR abierta use la misma rama;
-- el SHA remoto siga siendo idéntico al SHA de la PR fusionada.
+- la rama fuente pertenece a este mismo repositorio;
+- no es `main`;
+- ninguna otra PR abierta utiliza esa misma rama;
+- el SHA remoto sigue siendo idéntico al SHA de la PR fusionada.
 
-El job usa `pull_request_target` solo para el evento `closed`, ejecuta el código del repositorio base, nunca hace checkout del código de la PR y elimina la referencia mediante `--force-with-lease`. Si la rama cambió o sigue siendo utilizada, se conserva. Las ramas de PR abiertas —por ejemplo #200 y #222— no se eliminan.
+El job usa `pull_request_target` únicamente para el evento de cierre, ejecuta el código del repositorio base y nunca hace checkout ni ejecuta el código de la PR. La eliminación usa `--force-with-lease`. Si la rama cambió o sigue siendo utilizada, se conserva. Las ramas de PR abiertas —por ejemplo #200 y #222— no se eliminan.
 
-También conviene activar **Settings → General → Pull Requests → Automatically delete head branches** como respaldo nativo de GitHub. La automatización del repositorio proporciona además la comprobación de SHA y de otras PR abiertas.
+También conviene activar **Settings → General → Pull Requests → Automatically delete head branches** como respaldo nativo de GitHub. La automatización del repositorio añade las comprobaciones de SHA y de otras PR abiertas.
 
-La limpieza histórica del 27/11/2026 fue auditada y quedó cerrada en [issue #221](https://github.com/JavierGrecco/NetSentinel/issues/221). El inventario remoto final de ese corte quedó reducido a `main`, #200 y #222. No borrar por prefijo, antigüedad ni nombre.
+La limpieza histórica del 27/11/2026 quedó cerrada en [issue #221](https://github.com/JavierGrecco/NetSentinel/issues/221). El inventario remoto final de ese corte quedó reducido a `main`, #200 y #222. No borrar por prefijo, antigüedad ni nombre.
 
 ## Política de versiones
 
