@@ -199,6 +199,7 @@ def run_extension_test(extension_dir: Path) -> None:
                 )
                 page.goto("https://sub.example.com/excluded", wait_until="load")
                 page.goto("http://127.0.0.1:8765/private-network-fixture", wait_until="load")
+                context.wait_for_timeout(500)
                 popup.reload(wait_until="load")
                 events = _wait_for_event_count(popup, 3)
                 _assert(
@@ -218,7 +219,7 @@ def run_extension_test(extension_dir: Path) -> None:
                 _assert(download_path is not None, "CSV download did not produce a file.")
                 csv_bytes = Path(download_path).read_bytes()
                 csv_text = csv_bytes.decode("utf-8-sig")
-                _assert(csv_bytes.startswith(b"\\xef\\xbb\\xbf"), "CSV export must contain its UTF-8 BOM.")
+                _assert(csv_bytes.startswith(bytes((0xEF, 0xBB, 0xBF))), "CSV export must contain its UTF-8 BOM.")
                 _assert(SEARCH_FIXTURE in csv_text, "CSV export omitted the safe synthetic search phrase.")
                 _assert(SENSITIVE_FIXTURE not in csv_text, "CSV export leaked a sensitive query parameter.")
                 _assert(PRIVATE_FRAGMENT not in csv_text, "CSV export leaked a URL fragment.")
@@ -236,6 +237,7 @@ def run_extension_test(extension_dir: Path) -> None:
                     "() => (document.querySelector('#statusText')?.textContent || '').startsWith('Detenido.')"
                 )
                 page.goto("https://example.com/after-stop", wait_until="load")
+                context.wait_for_timeout(500)
                 popup.reload(wait_until="load")
                 _assert(_read_events(popup) == [], "A visit after opt-out was recorded.")
 
