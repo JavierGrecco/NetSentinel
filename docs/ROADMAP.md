@@ -4,7 +4,7 @@
 
 ## Estado vigente — 27 de noviembre de 2026
 
-**Rama canónica:** `main`. Último commit integrado verificado al iniciar este corte: `f06feb067dc36264ab9362b4a9a56b213a03fda5`. La última entrega funcional de dominio sigue siendo `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
+**Rama canónica:** `main`. Último commit integrado verificado: `203b1fc22679ace27e2ac24159a991bcc2750992`. La última entrega Zeek de dominio sigue siendo `a6088f5ed2239b530d07b484eb60bf8024e1a91f`; PR #235 es una mejora incremental de claridad de identidad y no cambia el modelo de datos.
 
 **Última integración funcional:** PR #200, correlación temporal Zeek en Hallazgos, commit [`a6088f5ed2239b530d07b484eb60bf8024e1a91f`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f). Incluye el núcleo semántico CSV/Zeek (#212), la procedencia `blocked` (#222), la correlación trazable y la corrección de presentación de estados de Actividad. La versión 0.10.0 sigue en desarrollo; no es estable.
 

@@ -4,6 +4,24 @@ Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguim
 
 > **Estado vigente — 27/11/2026:** El commit funcional `a6088f5ed2239b530d07b484eb60bf8024e1a91f` integrado en `main` reúne el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 y la primera entrega Zeek están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
+## Límites de identidad de MAC en Inventario — PR #235
+
+**HEAD probado:** `a88bdd8df459c703b02619e29c0a9d5c3b950570`. **Integración:** `203b1fc22679ace27e2ac24159a991bcc2750992`.
+
+| Control | Evidencia | Resultado |
+|---|---|---|
+| Contador de inventario | Panel de Inventario | Explicita que el total representa MAC únicas vistas y no equipos físicos únicos |
+| MAC administrada localmente | Fixture del navegador con `02:00:00:00:00:20` y dos IP observadas | Muestra una advertencia visible sobre aleatorización, virtualización y rotación |
+| Lectura accesible | El aviso usa un bloque semántico `role=note` y envuelve el texto | No depende de un tooltip ni ensancha la tabla |
+| API | `tests/test_api.py` | Una MAC local se expone como `mac_locally_administered=true`; una MAC global como `false` |
+| Responsive / Chromium | [run 46082383995](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082383995) | 135/135 comprobaciones; el E2E confirma la advertencia y el alcance del contador |
+| Seguridad | [run 46082384113](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082384113) | CodeQL y auditoría de dependencias 2/2 |
+| Cadena de suministro | [run 46082384004](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082384004) | Dos trabajos aplicables aprobados; firma de release omitida al no ser un tag |
+
+**Verificación posterior al merge** sobre `203b1fc`: CI 22/22 ([run 46082660628](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082660628)), Security 2/2 ([run 46082660521](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082660521)) y Supply Chain con dos trabajos aplicables ([run 46082660531](https://github.com/JavierGrecco/NetSentinel/actions/runs/46082660531)).
+
+**Límite explícito:** esta PR no modifica la identidad ni el agrupamiento de datos; el repositorio sigue usando `devices.mac_address` como clave única. La advertencia evita presentar esa asociación como identidad física verificada, pero no resuelve MAC reutilizadas/rotadas, IP reasignadas ni cambios de interfaz. La solución de datos pertenece a INV-01 en M1 y debe incluir migración SQLite aditiva, historial, compatibilidad de exportaciones y fixtures de no-fusión antes de alterar el modelo.
+
 ## Validación automatizada del wheel instalado — PR #231
 
 **HEAD probado:** `ade8ec02edc172d3cc38cd227764d7583235cbec`. **Integración:** `fdc5ce43435b7a4fa0def8c7300ec1f0d445cd7f`.
