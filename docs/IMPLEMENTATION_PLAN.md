@@ -2,7 +2,7 @@
 
 **Propósito:** conservar las decisiones de arquitectura y los criterios técnicos para evolucionar NetSentinel sin perder la identidad del producto ni acumular integraciones innecesarias.
 
-Este documento explica cómo construir las capacidades. El orden, prioridad y estado de ejecución se mantienen exclusivamente en [ROADMAP.md](ROADMAP.md). El seguimiento colaborativo del ciclo actual está en el [issue temporal #219](https://github.com/JavierGrecco/NetSentinel/issues/219); debe cerrarse al finalizar el plan y no reemplaza la documentación permanente. La aceptación manual se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+Este documento conserva las decisiones técnicas y los contratos de largo plazo. Mientras haya trabajo pendiente, el orden y la prioridad se mantienen en [ROADMAP.md](ROADMAP.md), y el seguimiento operativo en el [issue temporal #219](https://github.com/JavierGrecco/NetSentinel/issues/219). Ambos son temporales: al completar todas las fases se eliminan el roadmap y el issue. Este plan técnico, [PROJECT_STATUS.md](PROJECT_STATUS.md) y [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) permanecen como documentación de arquitectura, estado y evidencia. La aceptación humana se registra en la matriz.
 
 ## 1. Dirección de producto
 
