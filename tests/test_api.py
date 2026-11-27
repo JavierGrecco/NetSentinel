@@ -82,6 +82,7 @@ def test_api_device_trust_and_acknowledgement(monkeypatch, tmp_path):
     database.record_scan([Neighbor("192.168.5.2", "AA:BB:CC:DD:EE:FF", "en0")])
     with TestClient(app, base_url='http://127.0.0.1') as client:
         device = client.get("/api/devices").json()[0]
+        assert device["mac_locally_administered"] is True
         response = client.patch(f"/api/devices/{device['id']}", json={"trusted": True, "display_name": "Router de prueba"}, headers={"Origin": "http://127.0.0.1"})
         assert response.status_code == 200
         assert response.json()["trusted"] is True
@@ -97,6 +98,7 @@ def test_api_scan_history_and_device_addresses(monkeypatch, tmp_path):
     with TestClient(app, base_url='http://127.0.0.1') as client:
         assert client.get("/api/scans").json()[0]["devices_found"] == 1
         device = client.get("/api/devices").json()[0]
+        assert device["mac_locally_administered"] is False
         assert client.get(f"/api/devices/{device['id']}/addresses").json()[0]["ip_address"] == "192.168.5.2"
         missing = client.get("/api/devices/999/addresses")
         assert missing.status_code == 404
