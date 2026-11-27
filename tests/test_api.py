@@ -32,6 +32,8 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "IP local de esta computadora según la última lectura" in ui_source
         assert "Equipo local identificado" in ui_source
         assert "La observación proviene de una interfaz Apple de enlace local" in ui_source
+        assert "MAC administrada localmente: puede ser aleatoria o virtual y cambiar entre redes o sesiones." in ui_source
+        assert "MAC únicas vistas; no equivale a equipos físicos únicos." in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
         assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
