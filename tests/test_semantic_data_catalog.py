@@ -1,0 +1,327 @@
+"""Pruebas del catálogo semántico: resolución explícita y sugerencias no vinculantes."""
+
+from __future__ import annotations
+
+from decimal import Decimal
+from types import MappingProxyType
+
+import pytest
+
+from netsentinel.semantics.catalog import get_source_profile
+from netsentinel.semantics.models import (
+    FieldValueStatus,
+    HeaderStatus,
+    QuantityStatus,
+    SourceProfile,
+    ValueKind,
+)
+from netsentinel.semantics.resolver import missing_required_fields, normalize_header, resolve_headers
+from netsentinel.semantics.values import inspect_field_value, inspect_value, parse_quantity
+
+
+def test_header_normalization_supports_bom_camel_case_accents_and_zeek_paths() -> None:
+    assert normalize_header("\ufeffreceivedDateTime") == ("received_date_time", None)
+    assert normalize_header("DirecciónIP") == ("direccion_ip", None)
+    assert normalize_header("id.orig_h") == ("id.orig_h", None)
+    assert normalize_header("src-ip") == ("src_ip", None)
+
+
+def test_header_normalization_rejects_confusable_unicode_and_controls() -> None:
+    assert normalize_header("іd.orig_h")[0] is None  # Cyrillic small letter Byelorussian-Ukrainian i.
+    assert normalize_header("source\u200b_ip")[0] is None
+    assert normalize_header("x" * 129)[0] is None
+
+
+def test_activity_csv_resolves_existing_aliases_and_ignores_known_metadata() -> None:
+    plan = resolve_headers(
+        ["receivedDateTime", "senderAddress", "recipientAddress", "src_ip", "interface", "size"],
+        "activity_csv",
+    )
+
+    assert [item.status for item in plan.headers] == [
+        HeaderStatus.ALIAS,
+        HeaderStatus.ALIAS,
+        HeaderStatus.ALIAS,
+        HeaderStatus.ALIAS,
+        HeaderStatus.ALIAS,
+        HeaderStatus.IGNORED,
+    ]
+    assert [item.field_name for item in plan.headers[:5]] == [
+        "observed_at", "email_from", "email_to", "source_ip", "network_interface",
+    ]
+    assert plan.headers[5].field_name is None
+
+
+def test_zeek_conn_profile_preserves_field_direction_and_ip_byte_semantics() -> None:
+    plan = resolve_headers(
+        ["ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p",
+         "proto", "orig_ip_bytes", "resp_ip_bytes", "orig_pkts", "resp_pkts"],
+        "zeek_conn_log",
+    )
+
+    assert [item.field_name for item in plan.headers] == [
+        "observed_at", "source_event_id", "source_ip", "source_port",
+        "destination_ip", "destination_port", "protocol", "bytes_sent",
+        "bytes_received", "packets_sent", "packets_received",
+    ]
+    assert all(item.usable for item in plan.headers)
+
+
+def test_sensitive_csv_headers_are_blocked_including_compound_names() -> None:
+    plan = resolve_headers(
+        ["messageBody", "requestBody", "authorization", "user", "trace_message", "messageId", "messageSubject"],
+        "activity_csv",
+    )
+
+    assert [item.status for item in plan.headers] == [
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.BLOCKED,
+        HeaderStatus.IGNORED,
+        HeaderStatus.ALIAS,
+    ]
+
+
+def test_missing_required_fields_are_reported_even_when_typos_are_suggested() -> None:
+    plan = resolve_headers(["timestamp", "destionation_ip"], "activity_csv")
+
+    assert missing_required_fields(plan, {"observed_at", "event_type", "destination_ip"}) == (
+        "destination_ip",
+        "event_type",
+    )
+
+
+def test_zeek_payload_bytes_are_blocked_instead_of_mapped_to_ip_bytes() -> None:
+    plan = resolve_headers(["orig_bytes", "resp_bytes"], "zeek_conn_log")
+
+    assert all(item.status is HeaderStatus.BLOCKED for item in plan.headers)
+    assert all("carga útil" in (item.reason or "") for item in plan.headers)
+
+
+def test_typo_is_a_suggestion_and_never_an_automatic_assignment() -> None:
+    plan = resolve_headers(["destionation_ip"], "activity_csv")
+
+    result = plan.headers[0]
+    assert result.status is HeaderStatus.SUGGESTION
+    assert result.field_name is None
+    assert result.suggestions[0].field_name == "destination_ip"
+    assert result.usable is False
+
+
+def test_custom_profile_can_reuse_a_builtin_name_without_inheriting_its_aliases() -> None:
+    profile = SourceProfile(
+        name="activity_csv",
+        description="Perfil aislado para esta prueba.",
+        aliases=MappingProxyType({"custom_address": "source_ip"}),
+        ignored_headers=MappingProxyType({}),
+        blocked_headers=MappingProxyType({}),
+        field_scopes=MappingProxyType({}),
+    )
+
+    result = resolve_headers(["custom_address", "src_ip"], profile)
+
+    assert result.headers[0].status is HeaderStatus.ALIAS
+    assert result.headers[0].field_name == "source_ip"
+    assert result.headers[1].status is HeaderStatus.UNKNOWN
+
+
+def test_typo_with_multiple_edits_is_not_suggested() -> None:
+    result = resolve_headers(["destionation_iq"], "activity_csv").headers[0]
+
+    assert result.status is HeaderStatus.UNKNOWN
+    assert result.suggestions == ()
+
+
+def test_close_candidates_are_reported_as_ambiguous() -> None:
+    profile = SourceProfile(
+        name="test_ambiguous",
+        description="Perfil solo para probar empates.",
+        aliases=MappingProxyType({"alpha": "source_ip", "alphi": "destination_ip"}),
+        ignored_headers=MappingProxyType({}),
+        blocked_headers=MappingProxyType({}),
+        field_scopes=MappingProxyType({}),
+    )
+
+    result = resolve_headers(["alph"], profile).headers[0]
+
+    assert result.status is HeaderStatus.AMBIGUOUS
+    assert result.field_name is None
+    assert len(result.suggestions) == 2
+
+
+def test_two_columns_for_the_same_field_are_a_collision_not_last_write_wins() -> None:
+    plan = resolve_headers(["src_ip", "source_ip"], "activity_csv")
+
+    assert len(plan.collisions) == 1
+    assert plan.collisions[0].field_name == "source_ip"
+    assert all(item.status is HeaderStatus.COLLISION for item in plan.headers)
+    assert all(item.usable is False for item in plan.headers)
+
+
+def test_unknown_headers_are_not_assigned_from_value_ranges() -> None:
+    plan = resolve_headers(["size", "unknown_metric"], "activity_csv")
+
+    assert plan.headers[0].status is HeaderStatus.IGNORED
+    assert plan.headers[1].status is HeaderStatus.UNKNOWN
+    assert inspect_value("8080").kind is ValueKind.INTEGER
+    assert parse_quantity("8080").status is QuantityStatus.NO_UNIT
+
+
+def test_value_inspection_recognizes_shapes_without_inventing_roles() -> None:
+    assert inspect_value("192.0.2.10").kind is ValueKind.IP_ADDRESS
+    assert inspect_value("08:00:27:AA:BB:CC").kind is ValueKind.MAC_ADDRESS
+    assert inspect_value("2026-11-03T12:00:00-03:00").timezone_aware is True
+    assert inspect_value("2026-11-03 12:00:00").timezone_aware is False
+    assert inspect_value("0").kind is ValueKind.INTEGER
+    assert inspect_value("true").kind is ValueKind.BOOLEAN
+    assert inspect_value(" ").kind is ValueKind.EMPTY
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected_dimension", "expected_unit", "expected_value"),
+    [
+        ("1.5 KiB", "data_size", "B", "1536.0"),
+        ("250 ms", "time", "s", "0.250"),
+        ("25%", "ratio", "1", "0.25"),
+        ("2 kB", "data_size", "B", "2000"),
+    ],
+)
+def test_explicit_units_convert_only_within_their_declared_dimension(
+    raw: str,
+    expected_dimension: str,
+    expected_unit: str,
+    expected_value: str,
+) -> None:
+    result = parse_quantity(raw)
+
+    assert result.status is QuantityStatus.EXPLICIT
+    assert result.dimension == expected_dimension
+    assert result.canonical_unit == expected_unit
+    assert result.normalized_value == Decimal(expected_value)
+
+
+def test_decimal_unit_conversion_preserves_precision_beyond_default_decimal_context() -> None:
+    raw = "123456789012345678901234567890 kB"
+
+    result = parse_quantity(raw)
+
+    assert result.status is QuantityStatus.EXPLICIT
+    assert result.normalized_value == Decimal("123456789012345678901234567890000")
+
+
+def test_oversized_values_are_rejected_before_expensive_parsing() -> None:
+    assert parse_quantity("1" * 129).status is QuantityStatus.INVALID_NUMBER
+    assert inspect_value("1" * 129).kind is ValueKind.INVALID
+    assert inspect_value("x" * 4097).kind is ValueKind.INVALID
+
+
+def test_ambiguous_or_unknown_units_are_not_converted() -> None:
+    ambiguous = parse_quantity("12 KB")
+    unknown = parse_quantity("12 widgets")
+
+    assert ambiguous.status is QuantityStatus.AMBIGUOUS_UNIT
+    assert ambiguous.normalized_value is None
+    assert unknown.status is QuantityStatus.UNKNOWN_UNIT
+    assert unknown.normalized_value is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1e129",
+        "1e999999999999",
+        "9" * 65,
+        Decimal("1e129"),
+        Decimal("0e-129"),
+        10**64,
+        1e129,
+        1e-129,
+    ],
+)
+def test_extreme_numeric_precision_and_scale_are_rejected(value: object) -> None:
+    assert inspect_value(value).kind is ValueKind.INVALID
+
+
+def test_extreme_numeric_scale_cannot_reach_integer_range_validation() -> None:
+    result = inspect_field_value("bytes_sent", "1e999999999999")
+
+    assert result.status is FieldValueStatus.INVALID
+    assert result.inspection.kind is ValueKind.INVALID
+
+
+@pytest.mark.parametrize("value", [1.25, 1e-128, 1e128])
+def test_finite_float_inside_numeric_limits_remains_inspectable(value: float) -> None:
+    assert inspect_value(value).kind is ValueKind.DECIMAL
+
+
+def test_numeric_unix_timestamp_candidate_is_not_inferred_from_magnitude() -> None:
+    value = inspect_value("1793728800")
+
+    assert value.kind is ValueKind.INTEGER
+    assert value.timezone_aware is None
+    assert value.quantity is not None
+    assert value.quantity.status is QuantityStatus.NO_UNIT
+
+
+
+def test_resolver_caps_source_columns_before_fuzzy_matching() -> None:
+    with pytest.raises(ValueError, match="más de 256 columnas"):
+        resolve_headers(["unknown"] * 257, "activity_csv")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_status"),
+    [
+        ("source_ip", "192.0.2.10", FieldValueStatus.VALID),
+        ("source_ip", "not-an-ip", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "443", FieldValueStatus.VALID),
+        ("source_port", 443, FieldValueStatus.VALID),
+        ("source_port", "443.0", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "4.43e2", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", 443.0, FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", Decimal("443"), FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "0", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "70000", FieldValueStatus.TYPE_MISMATCH),
+        ("source_port", "70000.0", FieldValueStatus.TYPE_MISMATCH),
+        ("destination_port", "65535", FieldValueStatus.VALID),
+        ("destination_port", "0", FieldValueStatus.TYPE_MISMATCH),
+        ("destination_port", "65536", FieldValueStatus.TYPE_MISMATCH),
+        ("bytes_sent", "0", FieldValueStatus.VALID),
+        ("bytes_received", "0", FieldValueStatus.VALID),
+        ("bytes_sent", None, FieldValueStatus.MISSING),
+        ("bytes_sent", "", FieldValueStatus.EMPTY),
+        ("packets_sent", "0", FieldValueStatus.VALID),
+        ("packets_received", "0", FieldValueStatus.VALID),
+        ("blocked", "yes", FieldValueStatus.VALID),
+        ("blocked", "2", FieldValueStatus.TYPE_MISMATCH),
+        ("observed_at", "2026-11-03T12:00:00Z", FieldValueStatus.VALID),
+        ("observed_at", "1793728800", FieldValueStatus.TYPE_MISMATCH),
+    ],
+)
+def test_field_value_validation_uses_declared_semantics_without_role_guessing(
+    field: str,
+    value: object,
+    expected_status: FieldValueStatus,
+) -> None:
+    result = inspect_field_value(field, value)
+
+    assert result.status is expected_status
+    assert result.expected_kind is not None
+
+
+def test_unmapped_field_value_shape_does_not_create_a_semantic_assignment() -> None:
+    result = inspect_field_value("unmapped_counter", "1500")
+
+    assert result.status is FieldValueStatus.UNKNOWN_FIELD
+    assert result.inspection.kind is ValueKind.INTEGER
+    assert result.expected_kind is None
+
+
+def test_measurement_with_ambiguous_unit_remains_ambiguous_in_field_context() -> None:
+    result = inspect_field_value("bytes_sent", "12 KB")
+
+    assert result.status is FieldValueStatus.AMBIGUOUS
+    assert result.inspection.quantity is not None
+    assert result.inspection.quantity.normalized_value is None
