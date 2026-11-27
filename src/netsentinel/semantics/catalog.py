@@ -169,6 +169,13 @@ _CSV_IGNORED = {
     "networkmessageid": "Identificador de mensaje, no de evento de red.",
     "trace_id": "Identificador de trazabilidad del proveedor no modelado.",
     "traceid": "Identificador de trazabilidad del proveedor no modelado.",
+    # Metadatos añadidos por la propia exportación de NetSentinel. No se
+    # reasignan al importar: el activo destino se selecciona explícitamente
+    # y la fuente queda registrada como manual_import.
+    "device_id": "Identificador local del export; no se reutiliza al importar.",
+    "device_name": "Nombre local del activo exportado; no se reutiliza al importar.",
+    "ip_address": "Dirección resumida del activo; no sustituye source_ip/destination_ip.",
+    "source": "Fuente del registro original; una reimportación se marca manual_import.",
 }
 _CSV_BLOCKED = {
     "url": "La columna podría contener URLs completas o rutas sensibles.",
