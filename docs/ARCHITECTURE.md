@@ -32,7 +32,7 @@ Al modificar una pantalla, cambiá su archivo JavaScript salvo que también nece
 
 ## Dirección propuesta
 
-La decisión de arquitectura se documenta en [ADR-001: aplicación modular de despliegue único](ADR-001-MODULAR-MONOLITH.md). El término *monolito* describe aquí cómo se instala y ejecuta el producto, no el tamaño interno de sus módulos: cada módulo debe ser cohesionado, tener una interfaz pública pequeña y proteger sus detalles privados. La meta es separar responsabilidades sin cambiar la instalación local.
+La decisión de despliegue local modular se documenta en [ADR-001](ADR-001-MODULAR-MONOLITH.md); la decisión complementaria de mantener FastAPI/Python y JavaScript nativo, sin sumar otro framework de backend o frontend, está en [ADR-002](ADR-002-KEEP-FASTAPI-MODULAR-MONOLITH.md). El término *monolito* describe cómo se instala y ejecuta el producto, no el tamaño interno de sus módulos: cada módulo debe ser cohesivo, tener una interfaz pública pequeña y proteger sus detalles privados. La meta es separar responsabilidades sin cambiar la instalación local.
 
 | Módulo | Responsabilidad principal | No debería hacer |
 | --- | --- | --- |

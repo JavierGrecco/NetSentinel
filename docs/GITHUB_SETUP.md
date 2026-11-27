@@ -9,28 +9,32 @@
 
 ## Proteger la rama principal
 
-Un Ruleset puede estar activo y aun así no exigir PR ni pruebas. La API de `/branches/main` puede devolver `protected: false` cuando no hay una regla de protección clásica; para evaluar el estado real también hay que leer los Rulesets.
+**Última lectura verificada: 27/11/2026.** El ruleset de repositorio `rules` (ID `25281660`) aparece como **Active**, pero su configuración actual no demuestra que proteja `main`:
 
-**Última lectura verificada: 3/11/2026.** El ruleset `rules` (ID `25281660`) está activo y contiene `deletion`, `non_fast_forward`, `pull_request` y `required_status_checks`. Pero la lista de checks sigue vacía (`required_status_checks: []`), la condición de ramas continúa con `include: []` y `exclude: []`, exige cero aprobaciones y no tiene actores de bypass. La API de ramas devuelve `protected: false` para `main`. La documentación oficial de GitHub indica que al menos uno de los patrones `include` debe coincidir y permite usar `~DEFAULT_BRANCH`; el arreglo vacío no identifica `main`. Por lo tanto, el ruleset no demuestra protección efectiva de `main`.
+- `conditions.ref_name.include = []` y `exclude = []`. La condición requiere que al menos un patrón de inclusión coincida; con la lista vacía no hay un alcance explícito para `main`.
+- `required_status_checks = []`: no exige ningún contexto de CI o seguridad.
+- `required_approving_review_count = 0`: no exige aprobación.
+- Están presentes las reglas de PR, bloqueo de borrado y bloqueo de force-push, pero las reglas solo se aplican a refs que coinciden con las condiciones.
+- La API clásica de branch protection devolvió 403 para esta integración, por lo que no se afirma que exista una protección clásica adicional.
 
-**Bloqueo actual:** la verificación del 3/11/2026 sigue mostrando alcance de `ref_name` vacío, cero aprobaciones y `required_status_checks: []`; `main` responde `protected: false`. El ruleset está activo, pero no tiene patrón de inclusión que apunte a `main` ni contextos obligatorios. No equivale a una puerta de integración efectiva. No asumir que CI, seguridad ni cadena de suministro son obligatorios para fusionar. Durante la actualización del repositorio, la integración automatizada pudo mover la referencia `main` mediante la API de refs aunque el ruleset declara la regla `pull_request`. Eso no demuestra cómo se comporta una credencial humana, pero sí obliga a verificar el efecto real en GitHub antes de afirmar que los pushes directos están bloqueados. Una persona con permisos de administración debe configurar el alcance explícito para `main`, seleccionar los checks requeridos y realizar una prueba de aceptación. El conector de revisión utilizado para este trabajo permite consultar reglas, pero no modificarlas; por eso este paso sigue siendo administrativo. Seguimiento: [issue #73](https://github.com/JavierGrecco/NetSentinel/issues/73). La [auditoría de ramas](BRANCH_AUDIT_2026-11.md) mantiene en pausa la eliminación física hasta verificar el alcance de la regla de borrado.
+La documentación de GitHub exige que un patrón de inclusión alcance las refs que se desean proteger y permite `~DEFAULT_BRANCH` o `refs/heads/main` para seleccionar la rama principal ([documentación de rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository); [API de reglas](https://docs.github.com/en/rest/repos/rules)). Una persona con permisos de administración debe corregir y verificar este punto en Settings. La integración utilizada aquí puede consultar el ruleset, pero no modificarlo.
 
 ### Configuración que debe quedar en el Ruleset
 
-1. Abrí **Settings → Rules → Rulesets** y editá el Ruleset existente, o creá uno nuevo si corresponde.
-2. Seleccioná el objetivo **Branches** y configurá el patrón de inclusión `main`. Revisá la vista previa para confirmar que la regla se aplique a `main` y no accidentalmente a todas las ramas.
-3. Mantené activadas **Restrict deletions** y **Block force pushes**.
-4. Activá **Require a pull request before merging**. Si otra persona puede revisar, exigí una aprobación y descartá aprobaciones obsoletas. Si hay una sola persona mantenedora, no exijas una aprobación imposible de obtener.
-5. Activá **Require status checks to pass** y añadí los nombres de check que aparecen a continuación. Seleccioná el proveedor/origen correcto que muestra GitHub; no sustituyas los checks individuales por el nombre general del workflow.
-6. Recomiendo exigir que la rama esté actualizada con `main` antes de fusionar. Esto da una señal más fiable de la integración, pero significa que hay que actualizar una PR cuando cambie `main`.
-7. Revisá los permisos de bypass y dejalos desactivados salvo que exista una excepción operativa deliberada, documentada y restringida.
-8. Guardá y confirmá que el Ruleset esté en modo **Active**, que la vista previa apunte a `main` y que los checks aparezcan en las reglas requeridas.
+1. Abrí **Settings → Rules → Rulesets** y editá el ruleset `rules`.
+2. En **Target branches**, añadí `~DEFAULT_BRANCH` o `refs/heads/main` y revisá la vista previa para confirmar que incluya `main`.
+3. Mantené activados **Restrict deletions** y **Block force pushes**.
+4. Activá **Require a pull request before merging**. Con un único mantenedor no exijas una aprobación imposible de obtener; documentá esa limitación.
+5. Activá **Require status checks to pass** y añadí los contextos enumerados abajo. No uses el nombre genérico del workflow cuando GitHub muestre los jobs individuales.
+6. Recomiendo exigir que la rama esté actualizada con `main`, siempre que el coste operativo de actualizar PRs sea aceptable.
+7. Revisá los permisos de bypass y dejalos vacíos salvo una excepción deliberada y documentada.
+8. Guardá como **Active** y volvé a consultar el ruleset para comprobar el patrón y los checks.
 
-### Checks obligatorios para Pull Requests
+### Checks obligatorios recomendados para Pull Requests
 
-Seleccioná los siguientes **23 contextos verificados**. Se cotejaron con los check-runs de GitHub de la PR documental #208, HEAD `d9368dc8de2bfa175a5bd8c82c8d343a44c7a1ca`, el 3/11/2026: aparecen 23 checks exitosos y 1 omisión esperada para firma de artefactos de release. La matriz incluyó 855 pruebas Python 3.14/Ubuntu y 135/135 comprobaciones Chromium. La rama recibió después una sincronización documental; no traslades estos resultados a un SHA posterior sin comprobar sus propios checks. El check `CodeQL` de GitHub Advanced Security aparece al completar el análisis; puede tardar más que el job de Actions en publicarse. Reconfirmá los nombres en una PR reciente antes de guardarlos.
+La matriz vigente tiene **23 contextos aplicables**: 19 de CI, 2 de Security Analysis y 2 de Supply Chain. Confirmá los nombres en una PR reciente antes de guardarlos, ya que pueden cambiar en futuras actualizaciones.
 
-**CI — 18 checks**
+**CI — 19 checks**
 
 Matriz Python (15 combinaciones):
 
@@ -54,44 +58,45 @@ Otras verificaciones de CI:
 
 - `Minimum declared dependencies (Python 3.10 / Ubuntu)`
 - `Wheel metadata and static assets`
+- `Browser extension tests (Node 24)`
 - `Responsive UI / Chromium`
 
-**Seguridad — 3 checks**
+**Seguridad — 2 checks**
 
-- `CodeQL` — resultado de GitHub Advanced Security. Se publica al completar el análisis; puede aparecer después de otros jobs.
-- `CodeQL static analysis (Python)` — job de Actions que ejecuta el análisis estático.
-- `Audit Python dependencies` — revisión de dependencias contra avisos conocidos.
+- `CodeQL static analysis (Python, JavaScript and GitHub Actions)`
+- `Audit Python dependencies`
+
+CodeQL publica además resultados en GitHub Code Scanning; ese resultado de análisis no debe contarse como un tercer job de Actions.
 
 **Cadena de suministro — 2 checks**
 
 - `Detect committed secrets`
 - `Build wheel, SBOM, and integrity manifest`
 
-No añadas `Sign release artifact provenance` como requisito para PR: se ejecuta solo al publicar una etiqueta `v*` y aparece omitido en PR normales. Hacerlo obligatorio bloquearía los merges que no sean publicaciones de release.
+No añadas `Sign release artifact provenance` como requisito de PR: se ejecuta únicamente al publicar una etiqueta `v*` y se omite en PR normales.
 
 ### Cómo verificar que realmente protege
 
-- Confirmá que el Ruleset esté **Active**, no en modo Evaluate.
-- Confirmá que el patrón se aplique a `main`.
-- Abrí una PR de prueba: GitHub debe mostrar el merge bloqueado mientras falte un check obligatorio o alguno falle.
-- La PR no debe poder fusionarse directamente si no tiene aprobación cuando esta sea obligatoria, o si no pasó todos los checks requeridos.
-- No marques una prueba manual como aprobada solo porque la CI esté verde. Registrá la prueba manual en `VALIDATION_MATRIX.md`.
+- Confirmá que el ruleset esté **Active** y que incluya explícitamente `main`.
+- Abrí una PR de prueba: GitHub debe bloquear el merge cuando falte un check obligatorio o alguno falle.
+- Comprobá que un push directo a `main` sea rechazado para una identidad sin bypass.
+- No marques una prueba manual como aprobada solo porque CI esté verde. Registrá esa evidencia en `VALIDATION_MATRIX.md`.
 
-Si cambian los nombres de job o workflows, actualizá los contextos requeridos. Antes de completar la tarea, comprobá los nombres disponibles en una PR reciente y volvé a verificar el efecto de la regla desde GitHub.
+## Eliminar ramas fusionadas sin acumular ramas activas
 
-## Reducir y ordenar las ramas
+El workflow `.github/workflows/delete-merged-head-branch.yml` se ejecuta cuando una PR dirigida a `main` se cierra y solo elimina la rama fuente cuando GitHub confirma que la PR fue fusionada y que:
 
-La consulta del 3/11/2026 devolvió **188 ramas remotas**: `main` y 187 adicionales. Hay **cuatro PR abiertas** (#208, #209, #210 y #200); las otras 184 referencias no corresponden a PR abiertas. Ese dato no autoriza a borrarlas: la auditoría `BRANCH_AUDIT_2026-11.md` distingue ramas integradas, PR cerradas sin merge y referencias sin PR.
+- la rama fuente pertenece a este mismo repositorio;
+- no es `main`;
+- ninguna otra PR abierta utiliza esa misma rama;
+- el SHA remoto sigue siendo idéntico al SHA de la PR fusionada.
 
-Para evitar que el inventario vuelva a crecer:
+El job usa `pull_request_target` únicamente para el evento de cierre, ejecuta el código del repositorio base y nunca hace checkout ni ejecuta el código de la PR. La eliminación usa `--force-with-lease`. Si la rama cambió o sigue siendo utilizada, se conserva. Las ramas de PR abiertas —por ejemplo #200 y #222— no se eliminan.
 
-1. En **Settings → General → Pull Requests**, activar **Automatically delete head branches**. Así GitHub elimina la rama fuente al fusionar una PR.
-2. No abrir una rama nueva para corregir documentación o sincronizar estado si puede hacerse en una PR existente.
-3. Mantener como máximo una PR funcional principal en Draft; no duplicar el mismo trabajo en varias ramas.
-4. Para la limpieza histórica, usar `BRANCH_AUDIT_2026-11.md`, verificar de nuevo el SHA remoto y comprobar que no haya contenido exclusivo antes de eliminar.
-5. Limpiar por lotes pequeños y volver a contar las ramas después de cada lote. No borrar por prefijo, antigüedad ni nombre.
+También conviene activar **Settings → General → Pull Requests → Automatically delete head branches** como respaldo nativo de GitHub. La automatización del repositorio añade las comprobaciones de SHA y de otras PR abiertas.
 
-La opción de borrado automático no sustituye la protección de `main`; ambas configuraciones son independientes.
+La limpieza histórica del 27/11/2026 quedó cerrada en [issue #221](https://github.com/JavierGrecco/NetSentinel/issues/221). El inventario remoto final de ese corte quedó reducido a `main`, #200 y #222. No borrar por prefijo, antigüedad ni nombre.
+
 ## Política de versiones
 
 La versión se define en src/netsentinel/__init__.py. pyproject.toml la obtiene mediante metadatos dinámicos y no debe mantener una segunda versión manual.

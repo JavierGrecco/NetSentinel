@@ -50,7 +50,7 @@ Las consultas SNMP, las integraciones con routers, los cambios de DNS, el bloque
 ## Controles automatizados del repositorio
 
 El workflow `.github/workflows/security.yml` ejecuta dos controles:
-- **CodeQL** analiza estáticamente el código Python con consultas de seguridad ampliadas y publica resultados en GitHub Code Scanning.
+- **CodeQL** analiza estáticamente Python, JavaScript/TypeScript y los workflows de GitHub Actions con consultas de seguridad ampliadas. Esto incluye tanto el backend como la interfaz web, la extensión Chromium y los flujos CI/CD, y publica resultados en GitHub Code Scanning.
 - **pip-audit** comprueba las dependencias de ejecución frente a avisos de vulnerabilidades conocidos; el job falla cuando detecta vulnerabilidades notificadas.
 
 El workflow se ejecuta en cambios a `main`, solicitudes de cambio y semanalmente. Sus permisos están limitados por job y las acciones externas se fijan a SHA completos para evitar depender de una etiqueta mutable. `.github/dependabot.yml` propone actualizaciones semanales para dependencias Python y GitHub Actions.
