@@ -288,6 +288,16 @@ def test_migrates_v01_device_schema(tmp_path: Path):
     assert device["manufacturer"] is None
     assert device["mac_locally_administered"] is False
     assert device["addresses"][0]["ip_address"] == "192.168.1.2"
+    # Additive migration creates the grouping layer but never assigns a legacy record automatically.
+    assert device["asset"] is None
+    assert database.list_assets(db) == []
+    with database.connect(db) as migrated:
+        tables = {
+            row["name"] for row in migrated.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        assert {"assets", "asset_device_links"} <= tables
     with database.connect(db) as migrated:
         columns = {row[1] for row in migrated.execute("PRAGMA table_info(scans)")}
     assert "discovery_json" in columns
