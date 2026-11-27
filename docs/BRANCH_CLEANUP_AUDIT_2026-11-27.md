@@ -1,32 +1,32 @@
-# Auditoría de limpieza de ramas — actualización 27/11/2026
+# Auditoría de limpieza de ramas — resultado final 27/11/2026
 
-**Estado:** el manifiesto inicial incluido en este archivo quedó **superado** por una revisión posterior. No ejecutar borrados usando listados de secciones antiguas de este documento.
+## Estado
 
-## Fuente vigente para la limpieza
+<badge> </badge> La limpieza histórica quedó **completada** y no hay una tarea de borrado masivo pendiente.
 
-La lista íntegra de ramas y las comprobaciones individuales están en [issue #221 — Eliminar ramas ya integradas y revisar referencias huérfanas](https://github.com/JavierGrecco/NetSentinel/issues/221). Ese issue contiene el corte actualizado de 193 referencias, su clasificación, la evidencia de PR fusionadas y las 23 referencias que deben preservarse o revisarse.
+- Manifiesto operativo: [issue #221](https://github.com/JavierGrecco/NetSentinel/issues/221), cerrado como completado.
+- Ejecución final: [GitHub Actions #46062536965](https://github.com/JavierGrecco/NetSentinel/actions/runs/46062536965).
+- Resultado registrado en esa ejecución: **193 refs eliminadas** (190 referencias del manifiesto auditado + 3 referencias auxiliares del procedimiento).
+- El inventario remoto posterior se verificó con exactamente tres refs: `main`, `feat/findings-zeek-evidence-context-2026-10-23` (#200) y `fix/activity-blocked-provenance-2026-11` (#222).
+- Las ramas auxiliares de las PR de mantenimiento posteriores se retiraron al completar sus merges. La PR #229 añadió una política automática para evitar nueva acumulación.
 
-## Resumen del corte actualizado
+## Automatización permanente
 
-- 193 referencias remotas, incluida `main`.
-- 189 SHA de commit distintos.
-- Cuatro pares de ramas apuntan al mismo SHA.
-- 167 referencias candidatas: 163 ramas cuyo HEAD coincide exactamente con el HEAD de una PR fusionada y cuatro punteros redundantes de parejas duplicadas.
-- 23 referencias deben preservarse/revisarse: 19 con PR cerradas sin merge y cuatro sin PR cerrada coincidente con el HEAD actual.
-- No se eliminó ninguna rama.
+El workflow `.github/workflows/delete-merged-head-branch.yml` se ejecuta al cerrar una PR dirigida a `main`. Solo elimina la rama fuente cuando GitHub confirma que:
 
-## Reglas de seguridad
+1. La PR fue fusionada y apunta a este mismo repositorio.
+2. La rama fuente no es `main`.
+3. Ninguna otra PR abierta utiliza esa rama.
+4. El SHA remoto sigue siendo exactamente el SHA de la PR fusionada.
 
-1. Consultar de nuevo las ramas y PR abiertas inmediatamente antes de borrar.
-2. Confirmar SHA actual = HEAD de la PR fusionada; verificar que el merge commit siga en `main`.
-3. Confirmar que no exista una PR cerrada sin merge cuyo HEAD coincida con esa misma referencia.
-4. En cada pareja duplicada, preservar la rama canónica y eliminar solo el puntero redundante.
-5. Preservar siempre `main`, #200 y #222; revisar nuevas PR que aparezcan desde el corte.
-6. Recuperar a una única rama/PR cualquier trabajo exclusivo que se decida conservar.
-7. No borrar por prefijo, antigüedad o nombre; no fusionar en bloque ni mover una rama a `main` para simular un DELETE.
+La eliminación usa `--force-with-lease`; si alguna condición falla, la rama se conserva. El workflow usa el código del repositorio base, no hace checkout ni ejecuta el código de la PR. La primera ejecución real eliminó la rama fuente de #229: [run 46067740405](https://github.com/JavierGrecco/NetSentinel/actions/runs/46067740405).
 
-## Restricción operativa
+## Reglas permanentes
 
-La conexión GitHub utilizada aquí permite leer el inventario y crear/actualizar archivos, pero no expone una operación para eliminar referencias Git. Por lo tanto, el recuento permanece en 193 hasta que un mantenedor con una operación `DELETE refs` ejecute el lote de #221 y se verifique el inventario posterior.
+- Mantener `main` como rama canónica y solo una o dos ramas funcionales activas.
+- Revisar PR, SHA y contenido antes de cualquier eliminación extraordinaria.
+- No borrar por prefijo, antigüedad o nombre.
+- No usar la limpieza automática como sustituto de revisión o integración de cambios.
+- Volver a contar refs después de cualquier operación excepcional.
 
-**Este documento es un resumen de control. El issue #221 es el único manifiesto vigente de candidatos, referencias preservadas y evidencia individual.**
+**Nota:** el recuento 193 pertenece a la ejecución puntual de limpieza masiva; no es el número actual de ramas ni un total acumulado de posteriores ramas auxiliares.

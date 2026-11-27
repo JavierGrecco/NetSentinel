@@ -1,25 +1,32 @@
 # Roadmap maestro de NetSentinel
 
-> **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento; no mantiene un backlog paralelo. Para retomar el trabajo sin leer todo el plan, consultá primero [PROJECT_STATUS.md](PROJECT_STATUS.md). La evidencia de pruebas manuales se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+> **Fuente única de verdad para prioridades, estado y criterios de finalización.** El plan técnico de [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) complementa este documento. Para retomar el trabajo, consultá [PROJECT_STATUS.md](PROJECT_STATUS.md); la evidencia manual se registra en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 ## Estado vigente — 27 de noviembre de 2026
 
-**Rama canónica:** `main`, HEAD `295a74e16986516d6f3d5d4b3214b59d186a6e81`. Última integración funcional: PR #212 (`956ceb4`). El producto sigue en desarrollo; 0.10.0 no es estable.
+**Rama canónica:** `main` · HEAD `a0f4a7e53ad8fbb197f47d29050b0d1f18264197`.
 
-**Seguimiento temporal:** [issue #219 — ejecución del plan integral](https://github.com/JavierGrecco/NetSentinel/issues/219). Las tareas completadas se eliminan del checklist temporal; el roadmap conserva prioridades permanentes y el historial de GitHub conserva los resultados.
+**Última integración funcional:** PR #212, núcleo semántico CSV/Zeek, commit `956ceb442fe21aae3d965e55c1b13d3a7baa2060`. La versión 0.10.0 sigue en desarrollo; no es una versión estable.
+
+**Seguimiento temporal:** [issue #219 — ejecución del plan integral](https://github.com/JavierGrecco/NetSentinel/issues/219). Las tareas completadas se retiran del checklist; los resultados permanecen en el historial y en los documentos duraderos.
 
 ### Prioridad inmediata — M0
 
-1. **Procedencia de `blocked` — PR #222, pendiente.** Resuelve issue #220 con `blocked_observation`, migración aditiva, API/CSV/UI compatibles y tratamiento explícito de registros históricos. El código del SHA `c974701` pasó CI 18/18, Security Analysis 2/2 y Supply Chain Security; una sincronización documental posterior requiere sus propios checks. El importador reconoce e ignora `device_id`, `device_name`, `ip_address` y `source` de su propia exportación: el destino se elige explícitamente y el origen se conserva como `manual_import`. La migración preserva los booleanos históricos; los tests cubren exportación/reimportación a otro dispositivo y backup/restauración SQLite. Continúa en Draft hasta registrar la aceptación manual BPR-01–BPR-08.
-2. **Correlación temporal Zeek — PR #200, pendiente y dependiente de #222.** Mantener Draft. Después del merge de #222, rebasar sobre el `main` vigente, revisar las áreas compartidas y pasar CI, seguridad y cadena de suministro en el SHA final. La aceptación manual de 13 pasos debe registrarse en #75 antes de marcar Ready.
-3. **Higiene de ramas — issue #221.** Inventario vivo comprobado: 193 refs, 189 SHA distintos y cuatro pares duplicados. El corte auditado propone 167 referencias candidatas (163 heads exactos de PR fusionadas y 4 redundantes) y conserva 23 referencias. No se ha borrado ninguna. Revalidar cada rama justo antes de DELETE; recuperar primero cualquier trabajo exclusivo. La lista completa y vigente vive en #221.
-4. **Gobernanza de `main`.** El ruleset activo ID 25281660 requiere PR, pero no obliga checks ni aprobaciones. Confirmar por la interfaz administrativa la protección efectiva y configurar las verificaciones que deben bloquear merges. El conector actual puede leer el ruleset, pero no consultar el endpoint de protección de rama (403) ni modificar reglasets.
-5. **Aceptación 0.10.0.** Completar el laboratorio integral de 13 pasos, instalación limpia, backup/restauración, accesibilidad, revisión visual y matriz multiplataforma. Vincular cada resultado al SHA, entorno y evidencia sanitizada. No declarar estable basándose solo en CI.
-6. **Mantenimiento integrado.** #213 CodeQL Actions, #215 FastAPI, #217 Playwright y #218 MaxMindDB ya están fusionadas en `main`; no siguen siendo trabajo abierto. Solo queda retirar sus referencias antiguas cuando #221 valide las condiciones de borrado.
+1. **Procedencia de `blocked` — PR #222, pendiente de aceptación manual.** La implementación diferencia `reported_true`, `reported_false`, `missing`, `empty`, `event_type_blocked` y `legacy_unknown`; preserva el booleano histórico 0/1; agrega una migración SQLite aditiva; mantiene compatibilidad API/CSV/UI; y protege la reimportación del CSV propio para no confiar en metadatos locales del archivo. La rama se sincronizó con el `main` actual sin solapamientos de archivos. La nueva validación debe completarse en el HEAD vigente de la PR; los checks de SHA anteriores son históricos. **BPR-01–BPR-08 siguen pendientes de ejecución manual** en una base aislada con datos sintéticos.
+2. **Correlación temporal Zeek — PR #200, pendiente y dependiente de #222.** Sigue en Draft. En el corte actual tiene 3 commits propios y está 18 detrás de `main`. Después de integrar #222, sincronizar/rebasar #200 y reconciliar explícitamente los módulos compartidos, conservando UID Zeek, `import_format`, filtros, correlación temporal y la migración compatible de Actividad. Repetir CI, Security Analysis y Supply Chain sobre el nuevo SHA. Completar los 13 pasos del laboratorio y registrar la aceptación manual antes de salir de Draft.
+3. **Gobernanza de `main`.** El ruleset #25281660 figura Active, pero sus condiciones incluyen/excluyen cero patrones, exige 0 status checks y 0 aprobaciones. No se considera protección efectiva de `main`. Una persona administradora debe configurar `~DEFAULT_BRANCH` o `refs/heads/main`, los 23 checks aplicables y los permisos de bypass según [GITHUB_SETUP.md](GITHUB_SETUP.md); después debe volver a consultar el ruleset y probar que realmente bloquea un merge sin checks.
+4. **Aceptación 0.10.0.** Completar instalación limpia, backup/restauración, accesibilidad, revisión visual y matriz multiplataforma. Vincular cada resultado al SHA, entorno y evidencia sanitizada. No declarar estable basándose solo en CI.
 
-**PR funcionales abiertas en este corte:** #222 (procedencia de `blocked`, Draft) y #200 (correlación Zeek, Draft). #212 y las cuatro PR de mantenimiento ya están integradas.
+### Etapas cerradas en M0
 
-**Puerta común:** no declarar una función disponible hasta que esté integrada en `main`, pase las verificaciones aplicables sobre el SHA integrado y tenga aceptación manual cuando corresponda. Evidencia y procedencia prevalecen sobre inferencias.
+- **Limpieza histórica de ramas:** completada. El run final [46062536965](https://github.com/JavierGrecco/NetSentinel/actions/runs/46062536965) eliminó 193 refs en esa ejecución (190 del manifiesto #221 y tres refs auxiliares). Issue #221 quedó cerrado con la evidencia. Tras el cierre de las PR de infraestructura #226–#229, el inventario volvió a verificarse en exactamente tres refs: `main`, #200 y #222.
+- **Seguridad y mantenimiento:** PR #226 amplió CodeQL a Python, JavaScript/TypeScript y GitHub Actions; #227 corrigió el disparador owner-gated de la herramienta temporal; #228 formalizó ADR-002 y mantuvo FastAPI/Python + JavaScript nativo; #229 retiró la herramienta puntual y añadió borrado restringido de ramas solo después de merges seguros. Todas están integradas en `main`.
+- **Higiene continua:** la automatización de #229 ya eliminó la rama fuente de su propia PR tras verificar merge, repositorio, SHA sin cambios y ausencia de otras PR abiertas. No borrar por prefijo, antigüedad o nombre.
+
+**PR funcionales abiertas:** #222 (procedencia de `blocked`, Draft) y #200 (correlación temporal Zeek, Draft). No declarar estas capacidades disponibles hasta su integración en `main` y la aceptación manual correspondiente.
+
+**Puerta común:** evidencia y procedencia prevalecen sobre inferencias; ningún check histórico sustituye el resultado del SHA vigente; ninguna tarea manual se marca como completada por CI.
+
 ### Dirección posterior a la estabilización
 
 7. **M1 — NetSentinel Red:** reforzar identidad estable de activos, procedencia y frescura; separar relaciones de topología observadas/importadas/inferidas; cerrar el ciclo monitorización → hallazgo → investigación → informe; integrar DNS/TLS persistidos solo con contratos, retención y migraciones adecuados.
