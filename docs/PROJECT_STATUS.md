@@ -1,7 +1,7 @@
 # Estado del proyecto — NetSentinel
 
 **Corte de estado:** 27 de noviembre de 2026.  
-**Rama canónica:** `main`. Última integración funcional verificada: `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
+**Rama canónica:** `main`. Último commit integrado: `203b1fc22679ace27e2ac24159a991bcc2750992`; última entrega de dominio Zeek: `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
 
 ## Situación verificada
 
@@ -17,7 +17,8 @@
 - **Ramas remotas:** después de integrar PR #233, el workflow de borrado automático terminó correctamente y el inventario remoto mostró únicamente `main`; no quedaron ramas auxiliares activas.
 - **Gobernanza de `main`:** el ruleset #25281660 está Active pero sigue sin patrón de inclusión, sin checks requeridos y con cero aprobaciones requeridas; además la API indica `protected: false`. No protege efectivamente `main`. La corrección requiere una persona administradora desde Settings; ver [GITHUB_SETUP.md](GITHUB_SETUP.md) e issue #73.
 - **Forense:** casos, hashes, auditoría y borradores de informes siguen siendo experimentales. No son una cadena de custodia validada ni sustituyen procedimientos institucionales.
-- **Identidad del inventario — limitación M1 identificada:** el registro actual se agrupa por MAC observada (`devices.mac_address` es única). `mac_locally_administered` ya se conserva y se expone, pero no existe todavía una ficha de activo independiente de MAC/IP. Una MAC local puede rotar, ser virtual o reutilizarse; una IP puede reasignarse. El panel ahora explicita estos límites y el plan M1 añade INV-01 para separar identidad lógica y observaciones con migración compatible. No inferir identidad física ni fusionar registros por coincidencia solamente.
+- **PR #235 — límites de identidad MAC en el inventario:** integrada en `main` mediante [`203b1fc22679ace27e2ac24159a991bcc2750992`](https://github.com/JavierGrecco/NetSentinel/commit/203b1fc22679ace27e2ac24159a991bcc2750992). El contador aclara que cuenta MAC observadas y no equipos físicos únicos; las MAC administradas localmente muestran una advertencia de estabilidad limitada. La guía documenta que MAC/IP/hostname no verifican identidad física. Las pruebas API distinguen una MAC local de una global y Chromium verifica la advertencia visible/envolvente usando la fixture `02:00:00:00:00:20`. HEAD probado `a88bdd8df459c703b02619e29c0a9d5c3b950570`: CI 22/22, Security 2/2 y Supply Chain dos trabajos aplicables aprobados; push sobre el merge `203b1fc`: CI 22/22, Security 2/2 y Supply Chain dos trabajos aplicables. **No cambia el agrupamiento ni crea una identidad estable**: `devices.mac_address` sigue siendo la clave única. INV-01 continúa pendiente para diseñar esa separación con migración y pruebas de compatibilidad.
+- **Limitación vigente de identidad del inventario:** el registro actual se agrupa por MAC observada (`devices.mac_address` es única). `mac_locally_administered` se conserva y se expone, pero todavía no existe una ficha de activo independiente de MAC/IP. Una MAC local puede rotar, ser virtual o reutilizarse; una IP puede reasignarse. El panel explica estos límites desde PR #235. No inferir identidad física ni fusionar registros por coincidencia solamente; INV-01 sigue pendiente.
 - **Alcance pendiente de investigación:** #197 sigue abierto para cubrir casos adicionales como IP reasignada/ambigua, timestamps inválidos, importaciones repetidas, faltantes y exportación reproducible. La PR #200 cerró solo el primer tramo Zeek.
 - **Seguimiento temporal:** [issue #219](https://github.com/JavierGrecco/NetSentinel/issues/219). M0 continúa abierto por la configuración administrativa de protección y la aceptación integral 0.10.0.
 
