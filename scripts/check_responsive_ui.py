@@ -1614,7 +1614,7 @@ def _activity_blocked_provenance_failures(page, base_url: str, scenarios_dir: Pa
         device_id = page.locator("#csvDevice").input_value()
         for case in cases:
             file_path = scenarios_dir / case["filename"]
-            file_path.write_text(case["content"], encoding="utf-8", newline="")
+            file_path.write_text(case["content"], encoding="utf-8")
             page.locator("#csvFile").set_input_files(str(file_path))
             page.locator("#importStatus").evaluate("(element) => { element.textContent = ''; }")
             with page.expect_response(
@@ -1671,7 +1671,6 @@ def _activity_blocked_provenance_failures(page, base_url: str, scenarios_dir: Pa
             "observed_at,event_type,destination_ip,blocked\n"
             f"{stamp},blocked,192.0.2.216,false\n",
             encoding="utf-8",
-            newline="",
         )
         page.locator("#csvFile").set_input_files(str(contradictory))
         with page.expect_response(
