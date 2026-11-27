@@ -2,7 +2,26 @@
 
 Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Las pruebas automatizadas y las sesiones humanas se registran por separado; una ejecución CI no se presenta como si una persona hubiera probado una instalación local.
 
-> **Estado vigente — 27/11/2026:** `main` integra el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado vigente — 27/11/2026:** `main` HEAD `a6088f5ed2239b530d07b484eb60bf8024e1a91f` integra el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 y la primera entrega Zeek están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+
+## Aceptación funcional automatizada — correlación temporal Zeek (PR #200)
+
+**Integración:** `a6088f5ed2239b530d07b484eb60bf8024e1a91f`. **HEAD probado en PR:** `d7b57ada501696c64f0fb76335fdbbd3f561ac69`.
+
+| Control | Evidencia | Resultado |
+|---|---|---|
+| CI multiplataforma | [run 46073256547](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256547), 19 jobs; Python 3.10–3.14 en Ubuntu/Windows/macOS, Node 24, empaquetado y Chromium | Aprobado 19/19 |
+| Chromium/responsive | 9 páginas × 15 tamaños, informe de Actions | Aprobado 135/135 |
+| Seguridad | [run 46073256811](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256811): CodeQL (Python, JavaScript, Actions) + auditoría de dependencias | Aprobado 2/2 |
+| Cadena de suministro | [run 46073256516](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256516): wheel, SBOM/manifiesto y detección de secretos | Aprobado 2/2; firma release omitida en PR |
+| Correlación de inventario y monitor | `test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target` | Coincidencia exacta de activo/IP, UID, contadores, vínculo y nota causal |
+| Hostname de monitor | `test_findings_do_not_resolve_monitor_hostnames_for_zeek_context` | Sin resolución DNS implícita |
+| Repositorio Zeek | `tests/test_findings_activity_repository.py`: activo exacto, IP exacta, IP distinta, fuente/formato/tipo, fuera de ventana, límites de contexto | Cubierto |
+| Límite temporal | `test_zeek_context_query_uses_inclusive_five_minute_boundaries`: −301/−300/+300/+301 s | Acepta ±300; rechaza ±301 |
+| UID y navegación | La API y el enlace Hallazgos → Actividad preservan `source_event_id` y `import_format=zeek_conn_log` | Cubierto |
+| Presentación de Actividad | Chromium comprueba que el estado no contiene `.tag`; se inspeccionaron las capturas del run | Texto plano, sin marco; temas Oscuro/Medio/Claro conservados |
+
+La correlación consulta solo filas de conexiones `manual_import` admitidas por el importador Zeek, con `import_format=zeek_conn_log` y UID `zeek:`. La ventana es ±300 segundos. La relación temporal no demuestra causalidad, ataque, identidad ni causa raíz. Esta cobertura valida la primera entrega integrada; no cierra los criterios ampliados de #197 ni sustituye la aceptación humana 0.10.0.
 
 ## Aceptación funcional automatizada — procedencia de `blocked` (PR #222)
 
