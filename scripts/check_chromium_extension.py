@@ -67,7 +67,7 @@ def _extension_id(context) -> str:
                 parsed = urlsplit(worker.url)
                 if parsed.scheme == "chrome-extension" and parsed.hostname:
                     return parsed.hostname
-        context.wait_for_timeout(200)
+        time.sleep(0.2)
     urls = [worker.url for worker in context.service_workers]
     raise RuntimeError(f"Extension service worker did not start. Workers seen: {urls!r}")
 
@@ -244,7 +244,7 @@ def run_extension_test(extension_dir: Path) -> None:
                 _wait_for_status(popup, "Activo.", "saving the domain exclusion")
                 page.goto("https://sub.example.com/excluded", wait_until="load")
                 page.goto("http://127.0.0.1:8765/private-network-fixture", wait_until="load")
-                context.wait_for_timeout(500)
+                page.wait_for_timeout(500)
                 popup.reload(wait_until="load")
                 events = _wait_for_event_count(popup, 3)
                 _assert(
@@ -283,7 +283,7 @@ def run_extension_test(extension_dir: Path) -> None:
                 popup.locator("#enabled").uncheck()
                 _wait_for_status(popup, "Detenido.", "turning tracking off")
                 page.goto("https://example.com/after-stop", wait_until="load")
-                context.wait_for_timeout(500)
+                page.wait_for_timeout(500)
                 popup.reload(wait_until="load")
                 _assert(_read_events(popup) == [], "A visit after opt-out was recorded.")
                 print("[extension] opt-out stops future capture", flush=True)
