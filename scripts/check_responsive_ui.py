@@ -1548,9 +1548,15 @@ def _activity_synthetic_import_failures(page, base_url: str, scenarios_dir: Path
     except Exception as exc:
         failures.append(f"el recorrido CSV sintético no se completó en Chromium: {exc}")
     finally:
-        # No dejamos la vista en un panel de error ni reutilizamos el archivo inválido.
+        # El screenshot de CI debe conservar la tabla de Eventos ya validada,
+        # no volver al resumen que oculta los estados de procedencia revisados.
         try:
             page.goto(f"{base_url}/activity", wait_until="load", timeout=10000)
+            page.locator('button.section-tab[data-tab-target="activity-events"]').click()
+            page.wait_for_function(
+                "() => document.querySelectorAll('#events tr').length >= 5",
+                timeout=10000,
+            )
         except Exception:
             pass
     return failures
