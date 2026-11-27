@@ -19,33 +19,42 @@ SEARCH_FIXTURE = "netsentinel-smoke-search-phrase"
 PRIVATE_FRAGMENT = "must-not-leak-this-fragment"
 
 
-def _synthetic_response(route, request) -> None:
-    """Fulfil only documented synthetic pages; abort every other network request."""
-    parsed = urlsplit(request.url)
-    host = (parsed.hostname or "").lower()
-    allowed_hosts = {"example.com", "sub.example.com", "www.google.com"}
-    is_loopback_fixture = host == "127.0.0.1"
+def _synthetic_response(blocked_requests: list[str]):
+    """Return a route handler that only fulfils synthetic sites and records blocked requests."""
+    def handle(route, request) -> None:
+        parsed = urlsplit(request.url)
+        if parsed.scheme not in {"http", "https"}:
+            # Browser-internal and extension resources never use the external network.
+            route.continue_()
+            return
 
-    if parsed.scheme == "https" and host in allowed_hosts:
-        route.fulfill(
-            status=200,
-            content_type="text/html; charset=utf-8",
-            body=(
-                "<!doctype html><html lang='en'><head><title>NetSentinel synthetic page</title>"
-                "</head><body><main>synthetic browser fixture</main></body></html>"
-            ),
-        )
-        return
-    if parsed.scheme == "http" and is_loopback_fixture:
-        route.fulfill(
-            status=200,
-            content_type="text/html; charset=utf-8",
-            body="<html><body>loopback fixture</body></html>",
-        )
-        return
+        host = (parsed.hostname or "").lower()
+        allowed_hosts = {"example.com", "sub.example.com", "www.google.com"}
+        is_loopback_fixture = host == "127.0.0.1"
 
-    # Do not silently let a new URL escape this test's synthetic network boundary.
-    route.abort("blockedbyclient")
+        if parsed.scheme == "https" and host in allowed_hosts:
+            route.fulfill(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=(
+                    "<!doctype html><html lang='en'><head><title>NetSentinel synthetic page</title>"
+                    "</head><body><main>synthetic browser fixture</main></body></html>"
+                ),
+            )
+            return
+        if parsed.scheme == "http" and is_loopback_fixture:
+            route.fulfill(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body="<html><body>loopback fixture</body></html>",
+            )
+            return
+
+        # Abort before transmission and fail the test if Chromium tried an unapproved URL.
+        blocked_requests.append(request.url)
+        route.abort("blockedbyclient")
+
+    return handle
 
 
 def _extension_id(context) -> str:
@@ -128,7 +137,8 @@ def run_extension_test(extension_dir: Path) -> None:
             )
             try:
                 context.set_default_timeout(10000)
-                context.route("**/*", _synthetic_response)
+                blocked_requests: list[str] = []
+                context.route("**/*", _synthetic_response(blocked_requests))
                 extension_id = _extension_id(context)
                 extension_url = f"chrome-extension://{extension_id}/popup.html"
 
@@ -241,10 +251,16 @@ def run_extension_test(extension_dir: Path) -> None:
                 popup.reload(wait_until="load")
                 _assert(_read_events(popup) == [], "A visit after opt-out was recorded.")
 
+                _assert(
+                    not blocked_requests,
+                    "Chromium attempted an unapproved HTTP/HTTPS request; all requests must stay inside the synthetic allowlist: "
+                    + repr(blocked_requests),
+                )
                 print(
                     "Chromium extension integration passed: default-off, explicit opt-in, "
                     "synthetic page/search capture, URL sanitization, domain/loopback exclusions, "
-                    "CSV export and clear/opt-out. All HTTP navigations were intercepted."
+                    "CSV export and clear/opt-out. All HTTP navigations were intercepted; "
+                    "no unapproved request was attempted."
                 )
             finally:
                 context.close()
