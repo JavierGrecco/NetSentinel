@@ -17,6 +17,7 @@ CONFIRM_TOKEN = "BORRAR-RAMAS-NETSENTINEL"
 TEMP_BRANCHES = {
     "ops/one-time-branch-cleanup-2026-11",
     "ops/cleanup-command-trigger-2026-11",
+    "fix/cleanup-temp-branch-validation-2026-11",
 }
 PROTECTED = {
     "main",
@@ -189,8 +190,17 @@ def verify(root: Path):
 
     temp_refs = {name: remote[name] for name in TEMP_BRANCHES if name in remote}
     for name, sha in temp_refs.items():
-        if sha not in history:
-            raise CleanupError(f"La rama temporal {name} no está integrada en main.")
+        merged = [
+            pr for pr in closed_prs
+            if pr.get("merged_at")
+            and (pr.get("head") or {}).get("ref") == name
+            and (pr.get("head") or {}).get("sha") == sha
+        ]
+        if len(merged) != 1:
+            raise CleanupError(f"La rama temporal {name} no tiene una única PR fusionada con el mismo HEAD.")
+        merge_sha = merged[0].get("merge_commit_sha")
+        if not merge_sha or merge_sha not in history:
+            raise CleanupError(f"El merge de la PR temporal de {name} no está en main.")
     return remaining, absent, remote["main"], protected_present, temp_refs
 
 
