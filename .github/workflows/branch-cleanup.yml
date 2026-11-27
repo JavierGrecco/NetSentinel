@@ -32,17 +32,12 @@ jobs:
   cleanup:
     name: Validate and clean audited branch refs
     if: >-
-      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' ||
       (
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event_name == 'issue_comment' &&
-          github.event.action == 'created' &&
-          github.event.issue.number == 221 &&
-          github.event.issue.pull_request == null &&
-          github.event.comment.user.login == 'JavierGrecco' &&
-          startsWith(github.event.comment.body, '/netsentinel-branch-cleanup ')
-        )
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 221 &&
+        github.event.comment.user.id == 48033633 &&
+        startsWith(github.event.comment.body, '/netsentinel-branch-cleanup ')
       )
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -90,8 +85,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           COMMAND_BODY: ${{ github.event.comment.body }}
+          COMMAND_AUTHOR_ID: ${{ github.event.comment.user.id }}
+          COMMAND_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           set -euo pipefail
+          test "$COMMAND_AUTHOR_ID" = "48033633"
+          test "$COMMAND_ISSUE_NUMBER" = "221"
           if [ "$COMMAND_BODY" = "/netsentinel-branch-cleanup dry-run" ]; then
             python3 scripts/netsentinel_branch_cleanup.py --dry-run
           elif [[ "$COMMAND_BODY" == "/netsentinel-branch-cleanup delete: "* ]]; then
