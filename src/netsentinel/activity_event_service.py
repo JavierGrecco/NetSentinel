@@ -197,18 +197,31 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         if blocked_observation not in allowed_observations:
             raise ValueError("blocked_observation debe ser un estado de procedencia admitido.")
         if blocked_value_present:
-            blocked, _ = parse_blocked_value(blocked_value)
+            blocked, parsed_observation = parse_blocked_value(blocked_value)
+            if blocked_observation == "event_type_blocked":
+                if event_type != "blocked" or parsed_observation != "empty":
+                    raise ValueError(
+                        "event_type_blocked requiere event_type=blocked y un valor blocked ausente o vacío."
+                    )
+                blocked = True
+            elif blocked_observation != "legacy_unknown" and blocked_observation != parsed_observation:
+                raise ValueError("blocked_observation no coincide con el valor informado en blocked.")
         else:
             # El estado preservado permite reconstruir el booleano heredado en CSV.
             blocked = blocked_observation in {"reported_true", "event_type_blocked"}
-        if blocked_observation in {"reported_true", "event_type_blocked"} and not blocked:
-            raise ValueError("blocked contradice blocked_observation.")
-        if blocked_observation in {"reported_false", "missing", "empty"} and blocked:
-            raise ValueError("blocked contradice blocked_observation.")
+
         if blocked_observation == "event_type_blocked" and event_type != "blocked":
             raise ValueError("event_type_blocked requiere event_type=blocked.")
-        if event_type == "blocked" and blocked_observation in {"reported_false", "missing", "empty"}:
-            raise ValueError("event_type=blocked contradice el estado de blocked.")
+
+        if event_type == "blocked":
+            if blocked_observation == "reported_false":
+                raise ValueError("event_type=blocked no puede declarar blocked=false.")
+            if blocked_observation in {"missing", "empty"}:
+                # El tipo de evento es evidencia positiva aunque la columna booleana
+                # falte o llegue vacía; conserva esa procedencia en vez de inventar
+                # un false explícito.
+                blocked_observation = "event_type_blocked"
+                blocked = True
     elif blocked_value_present:
         blocked, blocked_observation = parse_blocked_value(blocked_value)
     else:
