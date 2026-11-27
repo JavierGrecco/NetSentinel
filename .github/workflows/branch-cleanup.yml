@@ -41,8 +41,8 @@ jobs:
 
       - name: Verify GitHub CLI and repository context
         env:
-          GH_TOKEN: ${ github.token }}
-          GH_REPO: ${ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           gh auth status
@@ -52,16 +52,16 @@ jobs:
       - name: Dry-run — read-only audit
         if: inputs.mode == 'dry-run'
         env:
-          GH_TOKEN: ${ github.token }}
-          GH_REPO: ${ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: python3 scripts/netsentinel_branch_cleanup.py --dry-run
 
       - name: Delete — require exact confirmation phrase
         if: inputs.mode == 'delete'
         env:
-          GH_TOKEN: ${ github.token }}
-          GH_REPO: ${ github.repository }}
-          CONFIRMATION: ${ inputs.confirmation }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
           python3 scripts/netsentinel_branch_cleanup.py \
