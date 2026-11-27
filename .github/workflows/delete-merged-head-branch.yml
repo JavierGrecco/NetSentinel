@@ -1,0 +1,67 @@
+name: Delete merged head branch
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: delete-merged-head-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  delete-merged-head:
+    name: Delete unchanged same-repository head after merge
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # pull_request_target runs in the base-repository context. Never check out
+      # or execute code from the PR head in this privileged job.
+      - name: Check out trusted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Delete only the exact merged head SHA
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+        run: |
+          set -euo pipefail
+
+          test "$MERGED" = "true"
+          test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"
+          test "$BASE_BRANCH" = "main"
+          test -n "$HEAD_BRANCH"
+          test "$HEAD_BRANCH" != "main"
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          remote_line="$(git ls-remote --heads origin "refs/heads/$HEAD_BRANCH")"
+          if [[ -z "$remote_line" ]]; then
+            echo "La rama fuente ya no existe; no hay nada que eliminar."
+            exit 0
+          fi
+
+          actual_sha="$(printf '%s\\n' "$remote_line" | cut -f1)"
+          if [[ "$actual_sha" != "$HEAD_SHA" ]]; then
+            echo "::warning::La rama fuente cambió después del merge; se conserva por seguridad."
+            exit 0
+          fi
+
+          # The lease closes the race between ls-remote and the delete push.
+          git push --porcelain \
+            "--force-with-lease=refs/heads/$HEAD_BRANCH:$HEAD_SHA" \
+            origin ":refs/heads/$HEAD_BRANCH"
