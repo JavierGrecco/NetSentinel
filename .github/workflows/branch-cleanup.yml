@@ -95,7 +95,7 @@ jobs:
           if [ "$COMMAND_BODY" = "/netsentinel-branch-cleanup dry-run" ]; then
             python3 scripts/netsentinel_branch_cleanup.py --dry-run
           elif [[ "$COMMAND_BODY" == "/netsentinel-branch-cleanup delete: "* ]]; then
-            confirmation="\${COMMAND_BODY#"/netsentinel-branch-cleanup delete: "}"
+            confirmation=$(echo "$COMMAND_BODY" | sed "s#^/netsentinel-branch-cleanup delete: ##")
             python3 scripts/netsentinel_branch_cleanup.py \
               --execute \
               --confirm BORRAR-RAMAS-NETSENTINEL \
