@@ -1,19 +1,24 @@
 # Estado del proyecto — NetSentinel
 
-**Corte de portfolio:** 26 de noviembre de 2026  \
-**Rama canónica:** `main` · último commit documental de este corte: [`8df3f765`](https://github.com/JavierGrecco/NetSentinel/commit/8df3f765414b3bf0d875e6063f4964cbf0e9a14a) (actualiza este estado y el README; no modifica el runtime).
+**Corte de estado:** 27 de noviembre de 2026  
+**Rama canónica:** main · HEAD [956ceb4](https://github.com/JavierGrecco/NetSentinel/commit/956ceb442fe21aae3d965e55c1b13d3a7baa2060).
 
-## Situación verificada — 26 de noviembre de 2026
+## Situación verificada — 27 de noviembre de 2026
 
-- **Estado del producto:** desarrollo activo. No se declara una versión estable; la aceptación manual integral y la comprobación efectiva de las reglas de integración de `main` siguen pendientes.
-- **PR #212 — registro semántico CSV/Zeek:** abierta y no integrada. Sus ejecuciones visibles de CI, análisis de seguridad y cadena de suministro terminaron correctamente sobre el HEAD de esa PR (`ab012b2`), pero la rama conserva como base un SHA anterior de `main`; requiere actualizarse y volver a validarse antes de considerar su integración.
-- **PR #200 — correlación de contexto Zeek:** abierta en Draft y no integrada. También requiere actualizar su base y completar las validaciones previstas.
-- **PR #208 — presentación profesional:** integrada; no debe aparecer como una PR abierta.
-- **Mantenimiento:** hay PRs abiertas de Dependabot para FastAPI (#215), CodeQL Actions (#213), Playwright (#217) y MaxMindDB (#218). No se consideran integradas hasta su merge.
-- **Alcance:** las funciones de #212 y #200 que todavía están en PR no se deben atribuir a `main`. La descripción pública del README se limita a las capacidades que figuran en la rama canónica.
-- **Evidencia:** los checks automatizados aprobados corresponden a sus SHA concretos. No sustituyen la aceptación manual, pruebas de instalación/recuperación ni revisión de accesibilidad.
+- **Estado del producto:** desarrollo activo. No declarar 0.10.0 estable hasta completar aceptación manual integral, instalación limpia, backup/restauración, accesibilidad y verificación administrativa de la gobernanza de main.
+- **PR #212 — núcleo semántico CSV/Zeek:** integrada mediante squash en 956ceb4. El HEAD previo al merge (2f5e0d1) pasó CI 18/18, Security Analysis 2/2 y Supply Chain (wheel, detección de secretos, SBOM y manifiesto; firma omitida por tratarse de una PR).
+- **Motor semántico integrado:** perfiles CSV/Zeek, catálogo determinista, alias explícitos, sugerencias no automáticas, detección de colisiones, inspección tipada de valores y análisis de magnitudes con unidades explícitas. No se ha extendido todavía a Monitorización, Inventario o Forense; las conversiones no se aplican automáticamente a valores persistidos.
+- **Limitación conocida de Actividad:** el campo heredado blocked sigue reduciendo ausencia/vacío a booleano falso en el contrato actual. La evolución compatible y su migración están en [issue #220](https://github.com/JavierGrecco/NetSentinel/issues/220); no afirmar que esta distinción esté resuelta.
+- **PR #200 — correlación de contexto Zeek:** continúa abierta en Draft. Su rama se reaplicó sobre el HEAD actual de main en la misma PR. HEAD actualizado: 606c6b587e30c04b0e7c5a515f515263c61d2ddc; base 956ceb442fe21aae3d965e55c1b13d3a7baa2060; comparación 1 ahead / 0 behind. CI, análisis de seguridad y supply chain están en ejecución sobre ese SHA. La correlación no está integrada ni disponible en main hasta que supere las puertas y se fusione.
+- **PRs abiertas de mantenimiento:** #213 CodeQL Actions, #215 FastAPI, #217 Playwright y #218 MaxMindDB. Sus heads deben actualizarse/revalidarse contra main antes de integrarse; los checks de sus bases anteriores no son evidencia suficiente.
+- **Ramas remotas:** el corte consultado tiene 193 referencias incluidas main, 189 SHA distintos y cuatro grupos de referencias con SHA duplicado. Solo cinco ramas están asociadas a PRs abiertas en este corte: #200 y las cuatro de mantenimiento. Las otras 187 referencias requieren auditoría de contenido exclusivo y de estado de integración; no borrar por nombre o antigüedad.
+- **Gobernanza:** la rama aparece como protected: false; el ruleset activo ID 25281660 no declara checks obligatorios ni aprobaciones requeridas. La protección efectiva de main sigue pendiente de corrección/verificación administrativa.
+- **Forense:** el registro de casos, evidencias, hashes, auditoría y borradores de informes sigue siendo experimental. No está validado para ser registro oficial ni sustituye procedimientos institucionales.
+- **Acceso remoto e inteligencia externa:** continúan como integraciones planificadas. No se almacenan credenciales de proveedores externos ni se envían evidencias a terceros por defecto.
+- **Seguimiento del plan:** [issue temporal #219](https://github.com/JavierGrecco/NetSentinel/issues/219). El issue es el tablero de coordinación; el plan durable permanece en ROADMAP.md e IMPLEMENTATION_PLAN.md.
 
 La fotografía detallada que sigue se conserva como **registro histórico del 3 de noviembre de 2026**. Sus listados de ramas, PR y ejecuciones no representan el estado vivo actual.
+
 
 ## Histórico: fotografía de main — 3 de noviembre de 2026
 
