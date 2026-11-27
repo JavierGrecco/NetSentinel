@@ -22,7 +22,13 @@ device_agent:"Qué necesitás: instalar y configurar en el dispositivo un agente
 help.textContent=guidance[$("source").value]||"Elegí una fuente para consultar los requisitos y límites.";
 }
 function deviceName(d){return d.display_name||d.ip_address||("Dispositivo "+d.id);}
-function blockedLabel(e){const status=e.blocked_observation;const labels={reported_true:"Bloqueado",event_type_blocked:"Bloqueado por tipo de evento",reported_false:"No bloqueado",missing:"No informado (campo ausente)",empty:"No informado (campo vacío)",legacy_unknown:"No informado (registro histórico)"};if(status==="legacy_unknown"&&e.blocked)return '<span class="tag">Bloqueado (registro histórico; procedencia desconocida)</span>';if(!status)return e.blocked?'<span class="tag">Bloqueado</span>':"Observado";const label=labels[status]||"No informado";return status==="reported_true"||status==="event_type_blocked"?'<span class="tag">'+esc(label)+"</span>":esc(label);}
+function blockedLabel(e){
+const status=e.blocked_observation;
+const labels={reported_true:"Bloqueado",event_type_blocked:"Bloqueado por tipo de evento",reported_false:"No bloqueado",missing:"No informado (campo ausente)",empty:"No informado (campo vacío)",legacy_unknown:"No informado (registro histórico)"};
+if(status==="legacy_unknown"&&e.blocked)return esc("Bloqueado (registro histórico; procedencia desconocida)");
+if(!status)return e.blocked?"Bloqueado":"Observado";
+return esc(labels[status]||"No informado");
+}
 function fillSelect(id,devices,placeholder,selected){const s=$(id),old=selected??s.value;s.innerHTML="";const first=document.createElement("option");first.value="";first.textContent=placeholder;s.appendChild(first);for(const d of devices){const o=document.createElement("option");o.value=String(d.id);o.textContent=deviceName(d)+" · "+d.ip_address;s.appendChild(o);}if([...s.options].some(o=>o.value===old))s.value=old;}
 function render(){ $("summary").innerHTML='<div class="stat"><b>'+state.active_sessions+'</b><span>Ventanas temporales abiertas</span></div><div class="stat"><b>'+state.total_events+'</b><span>Eventos conservados</span></div><div class="stat"><b>'+state.blocked_events+'</b><span>Eventos marcados como bloqueados</span></div><div class="stat"><b>'+state.retention_days+' días</b><span>Retención</span></div>';
 $("domains").innerHTML=state.top_domains&&state.top_domains.length?state.top_domains.map(d=>'<div class="item"><strong>'+esc(d.domain)+'</strong><div class="meta">'+Number(d.events)+' evento(s) · último: '+esc(when(d.last_seen))+'</div></div>').join(""):'<div class="empty">Todavía no hay dominios registrados.</div>';

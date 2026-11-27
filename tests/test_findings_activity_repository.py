@@ -143,3 +143,26 @@ def test_zeek_context_query_rejects_csv_or_legacy_rows_even_with_zeek_prefixed_i
     ])
 
     assert rows == []
+
+
+@pytest.mark.parametrize(
+    ("offset_seconds", "expected_match"),
+    [(-301, False), (-300, True), (300, True), (301, False)],
+)
+def test_zeek_context_query_uses_inclusive_five_minute_boundaries(
+    monkeypatch, tmp_path, offset_seconds, expected_match
+):
+    """La ventana es inclusiva en ±300 s y no admite registros a ±301 s."""
+    anchor = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+    observed = anchor + timedelta(seconds=offset_seconds)
+    device_id, _observed_stamp = _database_with_zeek(
+        monkeypatch, tmp_path, observed_at=observed
+    )
+
+    rows = findings_activity_repository.get_zeek_activity_contexts([
+        _context(device_id=device_id, anchor_at=_stamp(anchor)),
+    ])
+
+    assert bool(rows) is expected_match
+    if expected_match:
+        assert rows[0]["time_delta_seconds"] == pytest.approx(300, abs=0.01)

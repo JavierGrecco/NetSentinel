@@ -1726,6 +1726,11 @@ def _activity_blocked_provenance_failures(page, base_url: str, scenarios_dir: Pa
                 failures.append(
                     f"la fila {case['ip']} no muestra {case['label']!r}: {rendered!r}"
                 )
+            status_cell = row.locator("td").nth(7)
+            if status_cell.locator(".tag").count():
+                failures.append(
+                    f"el estado de {case['ip']} debe ser texto informativo, sin marco tipo botón"
+                )
 
         exported = page.request.get(
             f"{base_url}/api/activity/export.csv?device_id={device_id}"
