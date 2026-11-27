@@ -1,6 +1,6 @@
 # Correlación de evidencia en Hallazgos
 
-**Estado:** primera entrega integrada en `main` mediante PR #200, squash `a6088f5ed2239b530d07b484eb60bf8024e1a91f` (27/11/2026). Validada en el HEAD de PR `d7b57ada501696c64f0fb76335fdbbd3f561ac69`: CI 19/19, Security Analysis 2/2, Supply Chain 2/2 y Chromium 135/135. No sustituye la aceptación manual de 0.10.0 ni convierte a NetSentinel en un SIEM/NDR.
+**Estado:** primera implementación en una rama de trabajo; pendiente de revisión y CI antes de decidir si se integra. No sustituye la aceptación manual ni convierte a NetSentinel en un SIEM/NDR.
 
 ## Qué hace esta primera entrega
 
@@ -27,14 +27,17 @@ La correlación usa únicamente filas ya guardadas y marcadas por el importador 
 
 El filtro de Actividad exige un ID exacto de origen, lo valida como texto acotado y lo pasa como parámetro SQL. Se mantiene separado de los filtros de dispositivo, fuente, fecha y tipo.
 
-## Verificación registrada
+## Verificación
 
-La PR #200 se integró en `main` mediante [`a6088f5ed2239b530d07b484eb60bf8024e1a91f`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f). En el HEAD final de la PR se aprobaron:
+La suite de esta rama debe cubrir:
 
-- [CI 19/19](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256547), incluida Chromium 135/135;
-- [Security Analysis 2/2](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256811);
-- [Supply Chain Security 2/2](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073256516), con firma de procedencia omitida en forma esperada al no tratarse de un release.
+- coincidencia temporal por ID de activo;
+- coincidencia por IP literal del objetivo del monitor;
+- ausencia de coincidencia por IP distinta o fuera de ventana;
+- exclusión de fuentes que no sean conexiones Zeek importadas;
+- preservación de dirección, UID, contadores y cero frente a desconocido;
+- límites de registros/contextos y filtro de origen exacto;
+- navegación segura desde Hallazgos a Actividad, sin usar `innerHTML` para datos de la fuente;
+- compatibilidad de formato del informe existente y límites de arquitectura.
 
-Cobertura específica: `test_findings_link_exact_zeek_connection_to_inventory_and_monitor_target`, `test_findings_do_not_resolve_monitor_hostnames_for_zeek_context`, el conjunto `tests/test_findings_activity_repository.py` (incluida `test_zeek_context_query_uses_inclusive_five_minute_boundaries`) y la prueba Chromium que asegura que los estados de procedencia en Actividad sean texto simple, no componentes tipo botón.
-
-La revisión ampliada de #197 sigue abierta para IP reasignadas/ambiguas, timestamps inválidos, registros antiguos, reimportación duplicada, faltantes/cero y exportación portátil reproducible. La aceptación general 0.10.0 también sigue pendiente; ver [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md), [issue #197](https://github.com/JavierGrecco/NetSentinel/issues/197) e [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
+Los tests automatizados no sustituyen la revisión manual visual y de accesibilidad del producto. La implementación no debe fusionarse a `main` hasta cerrar las puertas de estabilización actuales, incluidas aceptación guiada y protección efectiva del repositorio. Seguimiento: [issue #197](https://github.com/JavierGrecco/NetSentinel/issues/197).

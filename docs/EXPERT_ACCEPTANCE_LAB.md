@@ -1,8 +1,7 @@
 # Laboratorio consolidado de aceptación para expertos
 
-**Rama canónica:** `main`; última integración funcional `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.  
-**Laboratorio integrado:** 13 pasos evaluables, incluyendo Hallazgos–Zeek (`findings-correlation`), desde el merge de PR #200.  
-**Correlación Zeek:** PR #200 integrada mediante [`a6088f5ed2239b530d07b484eb60bf8024e1a91f`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f); CI 19/19, Security 2/2, Supply Chain 2/2 y Chromium 135/135 en el HEAD de la PR.
+**Rama canónica:** `main`.  
+**Laboratorio integrado:** 13 pasos evaluables, incluyendo Hallazgos–Zeek (`findings-correlation`).  
 **Procedencia de `blocked`:** BPR-01–BPR-08 están cubiertos por pruebas automatizadas API/CSV/UI en Chromium, reimportación a otro dispositivo y migración/backup SQLite (PR #222). El artefacto conserva informe y capturas; no se afirma una instalación humana local.  
 **Estado general:** la aceptación automatizada BPR está cerrada; la aceptación integral 0.10.0, accesibilidad y pruebas operativas multiplataforma siguen pendientes. Separá evidencia automatizada de una sesión humana en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
