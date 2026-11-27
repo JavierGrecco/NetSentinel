@@ -250,6 +250,7 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.database_schema",
         "netsentinel.network_models",
         "netsentinel.events_repository",
+        "netsentinel.asset_repository",
         "netsentinel.inventory_repository",
         "netsentinel.dashboard_repository",
         "netsentinel.data_export_service",
@@ -598,13 +599,17 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/scan",
         "/api/devices/{device_id}/dns-reverse",
         "/api/devices/{device_id}",
+        "/api/assets",
+        "/api/assets/{asset_id}",
+        "/api/devices/{device_id}/asset",
+        "/api/devices/{device_id}/asset-history",
         "/api/events/{event_id}",
         "/api/export/devices.csv",
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
     } <= paths
-    assert sum(len(routes) for routes in route_groups) == 17
-    assert len(paths) == 17
+    assert sum(len(routes) for routes in route_groups) == 23
+    assert len(paths) == 23
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
