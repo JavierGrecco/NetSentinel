@@ -18,6 +18,7 @@ TEMP_BRANCHES = {
     "ops/one-time-branch-cleanup-2026-11",
     "ops/cleanup-command-trigger-2026-11",
     "fix/cleanup-temp-branch-validation-2026-11",
+    "security/codeql-javascript-actions-2026-11",
 }
 PROTECTED = {
     "main",
