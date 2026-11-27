@@ -271,6 +271,68 @@ def test_csv_import_distinguishes_missing_and_empty_blocked_values(client):
     assert by_ip["192.0.2.32"]["blocked_observation"] == "empty"
 
 
+def test_blocked_provenance_csv_export_import_round_trip_preserves_all_states(client):
+    """La exportación y reimportación conserva valores booleanos y su procedencia."""
+    selected = device_id(client)
+    database.record_scan(
+        [Neighbor("192.168.5.21", "AA:BB:CC:DD:EE:92", "en0")]
+    )
+    second = next(
+        item["id"]
+        for item in client.get("/api/devices").json()
+        if item["ip_address"] == "192.168.5.21"
+    )
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    csv_data = (
+        "observed_at,event_type,destination_ip,blocked,blocked_observation\\n"
+        f"{stamp},connection,192.0.2.41,0,missing\\n"
+        f"{stamp},connection,192.0.2.42,0,empty\\n"
+        f"{stamp},connection,192.0.2.43,0,reported_false\\n"
+        f"{stamp},connection,192.0.2.44,1,reported_true\\n"
+        f"{stamp},blocked,192.0.2.45,1,event_type_blocked\\n"
+        f"{stamp},connection,192.0.2.46,1,legacy_unknown\\n"
+    )
+    imported = client.post(
+        "/api/activity/import",
+        json={"device_id": selected, "csv_data": csv_data},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 6
+
+    exported = client.get(
+        "/api/activity/export.csv",
+        params={"device_id": selected},
+    )
+    assert exported.status_code == 200, exported.text
+    exported_text = exported.text.lstrip("\\ufeff")
+    rows = list(csv.DictReader(io.StringIO(exported_text)))
+    assert {row["blocked_observation"] for row in rows} == {
+        "missing", "empty", "reported_false", "reported_true",
+        "event_type_blocked", "legacy_unknown",
+    }
+
+    restored_import = client.post(
+        "/api/activity/import",
+        json={"device_id": second, "csv_data": exported_text},
+    )
+    assert restored_import.status_code == 200, restored_import.text
+    assert restored_import.json()["imported"] == 6
+
+    events = client.get(f"/api/activity?device_id={second}").json()["events"]
+    by_ip = {event["destination_ip"]: event for event in events}
+    expected = {
+        "192.0.2.41": (0, "missing"),
+        "192.0.2.42": (0, "empty"),
+        "192.0.2.43": (0, "reported_false"),
+        "192.0.2.44": (1, "reported_true"),
+        "192.0.2.45": (1, "event_type_blocked"),
+        "192.0.2.46": (1, "legacy_unknown"),
+    }
+    for address, (blocked, observation) in expected.items():
+        assert by_ip[address]["blocked"] == blocked
+        assert by_ip[address]["blocked_observation"] == observation
+
+
 def test_csv_import_is_idempotent_and_skips_duplicate_rows(client):
     selected = device_id(client)
     stamp = datetime.now(timezone.utc).isoformat()
