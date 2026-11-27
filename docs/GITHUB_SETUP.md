@@ -32,9 +32,9 @@ La documentación de GitHub exige que un patrón de inclusión alcance las refs 
 
 ### Checks obligatorios recomendados para Pull Requests
 
-La matriz vigente tiene **26 contextos aplicables**: 22 de CI, 2 de Security Analysis y 2 de Supply Chain. Confirmá los nombres en una PR reciente antes de guardarlos, ya que pueden cambiar en futuras actualizaciones.
+La matriz vigente tiene **23 contextos aplicables**: 19 de CI, 2 de Security Analysis y 2 de Supply Chain. Confirmá los nombres en una PR reciente antes de guardarlos, ya que pueden cambiar en futuras actualizaciones.
 
-**CI — 22 checks**
+**CI — 19 checks**
 
 Matriz Python (15 combinaciones):
 
@@ -60,11 +60,6 @@ Otras verificaciones de CI:
 - `Wheel metadata and static assets`
 - `Browser extension tests (Node 24)`
 - `Responsive UI / Chromium`
-- `Installed wheel smoke / ubuntu-latest`
-- `Installed wheel smoke / windows-latest`
-- `Installed wheel smoke / macos-latest`
-
-La matriz `Installed wheel smoke` construye un wheel por plataforma, lo instala en un entorno virtual limpio, inicia la aplicación desde fuera del checkout con almacenamiento temporal aislado y comprueba health, cabeceras, páginas, estáticos y API inicial. No reemplaza la aceptación humana ni las pruebas de la extensión en Chrome/Edge.
 
 **Seguridad — 2 checks**
 

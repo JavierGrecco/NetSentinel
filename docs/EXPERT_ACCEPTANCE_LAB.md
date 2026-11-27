@@ -6,19 +6,6 @@
 **Procedencia de `blocked`:** BPR-01–BPR-08 están cubiertos por pruebas automatizadas API/CSV/UI en Chromium, reimportación a otro dispositivo y migración/backup SQLite (PR #222). El artefacto conserva informe y capturas; no se afirma una instalación humana local.  
 **Estado general:** la aceptación automatizada BPR está cerrada; la aceptación integral 0.10.0, accesibilidad y pruebas operativas multiplataforma siguen pendientes. Separá evidencia automatizada de una sesión humana en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
-## Comprobación automatizada del paquete distribuible
-
-La CI incluye `scripts/smoke_installed_wheel.py` (PR #231). En Ubuntu, Windows y macOS construye el wheel, lo instala en un entorno virtual nuevo y ejecuta la aplicación desde una carpeta temporal fuera del repositorio. Verifica versión del entry point, health/cabeceras, páginas, recursos estáticos, endpoints iniciales y exportación SQLite con datos temporales.
-
-Para repetir el smoke test localmente desde la raíz del repositorio:
-
-```bash
-python -m pip wheel . --no-deps --wheel-dir dist
-python scripts/smoke_installed_wheel.py --wheel-dir dist
-```
-
-Se instala el wheel con sus dependencias de runtime en un venv temporal y se elimina el directorio de datos de prueba al terminar. Requiere acceso a los índices de paquetes para instalar dependencias. No sustituye la instalación manual con los launchers, la actualización/restauración ni la aceptación de accesibilidad.
-
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
 El asistente reemplaza la lista de casillas dispersas por un recorrido de **13 pasos evaluables, uno por pantalla**. Explica qué se comprueba y por qué importa; abre el módulo necesario en otra pestaña sin cerrar la guía; muestra resultados de API en las pruebas automáticas de solo lectura; y permite registrar cada resultado como correcto, fallido o no comprobado. El progreso y las notas se guardan en el navegador, con un indicador visible y una señal cuando se recupera una sesión anterior. Las fases alcanzadas permiten volver a un paso sin reiniciar el recorrido; en el resumen, cada fila tiene una acción para revisar directamente ese paso y un acceso al primer pendiente o con incidencias. La guía no envía `POST /api/scan` ni inicia descubrimientos.

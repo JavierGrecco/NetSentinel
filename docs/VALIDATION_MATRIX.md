@@ -4,25 +4,6 @@ Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguim
 
 > **Estado vigente — 27/11/2026:** El commit funcional `a6088f5ed2239b530d07b484eb60bf8024e1a91f` integrado en `main` reúne el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 y la primera entrega Zeek están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
-## Validación automatizada del wheel instalado — PR #231
-
-**HEAD probado:** `ade8ec02edc172d3cc38cd227764d7583235cbec`. **Integración:** `fdc5ce43435b7a4fa0def8c7300ec1f0d445cd7f`.
-
-| Plataforma | Prueba | Resultado |
-|---|---|---|
-| Ubuntu latest | Construcción del wheel, venv limpio, instalación del wheel con dependencias de runtime, CLI, arranque fuera del checkout, health/cabeceras, páginas, estáticos, API vacía y exportación inicial | Aprobado |
-| Windows latest | Mismo recorrido con venv/entry point y proceso nativos de Windows | Aprobado |
-| macOS latest | Mismo recorrido con venv/entry point y proceso nativos de macOS | Aprobado |
-
-Evidencia de PR #231:
-- CI **22/22**, incluidos los tres jobs de wheel instalado y Chromium 135/135: [run 46078010482](https://github.com/JavierGrecco/NetSentinel/actions/runs/46078010482).
-- Security Analysis **2/2**: [run 46078010452](https://github.com/JavierGrecco/NetSentinel/actions/runs/46078010452).
-- Supply Chain Security: dos trabajos aplicables aprobados; la firma se omitió por no ser un release: [run 46078010605](https://github.com/JavierGrecco/NetSentinel/actions/runs/46078010605).
-
-El proceso no usa la copia de código del checkout: ejecuta desde un directorio temporal, elimina `PYTHONPATH`, usa un venv nuevo y una base temporal. Comprueba que el arranque no genere dispositivos ni escaneos y no inicia descubrimiento de red. El script reproducible es `scripts/smoke_installed_wheel.py`.
-
-**Límite:** no equivale a una persona instalando el paquete desde cero, ejecutando los launchers reales, actualizando una instalación anterior, restaurando una copia manualmente o usando la aplicación con tecnologías de asistencia. Esas puertas siguen pendientes.
-
 ## Aceptación funcional automatizada — correlación temporal Zeek (PR #200)
 
 **Integración:** `a6088f5ed2239b530d07b484eb60bf8024e1a91f`. **HEAD probado en PR:** `d7b57ada501696c64f0fb76335fdbbd3f561ac69`.
