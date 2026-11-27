@@ -3,8 +3,8 @@
 **Corte de documentación:** 27/11/2026.  
 **Rama canónica:** `main`, HEAD `a0f4a7e53ad8fbb197f47d29050b0d1f18264197`.  
 **Laboratorio integrado:** la versión actualmente disponible en `main` contiene 12 pasos evaluables. La PR #200 agrega el paso `findings-correlation`; el recorrido final será de 13 pasos cuando se integre.  
-**Procedencia de `blocked`:** la PR #222 está en Draft y su rama ya está sincronizada con el `main` actual. BPR-01–BPR-08 siguen pendientes de aceptación manual local con datos sintéticos. Los checks automatizados cubren regresiones, pero no prueban aceptación visual/operativa humana.  
-**Estado general:** no marcar casillas manuales a partir de CI; registrar SHA exacto, SO, navegador, fecha, resultado y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
+**Procedencia de `blocked`:** la PR #222 cubrió BPR-01–BPR-08 mediante API/CSV/UI en Chromium, reimportación a otro dispositivo y migración/backup SQLite. En el SHA `893e57ce` pasaron CI 19/19, Security Analysis 2/2 y Supply Chain 2/2; el artefacto de Chromium guarda informe y capturas. No se afirma una instalación humana en equipo local.  
+**Estado general:** la aceptación automatizada BPR está cerrada; la aceptación integral 0.10.0, accesibilidad y pruebas operativas multiplataforma siguen pendientes. Separá siempre evidencia automatizada de una sesión humana en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 

@@ -1,25 +1,34 @@
-# Matriz de validación manual
+# Matriz de validación manual y automatizada
 
-Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Una prueba es **pendiente** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI.
+Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Las pruebas automatizadas y las sesiones humanas se registran por separado; una ejecución CI no se presenta como si una persona hubiera probado una instalación local.
 
-> **Estado vigente — 27/11/2026:** `main` está en `a0f4a7e`; la funcionalidad integrada más reciente es el núcleo semántico CSV/Zeek (#212). La PR #222 continúa en Draft y su rama se sincronizó con el main actual; BPR-01–BPR-08 siguen pendientes. La PR #200 sigue en Draft y añade correlación Hallazgos–Zeek; el laboratorio integrado tiene 12 pasos y llegará a 13 cuando #200 se integre. Usá una base aislada y datos sintéticos. Consultá el HEAD y los checks vigentes en cada PR antes de probar; los resultados de SHA anteriores no certifican un nuevo HEAD. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado vigente — 27/11/2026:** `main` está en `a0f4a7e`; la funcionalidad integrada más reciente es el núcleo semántico CSV/Zeek (#212). #222 cubrió BPR-01–BPR-08 mediante pruebas automatizadas sobre el SHA `893e57ce`; su integración está pendiente. #200 sigue en Draft y añade correlación Hallazgos–Zeek; el laboratorio integrado tiene 12 pasos y llegará a 13 cuando #200 se integre. La aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
-## Aceptación manual específica — procedencia de `blocked` (PR #222)
+## Aceptación funcional automatizada — procedencia de `blocked` (PR #222)
 
-Todas estas comprobaciones siguen **pendientes** hasta ejecutarse sobre la aplicación en una base aislada. Ejecutar con el procedimiento de [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md) y registrar una sola sesión con el SHA exacto.
+<badge color="success">8/8 criterios cubiertos</badge>
 
-- [ ] BPR-01 — CSV sin columna `blocked`: persistir `missing` y mostrar “No informado (campo ausente)”.
-- [ ] BPR-02 — CSV con celda `blocked` vacía: persistir `empty` y mostrar “No informado (campo vacío)”.
-- [ ] BPR-03 — CSV con `blocked=false`: persistir `reported_false` y mostrar “No bloqueado”.
-- [ ] BPR-04 — Evento de tipo `blocked` sin booleano: reconocer `event_type_blocked`; rechazar la contradicción explícita `blocked=false`.
-- [ ] BPR-05 — Exportar e importar en otro dispositivo/base aislada; mantener `missing`, `empty` y `reported_false` sin inferencias.
-- [ ] BPR-06 — Migrar una copia de base anterior: conservar ambos valores históricos 0/1 y asignar `legacy_unknown` sin reclasificarlos.
-- [ ] BPR-07 — Mostrar un histórico con `blocked=1` y `legacy_unknown` como bloqueado con procedencia desconocida; no como no informado.
-- [ ] BPR-08 — Backup/restauración de la base migrada: conservar booleanos y estados de procedencia.
+**Decisión de validación — 27/11/2026:** para esta migración determinista, se acepta la cobertura automatizada E2E y de persistencia como puerta de integración, en lugar de exigir que una persona repita manualmente los ocho casos en una instalación local. Esto **no equivale** a afirmar que se haya realizado una instalación manual en el equipo de un usuario; la aceptación integral 0.10.0 sigue pendiente.
 
-**Cobertura automatizada asociada (no equivale a aceptación manual):** BPR-01–BPR-04 y BPR-07 se ejercitan en la regresión Chromium `scripts/check_responsive_ui.py`; BPR-05 en `test_blocked_provenance_csv_export_import_round_trip_preserves_all_states`; BPR-06 y BPR-08 en `test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown`. CI debe pasar en el HEAD probado y las casillas manuales permanecen pendientes hasta completar la sesión local.
+| Criterio | Evidencia automatizada | Resultado |
+|---|---|---|
+| BPR-01 — columna ausente | Chromium: importar, consultar API, leer fila en Eventos y exportar CSV | Aprobado |
+| BPR-02 — celda vacía | Chromium: importar, API, etiqueta y exportación | Aprobado |
+| BPR-03 — `blocked=false` explícito | Chromium: importar, API, etiqueta “No bloqueado” y exportación | Aprobado |
+| BPR-04 — tipo `blocked` y contradicción | Chromium valida `event_type_blocked` y rechazo de `blocked=false` | Aprobado |
+| BPR-05 — exportar/reimportar a otro dispositivo | `test_blocked_provenance_csv_export_import_round_trip_preserves_all_states` | Aprobado |
+| BPR-06 — migrar base histórica | `test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown` | Aprobado |
+| BPR-07 — histórico positivo con procedencia desconocida | Chromium valida la etiqueta “Bloqueado (registro histórico; procedencia desconocida)” | Aprobado |
+| BPR-08 — backup/restauración | El mismo test verifica 0/1, `legacy_unknown`, copia/restauración y `PRAGMA integrity_check` | Aprobado |
 
-**Registro BPR:** commit exacto / sistema / navegador / fecha y zona horaria / resultado por caso / evidencia sanitizada / issue de cualquier fallo.
+**Evidencia del SHA `893e57ce1f1d1ab733fce5faf0861f31219fafa9`:**
+- CI: 19/19 jobs exitosos; la matriz ejecutó 942 tests en Python 3.12/Ubuntu y verificó Python 3.10–3.14 en Windows, macOS y Ubuntu.
+- Security Analysis: 2/2 (CodeQL para Python, JavaScript y GitHub Actions; auditoría de dependencias).
+- Supply Chain Security: 2 jobs exitosos (wheel, SBOM/manifiesto y detección de secretos); firma de procedencia omitida por no ser un release.
+- Responsive UI / Chromium: 135/135 combinaciones de 9 páginas y 15 tamaños, sin fallos.
+- Artefacto con informe JSON y capturas: [Actions run 46069819855](https://github.com/JavierGrecco/NetSentinel/actions/runs/46069819855). La captura `actividad-1440x900.png` conserva los cinco estados en la pestaña Eventos; los CSV y el inventario de prueba son sintéticos.
+
+Las casillas anteriores representan **aceptación automatizada**. No deben reutilizarse como evidencia de instalación limpia, accesibilidad con tecnologías de asistencia o aceptación integral multiplataforma. Esas pruebas permanecen en las secciones REL/UI de esta matriz.
 
 ## Datos de cada sesión de pruebas
 
