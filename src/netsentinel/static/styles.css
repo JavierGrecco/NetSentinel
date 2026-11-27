@@ -285,3 +285,5 @@
 .scan-history-pagination button{min-height:36px}
 .scan-history-pagination .panel-sub{margin:0;line-height:1.5}
 @media(max-width:560px){.scan-history-pagination{align-items:stretch}.scan-history-pagination button{width:100%}}
+
+.identity-caution{white-space:normal;max-width:280px;line-height:1.5}

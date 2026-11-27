@@ -345,6 +345,41 @@ def _page_metrics(page) -> dict:
     )
 
 
+def _inventory_identity_caution_failures(page) -> list[str]:
+    """Comprueba que el inventario no presenta una MAC observada como identidad física."""
+    failures: list[str] = []
+    try:
+        metric_help = page.locator("#totalMetric").evaluate(
+            "(element) => element.closest('.metric')?.querySelector('.metric-help')?.textContent?.trim() || ''"
+        )
+        if metric_help != "MAC únicas vistas; no equivale a equipos físicos únicos.":
+            failures.append("el contador del inventario no explica que agrupa MAC y no equipos físicos")
+    except Exception as exc:
+        failures.append(f"no se pudo leer el alcance del contador de inventario: {exc}")
+
+    caution = page.locator(".identity-caution")
+    if caution.count() != 1:
+        failures.append(
+            "el fixture de MAC administrada localmente debe mostrar exactamente una advertencia de identidad"
+        )
+        return failures
+    if not caution.is_visible():
+        failures.append("la advertencia de identidad de MAC local no está visible")
+    else:
+        message = caution.inner_text()
+        for expected in (
+            "Identificador variable",
+            "puede ser aleatoria o virtual",
+            "No confirma por sí sola que dos observaciones pertenezcan al mismo equipo físico.",
+        ):
+            if expected not in message:
+                failures.append(f"la advertencia de identidad no contiene el límite esperado: {expected!r}")
+        white_space = caution.evaluate("(element) => getComputedStyle(element).whiteSpace")
+        if white_space != "normal":
+            failures.append("la advertencia de identidad no puede envolver texto dentro de la tabla")
+    return failures
+
+
 def _inventory_layout_failures(page, viewport: Viewport) -> list[str]:
     """Comprueba que el inventario cambie de cuadrícula sin solapar paneles."""
     boxes = page.evaluate(
@@ -2408,6 +2443,8 @@ def _run_browser_checks(base_url: str, viewports: tuple[Viewport, ...], output_d
 
                             if path == "/":
                                 case_failures.extend(_inventory_layout_failures(page, viewport))
+                                if viewport == Viewport(1440, 900):
+                                    case_failures.extend(_inventory_identity_caution_failures(page))
                             if path in {"/", "/network"} and viewport == Viewport(1440, 900):
                                 case_failures.extend(_scan_comparison_failures(page))
                             if path == "/network":

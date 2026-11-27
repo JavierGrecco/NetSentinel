@@ -159,6 +159,19 @@ def test_all_main_pages_load_shared_layout_after_module_styles():
 
 
 
+def test_inventory_explains_observed_mac_is_not_verified_physical_identity():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    script = (STATIC / "index.js").read_text(encoding="utf-8")
+    css = (STATIC / "styles.css").read_text(encoding="utf-8")
+
+    assert "MAC únicas vistas; no equivale a equipos físicos únicos." in html
+    assert 'class="device-meta identity-caution" role="note"' in script
+    assert "Identificador variable" in script
+    assert "puede ser aleatoria o virtual y cambiar entre redes o sesiones" in script
+    assert "No confirma por sí sola que dos observaciones pertenezcan al mismo equipo físico." in script
+    assert ".identity-caution{white-space:normal;max-width:280px;line-height:1.5}" in css
+
+
 def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens():
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     css = (STATIC / "styles.css").read_text(encoding="utf-8")

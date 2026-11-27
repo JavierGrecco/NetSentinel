@@ -74,6 +74,14 @@ En el panel, pulsá **Descubrir dispositivos** y confirmá la operación. NetSen
 
 Algunos equipos no responderán al ping, las redes aisladas de invitados pueden ocultar dispositivos y el escaneo IPv4 no cubre redes exclusivamente IPv6. Por eso, un resultado vacío o incompleto no prueba que no haya otros equipos conectados. NetSentinel no bloquea dispositivos ni cambia la configuración del router.
 
+## Identidad y límites del inventario
+
+El inventario agrupa actualmente las observaciones por la dirección MAC que reporta la red. Por eso, el contador muestra MAC únicas vistas, no un número verificado de equipos físicos. Una MAC administrada localmente puede ser aleatoria, virtual o cambiar entre redes y sesiones; una misma MAC también puede ser reutilizada o suplantada. Una dirección IP puede cambiar por DHCP y un mismo equipo puede aparecer con varias interfaces.
+
+Usá el nombre y la marca **De confianza** como referencias operativas que asignás al registro, no como verificación de identidad física. Una coincidencia de MAC o IP no demuestra por sí sola que dos observaciones pertenezcan al mismo equipo, y una MAC distinta no demuestra que sea otro equipo. No atribuyas la actividad a una persona por estos identificadores.
+
+La separación entre una ficha estable de activo y sus identificadores observados (MAC, IP, hostname e interfaz), con procedencia e intervalos, forma parte de la evolución pendiente de NetSentinel Red.
+
 ## Herramientas DNS
 
 Las consultas DNS A/AAAA por nombre y PTR inverso por IP están disponibles en `/tools` y en las acciones del inventario. Se ejecutan solo cuando las solicitás y no cambian la configuración de red. Cada consulta de nombre o PTR tiene un límite estricto de 3 segundos en un proceso hijo terminable, para que un resolvedor del sistema bloqueado no retenga indefinidamente una solicitud del panel. La consulta A/AAAA acepta nombres de host, no URLs ni direcciones IP literales. La API ofrece `GET /api/tools/dns/lookup?hostname=example.com` y `GET /api/devices/{device_id}/dns-reverse`. Los resultados indican resolución, no identidad verificada; la detección de DNS local puede ser parcial según el sistema operativo, las VPN y el split DNS.
