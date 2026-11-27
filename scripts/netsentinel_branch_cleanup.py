@@ -20,6 +20,7 @@ TEMP_BRANCHES = {
     "fix/cleanup-temp-branch-validation-2026-11",
     "security/codeql-javascript-actions-2026-11",
     "fix/cleanup-workflow-event-guard-2026-11",
+    "docs/adr-002-keep-fastapi-modular-monolith-2026-11",
 }
 PROTECTED = {
     "main",
