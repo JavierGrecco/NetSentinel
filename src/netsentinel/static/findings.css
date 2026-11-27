@@ -34,3 +34,8 @@
     .section-label{margin:0;font-size:17px}
     button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     @media(max-width:650px){.findings-grid{grid-template-columns:1fr}.finding-head{flex-direction:column}.findings-controls{align-items:stretch}.findings-controls label,.findings-controls select,.findings-controls a{width:100%}.finding-card{padding:13px}}
+
+.finding-related-list{margin:8px 0 0;padding-left:20px}
+.finding-related-list li{margin:10px 0;padding-left:2px}
+.finding-related-list a{display:inline-flex;margin:4px 0;color:var(--accent);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.finding-related-list a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

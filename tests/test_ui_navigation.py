@@ -199,7 +199,7 @@ def test_guided_test_page_contains_in_app_scenarios_and_checks() -> None:
     ):
         assert f'id="{element_id}"' in html
 
-    assert 'target="_blank"' in html
+    assert 'target="netsentinel-acceptance-module"' in html
     assert 'href="https://github.com/JavierGrecco/NetSentinel/blob/main/docs/EXPERT_ACCEPTANCE_LAB.md"' in html
     assert '/blob/qa/expert-acceptance-consolidated-2026-10/' not in html
     assert 'data-wizard-outcome="passed"' in html

@@ -52,6 +52,11 @@ def main() -> int:
         action="store_true",
         help="Añade una única lectura y observación de topología marcadas como sintéticas; no son un escaneo real.",
     )
+    parser.add_argument(
+        "--include-findings-correlation",
+        action="store_true",
+        help="Añade un hallazgo sintético explícito para probar la correlación con Zeek; no es una observación real.",
+    )
     args = parser.parse_args()
 
     configured_dir = os.environ.get("NETSENTINEL_DATA_DIR", "").strip()
@@ -121,6 +126,24 @@ def main() -> int:
                 "synthetic-test-fixture",
             ),
         )
+
+    if args.include_findings_correlation:
+        # Es un evento sintético optativo, distinto de una observación de red real.
+        # El mensaje permite a la guía distinguir esta fixture de cualquier hallazgo real.
+        with database.connect() as db:
+            db.execute(
+                """INSERT INTO events
+                   (event_type, severity, device_id, created_at, message, acknowledged)
+                   VALUES (?, ?, ?, ?, ?, 0)""",
+                (
+                    "new_device",
+                    "warning",
+                    device_id,
+                    last_seen,
+                    "Fixture sintética: evento de laboratorio para validar correlación Zeek; no representa una observación real.",
+                ),
+            )
+        print("Se añadió un hallazgo sintético explícito para la prueba de correlación Zeek.")
 
     if args.include_topology:
         # Este modo optativo crea tres activos y una lectura claramente sintéticos.

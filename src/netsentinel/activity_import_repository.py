@@ -40,6 +40,11 @@ def import_manual_events(
     """
     if len(events) != len(source_line_numbers):
         raise ValueError("La importación recibió filas y números de línea incompatibles.")
+    allowed_import_formats = {"csv", "zeek_conn_log"}
+    for line, item in zip(source_line_numbers, events):
+        import_format = item.get("import_format", "csv")
+        if not isinstance(import_format, str) or import_format not in allowed_import_formats:
+            raise ValueError(f"Fila {line}: formato de importación no permitido.")
 
     imported_count = 0
     skipped_duplicates = 0
@@ -66,19 +71,16 @@ def import_manual_events(
 
         duplicate_sql = (
             "SELECT 1 FROM activity_events "
-            "WHERE device_id = ? AND source = 'manual_import' AND "
-            + " AND ".join(f"{field} IS ?" for field in _MANUAL_IMPORT_DEDUP_FIELDS)
+            "WHERE device_id = ? AND source = 'manual_import' AND (import_format = ? OR (import_format = 'unknown' AND ? = 'csv'))"
+            + (" AND observed_at >= ?" if preview else "")
+            + " AND " + " AND ".join(f"{field} IS ?" for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             + " LIMIT 1"
         )
-        if preview:
-            # La vista previa solo compara con eventos que seguirían en retención.
-            duplicate_sql = duplicate_sql.replace(
-                "source = 'manual_import' AND",
-                "source = 'manual_import' AND observed_at >= ? AND",
-            )
+        # El formato es parte de la identidad: un CSV no puede hacerse pasar por
+        # Zeek usando un source_event_id que empiece por "zeek:".
         duplicate_source_id_sql = (
             "SELECT 1 FROM activity_events "
-            "WHERE device_id = ? AND source = 'manual_import' AND source_event_id = ?"
+            "WHERE device_id = ? AND source = 'manual_import' AND (import_format = ? OR (import_format = 'unknown' AND ? = 'csv')) AND source_event_id = ?"
             + (" AND observed_at >= ?" if preview else "")
             + " LIMIT 1"
         )
@@ -87,12 +89,17 @@ def import_manual_events(
 
         now_text = _utc_iso(now)
         for item in events:
+            import_format = item.get("import_format", "csv")
             values = tuple(item.get(field) for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             source_event_id = item.get("source_event_id")
             # Una fuente puede exportar el mismo registro con metadatos añadidos
             # después. Si trae un ID estable, ese ID es la identidad principal.
             # Sin ID de origen conservamos la deduplicación por todos los campos.
-            identity = ("source_event_id", source_event_id) if source_event_id else ("fields", *values)
+            identity = (
+                (import_format, "source_event_id", source_event_id)
+                if source_event_id
+                else ("fields", import_format, *values)
+            )
             disposition = "new"
             if identity in seen_in_batch:
                 skipped_duplicates += 1
@@ -101,13 +108,17 @@ def import_manual_events(
                 seen_in_batch.add(identity)
                 if source_event_id:
                     params = (
-                        (device_id, source_event_id, cutoff)
+                        (device_id, import_format, import_format, source_event_id, cutoff)
                         if preview
-                        else (device_id, source_event_id)
+                        else (device_id, import_format, import_format, source_event_id)
                     )
                     duplicate = db.execute(duplicate_source_id_sql, params).fetchone()
                 else:
-                    params = (device_id, cutoff, *values) if preview else (device_id, *values)
+                    params = (
+                        (device_id, import_format, import_format, cutoff, *values)
+                        if preview
+                        else (device_id, import_format, import_format, *values)
+                    )
                     duplicate = db.execute(duplicate_sql, params).fetchone()
                 if duplicate:
                     skipped_duplicates += 1
@@ -120,8 +131,8 @@ def import_manual_events(
                                 source_ip, source_port, destination_ip, destination_port, protocol,
                                 bytes_sent, bytes_received, packets_sent, packets_received, network_interface, source_event_id,
                                 app_name, page_url, search_engine, search_terms,
-                                email_provider, email_from, email_to, email_subject, blocked)
-                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                email_provider, email_from, email_to, email_subject, blocked, import_format)
+                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (
                                 device_id, item["observed_at"], now_text, item["event_type"], item["domain"],
                                 item.get("source_ip"), item.get("source_port"), item["destination_ip"],
@@ -129,7 +140,8 @@ def import_manual_events(
                                 item.get("bytes_received"), item.get("packets_sent"), item.get("packets_received"),
                                 item.get("network_interface"), item.get("source_event_id"),
                                 item["app_name"], item["page_url"], item["search_engine"], item["search_terms"],
-                                item["email_provider"], item["email_from"], item["email_to"], item["email_subject"], item["blocked"],
+                                item["email_provider"], item["email_from"], item["email_to"], item["email_subject"],
+                                item["blocked"], import_format,
                             ),
                         )
                     imported_count += 1
