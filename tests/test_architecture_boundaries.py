@@ -200,12 +200,34 @@ def test_architecture_policy_passes_without_coupling_violations() -> None:
         "netsentinel.activity_repository",
         "netsentinel.csv_safety",
     }
-    assert graph["netsentinel.activity_import_service"] == {"netsentinel.activity_repository"}
+    assert graph["netsentinel.activity_import_service"] == {
+        "netsentinel.activity_repository",
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
+    }
     assert graph["netsentinel.activity_zeek_import_service"] == {
         "netsentinel.activity_event_service",
         "netsentinel.activity_repository",
         "netsentinel.activity_retention_service",
         "netsentinel.inventory_read_repository",
+        "netsentinel.semantics.models",
+        "netsentinel.semantics.resolver",
+    }
+    assert graph["netsentinel.semantics"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.resolver",
+        "netsentinel.semantics.values",
+    }
+    assert graph["netsentinel.semantics.models"] == set()
+    assert graph["netsentinel.semantics.catalog"] == {"netsentinel.semantics.models"}
+    assert graph["netsentinel.semantics.resolver"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
+    }
+    assert graph["netsentinel.semantics.values"] == {
+        "netsentinel.semantics.catalog",
+        "netsentinel.semantics.models",
     }
     assert graph["netsentinel.geolocation_service"] == {
         "netsentinel.config",

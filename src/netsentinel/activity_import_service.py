@@ -9,21 +9,17 @@ from __future__ import annotations
 
 import csv
 import io
-import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
 from . import activity_repository
+from .semantics.catalog import FIELD_DEFINITIONS
+from .semantics.models import HeaderStatus
+from .semantics.resolver import missing_required_fields, normalize_header, resolve_headers
 
 EventNormalizer = Callable[..., dict[str, Any]]
 
-CSV_FIELDS = {
-    "observed_at", "event_type", "domain", "source_ip", "source_port",
-    "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
-    "packets_sent", "packets_received", "network_interface", "source_event_id",
-    "app_name", "blocked", "page_url", "search_engine", "search_terms",
-    "email_provider", "email_from", "email_to", "email_subject",
-}
+CSV_FIELDS = set(FIELD_DEFINITIONS)
 CSV_PREVIEW_FIELDS = (
     "observed_at", "event_type", "domain", "source_ip", "source_port",
     "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
@@ -31,76 +27,34 @@ CSV_PREVIEW_FIELDS = (
     "app_name", "page_url", "search_engine", "search_terms",
     "email_provider", "email_from", "email_to", "email_subject", "blocked",
 )
-SENSITIVE_HEADERS = {
-    "url", "full_url", "path", "query_string", "username", "user",
-    "password", "passwd", "token", "cookie", "authorization", "payload",
-    "body", "message", "email_body", "message_body", "body_text", "body_html",
-    "content", "email_message", "request_body", "response_body", "attachment",
-    "attachments", "attachment_content", "message_content",
-}
-
-CSV_IGNORED_METADATA_HEADERS = {
-    "id", "message_id", "messageid", "message_trace_id", "messagetraceid",
-    "status", "delivery_status", "direction", "size", "message_size",
-    "from_ip", "fromip", "to_ip", "toip", "sender_ip", "senderip",
-    "recipient_ip", "recipientip", "delivery_step", "event", "route",
-    "internet_message_id", "internetmessageid", "network_message_id",
-    "networkmessageid", "trace_id", "traceid",
-}
-CSV_HEADER_ALIASES = {
-    "observed_at": {
-        "date", "datetime", "timestamp", "date_time", "date_and_time",
-        "received_datetime", "received_date_time", "sent_datetime", "sent_date_time",
-        "received_time", "sent_time", "time",
-    },
-    "event_type": {"eventtype"},
-    "email_provider": {"provider", "mail_provider", "email_service", "service"},
-    "email_from": {
-        "from", "from_address", "from_email", "sender", "sender_address",
-        "senderaddress", "sender_email", "sender_email_address",
-    },
-    "email_to": {
-        "to", "to_address", "to_email", "recipient", "recipient_address",
-        "recipientaddress", "recipient_email", "recipients",
-    },
-    "email_subject": {
-        "subject", "subject_line", "message_subject", "subject_or_message_id",
-    },
-    "source_ip": {"src_ip", "source_address", "src_address"},
-    "source_port": {"src_port"},
-    "network_interface": {"interface", "ifname", "interface_name"},
-    "source_event_id": {"event_id", "event_identifier", "record_id"},
-}
-
-
 def _normalized_csv_header(value: str | None) -> str:
-    raw = str(value or "").strip().lstrip(chr(0xFEFF))
-    # Las exportaciones de proveedores suelen usar camelCase, por ejemplo receivedDateTime.
-    raw = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", raw)
-    return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
+    """Conserva el helper histórico usando la normalización semántica compartida."""
+    normalized, reason = normalize_header(value)
+    return normalized or ""
 
 
 def _is_sensitive_csv_header(value: str | None) -> bool:
-    normalized = _normalized_csv_header(value)
-    if normalized in SENSITIVE_HEADERS:
-        return True
-    parts = set(normalized.split("_"))
-    if parts.intersection({"body", "content", "payload", "attachment", "attachments"}):
-        return True
-    # Un identificador de mensaje es metadato; el cuerpo o contenido del mensaje no se importa.
-    return "message" in parts and "id" not in parts and "subject" not in parts
+    """Identifica encabezados sensibles mediante el perfil CSV central."""
+    result = resolve_headers(
+        [value],
+        "activity_csv",
+        suggest_typos=False,
+    ).headers[0]
+    return result.status is HeaderStatus.BLOCKED
 
 
 def _canonical_csv_header(value: str | None) -> str | None:
-    normalized = _normalized_csv_header(value)
-    if normalized in CSV_IGNORED_METADATA_HEADERS:
+    """Compatibilidad para llamadas existentes; los typos nunca se asignan."""
+    result = resolve_headers(
+        [value],
+        "activity_csv",
+        suggest_typos=False,
+    ).headers[0]
+    if result.usable:
+        return result.field_name
+    if result.status in {HeaderStatus.IGNORED, HeaderStatus.BLOCKED}:
         return None
-    if normalized in CSV_FIELDS:
-        return normalized
-    for canonical, aliases in CSV_HEADER_ALIASES.items():
-        if normalized in aliases:
-            return canonical
-    return normalized
+    return result.normalized_header
 
 
 def _now() -> datetime:
@@ -126,28 +80,83 @@ def import_csv(
         raise ValueError("El CSV contiene una cabecera inválida o demasiado grande.") from exc
     if not raw_headers:
         raise ValueError("El CSV está vacío o no contiene cabeceras.")
-    forbidden = [name for name in raw_headers if _is_sensitive_csv_header(name)]
-    if forbidden:
+    header_plan = resolve_headers(raw_headers, "activity_csv")
+    blocked = [
+        result.source_header
+        for result in header_plan.headers
+        if result.status is HeaderStatus.BLOCKED
+    ]
+    if blocked:
         raise ValueError(
             "El CSV incluye campos que no se importan por privacidad: "
-            + ", ".join(sorted(str(name) for name in forbidden)) + "."
+            + ", ".join(sorted(str(name) for name in blocked)) + "."
         )
-    normalized_headers = [_normalized_csv_header(name) for name in raw_headers]
-    headers = [_canonical_csv_header(name) for name in raw_headers]
-    effective_headers = [name for name in headers if name is not None]
-    if len(set(effective_headers)) != len(effective_headers):
+
+    unsafe = [
+        result for result in header_plan.headers
+        if result.status is HeaderStatus.UNSAFE_NAME
+    ]
+    if unsafe:
+        details = "; ".join(
+            f"{result.source_header!r}: {result.reason}"
+            for result in unsafe
+        )
+        raise ValueError("El CSV contiene nombres de columna no seguros: " + details)
+
+    if header_plan.collisions:
         raise ValueError("El CSV repite una cabecera tras normalizar los nombres de columna.")
-    email_audit_csv = {"email_from", "email_to"}.issubset(set(effective_headers))
-    if "observed_at" not in effective_headers or (
-        "event_type" not in effective_headers and not email_audit_csv
-    ):
+
+    unresolved = [
+        result for result in header_plan.headers
+        if result.status in {
+            HeaderStatus.UNKNOWN, HeaderStatus.SUGGESTION, HeaderStatus.AMBIGUOUS,
+        }
+    ]
+    if unresolved:
+        descriptions = []
+        for result in unresolved:
+            if result.suggestions:
+                candidates = ", ".join(
+                    f"{suggestion.field_name} (alias {suggestion.matched_alias})"
+                    for suggestion in result.suggestions
+                )
+                descriptions.append(
+                    f"{result.source_header!r} → posible {candidates}; no se asignó automáticamente"
+                )
+            else:
+                descriptions.append(f"{result.source_header!r} (sin correspondencia conocida)")
         raise ValueError(
-            "El CSV requiere fecha y tipo de evento, o fecha más emisor/destinatario "
-            "para una exportación de auditoría de correo."
+            "Cabeceras CSV no admitidas: " + "; ".join(descriptions) + "."
         )
-    unknown = set(effective_headers) - CSV_FIELDS
-    if unknown:
-        raise ValueError("Cabeceras CSV no admitidas: " + ", ".join(sorted(unknown)) + ".")
+
+    normalized_headers = [
+        result.normalized_header or ""
+        for result in header_plan.headers
+    ]
+    field_by_header = {
+        result.source_header: result.field_name
+        for result in header_plan.headers
+        if result.usable and result.source_header is not None and result.field_name is not None
+    }
+    present_fields = {
+        result.field_name
+        for result in header_plan.headers
+        if result.usable and result.field_name is not None
+    }
+    email_audit_csv = {"email_from", "email_to"}.issubset(present_fields)
+    required_headers = {"observed_at"}
+    if not email_audit_csv:
+        required_headers.add("event_type")
+    missing_headers = missing_required_fields(header_plan, required_headers)
+    if missing_headers:
+        if email_audit_csv:
+            message = (
+                "El CSV requiere fecha y tipo de evento, o fecha más emisor/destinatario "
+                "para una exportación de auditoría de correo."
+            )
+        else:
+            message = "El CSV requiere fecha y tipo de evento."
+        raise ValueError(message)
     # Detener la lectura al llegar a la fila 1001 para no cargar en memoria un
     # número de filas no confiable antes de aplicar el límite de importación.
     raw_rows: list[dict[str, Any]] = []
@@ -168,7 +177,7 @@ def import_csv(
         for raw_name, value in row.items():
             if raw_name is None:
                 continue
-            canonical = _canonical_csv_header(raw_name)
+            canonical = field_by_header.get(raw_name)
             if canonical is None:
                 continue
             if canonical in mapped:
