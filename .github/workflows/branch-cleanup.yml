@@ -16,6 +16,8 @@ on:
         required: false
         type: string
         default: ""
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -29,7 +31,19 @@ concurrency:
 jobs:
   cleanup:
     name: Validate and clean audited branch refs
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.action == 'created' &&
+          github.event.issue.number == 221 &&
+          github.event.issue.pull_request == null &&
+          github.event.comment.user.login == 'JavierGrecco' &&
+          startsWith(github.event.comment.body, '/netsentinel-branch-cleanup ')
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -69,3 +83,25 @@ jobs:
             --confirm BORRAR-RAMAS-NETSENTINEL \
             --yes \
             --phrase "$CONFIRMATION"
+
+      - name: Process explicit owner command from issue #221
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMAND_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          if [ "$COMMAND_BODY" = "/netsentinel-branch-cleanup dry-run" ]; then
+            python3 scripts/netsentinel_branch_cleanup.py --dry-run
+          elif [[ "$COMMAND_BODY" == "/netsentinel-branch-cleanup delete: "* ]]; then
+            confirmation=$(echo "$COMMAND_BODY" | sed "s#^/netsentinel-branch-cleanup delete: ##")
+            python3 scripts/netsentinel_branch_cleanup.py \
+              --execute \
+              --confirm BORRAR-RAMAS-NETSENTINEL \
+              --yes \
+              --phrase "$confirmation"
+          else
+            echo "Comando no reconocido; no se realizó ningún cambio."
+            exit 1
+          fi

@@ -14,7 +14,10 @@ REPO = "JavierGrecco/NetSentinel"
 ISSUE = 221
 EXPECTED = 190
 CONFIRM_TOKEN = "BORRAR-RAMAS-NETSENTINEL"
-TEMP_BRANCH = "ops/one-time-branch-cleanup-2026-11"
+TEMP_BRANCHES = {
+    "ops/one-time-branch-cleanup-2026-11",
+    "ops/cleanup-command-trigger-2026-11",
+}
 PROTECTED = {
     "main",
     "feat/findings-zeek-evidence-context-2026-10-23",  # PR #200
@@ -118,7 +121,7 @@ def verify(root: Path):
     branches = gh_json(f"repos/{REPO}/branches?per_page=100", paginate=True)
     remote = {b["name"]: b["commit"]["sha"] for b in branches if b.get("name") and b.get("commit", {}).get("sha")}
     candidates = set(rows)
-    unexpected = set(remote) - candidates - PROTECTED - {TEMP_BRANCH}
+    unexpected = set(remote) - candidates - PROTECTED - TEMP_BRANCHES
     if unexpected:
         raise CleanupError("Hay ramas no auditadas; se detiene sin borrar: " + ", ".join(sorted(unexpected)))
     if "main" not in remote:
@@ -184,10 +187,11 @@ def verify(root: Path):
         if item["class"] == "A1" and item["merge_sha"] not in history:
             raise CleanupError(f"El merge de la PR #{item['pr']} no está en main.")
 
-    temp_sha = remote.get(TEMP_BRANCH)
-    if temp_sha and temp_sha not in history:
-        raise CleanupError(f"La rama temporal {TEMP_BRANCH} no está integrada en main.")
-    return remaining, absent, remote["main"], protected_present, temp_sha
+    temp_refs = {name: remote[name] for name in TEMP_BRANCHES if name in remote}
+    for name, sha in temp_refs.items():
+        if sha not in history:
+            raise CleanupError(f"La rama temporal {name} no está integrada en main.")
+    return remaining, absent, remote["main"], protected_present, temp_refs
 
 
 def delete_ref(root: Path, branch: str, sha: str):
@@ -206,7 +210,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         root = repo_root()
-        remaining, absent, main_sha, protected, temp_sha = verify(root)
+        remaining, absent, main_sha, protected, temp_refs = verify(root)
         print(f"Repositorio: {REPO}")
         print(f"main verificado: {main_sha}")
         print(f"Manifiesto: issue #{ISSUE}")
@@ -214,7 +218,7 @@ def main() -> int:
         print(f"Ya ausentes: {len(absent)}")
         print(f"Candidatas presentes y revalidadas: {len(remaining)}")
         print("Ramas protegidas presentes: " + ", ".join(sorted(protected)))
-        print(f"Rama temporal presente: {'sí' if temp_sha else 'no'}")
+        print("Ramas temporales presentes: " + (", ".join(sorted(temp_refs)) if temp_refs else "ninguna"))
         for item in remaining:
             print(f"OK  {item['branch']}  {item['sha']}")
         phrase = f"BORRAR {len(remaining)} RAMAS DE {REPO}"
@@ -234,10 +238,10 @@ def main() -> int:
             print(f"[{n}/{len(remaining)}] {item['branch']}", flush=True)
             delete_ref(root, item["branch"], item["sha"])
             deleted.append(item["branch"])
-        if temp_sha:
-            print(f"[final] {TEMP_BRANCH}", flush=True)
-            delete_ref(root, TEMP_BRANCH, temp_sha)
-            deleted.append(TEMP_BRANCH)
+        for branch, sha in sorted(temp_refs.items()):
+            print(f"[final] {branch}", flush=True)
+            delete_ref(root, branch, sha)
+            deleted.append(branch)
         lines = run(["git", "ls-remote", "--heads", "origin"], cwd=root).stdout.splitlines()
         after = {line.split("\t", 1)[1].removeprefix("refs/heads/") for line in lines if "\t" in line}
         if after != protected:
