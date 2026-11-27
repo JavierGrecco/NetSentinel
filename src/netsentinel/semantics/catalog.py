@@ -176,6 +176,7 @@ _CSV_IGNORED = {
     "device_name": "Nombre local del activo exportado; no se reutiliza al importar.",
     "ip_address": "Dirección resumida del activo; no sustituye source_ip/destination_ip.",
     "source": "Fuente del registro original; una reimportación se marca manual_import.",
+    "import_format": "Formato local asignado por el adaptador; no se confía en el valor del CSV.",
 }
 _CSV_BLOCKED = {
     "url": "La columna podría contener URLs completas o rutas sensibles.",
