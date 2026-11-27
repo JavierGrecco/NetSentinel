@@ -103,6 +103,36 @@ def _assert(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def _wait_for_status(extension_page, prefix: str, stage: str) -> None:
+    """Wait for an explicit popup status and report storage state on failure."""
+    try:
+        extension_page.wait_for_function(
+            """prefix => (document.querySelector("#statusText")?.textContent || "").startsWith(prefix)""",
+            arg=prefix,
+            timeout=15000,
+        )
+    except Exception as exc:
+        try:
+            diagnostics = extension_page.evaluate(
+                """async () => {
+                    const stored = await new Promise(resolve =>
+                        chrome.storage.local.get(["netsentinelSettings", "netsentinelEvents"], resolve)
+                    );
+                    return {
+                        title: document.title,
+                        enabledChecked: document.querySelector("#enabled")?.checked ?? null,
+                        status: document.querySelector("#statusText")?.textContent || "",
+                        count: document.querySelector("#count")?.textContent || "",
+                        settings: stored.netsentinelSettings || null,
+                        eventCount: Array.isArray(stored.netsentinelEvents) ? stored.netsentinelEvents.length : null
+                    };
+                }"""
+            )
+        except Exception as diagnostic_error:
+            diagnostics = f"diagnostic read failed: {type(diagnostic_error).__name__}: {diagnostic_error}"
+        raise RuntimeError(f"Timed out during {stage}; popup state: {diagnostics!r}") from exc
+
+
 def run_extension_test(extension_dir: Path) -> None:
     try:
         from playwright.sync_api import sync_playwright
@@ -141,10 +171,14 @@ def run_extension_test(extension_dir: Path) -> None:
                 blocked_requests: list[str] = []
                 context.route("**/*", _synthetic_response(blocked_requests))
                 extension_id = _extension_id(context)
+                print(f"[extension] service worker started: {extension_id}", flush=True)
                 extension_url = f"chrome-extension://{extension_id}/popup.html"
 
                 popup = context.new_page()
-                popup.goto(extension_url, wait_until="load")
+                page_errors: list[str] = []
+                popup.on("pageerror", lambda error: page_errors.append(str(error)))
+                popup_response = popup.goto(extension_url, wait_until="load")
+                print(f"[extension] popup loaded (response={popup_response.status if popup_response else 'none'})", flush=True)
                 _assert(
                     not popup.locator("#enabled").is_checked(),
                     "The extension must be off by default in a newly created profile.",
@@ -154,20 +188,21 @@ def run_extension_test(extension_dir: Path) -> None:
                     "The default popup status must explain that capture is stopped.",
                 )
                 _assert(popup.locator("#count").inner_text() == "0", "A clean profile must have no events.")
+                print("[extension] default-off state verified", flush=True)
 
                 page = context.new_page()
                 # A navigation before opt-in must not be recorded.
                 page.goto("https://example.com/before-opt-in", wait_until="load")
                 popup.reload(wait_until="load")
                 _assert(_read_events(popup) == [], "A visit before opt-in was recorded.")
+                print("[extension] pre-opt-in navigation was not recorded", flush=True)
 
                 # Explicit opt-in is required and visible.
                 popup.on("dialog", lambda dialog: dialog.accept())
                 popup.locator("#enabled").check()
-                popup.wait_for_function(
-                    "() => (document.querySelector('#statusText')?.textContent || '').startsWith('Activo.')"
-                )
+                _wait_for_status(popup, "Activo.", "explicit opt-in")
                 _assert(popup.locator("#enabled").is_checked(), "Opt-in did not persist as enabled.")
+                print("[extension] explicit opt-in verified", flush=True)
 
                 # Sensitive query keys and URL fragments must not survive sanitization.
                 page.goto(
@@ -201,13 +236,12 @@ def run_extension_test(extension_dir: Path) -> None:
                     and event.get("search_terms") == SEARCH_FIXTURE
                     for event in events
                 ), "The synthetic Google search was not separated into a search_query event.")
+                print("[extension] page/search capture and URL sanitization verified", flush=True)
 
                 # User-managed domain exclusions are applied to subdomains too.
                 popup.locator("#excludeDomains").fill("example.com")
                 popup.locator("#saveSettings").click()
-                popup.wait_for_function(
-                    "() => (document.querySelector('#statusText')?.textContent || '').startsWith('Activo.')"
-                )
+                _wait_for_status(popup, "Activo.", "saving the domain exclusion")
                 page.goto("https://sub.example.com/excluded", wait_until="load")
                 page.goto("http://127.0.0.1:8765/private-network-fixture", wait_until="load")
                 context.wait_for_timeout(500)
@@ -221,6 +255,7 @@ def run_extension_test(extension_dir: Path) -> None:
                     all(event.get("domain") != "127.0.0.1" for event in events),
                     "A loopback/private destination was captured.",
                 )
+                print("[extension] domain and loopback exclusions verified", flush=True)
 
                 # Export should preserve safe values while excluding secret material.
                 with popup.expect_download() as download_info:
@@ -234,6 +269,7 @@ def run_extension_test(extension_dir: Path) -> None:
                 _assert(SEARCH_FIXTURE in csv_text, "CSV export omitted the safe synthetic search phrase.")
                 _assert(SENSITIVE_FIXTURE not in csv_text, "CSV export leaked a sensitive query parameter.")
                 _assert(PRIVATE_FRAGMENT not in csv_text, "CSV export leaked a URL fragment.")
+                print("[extension] CSV export and sanitization verified", flush=True)
 
                 # Clearing is routed through the service worker's serialized queue.
                 popup.locator("#clear").click()
@@ -241,16 +277,17 @@ def run_extension_test(extension_dir: Path) -> None:
                     "() => (document.querySelector('#count')?.textContent || '') === '0'"
                 )
                 _assert(_read_events(popup) == [], "The explicit clear action left events in storage.")
+                print("[extension] clear action verified", flush=True)
 
                 # Turning capture off again must stop future recording.
                 popup.locator("#enabled").uncheck()
-                popup.wait_for_function(
-                    "() => (document.querySelector('#statusText')?.textContent || '').startsWith('Detenido.')"
-                )
+                _wait_for_status(popup, "Detenido.", "turning tracking off")
                 page.goto("https://example.com/after-stop", wait_until="load")
                 context.wait_for_timeout(500)
                 popup.reload(wait_until="load")
                 _assert(_read_events(popup) == [], "A visit after opt-out was recorded.")
+                print("[extension] opt-out stops future capture", flush=True)
+                _assert(not page_errors, f"Extension popup JavaScript errors: {page_errors!r}")
 
                 _assert(
                     not blocked_requests,
