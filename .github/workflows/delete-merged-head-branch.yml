@@ -55,7 +55,7 @@ jobs:
             exit 0
           fi
 
-          actual_sha="$(printf '%s\\n' "$remote_line" | cut -f1)"
+          read -r actual_sha _ <<< "$remote_line"
           if [[ "$actual_sha" != "$HEAD_SHA" ]]; then
             echo "::warning::La rama fuente cambió después del merge; se conserva por seguridad."
             exit 0
