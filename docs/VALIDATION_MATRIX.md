@@ -2,7 +2,7 @@
 
 Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Las pruebas automatizadas y las sesiones humanas se registran por separado; una ejecución CI no se presenta como si una persona hubiera probado una instalación local.
 
-> **Estado vigente — 27/11/2026:** `main` HEAD `a6088f5ed2239b530d07b484eb60bf8024e1a91f` integra el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 y la primera entrega Zeek están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado vigente — 27/11/2026:** El commit funcional `a6088f5ed2239b530d07b484eb60bf8024e1a91f` integrado en `main` reúne el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 y la primera entrega Zeek están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
 
 ## Aceptación funcional automatizada — correlación temporal Zeek (PR #200)
 
@@ -20,6 +20,8 @@ Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguim
 | Límite temporal | `test_zeek_context_query_uses_inclusive_five_minute_boundaries`: −301/−300/+300/+301 s | Acepta ±300; rechaza ±301 |
 | UID y navegación | La API y el enlace Hallazgos → Actividad preservan `source_event_id` y `import_format=zeek_conn_log` | Cubierto |
 | Presentación de Actividad | Chromium comprueba que el estado no contiene `.tag`; se inspeccionaron las capturas del run | Texto plano, sin marco; temas Oscuro/Medio/Claro conservados |
+
+El commit squash integrado en `main` también pasó CI 19/19 ([run 46073568765](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568765)), Security Analysis 2/2 ([run 46073568777](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568777)) y Supply Chain Security (dos trabajos aplicables; [run 46073568823](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568823)).
 
 La correlación consulta solo filas de conexiones `manual_import` admitidas por el importador Zeek, con `import_format=zeek_conn_log` y UID `zeek:`. La ventana es ±300 segundos. La relación temporal no demuestra causalidad, ataque, identidad ni causa raíz. Esta cobertura valida la primera entrega integrada; no cierra los criterios ampliados de #197 ni sustituye la aceptación humana 0.10.0.
 

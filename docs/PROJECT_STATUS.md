@@ -1,7 +1,7 @@
 # Estado del proyecto — NetSentinel
 
 **Corte de estado:** 27 de noviembre de 2026.  
-**Rama canónica:** `main` · HEAD `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
+**Rama canónica:** `main`. Última integración funcional verificada: `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
 
 ## Situación verificada
 
@@ -10,7 +10,7 @@
 - **PR #222 — procedencia de `blocked`:** integrada en `main` mediante [`6d71604`](https://github.com/JavierGrecco/NetSentinel/commit/6d71604fb4ca1613d68439e632a62001c36d2fbe). BPR-01–BPR-08 se cerraron mediante pruebas automatizadas de API/CSV/Chromium, reimportación y migración/backup/restauración SQLite; no se afirma una instalación manual local.
 - **PR #200 — correlación temporal Zeek:** integrada en `main` mediante [`a6088f5`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f). El HEAD de la PR `d7b57ada501696c64f0fb76335fdbbd3f561ac69` pasó CI 19/19, Security Analysis 2/2 y Supply Chain 2/2; la firma de procedencia se omitió de forma esperada al no ser un release. Chromium verificó 135/135 casos de nueve páginas en quince tamaños. La prueba temporal acepta ±300 segundos y rechaza ±301; Hallazgos conserva UID, origen, delta y enlace a Actividad sin afirmar causalidad.
 - **Corrección visual de Actividad:** los estados de procedencia `blocked` se presentan como texto informativo, no como chips con borde. Una regresión Chromium comprueba que la celda no contiene elementos `.tag`. El selector de temas Oscuro, Medio y Claro permanece disponible.
-- **CI posterior al merge:** los workflows `push` sobre el commit de `main` se lanzaron por separado. La aprobación de la PR no se usa como sustituto de esos resultados; los estados vigentes se verifican en Actions y la matriz de validación.
+- **CI posterior al merge:** sobre el commit integrado `a6088f5ed2239b530d07b484eb60bf8024e1a91f`, los workflows `push` también finalizaron correctamente: CI 19/19 ([run 46073568765](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568765)), Security Analysis 2/2 ([run 46073568777](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568777)) y Supply Chain 2 trabajos exitosos ([run 46073568823](https://github.com/JavierGrecco/NetSentinel/actions/runs/46073568823)); la firma de procedencia se omitió como corresponde para una PR sin release.
 - **Laboratorio de aceptación:** el asistente integrado contiene 13 pasos, incluido Hallazgos–Zeek. La ejecución de Chromium valida páginas y tamaños, pero no constituye una sesión humana de aceptación ni una revisión de accesibilidad con lector de pantalla.
 - **Ramas remotas:** tras fusionar #200, el workflow de borrado automático terminó correctamente y el inventario remoto mostró únicamente `main`. No quedan ramas de #200 ni #222.
 - **Gobernanza de `main`:** el ruleset #25281660 está Active pero sigue sin patrón de inclusión, sin checks requeridos y con cero aprobaciones requeridas; además la API indica `protected: false`. No protege efectivamente `main`. La corrección requiere una persona administradora desde Settings; ver [GITHUB_SETUP.md](GITHUB_SETUP.md) e issue #73.
