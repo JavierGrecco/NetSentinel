@@ -2,7 +2,7 @@
 
 ## Estado
 
-<badge> </badge> La limpieza histórica quedó **completada** y no hay una tarea de borrado masivo pendiente.
+La limpieza histórica quedó **completada** y no hay una tarea de borrado masivo pendiente.
 
 - Manifiesto operativo: [issue #221](https://github.com/JavierGrecco/NetSentinel/issues/221), cerrado como completado.
 - Ejecución final: [GitHub Actions #46062536965](https://github.com/JavierGrecco/NetSentinel/actions/runs/46062536965).
