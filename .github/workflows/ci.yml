@@ -396,6 +396,27 @@ jobs:
           PY
 
 
+  installed-wheel-smoke:
+    name: Installed wheel smoke / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Install wheel and verify isolated application startup
+        run: python scripts/smoke_installed_wheel.py --wheel-dir dist
+
+
   responsive-ui:
     name: Responsive UI / Chromium
     # Playwright's --with-deps is pinned to Ubuntu LTS after ubuntu-latest apt feed 403.
