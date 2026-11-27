@@ -412,5 +412,13 @@ jobs:
         run: python -m pip install -e ".[test,ui-test]"
       - name: Install Chromium and its system dependencies
         run: python -m playwright install --with-deps chromium
-      - name: Check all main pages at representative viewport sizes
-        run: python scripts/check_responsive_ui.py
+      - name: Check all main pages at representative viewport sizes and capture acceptance evidence
+        run: python scripts/check_responsive_ui.py --screenshots
+      - name: Upload responsive and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: netsentinel-ui-acceptance-${{ github.sha }}
+          path: .netsentinel-test-artifacts/responsive-ui/
+          if-no-files-found: warn
+          retention-days: 14

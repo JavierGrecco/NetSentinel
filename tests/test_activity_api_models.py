@@ -41,6 +41,18 @@ def test_ingest_schema_accepts_valid_counters(value) -> None:
     assert body.bytes_sent == value
 
 
+def test_ingest_schema_preserves_whether_blocked_was_supplied() -> None:
+    omitted = ActivityEventIngest.model_validate(BASE_INGEST)
+    explicit_false = ActivityEventIngest.model_validate({**BASE_INGEST, "blocked": False})
+    explicit_null = ActivityEventIngest.model_validate({**BASE_INGEST, "blocked": None})
+
+    assert "blocked" not in omitted.model_fields_set
+    assert "blocked" in explicit_false.model_fields_set
+    assert explicit_false.blocked is False
+    assert "blocked" in explicit_null.model_fields_set
+    assert explicit_null.blocked is None
+
+
 def test_ingest_schema_accepts_optional_provenance_and_ips() -> None:
     body = ActivityEventIngest.model_validate({
         **BASE_INGEST, "source_ip": "192.0.2.20", "source_port": 51514,

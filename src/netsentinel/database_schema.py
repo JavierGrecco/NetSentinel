@@ -149,6 +149,7 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 email_from TEXT,
                 email_to TEXT,
                 email_subject TEXT,
+                blocked_observation TEXT NOT NULL DEFAULT 'legacy_unknown' CHECK (blocked_observation IN ('reported_true', 'reported_false', 'missing', 'empty', 'event_type_blocked', 'legacy_unknown')),
                 blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
             );
             CREATE TABLE IF NOT EXISTS activity_settings (
@@ -211,7 +212,8 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                     email_from TEXT,
                     email_to TEXT,
                     email_subject TEXT,
-                    blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
+                    blocked_observation TEXT NOT NULL DEFAULT 'legacy_unknown' CHECK (blocked_observation IN ('reported_true', 'reported_false', 'missing', 'empty', 'event_type_blocked', 'legacy_unknown')),
+                blocked INTEGER NOT NULL DEFAULT 0 CHECK (blocked IN (0, 1))
                 )
             """)
             core_columns = [
@@ -224,7 +226,8 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
             extra_columns = ("page_url", "search_engine", "search_terms", "email_provider", "email_from", "email_to", "email_subject")
             select_columns.extend(name if name in old_columns else "NULL" for name in extra_columns)
             select_columns.append("blocked" if "blocked" in old_columns else "0")
-            target_columns = core_columns + list(extra_columns) + ["blocked"]
+            select_columns.append("blocked_observation" if "blocked_observation" in old_columns else "'legacy_unknown'")
+            target_columns = core_columns + list(extra_columns) + ["blocked", "blocked_observation"]
             db.execute(
                 "INSERT INTO activity_events_migrated (" + ", ".join(target_columns) + ") "
                 "SELECT " + ", ".join(select_columns) + " FROM activity_events"
@@ -249,6 +252,7 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 "packets_sent": "INTEGER CHECK (packets_sent BETWEEN 0 AND 9223372036854775807 OR packets_sent IS NULL)",
                 "packets_received": "INTEGER CHECK (packets_received BETWEEN 0 AND 9223372036854775807 OR packets_received IS NULL)",
                 "network_interface": "TEXT",
+                "blocked_observation": "TEXT NOT NULL DEFAULT 'legacy_unknown' CHECK (blocked_observation IN ('reported_true', 'reported_false', 'missing', 'empty', 'event_type_blocked', 'legacy_unknown'))",
             }
             for column, definition in column_definitions.items():
                 if column not in activity_columns:

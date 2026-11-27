@@ -136,16 +136,6 @@ def test_search_event_requires_engine_and_terms():
         })
 
 
-@pytest.mark.parametrize("value", ["perhaps", "enabled", "2"])
-def test_blocked_field_rejects_ambiguous_strings(value):
-    with pytest.raises(ValueError, match="blocked debe ser verdadero o falso"):
-        normalize_event({
-            "event_type": "connection",
-            "source": "router_flow",
-            "destination_ip": "192.0.2.15",
-            "blocked": value,
-        })
-
 @pytest.mark.parametrize("value", [80.5, 443.0, True, False, [], {}, object()])
 def test_destination_port_rejects_coercible_non_integer_values(value):
     with pytest.raises(ValueError, match="destination_port debe ser un entero"):
@@ -168,11 +158,17 @@ def test_blocked_field_rejects_non_boolean_non_binary_values(value):
         })
 
 
-@pytest.mark.parametrize("value, expected", [
-    (True, 1), (False, 0), (1, 1), (0, 0),
-    ("true", 1), ("YES", 1), ("false", 0), ("0", 0), ("", 0), (None, 0),
-])
-def test_blocked_field_accepts_explicit_boolean_representations(value, expected):
+@pytest.mark.parametrize(
+    "value, expected, observation",
+    [
+        (True, 1, "reported_true"), (1, 1, "reported_true"),
+        ("true", 1, "reported_true"), ("YES", 1, "reported_true"),
+        (False, 0, "reported_false"), (0, 0, "reported_false"),
+        ("false", 0, "reported_false"), ("0", 0, "reported_false"),
+        ("", 0, "empty"), (None, 0, "empty"),
+    ],
+)
+def test_blocked_field_preserves_explicit_values_and_empty_inputs(value, expected, observation):
     event = normalize_event({
         "event_type": "connection",
         "source": "router_flow",
@@ -180,6 +176,96 @@ def test_blocked_field_accepts_explicit_boolean_representations(value, expected)
         "blocked": value,
     })
     assert event["blocked"] == expected
+    assert event["blocked_observation"] == observation
+
+
+def test_blocked_field_distinguishes_an_absent_field_from_an_empty_value():
+    common = {"event_type": "connection", "source": "router_flow", "destination_ip": "192.0.2.15"}
+    absent = normalize_event(common)
+    empty = normalize_event({**common, "blocked": ""})
+    assert absent["blocked"] == empty["blocked"] == 0
+    assert absent["blocked_observation"] == "missing"
+    assert empty["blocked_observation"] == "empty"
+
+
+def test_blocked_event_type_is_explicit_evidence_and_rejects_contradiction():
+    event = normalize_event({"event_type": "blocked", "source": "router_flow"})
+    assert event["blocked"] == 1
+    assert event["blocked_observation"] == "event_type_blocked"
+
+    with pytest.raises(ValueError, match="event_type=blocked"):
+        normalize_event({
+            "event_type": "blocked",
+            "source": "router_flow",
+            "blocked": False,
+        })
+
+
+@pytest.mark.parametrize("value", ["perhaps", "enabled", "2"])
+def test_blocked_field_rejects_ambiguous_strings(value):
+    with pytest.raises(ValueError, match="blocked debe ser verdadero o falso"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked": value,
+        })
+
+
+def test_blocked_observation_must_match_an_explicit_false_value():
+    with pytest.raises(ValueError, match="no coincide"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked": "",
+            "blocked_observation": "reported_false",
+        })
+
+
+def test_blocked_event_type_promotes_missing_or_empty_observation_to_evidence():
+    common = {"event_type": "blocked", "source": "router_flow"}
+    for payload in (
+        {**common, "blocked": "", "blocked_observation": "empty"},
+        {**common, "blocked_observation": "missing"},
+    ):
+        event = normalize_event(payload)
+        assert event["blocked"] == 1
+        assert event["blocked_observation"] == "event_type_blocked"
+
+    round_trip = normalize_event({
+        **common,
+        "blocked": 1,
+        "blocked_observation": "event_type_blocked",
+    })
+    assert round_trip["blocked"] == 1
+    assert round_trip["blocked_observation"] == "event_type_blocked"
+
+
+def test_imported_blocked_observation_round_trips_without_inference():
+    for blocked, observation in ((0, "legacy_unknown"), (1, "legacy_unknown"),
+                                 (0, "missing"), (0, "empty"), (0, "reported_false"),
+                                 (1, "reported_true")):
+        event = normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked": blocked,
+            "blocked_observation": observation,
+        })
+        assert event["blocked"] == blocked
+        assert event["blocked_observation"] == observation
+
+
+@pytest.mark.parametrize("observation", ["invalid", "unknown", ""])
+def test_blocked_observation_rejects_unknown_labels(observation):
+    with pytest.raises(ValueError, match="blocked_observation"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked_observation": observation,
+        })
 
 
 @pytest.mark.parametrize("value, expected", [(80, 80), ("443", 443), (" 53 ", 53)])
