@@ -861,3 +861,25 @@ def test_activity_blocked_observation_migration_preserves_legacy_values_as_unkno
         "legacy_unknown",
         "legacy_unknown",
     ]
+
+    # The newly introduced provenance must survive a real SQLite backup/restore.
+    backup_bytes = database.export_sqlite_backup(db)
+    backup_path = tmp_path / "legacy-activity-backup.sqlite3"
+    backup_path.write_bytes(backup_bytes)
+    restored_path = tmp_path / "legacy-activity-restored.sqlite3"
+    restored_path.write_bytes(backup_path.read_bytes())
+    database.initialize(restored_path)
+
+    with sqlite3.connect(restored_path) as restored:
+        restored.row_factory = sqlite3.Row
+        restored_rows = restored.execute(
+            "SELECT blocked, blocked_observation FROM activity_events ORDER BY id"
+        ).fetchall()
+
+    assert [row["blocked"] for row in restored_rows] == [0, 1]
+    assert [row["blocked_observation"] for row in restored_rows] == [
+        "legacy_unknown",
+        "legacy_unknown",
+    ]
+    with sqlite3.connect(restored_path) as restored:
+        assert restored.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
