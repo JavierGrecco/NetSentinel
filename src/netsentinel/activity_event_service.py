@@ -163,22 +163,83 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         raise ValueError("El evento app_usage requiere app_name.")
     if event_type == "email_metadata" and source != "manual_import":
         raise ValueError("La actividad de correo no se admite desde fuentes de red en tiempo real.")
-    blocked_value = payload.get("blocked", False)
-    if isinstance(blocked_value, str):
-        normalized_blocked = blocked_value.strip().lower()
-        if normalized_blocked not in {"", "0", "1", "true", "false", "yes", "no"}:
-            raise ValueError("blocked debe ser verdadero o falso.")
-        blocked = normalized_blocked in {"1", "true", "yes"}
-    elif isinstance(blocked_value, bool):
-        blocked = blocked_value
-    elif isinstance(blocked_value, int) and blocked_value in (0, 1):
-        blocked = bool(blocked_value)
-    elif blocked_value is None:
-        blocked = False
-    else:
-        # Evita que valores truthy como 2, 0.5, listas o diccionarios se
-        # conviertan silenciosamente en un indicador de bloqueo.
+    blocked_value_present = "blocked" in payload
+    blocked_value = payload.get("blocked")
+    supplied_observation = payload.get("blocked_observation")
+    allowed_observations = {
+        "reported_true", "reported_false", "missing", "empty",
+        "event_type_blocked", "legacy_unknown",
+    }
+
+    def parse_blocked_value(value: Any) -> tuple[bool, str]:
+        if value is None:
+            return False, "empty"
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if not normalized:
+                return False, "empty"
+            if normalized not in {"0", "1", "true", "false", "yes", "no"}:
+                raise ValueError("blocked debe ser verdadero o falso.")
+            result = normalized in {"1", "true", "yes"}
+            return result, "reported_true" if result else "reported_false"
+        if isinstance(value, bool):
+            return value, "reported_true" if value else "reported_false"
+        if isinstance(value, int) and value in (0, 1):
+            result = bool(value)
+            return result, "reported_true" if result else "reported_false"
+        # Evita convertir valores truthy arbitrarios en un indicador de bloqueo.
         raise ValueError("blocked debe ser verdadero o falso.")
+
+    if "blocked_observation" in payload:
+        if not isinstance(supplied_observation, str):
+            raise ValueError("blocked_observation debe ser un estado de procedencia admitido.")
+        blocked_observation = supplied_observation.strip().lower()
+        if blocked_observation not in allowed_observations:
+            raise ValueError("blocked_observation debe ser un estado de procedencia admitido.")
+
+        if blocked_value_present:
+            blocked, parsed_observation = parse_blocked_value(blocked_value)
+            # A normalized export carries the compatibility boolean alongside the
+            # original observation state. False is a valid projection for missing
+            # and empty values, but an empty raw value cannot substantiate an
+            # explicit reported_false claim.
+            if blocked_observation == "reported_false" and parsed_observation != "reported_false":
+                raise ValueError("blocked_observation no coincide con el valor informado en blocked.")
+        else:
+            # The status is sufficient to reconstruct the legacy boolean in CSV.
+            blocked = blocked_observation in {"reported_true", "event_type_blocked"}
+
+        if blocked_observation == "event_type_blocked" and event_type != "blocked":
+            raise ValueError("event_type_blocked requiere event_type=blocked.")
+
+        if event_type == "blocked":
+            if blocked_observation == "reported_false":
+                raise ValueError("event_type=blocked no puede declarar blocked=false.")
+            if blocked_observation in {"missing", "empty"}:
+                # The event type itself is positive evidence when the boolean
+                # column was omitted or empty.
+                blocked_observation = "event_type_blocked"
+                blocked = True
+            elif blocked_observation == "event_type_blocked":
+                if blocked_value_present and parsed_observation == "reported_false":
+                    raise ValueError("event_type=blocked no puede declarar blocked=false.")
+                blocked = True
+
+        if blocked_observation in {"reported_true", "event_type_blocked"} and not blocked:
+            raise ValueError("blocked contradice blocked_observation.")
+        if blocked_observation in {"reported_false", "missing", "empty"} and blocked:
+            raise ValueError("blocked contradice blocked_observation.")
+    elif blocked_value_present:
+        blocked, blocked_observation = parse_blocked_value(blocked_value)
+    else:
+        blocked, blocked_observation = False, "missing"
+
+    if event_type == "blocked" and "blocked_observation" not in payload:
+        if blocked_observation == "reported_false":
+            raise ValueError("event_type=blocked no puede declarar blocked=false.")
+        if blocked_observation in {"missing", "empty"}:
+            blocked_observation = "event_type_blocked"
+        blocked = True
     return {
         "observed_at": _parse_timestamp(payload.get("observed_at")),
         "event_type": event_type,
@@ -200,5 +261,6 @@ def normalize_event(payload: dict[str, Any], *, source_override: str | None = No
         "email_from": "; ".join(email_from_list) if email_from_list else None,
         "email_to": "; ".join(email_to_list) if email_to_list else None,
         "email_subject": email_subject,
-        "blocked": int(blocked or event_type == "blocked"),
+        "blocked": int(blocked),
+        "blocked_observation": blocked_observation,
     }

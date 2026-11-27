@@ -77,7 +77,7 @@ flowchart LR
 
 El esquema resume las responsabilidades principales; no implica captura automática de tráfico ni acceso remoto habilitado.
 
-Consultá la [vista general de arquitectura](docs/ARCHITECTURE_OVERVIEW.md) para entender cómo se conectan las partes; el [detalle técnico](docs/ARCHITECTURE.md) explica módulos, límites y contratos. La decisión principal está registrada en [ADR-001](docs/ADR-001-MODULAR-MONOLITH.md).
+Consultá la [vista general de arquitectura](docs/ARCHITECTURE_OVERVIEW.md) para entender cómo se conectan las partes; el [detalle técnico](docs/ARCHITECTURE.md) explica módulos, límites y contratos. Las decisiones de arquitectura están registradas en [ADR-001](docs/ADR-001-MODULAR-MONOLITH.md) y [ADR-002](docs/ADR-002-KEEP-FASTAPI-MODULAR-MONOLITH.md).
 
 ## Pruebas y calidad
 

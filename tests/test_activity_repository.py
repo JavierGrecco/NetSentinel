@@ -173,6 +173,7 @@ def test_event_repository_inserts_validated_metadata(monkeypatch, tmp_path):
     assert inserted["event_type"] == "dns_query"
     assert inserted["source"] == "router_dns"
     assert inserted["domain"] == "example.com"
+    assert inserted["blocked_observation"] == "legacy_unknown"
     assert "collector_token_hash" not in inserted
 
 

@@ -1,8 +1,34 @@
-# Matriz de validación manual
+# Matriz de validación manual y automatizada
 
-Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de pruebas manuales para la versión 0.10.0 se coordina en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Todas las pruebas se consideran **pendientes de registrar** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
+Esta matriz conserva evidencia de la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de aceptación se coordina en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Las pruebas automatizadas y las sesiones humanas se registran por separado; una ejecución CI no se presenta como si una persona hubiera probado una instalación local.
 
-> **Estado actual (23/10/2026):** topología, Zeek, mapa GeoIP, NetSentinel Forense y el asistente iterativo están integrados en `main`. La [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) añadió una regresión Chromium de revisar un paso desde el resumen, cambiar el resultado, conservar una nota y volver al informe; el SHA de la PR pasó CI 18/18, Chromium 135/135, seguridad y cadena de suministro. La [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198) solo añadió la evaluación estratégica y el enlace desde la matriz de referencias: no cambia el comportamiento probado. Esto no acredita la aceptación manual: las casillas de esta matriz siguen pendientes hasta registrar observaciones reales. Usá una copia de trabajo del `origin/main` vigente y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado vigente — 27/11/2026:** `main` integra el núcleo semántico CSV/Zeek (#212), procedencia de `blocked` (#222) y correlación Hallazgos–Zeek (#200). El laboratorio tiene 13 pasos. BPR-01–BPR-08 están cubiertos por pruebas automatizadas; la aceptación integral 0.10.0 (instalación, accesibilidad, experiencia de uso y plataformas) continúa pendiente. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+
+## Aceptación funcional automatizada — procedencia de `blocked` (PR #222)
+
+<badge color="success">8/8 criterios cubiertos</badge>
+
+**Decisión de validación — 27/11/2026:** para esta migración determinista, se acepta la cobertura automatizada E2E y de persistencia como puerta de integración, en lugar de exigir que una persona repita manualmente los ocho casos en una instalación local. Esto **no equivale** a afirmar que se haya realizado una instalación manual en el equipo de un usuario; la aceptación integral 0.10.0 sigue pendiente.
+
+| Criterio | Evidencia automatizada | Resultado |
+|---|---|---|
+| BPR-01 — columna ausente | Chromium: importar, consultar API, leer fila en Eventos y exportar CSV | Aprobado |
+| BPR-02 — celda vacía | Chromium: importar, API, etiqueta y exportación | Aprobado |
+| BPR-03 — `blocked=false` explícito | Chromium: importar, API, etiqueta “No bloqueado” y exportación | Aprobado |
+| BPR-04 — tipo `blocked` y contradicción | Chromium valida `event_type_blocked` y rechazo de `blocked=false` | Aprobado |
+| BPR-05 — exportar/reimportar a otro dispositivo | `test_blocked_provenance_csv_export_import_round_trip_preserves_all_states` | Aprobado |
+| BPR-06 — migrar base histórica | `test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown` | Aprobado |
+| BPR-07 — histórico positivo con procedencia desconocida | Chromium valida la etiqueta “Bloqueado (registro histórico; procedencia desconocida)” | Aprobado |
+| BPR-08 — backup/restauración | El mismo test verifica 0/1, `legacy_unknown`, copia/restauración y `PRAGMA integrity_check` | Aprobado |
+
+**Evidencia del SHA `893e57ce1f1d1ab733fce5faf0861f31219fafa9`:**
+- CI: 19/19 jobs exitosos; la matriz ejecutó 942 tests en Python 3.12/Ubuntu y verificó Python 3.10–3.14 en Windows, macOS y Ubuntu.
+- Security Analysis: 2/2 (CodeQL para Python, JavaScript y GitHub Actions; auditoría de dependencias).
+- Supply Chain Security: 2 jobs exitosos (wheel, SBOM/manifiesto y detección de secretos); firma de procedencia omitida por no ser un release.
+- Responsive UI / Chromium: 135/135 combinaciones de 9 páginas y 15 tamaños, sin fallos.
+- Artefacto con informe JSON y capturas: [Actions run 46069819855](https://github.com/JavierGrecco/NetSentinel/actions/runs/46069819855). La captura `actividad-1440x900.png` conserva los cinco estados en la pestaña Eventos; los CSV y el inventario de prueba son sintéticos.
+
+Las casillas anteriores representan **aceptación automatizada**. No deben reutilizarse como evidencia de instalación limpia, accesibilidad con tecnologías de asistencia o aceptación integral multiplataforma. Esas pruebas permanecen en las secciones REL/UI de esta matriz.
 
 ## Datos de cada sesión de pruebas
 

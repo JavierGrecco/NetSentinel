@@ -1,35 +1,46 @@
 # Normalización semántica y reconocimiento seguro de datos
 
-- **Estado:** diseño de arquitectura con primera implementación parcial en la PR #212; todavía no integrada en `main`.
-- **Fecha:** 2026-11-03.
-- **Alcance:** interpretación de campos, alias, errores de tipeo, unidades, valores ausentes, calidad y preparación de métricas.
-- **Compatibilidad:** conservar los contratos actuales de Actividad, Zeek, Monitorización, Inventario y SQLite durante la primera etapa.
+- **Estado en `main`:** primera entrega integrada mediante PR #212, squash commit `956ceb442fe21aae3d965e55c1b13d3a7baa2060`.
+- **Corte:** 27 de noviembre de 2026.
+- **Implementado en `main`:** perfiles CSV/Zeek, alias exactos por fuente, resolución conservadora de cabeceras, sugerencias sin autocorrección, control de colisiones, inspección tipada y análisis de magnitudes con unidades explícitas.
+- **Contrato actual en `main`:** 23 campos canónicos; la distinción entre `blocked` ausente, vacío y false aún no está integrada.
+- **Evolución en revisión:** PR #222, vinculada a issue #220, agrega `blocked_observation` como campo canónico adicional, migración SQLite aditiva, conservación de procedencia en CSV y presentación diferenciada. En esa rama el catálogo proyectado alcanza 24 campos. No describir ese campo como disponible hasta integrar la PR. También reconoce cuatro metadatos de su propia exportación (`device_id`, `device_name`, `ip_address`, `source`) como ignorados explícitos, elevando de 27 a 31 las cabeceras conocidas ignoradas en esa rama; no se mapean al activo ni a la fuente importada.
+- **Compatibilidad:** el diseño mantiene el booleano heredado y separa la procedencia del valor. El paquete semántico sigue siendo puro y no depende de API, servicios, repositorios ni infraestructura.
 
-## Estado de implementación — 3 de noviembre de 2026
+## Estado de implementación — 27 de noviembre de 2026
 
-La primera entrega está en [PR #212](https://github.com/JavierGrecco/NetSentinel/pull/212), rama `feat/semantic-data-registry-2026-11`. El HEAD actualmente en revisión es `f89c7654904ae9cd243a545477cbe2b610263151`. La implementación no se presenta como terminada ni como integrada en `main`.
+La primera entrega (#212) está en `main`. La segunda parte (#220/#222) sigue abierta en Draft y requiere checks actuales y aceptación manual de Actividad antes de integrar.
 
-### Ya implementado en la PR #212
+### Implementado en main
 
-- Paquete puro `src/netsentinel/semantics/` con modelos, catálogo, perfiles de origen, resolver y utilidades de inspección.
+- Paquete puro `src/netsentinel/semantics/` con modelos inmutables, catálogo canónico, perfiles de origen, resolver de cabeceras e inspección de valores.
 - 23 campos canónicos del contrato actual de Actividad y perfiles `activity_csv` y `zeek_conn_log`.
-- CSV utiliza el perfil compartido en lugar de mantener una segunda lista de alias. Se verificó paridad exacta respecto del importador anterior: 23/23 campos, 47/47 alias con el mismo destino, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
-- Zeek TSV/JSONL utiliza el perfil de origen para validar el esquema y señalar campos requeridos ausentes o con errores tipográficos, sin cambiar la interpretación específica de su timestamp Unix ni de los contadores.
-- Las cabeceras duplicadas, inseguras o ambiguas se bloquean. Las sugerencias se limitan a una única inserción, eliminación o sustitución; varios candidatos se marcan como ambiguos. No hay autocorrección.
-- La inspección de valores diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido. La conversión de unidades requiere una unidad explícita, compatible y no ambigua.
-- El resolver limita las cabeceras a 256 y el análisis numérico limita la longitud y escala de entrada.
-- El verificador de arquitectura declara el grafo permitido para el paquete semántico y prohíbe que dependa de API, servicios, repositorios o infraestructura.
+- CSV utiliza el perfil compartido; paridad comprobada en la integración: 23/23 campos, 47/47 alias, 27/27 cabeceras ignoradas y 26/26 cabeceras sensibles.
+- Zeek TSV/JSONL valida el esquema y señala campos requeridos ausentes o errores tipográficos, sin alterar la interpretación de timestamp Unix ni de contadores.
+- Cabeceras duplicadas, inseguras o ambiguas bloqueadas. Sugerencias aproximadas no se asignan ni importan automáticamente.
+- Inspección que diferencia ausente, vacío, válido, tipo incompatible, inválido, ambiguo y campo desconocido.
+- Magnitudes con `Decimal`, límites de precisión/escala y conversiones solo con unidades explícitas y dimensionalmente compatibles.
+- Controles de arquitectura que impiden dependencias del paquete semántico hacia API, servicios, repositorios o infraestructura.
+
+### Cambio propuesto en PR #222 — todavía no integrado
+
+- Añade `blocked_observation` con los estados `reported_true`, `reported_false`, `missing`, `empty`, `event_type_blocked` y `legacy_unknown`, manteniendo `blocked` como booleano 0/1 por compatibilidad.
+- Diferencia una cabecera CSV ausente, una celda vacía y el valor false explícito; preserva esa diferencia al exportar y reimportar.
+- La migración aditiva marca registros antiguos como `legacy_unknown` sin inventar procedencia ni cambiar su booleano.
+- La interfaz diferencia “No bloqueado” de “No informado”; para registros históricos con `blocked=1`, aclara que el dato es positivo pero su procedencia no fue conservada.
+- El evento de tipo `blocked` se considera evidencia positiva, salvo contradicción explícita que se rechaza.
+- Aceptación manual pendiente: revisar los tres casos CSV, lectura de Actividad, exportación/reimportación y backup/restauración en la aplicación.
 
 ### Límites actuales — no declararlos resueltos
 
-- `inspect_field_value` es una utilidad tipada probada; no reemplaza la validación autoritativa de `activity_event_service.py`. Los importadores siguen usando sus validadores de dominio específicos.
-- Las sugerencias y errores de cabecera se comunican en el resultado de validación del preview. Todavía no hay una pantalla dedicada de mapeo interactivo ni una tabla visual de calidad por columna.
-- El catálogo aún no incluye todo el modelo objetivo de dominio, tipo de evento, política de agregación, cardinalidad, enriquecimiento y versionado de esquema.
-- No existe todavía una política completa de `not_applicable` frente a `not_reported` para todos los campos. No se agregan valores por defecto ni se convierte ausencia en cero.
-- Monitorización, Inventario y Forense no utilizan este catálogo. No se cambió SQLite, el contrato HTTP ni el esquema persistido.
+- `inspect_field_value` es una utilidad tipada; no reemplaza la validación autoritativa de `activity_event_service.py`.
+- `parse_quantity` permite cálculos de conversiones explícitas, pero no transforma ni persiste automáticamente valores importados.
+- En `main`, hasta integrar #222, el campo heredado `blocked` todavía no preserva la distinción completa entre ausencia, vacío y false.
+- No existe todavía una pantalla dedicada de mapeo interactivo ni una tabla visual de calidad por columna.
+- El catálogo aún no se amplió a Monitorización, Inventario o Forense.
+- No hay IA externa, autocorrección fuzzy ni modificación automática de captura/frecuencia de sondas.
 
-Los principios y objetivos de las secciones siguientes siguen siendo el destino de diseño. La PR #212 implementa solo una base común de Actividad/CSV/Zeek, no el modelo completo descrito en esta propuesta.
-
+La implementación actual es una primera base común de Actividad/CSV/Zeek, no el modelo semántico completo de todos los dominios descrito en la propuesta.
 ## 1. Decisión propuesta
 
 Incorporar un **registro semántico determinista** dentro del monolito modular. Su responsabilidad es convertir nombres y estructuras heterogéneas en un vocabulario interno pequeño, tipado y verificable. Los adaptadores de cada fuente siguen siendo responsables de interpretar su formato; el registro les proporciona definiciones comunes, alias, unidades y reglas de resolución.

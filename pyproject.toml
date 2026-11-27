@@ -11,15 +11,15 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "NetSentinel contributors" }]
 dependencies = [
-  "fastapi>=0.143.3,<1.0",
+  "fastapi>=0.162.5,<1.0",
   "uvicorn[standard]>=0.54.0,<1.0",
   "psutil>=7.2.2,<8.0",
 ]
 
 [project.optional-dependencies]
 test = ["pytest>=9.2.0,<10.0", "httpx2>=2.14.0,<3.0"]
-ui-test = ["playwright>=1.64.1,<2.0"]
-geoip = ["maxminddb>=3.2.0,<4.0"]
+ui-test = ["playwright>=1.65.2,<2.0"]
+geoip = ["maxminddb>=3.3.0,<4.0"]
 
 [project.scripts]
 netsentinel = "netsentinel.cli:main"

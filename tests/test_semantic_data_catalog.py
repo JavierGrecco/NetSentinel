@@ -34,7 +34,7 @@ def test_header_normalization_rejects_confusable_unicode_and_controls() -> None:
 
 def test_activity_csv_resolves_existing_aliases_and_ignores_known_metadata() -> None:
     plan = resolve_headers(
-        ["receivedDateTime", "senderAddress", "recipientAddress", "src_ip", "interface", "size"],
+        ["receivedDateTime", "senderAddress", "recipientAddress", "src_ip", "interface", "size", "device_id", "device_name", "ip_address", "source"],
         "activity_csv",
     )
 
@@ -44,6 +44,10 @@ def test_activity_csv_resolves_existing_aliases_and_ignores_known_metadata() -> 
         HeaderStatus.ALIAS,
         HeaderStatus.ALIAS,
         HeaderStatus.ALIAS,
+        HeaderStatus.IGNORED,
+        HeaderStatus.IGNORED,
+        HeaderStatus.IGNORED,
+        HeaderStatus.IGNORED,
         HeaderStatus.IGNORED,
     ]
     assert [item.field_name for item in plan.headers[:5]] == [

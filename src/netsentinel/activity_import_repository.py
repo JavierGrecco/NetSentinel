@@ -20,7 +20,7 @@ _MANUAL_IMPORT_DEDUP_FIELDS = (
     "destination_ip", "destination_port", "protocol", "bytes_sent", "bytes_received",
     "packets_sent", "packets_received", "network_interface", "source_event_id",
     "app_name", "page_url", "search_engine", "search_terms",
-    "email_provider", "email_from", "email_to", "email_subject", "blocked",
+    "email_provider", "email_from", "email_to", "email_subject", "blocked", "blocked_observation",
 )
 
 
@@ -90,7 +90,7 @@ def import_manual_events(
         now_text = _utc_iso(now)
         for item in events:
             import_format = item.get("import_format", "csv")
-            values = tuple(item.get(field) for field in _MANUAL_IMPORT_DEDUP_FIELDS)
+            values = tuple(item.get(field, "legacy_unknown") if field == "blocked_observation" else item.get(field) for field in _MANUAL_IMPORT_DEDUP_FIELDS)
             source_event_id = item.get("source_event_id")
             # Una fuente puede exportar el mismo registro con metadatos añadidos
             # después. Si trae un ID estable, ese ID es la identidad principal.
@@ -131,8 +131,8 @@ def import_manual_events(
                                 source_ip, source_port, destination_ip, destination_port, protocol,
                                 bytes_sent, bytes_received, packets_sent, packets_received, network_interface, source_event_id,
                                 app_name, page_url, search_engine, search_terms,
-                                email_provider, email_from, email_to, email_subject, blocked, import_format)
-                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                email_provider, email_from, email_to, email_subject, blocked, blocked_observation, import_format)
+                               VALUES (NULL, ?, ?, ?, ?, 'manual_import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (
                                 device_id, item["observed_at"], now_text, item["event_type"], item["domain"],
                                 item.get("source_ip"), item.get("source_port"), item["destination_ip"],
@@ -141,7 +141,7 @@ def import_manual_events(
                                 item.get("network_interface"), item.get("source_event_id"),
                                 item["app_name"], item["page_url"], item["search_engine"], item["search_terms"],
                                 item["email_provider"], item["email_from"], item["email_to"], item["email_subject"],
-                                item["blocked"], import_format,
+                                item["blocked"], item.get("blocked_observation", "legacy_unknown"), import_format,
                             ),
                         )
                     imported_count += 1

@@ -11,7 +11,7 @@ import argparse
 import hashlib
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -58,7 +58,7 @@ class Viewport:
 
 
 def _is_activity_page_link(value: str | None) -> bool:
-    """Reconoce Actividad aunque el enlace seleccione una pestaña mediante hash."""
+    """Reconoce la página Actividad aunque el enlace seleccione una pestaña por hash."""
     return bool(value) and urlsplit(value).path == "/activity"
 
 
@@ -1564,15 +1564,187 @@ def _activity_synthetic_import_failures(page, base_url: str, scenarios_dir: Path
             error_text = page.locator("#importStatus").inner_text()
             if "Vista previa completada. No se guardaron eventos." in error_text:
                 failures.append(f"{filename} mostró un mensaje de éxito en lugar de rechazo")
+        failures.extend(_activity_blocked_provenance_failures(page, base_url, scenarios_dir))
     except Exception as exc:
         failures.append(f"el recorrido CSV sintético no se completó en Chromium: {exc}")
     finally:
-        # No dejamos la vista en un panel de error ni reutilizamos el archivo inválido.
+        # El screenshot de CI debe conservar la tabla de Eventos ya validada,
+        # no volver al resumen que oculta los estados de procedencia revisados.
         try:
             page.goto(f"{base_url}/activity", wait_until="load", timeout=10000)
+            page.locator('button.section-tab[data-tab-target="activity-events"]').click()
+            page.wait_for_function(
+                "() => document.querySelectorAll('#events tr').length >= 5",
+                timeout=10000,
+            )
         except Exception:
             pass
     return failures
+
+
+def _activity_blocked_provenance_failures(page, base_url: str, scenarios_dir: Path) -> list[str]:
+    """Comprueba en Chromium la procedencia del booleano blocked, API, tabla y exportación."""
+    failures: list[str] = []
+    stamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    cases = (
+        {
+            "filename": "blocked-missing.csv",
+            "ip": "192.0.2.211",
+            "content": f"observed_at,event_type,destination_ip\n{stamp},connection,192.0.2.211\n",
+            "observation": "missing",
+            "blocked": False,
+            "label": "No informado (campo ausente)",
+        },
+        {
+            "filename": "blocked-empty.csv",
+            "ip": "192.0.2.212",
+            "content": f"observed_at,event_type,destination_ip,blocked\n{stamp},connection,192.0.2.212,\n",
+            "observation": "empty",
+            "blocked": False,
+            "label": "No informado (campo vacío)",
+        },
+        {
+            "filename": "blocked-false.csv",
+            "ip": "192.0.2.213",
+            "content": f"observed_at,event_type,destination_ip,blocked\n{stamp},connection,192.0.2.213,false\n",
+            "observation": "reported_false",
+            "blocked": False,
+            "label": "No bloqueado",
+        },
+        {
+            "filename": "blocked-event-type.csv",
+            "ip": "192.0.2.214",
+            "content": f"observed_at,event_type,destination_ip\n{stamp},blocked,192.0.2.214\n",
+            "observation": "event_type_blocked",
+            "blocked": True,
+            "label": "Bloqueado por tipo de evento",
+        },
+        {
+            "filename": "blocked-legacy-positive.csv",
+            "ip": "192.0.2.215",
+            "content": (
+                "observed_at,event_type,destination_ip,blocked,blocked_observation\n"
+                f"{stamp},connection,192.0.2.215,true,legacy_unknown\n"
+            ),
+            "observation": "legacy_unknown",
+            "blocked": True,
+            "label": "Bloqueado (registro histórico; procedencia desconocida)",
+        },
+    )
+    try:
+        page.locator('button.section-tab[data-tab-target="activity-import"]').click()
+        page.wait_for_function(
+            "() => document.querySelector('#csvDevice')?.options.length > 1",
+            timeout=8000,
+        )
+        device_id = page.locator("#csvDevice").input_value()
+        for case in cases:
+            file_path = scenarios_dir / case["filename"]
+            file_path.write_text(case["content"], encoding="utf-8")
+            page.locator("#csvFile").set_input_files(str(file_path))
+            page.locator("#importStatus").evaluate("(element) => { element.textContent = ''; }")
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith("/api/activity/import/preview"),
+                timeout=10000,
+            ) as response_info:
+                page.locator("#previewImport").click()
+            preview = response_info.value
+            if preview.status != 200:
+                failures.append(f"{case['filename']} no pasó la vista previa (HTTP {preview.status})")
+                continue
+            page.wait_for_function(
+                "() => { const panel = document.querySelector('#previewPanel'); "
+                "return panel && !panel.hidden; }",
+                timeout=8000,
+            )
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith("/api/activity/import"),
+                timeout=10000,
+            ) as import_info:
+                page.locator("#import").click()
+            imported = import_info.value
+            if imported.status != 200:
+                failures.append(f"{case['filename']} no se importó (HTTP {imported.status})")
+                continue
+            page.wait_for_function(
+                "() => (document.querySelector('#importStatus')?.textContent || '')"
+                ".includes('1 evento(s) importados')",
+                timeout=10000,
+            )
+            response = page.request.get(f"{base_url}/api/activity?device_id={device_id}")
+            if response.status != 200:
+                failures.append(f"la lectura API tras {case['filename']} respondió HTTP {response.status}")
+                continue
+            events = response.json().get("events", [])
+            event = next((item for item in events if item.get("destination_ip") == case["ip"]), None)
+            if event is None:
+                failures.append(f"{case['filename']} no aparece en la lectura API de Actividad")
+                continue
+            if event.get("blocked_observation") != case["observation"]:
+                failures.append(
+                    f"{case['filename']} guardó blocked_observation={event.get('blocked_observation')!r}, "
+                    f"se esperaba {case['observation']!r}"
+                )
+            if bool(event.get("blocked")) is not case["blocked"]:
+                failures.append(
+                    f"{case['filename']} cambió el booleano blocked: {event.get('blocked')!r}"
+                )
+
+        contradictory = scenarios_dir / "blocked-contradictory.csv"
+        contradictory.write_text(
+            "observed_at,event_type,destination_ip,blocked\n"
+            f"{stamp},blocked,192.0.2.216,false\n",
+            encoding="utf-8",
+        )
+        page.locator("#csvFile").set_input_files(str(contradictory))
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/activity/import/preview"),
+            timeout=10000,
+        ) as invalid_info:
+            page.locator("#previewImport").click()
+        invalid = invalid_info.value
+        if not 400 <= invalid.status < 500:
+            failures.append(
+                "event_type=blocked con blocked=false explícito no fue rechazado "
+                f"(HTTP {invalid.status})"
+            )
+
+        events_tab = page.locator('button.section-tab[data-tab-target="activity-events"]')
+        events_tab.click()
+        for case in cases:
+            row = page.locator("#events tr").filter(has_text=case["ip"])
+            try:
+                row.wait_for(state="visible", timeout=8000)
+                rendered = row.inner_text()
+            except Exception:
+                failures.append(f"{case['ip']} no aparece en la tabla de Eventos")
+                continue
+            if case["label"] not in rendered:
+                failures.append(
+                    f"la fila {case['ip']} no muestra {case['label']!r}: {rendered!r}"
+                )
+
+        exported = page.request.get(
+            f"{base_url}/api/activity/export.csv?device_id={device_id}"
+        )
+        if exported.status != 200:
+            failures.append(f"la exportación CSV de procedencia respondió HTTP {exported.status}")
+        else:
+            exported_text = exported.text()
+            if "blocked_observation" not in exported_text:
+                failures.append("la exportación CSV no incluye blocked_observation")
+            for case in cases:
+                if case["observation"] not in exported_text:
+                    failures.append(
+                        f"la exportación CSV no conserva el estado {case['observation']!r}"
+                    )
+    except Exception as exc:
+        failures.append(f"la regresión de procedencia blocked en Chromium no se completó: {exc}")
+    return failures
+
 
 
 def _world_map_render_failures(page, base_url: str) -> list[str]:
@@ -1646,7 +1818,7 @@ def _guided_test_interaction_failures(page, base_url: str, scenarios_dir: Path |
     popups = []
     module_page = None
 
-    def track_request(request) -> None:
+    def track_request(request) -> None
         if request.method == "POST" and request.url.split("?", 1)[0].rstrip("/").endswith("/api/scan"):
             scan_posts.append(request.url)
 

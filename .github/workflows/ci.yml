@@ -47,6 +47,28 @@ jobs:
       - name: Run full test suite against minimum dependencies
         run: python -m pytest -W error::starlette.exceptions.StarletteDeprecationWarning
 
+  browser-extension:
+    name: Browser extension tests (Node 24)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Check first-party JavaScript syntax
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find browser-extension src/netsentinel/static -maxdepth 1 -type f -name '*.js' ! -name 'cytoscape.min.js' -print0)
+      - name: Run browser extension unit tests
+        run: node --test browser-extension/*.test.cjs
+
   package:
     name: Wheel metadata and static assets
     runs-on: ubuntu-latest
@@ -153,6 +175,16 @@ jobs:
           assert actions["init"] == actions["analyze"], (
               "CodeQL init and analyze must use the same full commit SHA and release tag; "
               f"found {actions!r}"
+          )
+
+          language_match = re.search(r"^[ \t]*languages:[ \t]*(.+)$", workflow, re.MULTILINE)
+          assert language_match is not None, "CodeQL must declare its analyzed languages."
+          languages = {item.strip() for item in language_match.group(1).split(",")}
+          required_languages = {"python", "javascript-typescript", "actions"}
+          missing_languages = required_languages - languages
+          assert not missing_languages, (
+              "CodeQL coverage must include Python, JavaScript/TypeScript and GitHub Actions; "
+              f"missing {sorted(missing_languages)}"
           )
 
           dependabot = Path(".github/dependabot.yml").read_text(encoding="utf-8")
@@ -366,9 +398,7 @@ jobs:
 
   responsive-ui:
     name: Responsive UI / Chromium
-    # Pin the browser-test runner to the current Ubuntu LTS. ubuntu-latest
-    # moved to a newer image whose Microsoft apt feed returned HTTP 403 during
-    # Playwright's --with-deps installation; this is environmental, not a UI test failure.
+    # Playwright's --with-deps is pinned to Ubuntu LTS after ubuntu-latest apt feed 403.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -383,5 +413,13 @@ jobs:
         run: python -m pip install -e ".[test,ui-test]"
       - name: Install Chromium and its system dependencies
         run: python -m playwright install --with-deps chromium
-      - name: Check all main pages at representative viewport sizes
-        run: python scripts/check_responsive_ui.py
+      - name: Check all main pages at representative viewport sizes and capture acceptance evidence
+        run: python scripts/check_responsive_ui.py --screenshots
+      - name: Upload responsive and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: netsentinel-ui-acceptance-${{ github.sha }}
+          path: .netsentinel-test-artifacts/responsive-ui/
+          if-no-files-found: warn
+          retention-days: 14

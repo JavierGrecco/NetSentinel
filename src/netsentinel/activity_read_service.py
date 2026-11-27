@@ -123,7 +123,7 @@ def export_activity_csv(
         "source_port", "destination_ip", "destination_port", "protocol",
         "bytes_sent", "bytes_received", "packets_sent", "packets_received",
         "network_interface", "source_event_id", "app_name", "blocked", "email_provider",
-        "email_from", "email_to", "email_subject",
+        "email_from", "email_to", "email_subject", "blocked_observation",
     ]
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
@@ -153,6 +153,7 @@ def export_activity_csv(
             "source_event_id": event.get("source_event_id"),
             "app_name": event["app_name"],
             "blocked": event["blocked"],
+            "blocked_observation": event.get("blocked_observation", "legacy_unknown"),
             "email_provider": event["email_provider"],
             "email_from": event["email_from"],
             "email_to": event["email_to"],

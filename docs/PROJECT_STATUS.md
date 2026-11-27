@@ -1,19 +1,24 @@
 # Estado del proyecto — NetSentinel
 
-**Corte de portfolio:** 26 de noviembre de 2026  \
-**Rama canónica:** `main` · último commit documental de este corte: [`8df3f765`](https://github.com/JavierGrecco/NetSentinel/commit/8df3f765414b3bf0d875e6063f4964cbf0e9a14a) (actualiza este estado y el README; no modifica el runtime).
+**Corte de estado:** 27 de noviembre de 2026.  
+**Rama canónica:** `main` · HEAD `a0f4a7e53ad8fbb197f47d29050b0d1f18264197`.
 
-## Situación verificada — 26 de noviembre de 2026
+## Situación verificada
 
-- **Estado del producto:** desarrollo activo. No se declara una versión estable; la aceptación manual integral y la comprobación efectiva de las reglas de integración de `main` siguen pendientes.
-- **PR #212 — registro semántico CSV/Zeek:** abierta y no integrada. Sus ejecuciones visibles de CI, análisis de seguridad y cadena de suministro terminaron correctamente sobre el HEAD de esa PR (`ab012b2`), pero la rama conserva como base un SHA anterior de `main`; requiere actualizarse y volver a validarse antes de considerar su integración.
-- **PR #200 — correlación de contexto Zeek:** abierta en Draft y no integrada. También requiere actualizar su base y completar las validaciones previstas.
-- **PR #208 — presentación profesional:** integrada; no debe aparecer como una PR abierta.
-- **Mantenimiento:** hay PRs abiertas de Dependabot para FastAPI (#215), CodeQL Actions (#213), Playwright (#217) y MaxMindDB (#218). No se consideran integradas hasta su merge.
-- **Alcance:** las funciones de #212 y #200 que todavía están en PR no se deben atribuir a `main`. La descripción pública del README se limita a las capacidades que figuran en la rama canónica.
-- **Evidencia:** los checks automatizados aprobados corresponden a sus SHA concretos. No sustituyen la aceptación manual, pruebas de instalación/recuperación ni revisión de accesibilidad.
+- **Estado del producto:** desarrollo activo. 0.10.0 no es estable; faltan aceptación manual integral, instalación limpia, backup/restauración, accesibilidad y verificación efectiva de la gobernanza de `main`.
+- **Última integración funcional:** PR #212, núcleo semántico CSV/Zeek, squash commit `956ceb442fe21aae3d965e55c1b13d3a7baa2060`. El catálogo es determinista y conserva alias explícitos, validación tipada y unidades; no es todavía un motor semántico universal de todos los módulos.
+- **PR #222 — procedencia de `blocked`:** el HEAD `893e57ce1f1d1ab733fce5faf0861f31219fafa9` se sincronizó con `main` y terminó con CI 19/19, Security Analysis 2/2 y Supply Chain 2/2 correctos. Incluye seis estados de procedencia, compatibilidad con el booleano heredado, migración SQLite aditiva y CSV de ida/vuelta. Se mantienen todas las ramas de historial y no hubo solapamientos de archivos con los cambios de seguridad/gobernanza.
+- **Aceptación específica BPR-01–BPR-08:** cerrada mediante cobertura automatizada, no presentada como prueba humana. Chromium comprueba cinco estados, contradicción, API, presentación de la tabla y exportación; pruebas de integración cubren la reimportación en otro dispositivo y la migración/back-up/restore. El informe Chromium registra 135/135 casos de interfaz/tamaños y no presenta fallos; sus capturas se guardan como artefacto de Actions por 14 días. La revisión visual de Actividad confirma etiquetas diferenciadas. La aceptación integral de instalación, accesibilidad y uso real para 0.10.0 continúa pendiente.
+- **PR #200 — correlación Zeek en Hallazgos:** abierta en Draft, HEAD funcional `9f1d10b1c2ba73c6e849d4b9fbbcdc2e0df86694`; comparación del corte contra `main`: 3 commits ahead / 18 behind. No integrarla antes de #222. Después del merge, sincronizarla sobre el nuevo `main`, preservar UID Zeek/filtrado `import_format` y reconciliar los módulos compartidos. Repetir los tres grupos de checks y la aceptación manual de 13 pasos.
+- **Seguridad y arquitectura integradas:** #226 amplió CodeQL a Python, JavaScript/TypeScript y GitHub Actions e incorporó verificaciones de sintaxis JS en Node 24; #227 corrigió el disparador seguro de la herramienta temporal; #228 incorporó ADR-002 y formalizó el monolito modular FastAPI/Python con JavaScript nativo; #229 retiró la herramienta puntual y añadió limpieza automática condicionada de ramas fusionadas.
+- **Ramas remotas:** el último inventario verificado contiene exactamente tres refs: `main`, la rama de #200 y la rama de #222. La limpieza masiva fue completada; no hay un lote histórico de ramas pendiente.
+- **Limpieza y automatización:** el run [46062536965](https://github.com/JavierGrecco/NetSentinel/actions/runs/46062536965) eliminó 193 refs en la ejecución final de #221. El issue #221 quedó cerrado como evidencia. PR #229 añadió un workflow permanente que borra únicamente ramas propias tras merge confirmado, SHA intacto y sin otras PR abiertas que las utilicen; su primera ejecución quedó verificada.
+- **Gobernanza de `main`:** el ruleset #25281660 está Active pero tiene condiciones sin patrones, 0 checks requeridos y 0 aprobaciones. Por tanto no puede afirmarse que proteja `main`. Se requiere corregirlo manualmente desde Settings y comprobar el bloqueo efectivo. Las instrucciones están en [GITHUB_SETUP.md](GITHUB_SETUP.md).
+- **Forense:** casos, hashes, auditoría y borradores de informes siguen siendo experimentales. No son una cadena de custodia validada ni sustituyen procedimientos institucionales.
+- **Acceso remoto e inteligencia externa:** siguen planificados; no se guardan secretos de proveedores ni se envían evidencias a terceros por defecto.
+- **Seguimiento temporal:** [issue #219](https://github.com/JavierGrecco/NetSentinel/issues/219). Su checklist activo conserva solo aceptación, sincronización e hitos administrativos pendientes; las etapas completadas se retiraron.
 
-La fotografía detallada que sigue se conserva como **registro histórico del 3 de noviembre de 2026**. Sus listados de ramas, PR y ejecuciones no representan el estado vivo actual.
+Las secciones históricas posteriores se conservan como fotografías fechadas y no representan el estado vivo.
 
 ## Histórico: fotografía de main — 3 de noviembre de 2026
 
