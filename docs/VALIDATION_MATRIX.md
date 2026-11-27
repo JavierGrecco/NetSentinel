@@ -2,7 +2,22 @@
 
 Esta matriz almacena evidencia para la Fase 0 del [roadmap](ROADMAP.md). El seguimiento de pruebas manuales para la versión 0.10.0 se coordina en el [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75). Todas las pruebas se consideran **pendientes de registrar** hasta adjuntar evidencia real; no se infieren resultados manuales a partir de CI. Actualizarla en el PR que complete un recorrido y adjuntar enlaces a issues si hubo fallos.
 
-> **Estado actual (23/10/2026):** topología, Zeek, mapa GeoIP, NetSentinel Forense y el asistente iterativo están integrados en `main`. La [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194) añadió una regresión Chromium de revisar un paso desde el resumen, cambiar el resultado, conservar una nota y volver al informe; el SHA de la PR pasó CI 18/18, Chromium 135/135, seguridad y cadena de suministro. La [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198) solo añadió la evaluación estratégica y el enlace desde la matriz de referencias: no cambia el comportamiento probado. Esto no acredita la aceptación manual: las casillas de esta matriz siguen pendientes hasta registrar observaciones reales. Usá una copia de trabajo del `origin/main` vigente y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+> **Estado actualizado (27/11/2026):** el núcleo semántico #212 está integrado en `main`. La [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222) sigue en Draft y añade la distinción de procedencia de `blocked`; la [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) sigue en Draft y agrega correlación Hallazgos–Zeek. El asistente que hoy está en `main` contiene 12 pasos; #200 incorpora el paso adicional de correlación y el recorrido final será de 13. La aceptación manual continúa pendiente: ninguna casilla se marca por pasar CI. Usá una copia del `origin/main` vigente y datos sintéticos aislados. La guía maestra es [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md); la guía ampliada de Forense es [FORENSIC_MANUAL_TEST.md](FORENSIC_MANUAL_TEST.md).
+
+## Aceptación manual específica — procedencia de `blocked` (PR #222)
+
+Todas estas comprobaciones siguen **pendientes** hasta ejecutarse sobre la aplicación en una base aislada. Ejecutar con el procedimiento de [EXPERT_ACCEPTANCE_LAB.md](EXPERT_ACCEPTANCE_LAB.md) y registrar una sola sesión con el SHA exacto.
+
+- [ ] BPR-01 — CSV sin columna `blocked`: persistir `missing` y mostrar “No informado (campo ausente)”.
+- [ ] BPR-02 — CSV con celda `blocked` vacía: persistir `empty` y mostrar “No informado (campo vacío)”.
+- [ ] BPR-03 — CSV con `blocked=false`: persistir `reported_false` y mostrar “No bloqueado”.
+- [ ] BPR-04 — Evento de tipo `blocked` sin booleano: reconocer `event_type_blocked`; rechazar la contradicción explícita `blocked=false`.
+- [ ] BPR-05 — Exportar e importar en otro dispositivo/base aislada; mantener `missing`, `empty` y `reported_false` sin inferencias.
+- [ ] BPR-06 — Migrar una copia de base anterior: conservar ambos valores históricos 0/1 y asignar `legacy_unknown` sin reclasificarlos.
+- [ ] BPR-07 — Mostrar un histórico con `blocked=1` y `legacy_unknown` como bloqueado con procedencia desconocida; no como no informado.
+- [ ] BPR-08 — Backup/restauración de la base migrada: conservar booleanos y estados de procedencia.
+
+**Registro BPR:** commit exacto / sistema / navegador / fecha y zona horaria / resultado por caso / evidencia sanitizada / issue de cualquier fallo.
 
 ## Datos de cada sesión de pruebas
 

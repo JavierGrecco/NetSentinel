@@ -1,11 +1,10 @@
 # Laboratorio consolidado de aceptación para expertos
 
-**Rama canónica:** `main`  
-**Último commit consultado al actualizar esta guía (23/10/2026):** [`3625709c`](https://github.com/JavierGrecco/NetSentinel/commit/3625709cf08f2c51a5c34d14db0b1a58bf1802b1).  
-**Asistente iterativo:** [PR #193](https://github.com/JavierGrecco/NetSentinel/pull/193), integrada en [`a1bbeaa`](https://github.com/JavierGrecco/NetSentinel/commit/a1bbeaa27c98f85991ad07bc998651b269c739c6).  
-**Regresión interactiva de Chromium:** [PR #194](https://github.com/JavierGrecco/NetSentinel/pull/194); CI 18/18 y navegador 135/135 correctos sobre el SHA de la PR. Las ejecuciones posteriores al merge se deben verificar de nuevo en [Actions](https://github.com/JavierGrecco/NetSentinel/actions).  
-**Análisis de producto:** [PR #198](https://github.com/JavierGrecco/NetSentinel/pull/198) añadió documentación estratégica, sin modificar el código del laboratorio.  
-**Estado:** laboratorio integrado; aceptación manual, revisión visual y de accesibilidad todavía pendientes.
+**Corte de documentación:** 27/11/2026.  
+**Rama canónica:** `main`, HEAD `295a74e16986516d6f3d5d4b3214b59d186a6e81`.  
+**Estado del laboratorio:** el asistente integrado en `main` tiene 12 pasos evaluables. La [PR #200](https://github.com/JavierGrecco/NetSentinel/pull/200) añade el paso `findings-correlation`; cuando #200 se integre, el recorrido final tendrá 13 pasos.  
+**Cambios de procedencia:** la [PR #222](https://github.com/JavierGrecco/NetSentinel/pull/222) añade a la aceptación CSV los casos de `blocked` ausente, vacío y false explícito. Permanece en Draft hasta ejecutar esta extensión manualmente y registrar evidencia.  
+**Estado general:** la aceptación manual, la revisión visual y la accesibilidad siguen pendientes; no inferir resultados manuales desde CI.
 
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
@@ -17,7 +16,7 @@ El asistente reemplaza la lista de casillas dispersas por un recorrido de **12 p
 |---|---|---|
 | Inventario y procedencia | Dispositivo sintético e intervalo de observación | El activo de prueba queda marcado como fixture y no como descubrimiento real. |
 | Explorador LAN (`/network`) | Captura sintética, subred, selección, filtros, zoom, detalle textual | El grafo usa la lectura persistida y no inventa enlaces; el endpoint de topología es de solo lectura. |
-| Actividad CSV | Vista previa, importación, repetición, archivos negativos | La vista previa no escribe; las repeticiones se deduplican y los archivos inválidos se rechazan sin importación parcial. |
+| Actividad CSV | Vista previa, importación, repetición, archivos negativos y procedencia de `blocked` | La vista previa no escribe; las repeticiones se deduplican; los archivos inválidos se rechazan sin escrituras parciales; ausencia, vacío y false explícito siguen siendo distintos. |
 | Importador Zeek | TSV nativo y JSON Lines, atribución por IP/fecha, contadores, UID | La vista previa precede a la escritura; bytes IP ausentes permanecen desconocidos; los UID repetidos no crean duplicados. |
 | Mapa mundial (`/world-map`) | Cartografía local, tabla, filtros y eventos de actividad | Las coordenadas solo aparecen con datos de GeoIP local válidos; una IP privada o no cubierta no se sitúa artificialmente. |
 | Forense (`/forensics`) | Caso, registro de evidencia, hash coincidente y discrepante, ruta inválida, auditoría, manifiestos e informe | El cambio de contenido se detecta y los resultados quedan exportables; el sistema explica los límites de confianza. |
@@ -78,12 +77,27 @@ El progreso y las notas se guardan solo en el navegador de esta máquina. El asi
 ## Orden sugerido para la prueba manual
 
 1. **Preparación e inventario sintético.** Confirmá las rutas aisladas y que no se inició un descubrimiento real.
-2. **CSV en Actividad.** Elegí `activity.csv`, revisá la vista previa e importá. La segunda importación debe indicar 0 eventos nuevos y 6 duplicados omitidos; después probá los CSV negativos.
+2. **CSV en Actividad.** Elegí `activity.csv`, revisá la vista previa e importá. La segunda importación debe indicar 0 eventos nuevos y 6 duplicados omitidos; después probá los CSV negativos. Para la aceptación de #222, ejecutá también la extensión de procedencia descrita debajo de este recorrido.
 3. **Topología histórica.** En la guía pulsá **Comprobar ahora** y revisá los nodos/enlaces observados; luego abrí `/network`, seleccioná la lectura con origen `synthetic-test-fixture` y probá búsqueda, filtros, zoom, selección y detalle textual.
 4. **Zeek.** En `/activity`, elegí el activo ficticio `192.168.56.20`, cargá `$SCENARIO_DIR/zeek-conn.tsv`, previsualizá y revisá atribución y contadores. Importá dos veces: la segunda debe mostrar 0 registros nuevos y 2 duplicados omitidos. Anotá cualquier atribución inesperada.
 5. **Mapa mundial.** En `/world-map`, revisá tabla, filtro, estados vacíos y mensajes de cobertura. Para comprobar marcadores geográficos se necesita una base GeoLite2-City autorizada y vigente instalada localmente; instalar el paquete Python no descarga esa base.
 6. **Forense.** Creá el caso con valores ficticios de la guía, registrá la muestra, compará el hash inicial, cambiá la copia de trabajo con el comando propuesto y repetí la comparación. Revisá transferencias, auditoría y manifiestos; creá también el informe sin firma, descargá JSON/Markdown y verificá el JSON desde una segunda terminal.
 7. **Cierre.** Recorré los enlaces entre Red/Forense, la navegación por teclado y los tamaños de escritorio/móvil. Anotá la versión de Python, el SO, el SHA exacto probado (`git rev-parse HEAD`), el resultado observado y cualquier fallo.
+
+
+### Extensión de aceptación de procedencia — PR #222
+
+Ejecutar en la misma base sintética aislada, con una fecha UTC actual y una IP de destino distinta por archivo. No reutilices tu base habitual.
+
+1. Importá un CSV cuya cabecera **no incluya** la columna `blocked`; el evento debe quedar con `blocked_observation=missing` y la interfaz debe mostrar **No informado (campo ausente)**.
+2. Importá otro CSV que incluya `blocked` pero deje la celda vacía; debe quedar `empty` y mostrarse **No informado (campo vacío)**.
+3. Importá un tercero con `blocked=false`; debe quedar `reported_false` y mostrarse **No bloqueado**.
+4. Como control adicional, importá un evento `event_type=blocked` sin la columna; debe mostrar **Bloqueado por tipo de evento**. Un `blocked=false` explícito en un evento de ese tipo debe rechazarse por contradicción.
+5. Exportá los eventos. Comprobá que el CSV incluya `blocked_observation`; importalo en otro dispositivo sintético o en otra base aislada y verifica que los tres estados no se colapsen.
+6. Sobre una copia de una base anterior al cambio, ejecutá la migración. Los valores históricos 0/1 de `blocked` deben mantenerse y la procedencia debe ser `legacy_unknown`. Un registro histórico con 1 debe seguir visualizándose como bloqueado, aclarando que su procedencia no fue conservada.
+7. Generá un backup y restauralo en una ubicación de prueba. Confirmá que los valores y estados de procedencia sobreviven a la restauración.
+
+Registrar el SHA exacto probado, sistema/navegador, resultado de cada caso y evidencia sanitizada en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md). Ninguna casilla se marca por el hecho de que CI haya pasado.
 
 ## Pruebas automatizadas locales
 
