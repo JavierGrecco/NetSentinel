@@ -366,7 +366,10 @@ jobs:
 
   responsive-ui:
     name: Responsive UI / Chromium
-    runs-on: ubuntu-latest
+    # Pin the browser-test runner to the current Ubuntu LTS. ubuntu-latest
+    # moved to a newer image whose Microsoft apt feed returned HTTP 403 during
+    # Playwright's --with-deps installation; this is environmental, not a UI test failure.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout
