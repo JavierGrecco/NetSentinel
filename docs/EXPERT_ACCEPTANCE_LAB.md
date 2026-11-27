@@ -19,6 +19,20 @@ python scripts/smoke_installed_wheel.py --wheel-dir dist
 
 Se instala el wheel con sus dependencias de runtime en un venv temporal y se elimina el directorio de datos de prueba al terminar. Requiere acceso a los índices de paquetes para instalar dependencias. No sustituye la instalación manual con los launchers, la actualización/restauración ni la aceptación de accesibilidad.
 
+## Integración automatizada de extensión MV3 en Chromium
+
+La CI ejecuta `scripts/check_chromium_extension.py` dentro del job `Responsive UI / Chromium` usando Xvfb. La prueba carga el directorio `browser-extension/` como extensión no empaquetada en un perfil temporal, abre su popup y recorre apagado por defecto, consentimiento, visita/búsqueda sintéticas, saneamiento, exclusiones, exportación CSV, borrado y opt-out. Playwright intercepta las solicitudes HTTP/HTTPS; solo responde los hosts sintéticos previstos y aborta cualquier otro destino, haciendo fallar el test si aparece una solicitud fuera de la allowlist.
+
+Para repetirla en Linux con entorno gráfico virtual y Playwright instalado:
+
+```bash
+python -m pip install -e ".[test,ui-test]"
+python -m playwright install chromium
+xvfb-run -a python scripts/check_chromium_extension.py
+```
+
+El perfil, la descarga y los datos de la prueba son temporales. Esta prueba automatizada de Chromium no sustituye instalar y revisar manualmente la extensión en Chrome y Edge, comprobar políticas corporativas ni la aceptación con una persona usuaria.
+
 Este laboratorio reúne en una sola copia ejecutable los módulos que antes estaban repartidos en ramas distintas: mapa mundial GeoIP local, explorador de topología LAN histórica, importador Zeek, NetSentinel Forense y el asistente de aceptación dentro de la aplicación.
 
 El asistente reemplaza la lista de casillas dispersas por un recorrido de **13 pasos evaluables, uno por pantalla**. Explica qué se comprueba y por qué importa; abre el módulo necesario en otra pestaña sin cerrar la guía; muestra resultados de API en las pruebas automáticas de solo lectura; y permite registrar cada resultado como correcto, fallido o no comprobado. El progreso y las notas se guardan en el navegador, con un indicador visible y una señal cuando se recupera una sesión anterior. Las fases alcanzadas permiten volver a un paso sin reiniciar el recorrido; en el resumen, cada fila tiene una acción para revisar directamente ese paso y un acceso al primer pendiente o con incidencias. La guía no envía `POST /api/scan` ni inicia descubrimientos.
