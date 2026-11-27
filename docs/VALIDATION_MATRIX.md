@@ -23,6 +23,30 @@ El proceso no usa la copia de código del checkout: ejecuta desde un directorio 
 
 **Límite:** no equivale a una persona instalando el paquete desde cero, ejecutando los launchers reales, actualizando una instalación anterior, restaurando una copia manualmente o usando la aplicación con tecnologías de asistencia. Esas puertas siguen pendientes.
 
+## Integración automatizada de extensión Manifest V3 en Chromium — PR #233
+
+**HEAD probado:** `ce28791dd32bc2c575777cdd6f110b323d60a3eb`. **Integración:** `f06feb067dc36264ab9362b4a9a56b213a03fda5`. El control corre dentro del job existente `Responsive UI / Chromium`; no añade un nuevo contexto requerido al ruleset.
+
+| Escenario | Resultado automatizado |
+|---|---|
+| Perfil nuevo y navegación antes del consentimiento | Seguimiento apagado por defecto; no se registra la visita previa |
+| Activación explícita | El opt-in requiere confirmación y queda persistido |
+| Navegación y búsqueda | Una visita sintética y una búsqueda Google sintética se guardan como eventos separados |
+| Saneamiento | Tokens de consulta y fragmentos no aparecen en almacenamiento ni CSV; el término de búsqueda se conserva en su campo separado |
+| Exclusiones | El dominio excluido también excluye subdominios; loopback `127.0.0.1` no se registra |
+| Exportación | Descarga CSV desde el popup con BOM UTF-8 y valores sintéticos permitidos |
+| Limpieza y desactivación | Borrar vacía el almacenamiento; opt-out detiene capturas posteriores |
+| Límite de red | Playwright cumple una allowlist de hosts sintéticos; toda solicitud HTTP/HTTPS no permitida se aborta y hace fallar el test |
+
+**Evidencia PR #233:**
+- CI **22/22**, incluida Chromium responsive 135/135 y el paso de integración MV3: [run 46079541536](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079541536). El log registra `Chromium extension integration passed` y cero intentos HTTP/HTTPS no aprobados.
+- Security Analysis **2/2**: [run 46079541558](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079541558).
+- Supply Chain Security: dos trabajos aplicables aprobados; firma omitida por no ser un release: [run 46079541519](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079541519).
+
+**Verificación posterior al merge** sobre `f06feb0`: CI 22/22 ([run 46079773917](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079773917)), Security 2/2 ([run 46079774018](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079774018)) y Supply Chain con dos trabajos aplicables ([run 46079773929](https://github.com/JavierGrecco/NetSentinel/actions/runs/46079773929)).
+
+Esta prueba carga la extensión en Chromium automatizado con páginas simuladas; no visita sitios reales y aborta los destinos HTTP/HTTPS fuera de la lista permitida. No demuestra compatibilidad manual con Microsoft Edge ni configuraciones administradas de Chrome/Edge. Esas revisiones manuales permanecen pendientes en la checklist de extensión de esta matriz y en [issue #75](https://github.com/JavierGrecco/NetSentinel/issues/75).
+
 ## Aceptación funcional automatizada — correlación temporal Zeek (PR #200)
 
 **Integración:** `a6088f5ed2239b530d07b484eb60bf8024e1a91f`. **HEAD probado en PR:** `d7b57ada501696c64f0fb76335fdbbd3f561ac69`.

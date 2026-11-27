@@ -58,18 +58,78 @@ def _synthetic_response(blocked_requests: list[str]):
     return handle
 
 
-def _extension_id(context) -> str:
-    """Wait for the installed Manifest V3 service worker and derive its ID."""
-    deadline = time.monotonic() + 15
-    while time.monotonic() < deadline:
-        for worker in context.service_workers:
-            if worker.url.endswith("/service-worker.js"):
-                parsed = urlsplit(worker.url)
-                if parsed.scheme == "chrome-extension" and parsed.hostname:
-                    return parsed.hostname
-        time.sleep(0.2)
-    urls = [worker.url for worker in context.service_workers]
-    raise RuntimeError(f"Extension service worker did not start. Workers seen: {urls!r}")
+def _extension_id_from_manager(context) -> str:
+    """Read the loaded extension ID from Chromium's own extensions manager UI."""
+    manager = context.new_page()
+    try:
+        manager.goto("chrome://extensions/", wait_until="load")
+        manager.wait_for_selector("extensions-manager", timeout=10000)
+        items = manager.evaluate(
+            """() => {
+                const found = [];
+                const visit = root => {
+                    if (!root || !root.querySelectorAll) return;
+                    for (const element of root.querySelectorAll("*")) {
+                        if (element.localName === "extensions-item") {
+                            const data = element.data || {};
+                            const nameNode = element.shadowRoot?.querySelector("#name");
+                            found.push({
+                                id: element.getAttribute("id") || element.id || data.id || "",
+                                name: (nameNode?.textContent || data.name || "").trim()
+                            });
+                        }
+                        if (element.shadowRoot) visit(element.shadowRoot);
+                    }
+                };
+                visit(document);
+                return found;
+            }"""
+        )
+        matches = [
+            item for item in items
+            if item.get("id") and "netsentinel" in item.get("name", "").lower()
+        ]
+        if len(matches) != 1:
+            raise RuntimeError(
+                "Chromium extensions manager did not show exactly one NetSentinel extension: "
+                + repr(items)
+            )
+        extension_id = str(matches[0]["id"])
+        if len(extension_id) != 32 or any(char not in "abcdefghijklmnop" for char in extension_id):
+            raise RuntimeError(f"Chromium returned an invalid extension ID: {extension_id!r}")
+        return extension_id
+    finally:
+        manager.close()
+
+
+def _wait_for_service_worker(context, extension_id: str) -> None:
+    """Require the expected background worker after the extension popup has been opened."""
+    def matching_worker():
+        return next(
+            (
+                worker for worker in context.service_workers
+                if worker.url == f"chrome-extension://{extension_id}/service-worker.js"
+            ),
+            None,
+        )
+
+    worker = matching_worker()
+    if worker is None:
+        try:
+            event_worker = context.wait_for_event("serviceworker", timeout=15000)
+        except Exception as exc:
+            urls = [worker.url for worker in context.service_workers]
+            raise RuntimeError(
+                "Opening the extension popup did not start its service worker; "
+                f"workers seen: {urls!r}"
+            ) from exc
+        if not event_worker.url.startswith(f"chrome-extension://{extension_id}/"):
+            raise RuntimeError(
+                f"Unexpected service worker started while opening the popup: {event_worker.url!r}"
+            )
+        worker = event_worker
+    if not worker.url.endswith("/service-worker.js"):
+        raise RuntimeError(f"Unexpected extension background worker: {worker.url!r}")
 
 
 def _read_events(extension_page) -> list[dict]:
@@ -170,15 +230,18 @@ def run_extension_test(extension_dir: Path) -> None:
                 context.set_default_timeout(10000)
                 blocked_requests: list[str] = []
                 context.route("**/*", _synthetic_response(blocked_requests))
-                extension_id = _extension_id(context)
-                print(f"[extension] service worker started: {extension_id}", flush=True)
+                extension_id = _extension_id_from_manager(context)
+                print(f"[extension] extension discovered in chrome://extensions: {extension_id}", flush=True)
                 extension_url = f"chrome-extension://{extension_id}/popup.html"
 
+                worker_events = []
+                context.on("serviceworker", lambda worker: worker_events.append(worker))
                 popup = context.new_page()
                 page_errors: list[str] = []
                 popup.on("pageerror", lambda error: page_errors.append(str(error)))
                 popup_response = popup.goto(extension_url, wait_until="load")
-                print(f"[extension] popup loaded (response={popup_response.status if popup_response else 'none'})", flush=True)
+                _wait_for_service_worker(context, extension_id)
+                print(f"[extension] popup loaded; MV3 service worker started (response={popup_response.status if popup_response else 'none'})", flush=True)
                 _assert(
                     not popup.locator("#enabled").is_checked(),
                     "The extension must be off by default in a newly created profile.",

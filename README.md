@@ -23,18 +23,6 @@ Su prioridad es mostrar qué se observó, de dónde procede la información y qu
 
 > **Estado del proyecto:** desarrollo activo. La aceptación manual integral y la verificación de las reglas de integración de `main` siguen pendientes; todavía no se declara una versión estable. Algunas mejoras se encuentran en Pull Requests y no forman parte de `main` hasta que se integren. Consultá el [estado del proyecto](docs/PROJECT_STATUS.md) y verificá siempre la rama y el commit evaluados.
 
-## Dirección de producto y desarrollo asistido por IA
-
-NetSentinel es un proyecto personal que conduzco como **Product Owner y responsable del producto**. Utilizo IA generativa como apoyo para investigar, diseñar e implementar, pero la dirección y la aceptación no se delegan:
-
-- Defino el problema, los usuarios, el alcance, las prioridades y el roadmap.
-- Investigo referencias y evalúo alternativas antes de decidir qué incorporar.
-- Guío la implementación con requisitos, reglas de negocio y criterios de aceptación.
-- Reviso arquitectura, seguridad, privacidad, integridad de la evidencia y mantenibilidad.
-- Pruebo los cambios, contrasto el resultado con lo solicitado y dirijo nuevas iteraciones cuando algo no cumple el estándar esperado.
-
-El criterio central del proyecto —mostrar evidencia, procedencia y límites en vez de presentar inferencias como certezas— también guía esas decisiones de producto.
-
 ## Empezar
 
 1. Descargá el repositorio y descomprimilo.
