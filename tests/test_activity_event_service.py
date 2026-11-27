@@ -212,6 +212,36 @@ def test_blocked_field_rejects_ambiguous_strings(value):
         })
 
 
+def test_blocked_observation_must_match_an_explicit_false_value():
+    with pytest.raises(ValueError, match="no coincide"):
+        normalize_event({
+            "event_type": "connection",
+            "source": "router_flow",
+            "destination_ip": "192.0.2.15",
+            "blocked": "",
+            "blocked_observation": "reported_false",
+        })
+
+
+def test_blocked_event_type_promotes_missing_or_empty_observation_to_evidence():
+    common = {"event_type": "blocked", "source": "router_flow"}
+    for payload in (
+        {**common, "blocked": "", "blocked_observation": "empty"},
+        {**common, "blocked_observation": "missing"},
+    ):
+        event = normalize_event(payload)
+        assert event["blocked"] == 1
+        assert event["blocked_observation"] == "event_type_blocked"
+
+    round_trip = normalize_event({
+        **common,
+        "blocked": 1,
+        "blocked_observation": "event_type_blocked",
+    })
+    assert round_trip["blocked"] == 1
+    assert round_trip["blocked_observation"] == "event_type_blocked"
+
+
 def test_imported_blocked_observation_round_trips_without_inference():
     for blocked, observation in ((0, "legacy_unknown"), (1, "legacy_unknown"),
                                  (0, "missing"), (0, "empty"), (0, "reported_false"),
