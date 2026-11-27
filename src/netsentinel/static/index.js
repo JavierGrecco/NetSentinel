@@ -262,6 +262,7 @@
     if(selection==='__new__'){
       const displayName=$('assetNewName').value.trim();
       if(!displayName){toast('Escribí un nombre para la nueva ficha lógica.');$('assetNewName').focus();return;}
+      if(reason.length<8){toast('Explicá el motivo de la asociación con al menos 8 caracteres.');$('assetReason').focus();return;}
       try{
         await api('/api/assets',{method:'POST',body:JSON.stringify({
           display_name:displayName,
@@ -277,6 +278,7 @@
     }
     const currentId=device.asset?.id||'';
     if(selection===currentId){dialog.close();return;}
+    if(reason.length<8){toast('Explicá el motivo del cambio con al menos 8 caracteres.');$('assetReason').focus();return;}
     try{
       await api('/api/devices/'+deviceId+'/asset',{method:'PUT',body:JSON.stringify({
         asset_id:selection||null,

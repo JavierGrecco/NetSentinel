@@ -179,6 +179,10 @@ def test_inventory_exposes_manual_logical_asset_grouping_without_claiming_verifi
     assert 'id="assetDialog"' in html
     assert 'id="assetSelect"' in html
     assert 'id="assetReason"' in html
+    assert 'id="assetReason" maxlength="280" placeholder=' in html
+    assert 'id="assetReason" maxlength="280" minlength="8" required' not in html
+    assert "Explicá el motivo de la asociación con al menos 8 caracteres." in script
+    assert "if(selection===currentId){dialog.close();return;}" in script
     assert 'id="assetNewName"' in html
     assert "No verifica una identidad física ni fusiona su historial de MAC o IP." in html
     assert 'data-asset-label' in script
