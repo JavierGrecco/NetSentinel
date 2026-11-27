@@ -49,6 +49,8 @@ La migración agrega la columna dentro de la inicialización transaccional de SQ
 
 La API mantiene el booleano `blocked` y expone el estado adicional en cada evento. La ingesta conserva si la propiedad fue omitida o enviada explícitamente. El importador y exportador CSV preservan `blocked_observation`; Zeek no aporta ese campo y, por eso, sus conexiones se etiquetan como `missing`. La interfaz presenta `No bloqueado` separado de los estados `No informado`.
 
+La exportación de Actividad incluye además `device_id`, `device_name`, `ip_address` y `source` como contexto informativo. Al reimportar un CSV propio, esas cuatro columnas se reconocen como metadatos ignorados: el dispositivo destino sigue siendo el que se selecciona en el formulario y el origen se registra como `manual_import`. No se confía en identificadores locales ni en el campo `source` del archivo, pero sí se conservan los campos del evento y `blocked_observation`.
+
 `legacy_unknown` es intencional: no se puede reconstruir retrospectivamente si un booleano histórico en cero fue informado por la fuente o agregado por el valor por defecto de versiones anteriores.
 
 ## Dónde hacer un cambio
