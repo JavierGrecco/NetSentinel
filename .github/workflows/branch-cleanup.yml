@@ -1,0 +1,71 @@
+name: One-time branch cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Primero ejecutá dry-run y revisá el resumen antes de elegir delete."
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - delete
+        default: dry-run
+      confirmation:
+        description: "Solo para delete: copiá la frase exacta que imprimió el dry-run."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: netsentinel-one-time-branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Validate and clean audited branch refs
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify GitHub CLI and repository context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh auth status
+          test "$GH_REPO" = "JavierGrecco/NetSentinel"
+          test "$(git branch --show-current)" = "main"
+
+      - name: Dry-run — read-only audit
+        if: inputs.mode == 'dry-run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 scripts/netsentinel_branch_cleanup.py --dry-run
+
+      - name: Delete — require exact confirmation phrase
+        if: inputs.mode == 'delete'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          python3 scripts/netsentinel_branch_cleanup.py \
+            --execute \
+            --confirm BORRAR-RAMAS-NETSENTINEL \
+            --yes \
+            --phrase "$CONFIRMATION"
