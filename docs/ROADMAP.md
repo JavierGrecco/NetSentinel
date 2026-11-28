@@ -4,9 +4,9 @@
 
 ## Estado vigente — 27 de noviembre de 2026
 
-**Rama canónica:** `main`. Último commit integrado verificado: `203b1fc22679ace27e2ac24159a991bcc2750992`. La última entrega Zeek de dominio sigue siendo `a6088f5ed2239b530d07b484eb60bf8024e1a91f`; PR #235 es una mejora incremental de claridad de identidad y no cambia el modelo de datos.
+**Rama canónica:** `main`. Último commit integrado verificado: [`610794e067e54803ff1a847a38970c40b18bff61`](https://github.com/JavierGrecco/NetSentinel/commit/610794e067e54803ff1a847a38970c40b18bff61). PR #237 añadió fichas lógicas manuales con historial sin reemplazar la clave técnica histórica. La última entrega Zeek de dominio sigue siendo `a6088f5ed2239b530d07b484eb60bf8024e1a91f`.
 
-**Última integración funcional:** PR #200, correlación temporal Zeek en Hallazgos, commit [`a6088f5ed2239b530d07b484eb60bf8024e1a91f`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f). Incluye el núcleo semántico CSV/Zeek (#212), la procedencia `blocked` (#222), la correlación trazable y la corrección de presentación de estados de Actividad. La versión 0.10.0 sigue en desarrollo; no es estable.
+**Última mejora funcional integrada:** PR #237, fichas lógicas de activos y asociaciones manuales con historial, commit [`610794e067e54803ff1a847a38970c40b18bff61`](https://github.com/JavierGrecco/NetSentinel/commit/610794e067e54803ff1a847a38970c40b18bff61). La capa organiza varios registros técnicos sin fusionarlos ni sustituir su clave MAC; la exportación JSON v5 incluye las fichas y los vínculos. La base de correlación temporal Zeek de PR #200 permanece en [`a6088f5ed2239b530d07b484eb60bf8024e1a91f`](https://github.com/JavierGrecco/NetSentinel/commit/a6088f5ed2239b530d07b484eb60bf8024e1a91f). La versión 0.10.0 sigue en desarrollo; no es estable.
 
 **Seguimiento temporal:** [issue #219 — ejecución del plan integral](https://github.com/JavierGrecco/NetSentinel/issues/219). Las etapas completadas se retiran del checklist; el estado durable y las evidencias se conservan aquí y en [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).
 
