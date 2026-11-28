@@ -4,6 +4,14 @@
 
 Este documento conserva las decisiones técnicas y los contratos de largo plazo. Mientras haya trabajo pendiente, el orden y la prioridad se mantienen en [ROADMAP.md](ROADMAP.md), y el seguimiento operativo en el [issue temporal #219](https://github.com/JavierGrecco/NetSentinel/issues/219). Ambos son temporales: al completar todas las fases se eliminan el roadmap y el issue. Este plan técnico, [PROJECT_STATUS.md](PROJECT_STATUS.md) y [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) permanecen como documentación de arquitectura, estado y evidencia. La aceptación humana se registra en la matriz.
 
+## 1.1 Fichas lógicas y registros técnicos observados
+
+El inventario técnico y la identidad lógica son conceptos distintos. La tabla histórica `devices` conserva registros agrupados por MAC y continúa siendo la referencia de compatibilidad para observaciones, eventos, sesiones y actividad. No se cambia esa clave en esta entrega.
+
+La capa `assets` proporciona identificadores lógicos definidos por el operador. `asset_device_links` registra asociaciones manuales con motivo, fecha de inicio y fecha de finalización. Un registro técnico tiene como máximo una asociación vigente, mientras que una ficha lógica puede agrupar varios registros. Al cambiar o quitar una asociación, se cierra el vínculo anterior sin borrar su historial. No se crea ni recomienda una asociación automática basada solo en MAC, IP, hostname o proximidad temporal.
+
+La asociación manual no constituye verificación de identidad física, titularidad ni atribución a una persona. La reconciliación futura requiere procedencia, alcance de red, precisión y vigencia temporal; se documentará y probará por separado. La decisión y sus consecuencias se mantienen en [ADR-003](ADR-003-LOGICAL-ASSET-GROUPS.md).
+
 ## 1. Dirección de producto
 
 NetSentinel evolucionará como **Network Operations & Intelligence**, una plataforma local-first para observar, comprender, monitorizar, diagnosticar, investigar y, mediante proveedores externos, intervenir sobre infraestructura autorizada.

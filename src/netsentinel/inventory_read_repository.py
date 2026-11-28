@@ -21,9 +21,17 @@ def list_devices(path: Path | None = None, query: str = "") -> list[dict[str, An
                        a.first_seen AS _address_first_seen,
                        a.last_seen AS _address_last_seen,
                        a.interface AS _address_interface,
-                       a.source AS _address_source
+                       a.source AS _address_source,
+                       logical_asset.id AS _asset_id,
+                       logical_asset.display_name AS _asset_display_name,
+                       logical_asset.notes AS _asset_notes,
+                       asset_link.linked_at AS _asset_linked_at,
+                       asset_link.link_reason AS _asset_link_reason
                 FROM devices d
-                LEFT JOIN device_addresses a ON a.device_id = d.id"""
+                LEFT JOIN device_addresses a ON a.device_id = d.id
+                LEFT JOIN asset_device_links asset_link
+                  ON asset_link.device_id = d.id AND asset_link.unlinked_at IS NULL
+                LEFT JOIN assets logical_asset ON logical_asset.id = asset_link.asset_id"""
     order = """ ORDER BY d.trusted ASC, d.last_seen DESC, d.id ASC,
                         CASE WHEN instr(COALESCE(a.ip_address, ''), ':') = 0 THEN 0 ELSE 1 END,
                         a.ip_address"""
@@ -35,12 +43,13 @@ def list_devices(path: Path | None = None, query: str = "") -> list[dict[str, An
                     OR d.display_name LIKE ? OR d.notes LIKE ?
                     OR COALESCE(d.manufacturer, '') LIKE ?
                     OR COALESCE(d.interface, '') LIKE ?
+                    OR COALESCE(logical_asset.display_name, '') LIKE ?
                     OR EXISTS (
                         SELECT 1 FROM device_addresses matched_address
                         WHERE matched_address.device_id = d.id
                           AND matched_address.ip_address LIKE ?
                     )""" + order,
-                (value, value, value, value, value, value, value),
+                (value, value, value, value, value, value, value, value),
             ).fetchall()
         else:
             rows = db.execute(select + order).fetchall()
@@ -57,10 +66,23 @@ def list_devices(path: Path | None = None, query: str = "") -> list[dict[str, An
             "source": values.pop("_address_source"),
         }
         device_id = int(values["id"])
+        asset_id = values.pop("_asset_id")
+        asset_name = values.pop("_asset_display_name")
+        asset_notes = values.pop("_asset_notes")
+        asset_linked_at = values.pop("_asset_linked_at")
+        asset_link_reason = values.pop("_asset_link_reason")
         device = devices_by_id.get(device_id)
         if device is None:
             device = _device_dict(values)
             device["addresses"] = []
+            device["asset"] = None if asset_id is None else {
+                "id": str(asset_id),
+                "display_name": str(asset_name),
+                "notes": str(asset_notes or ""),
+                "linked_at": str(asset_linked_at),
+                "link_reason": str(asset_link_reason),
+                "association": "manual",
+            }
             devices_by_id[device_id] = device
         if address_ip is not None:
             device["addresses"].append(address)

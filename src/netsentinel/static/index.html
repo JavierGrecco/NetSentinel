@@ -172,6 +172,38 @@
       <div class="dialog-actions"><button type="button" id="cancelEdit" class="quiet">Cancelar</button><button type="submit" class="primary">Guardar ficha</button></div>
     </form>
   </dialog>
+  <dialog id="assetDialog" class="dialog" aria-labelledby="assetTitle">
+    <form id="assetForm">
+      <h2 id="assetTitle">Ficha lógica del activo</h2>
+      <p class="asset-explanation">La ficha agrupa manualmente registros del inventario. No verifica una identidad física ni fusiona su historial de MAC o IP.</p>
+      <div class="field">
+        <label for="assetSelect">Agrupación actual</label>
+        <select id="assetSelect">
+          <option value="">Sin ficha lógica asignada</option>
+          <option value="__new__">Crear una nueva ficha lógica…</option>
+        </select>
+      </div>
+      <div id="assetCreateFields" class="asset-create-fields" hidden>
+        <div class="field">
+          <label for="assetNewName">Nombre de la nueva ficha</label>
+          <input id="assetNewName" maxlength="120" placeholder="Ej.: Notebook de oficina">
+        </div>
+        <div class="field">
+          <label for="assetNewNotes">Notas (opcional)</label>
+          <textarea id="assetNewNotes" maxlength="2000" placeholder="Descripción operativa, ubicación conocida…"></textarea>
+        </div>
+      </div>
+      <div id="assetCurrentNote" class="asset-current-note" role="status"></div>
+      <div class="field">
+        <label for="assetReason">Motivo de la asociación o del cambio</label>
+        <textarea id="assetReason" maxlength="280" placeholder="Ej.: comprobé que ambos registros corresponden al mismo equipo durante la revisión presencial."></textarea>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelAsset" class="quiet">Cancelar</button>
+        <button type="submit" class="primary">Guardar asociación</button>
+      </div>
+    </form>
+  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <script src="/static/scan-comparison.js" defer></script>
 <script src="/static/index.js" defer></script>

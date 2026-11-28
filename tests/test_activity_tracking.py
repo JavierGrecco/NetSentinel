@@ -964,7 +964,7 @@ def test_metadata_events_are_included_in_json_export(client):
     response = client.get("/api/export/data.json")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["format"] == "netsentinel-data-export-v4"
+    assert payload["format"] == "netsentinel-data-export-v5"
     assert payload["activity_events"][0]["domain"] == "example.com"
     assert payload["activity_settings"][0]["retention_days"] == 7
 

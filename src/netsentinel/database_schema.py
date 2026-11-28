@@ -60,6 +60,24 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 source TEXT NOT NULL,
                 PRIMARY KEY (device_id, ip_address)
             );
+            CREATE TABLE IF NOT EXISTS assets (
+                id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL CHECK (length(trim(display_name)) BETWEEN 1 AND 120),
+                notes TEXT NOT NULL DEFAULT '' CHECK (length(notes) <= 2000),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS asset_device_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE RESTRICT,
+                device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE RESTRICT,
+                linked_at TEXT NOT NULL,
+                unlinked_at TEXT,
+                link_reason TEXT NOT NULL CHECK (length(trim(link_reason)) BETWEEN 8 AND 280),
+                unlinked_reason TEXT,
+                CHECK (unlinked_at IS NULL OR unlinked_at >= linked_at),
+                CHECK (unlinked_reason IS NULL OR length(trim(unlinked_reason)) BETWEEN 8 AND 280)
+            );
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_type TEXT NOT NULL,
@@ -158,6 +176,13 @@ def initialize(path: Path | None = None, *, default_path_provider: Callable[[], 
                 retention_days INTEGER NOT NULL DEFAULT 7 CHECK (retention_days BETWEEN 1 AND 90)
             );
             INSERT OR IGNORE INTO activity_settings(id, retention_days) VALUES (1, 7);
+            CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(display_name COLLATE NOCASE);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_device_one_active
+                ON asset_device_links(device_id) WHERE unlinked_at IS NULL;
+            CREATE INDEX IF NOT EXISTS idx_asset_device_links_asset_time
+                ON asset_device_links(asset_id, linked_at DESC, id DESC);
+            CREATE INDEX IF NOT EXISTS idx_asset_device_links_device_time
+                ON asset_device_links(device_id, linked_at DESC, id DESC);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_time ON monitor_checks(monitor_id, checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_monitor_checks_checked_at ON monitor_checks(checked_at DESC);
             CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status, updated_at DESC);

@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 from pathlib import Path
 
 import pytest
@@ -287,6 +288,16 @@ def test_migrates_v01_device_schema(tmp_path: Path):
     assert device["manufacturer"] is None
     assert device["mac_locally_administered"] is False
     assert device["addresses"][0]["ip_address"] == "192.168.1.2"
+    # Additive migration creates the grouping layer but never assigns a legacy record automatically.
+    assert device["asset"] is None
+    assert database.list_assets(db) == []
+    with database.connect(db) as migrated:
+        tables = {
+            row["name"] for row in migrated.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        assert {"assets", "asset_device_links"} <= tables
     with database.connect(db) as migrated:
         columns = {row[1] for row in migrated.execute("PRAGMA table_info(scans)")}
     assert "discovery_json" in columns
@@ -817,6 +828,109 @@ def test_scan_comparison_ignores_devices_outside_shared_subnets(tmp_path: Path):
         "total_devices": 1,
     }
     assert result["changes"] == []
+
+
+def test_manual_logical_asset_grouping_preserves_device_rows_and_link_history(tmp_path: Path):
+    db = tmp_path / "logical-assets.sqlite3"
+    database.initialize(db)
+    database.record_scan([
+        Neighbor("192.168.30.10", "02:00:00:00:30:10", "en0", "fixture"),
+        Neighbor("192.168.30.11", "AA:BB:CC:30:00:11", "en0", "fixture"),
+    ], path=db)
+    devices = {item["mac_address"]: item for item in database.list_devices(db)}
+    first = devices["02:00:00:00:30:10"]
+    second = devices["AA:BB:CC:30:00:11"]
+
+    # Existing observations are not automatically assigned to a logical asset.
+    assert first["asset"] is None
+    assert second["asset"] is None
+
+    asset = database.create_asset(
+        "Notebook de oficina",
+        "Agrupación operativa local.",
+        device_id=first["id"],
+        reason="Etiqueta física cotejada durante la revisión.",
+        path=db,
+    )
+    second_link = database.set_device_asset(
+        second["id"], asset["id"],
+        "El operador confirmó el mismo equipo por etiqueta y serie.",
+        path=db,
+    )
+    assert second_link is not None
+    assert second_link["id"] == asset["id"]
+
+    grouped = {item["id"]: item for item in database.list_devices(db)}
+    assert grouped[first["id"]]["asset"]["id"] == asset["id"]
+    assert grouped[second["id"]]["asset"]["id"] == asset["id"]
+    assert len(grouped) == 2  # Linking never merges the original device rows.
+
+    listed = database.list_assets(db)
+    assert len(listed) == 1
+    assert listed[0]["device_count"] == 2
+    assert {member["device_id"] for member in listed[0]["devices"]} == {
+        first["id"], second["id"]
+    }
+
+    renamed = database.update_asset(asset["id"], display_name="Notebook principal", path=db)
+    assert renamed is not None
+    assert renamed["display_name"] == "Notebook principal"
+
+    replacement = database.create_asset("Otro registro lógico", path=db)
+    database.set_device_asset(
+        second["id"], replacement["id"],
+        "Se corrigió la asociación tras comparar el identificador de serie.",
+        path=db,
+    )
+    assert database.set_device_asset(
+        second["id"], None,
+        "Se retiró la agrupación por una revisión posterior.",
+        path=db,
+    ) is None
+
+    history = database.list_device_asset_history(second["id"], path=db)
+    assert len(history) == 2
+    assert history[0]["asset_id"] == replacement["id"]
+    assert history[0]["unlinked_at"] is not None
+    assert history[0]["unlinked_reason"] == "Se retiró la agrupación por una revisión posterior."
+    assert history[1]["asset_id"] == asset["id"]
+    assert history[1]["unlinked_at"] is not None
+    assert history[1]["unlinked_reason"] == "Se corrigió la asociación tras comparar el identificador de serie."
+
+    payload = json.loads(database.export_json(db))
+    assert payload["format"] == "netsentinel-data-export-v5"
+    assert {item["id"] for item in payload["assets"]} == {asset["id"], replacement["id"]}
+    assert len(payload["asset_device_links"]) == 3
+    csv_rows = list(csv.DictReader(io.StringIO(database.export_csv(db).lstrip("\ufeff"))))
+    first_csv = next(row for row in csv_rows if int(row["id"]) == first["id"])
+    assert first_csv["asset_id"] == asset["id"]
+    assert first_csv["asset_display_name"] == "Notebook principal"
+
+    backup = database.export_sqlite_backup(db)
+    restored = tmp_path / "logical-assets-restored.sqlite3"
+    restored.write_bytes(backup)
+    database.initialize(restored)
+    assert database.get_device_asset(first["id"], path=restored)["id"] == asset["id"]
+    assert database.get_device_asset(second["id"], path=restored) is None
+    assert len(database.list_device_asset_history(second["id"], path=restored)) == 2
+
+
+def test_logical_asset_association_rejects_missing_reason_without_partial_write(tmp_path: Path):
+    db = tmp_path / "logical-assets-validation.sqlite3"
+    database.initialize(db)
+    database.record_scan([Neighbor("192.168.31.10", "02:00:00:00:31:10")], path=db)
+    device = database.list_devices(db)[0]
+
+    with pytest.raises(ValueError):
+        database.create_asset(
+            "Invalid grouping",
+            device_id=device["id"],
+            reason="   ",
+            path=db,
+        )
+
+    assert database.list_assets(db) == []
+    assert database.get_device_asset(device["id"], path=db) is None
 
 
 def test_activity_blocked_observation_migration_preserves_legacy_values_as_unknown(tmp_path: Path):

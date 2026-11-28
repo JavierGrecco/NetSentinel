@@ -23,6 +23,14 @@ from .database_storage import (
 )
 from .database_schema import initialize as _initialize
 from .events_repository import _insert_event, acknowledge_event, get_events
+from .asset_repository import (
+    create_asset,
+    get_device_asset,
+    list_assets,
+    list_device_asset_history,
+    set_device_asset,
+    update_asset,
+)
 from .inventory_repository import (
     _device_dict,
     _ip_sort_key,

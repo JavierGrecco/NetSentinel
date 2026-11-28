@@ -134,6 +134,7 @@ DATABASE_ALLOWED_INTERNAL_IMPORTS = {
     "netsentinel.database_schema",
     "netsentinel.network_models",
     "netsentinel.events_repository",
+    "netsentinel.asset_repository",
     "netsentinel.inventory_repository",
     "netsentinel.dashboard_repository",
     "netsentinel.data_export_service",
@@ -303,6 +304,9 @@ REPOSITORY_ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     },
     "netsentinel.geolocation_repository": {
         "netsentinel.database",
+    },
+    "netsentinel.asset_repository": {
+        "netsentinel.database_storage",
     },
     "netsentinel.inventory_repository": {
         "netsentinel.database_storage",

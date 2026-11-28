@@ -1,7 +1,7 @@
   const $ = (id) => document.getElementById(id);
   const SCAN_PAGE_SIZE = 100;
   const state = {
-    devices: [], events: [], scans: [],
+    devices: [], assets: [], events: [], scans: [],
     scansHasMore: false, scansLoadingOlder: false, scansCursor: null
   };
   function sortScans(scans) {
@@ -58,13 +58,15 @@
   }
   async function refresh() {
     try {
-      const [summary, devices, events, scans] = await Promise.all([
+      const [summary, devices, assets, events, scans] = await Promise.all([
         api('/api/summary'),
         api('/api/devices?q=' + encodeURIComponent($('searchInput').value)),
+        api('/api/assets'),
         api('/api/events?limit=30'),
         api('/api/scans?limit=100')
       ]);
       state.devices = devices;
+      state.assets = assets;
       state.events = events;
       const firstScanLoad = state.scans.length === 0;
       state.scans = mergeScans(state.scans, Array.isArray(scans) ? scans : []);
@@ -106,6 +108,40 @@
       $("historyContent").textContent = "No se pudo cargar el historial: " + error.message;
     }
   }
+  function renderAssetOptions(selectedId) {
+    const select = $('assetSelect');
+    const options = ['<option value="">Sin ficha lógica asignada</option>'];
+    for (const asset of state.assets) {
+      options.push('<option value="' + escapeHtml(asset.id) + '">' +
+        escapeHtml(asset.display_name) + ' · ' + Number(asset.device_count || 0) + ' registro(s)</option>');
+    }
+    options.push('<option value="__new__">Crear una nueva ficha lógica…</option>');
+    select.innerHTML = options.join('');
+    select.value = selectedId || '';
+  }
+  function updateAssetCreateFields() {
+    const creating = $('assetSelect').value === '__new__';
+    $('assetCreateFields').hidden = !creating;
+    $('assetTitle').textContent = creating ? 'Crear y asociar ficha lógica' : 'Ficha lógica del activo';
+    const submit = $('assetForm').querySelector('button[type="submit"]');
+    submit.textContent = creating ? 'Crear ficha y asociar' : 'Guardar asociación';
+  }
+  function openAssetDialog(deviceId) {
+    const device = state.devices.find(item => item.id === Number(deviceId));
+    if (!device) return;
+    const dialog = $('assetDialog');
+    dialog.dataset.deviceId = String(device.id);
+    renderAssetOptions(device.asset?.id || '');
+    $('assetReason').value = '';
+    $('assetNewName').value = '';
+    $('assetNewNotes').value = '';
+    $('assetCurrentNote').textContent = device.asset
+      ? 'Vínculo manual vigente desde ' + dateTime(device.asset.linked_at) +
+        '. Motivo registrado: ' + device.asset.link_reason
+      : 'Este registro todavía no está vinculado a una ficha lógica.';
+    updateAssetCreateFields();
+    dialog.showModal();
+  }
   function renderDevices() {
     const tbody=$('devicesBody');$('deviceCount').textContent=`${state.devices.length} dispositivo${state.devices.length===1?'':'s'}`;
     if(!state.devices.length){
@@ -118,7 +154,7 @@
       return;
     }
     const localAddresses=latestLocalAddresses();
-    tbody.innerHTML=state.devices.map(d=>`<tr><td><div class="device-name">${escapeHtml(d.display_name||d.ip_address||'Dispositivo')}</div><div class="device-meta">IP principal: ${escapeHtml(d.ip_address)} · visto ${escapeHtml(dateTime(d.first_seen))}</div>${localAddresses.has(d.ip_address)?'<div class="device-meta">IP local de esta computadora según la última lectura</div>':''}<details><summary>${(d.addresses||[]).length||1} dirección(es) observada(s)</summary><div>${(d.addresses||[]).map(a=>`<div class="device-meta">${escapeHtml(a.ip_address)} · última: ${escapeHtml(dateTime(a.last_seen))} · ${escapeHtml(a.source||'origen desconocido')}</div>`).join('')}</div></details></td><td><code>${escapeHtml(d.mac_address)}</code><div class="device-meta" title="${escapeHtml(d.manufacturer_source||'No se configuró una base OUI local')}${d.manufacturer_checked_at?' · consultada: '+escapeHtml(dateTime(d.manufacturer_checked_at)):''}">${escapeHtml(d.manufacturer||'Fabricante sin identificar')}${d.mac_locally_administered?'<div class="device-meta identity-caution" role="note"><span class="pill warn">Identificador variable</span> MAC administrada localmente: puede ser aleatoria o virtual y cambiar entre redes o sesiones. No confirma por sí sola que dos observaciones pertenezcan al mismo equipo físico.</div>':''}</div></td><td>${escapeHtml(d.interface||'—')}${['awdl0','llw0'].includes(String(d.interface||'').toLowerCase())?'<div class="device-meta">Interfaz Apple de enlace local (virtual)</div>':''}</td><td><span class="pill ${d.trusted?'good':'warn'}">${d.trusted?'✓ De confianza':'! Pendiente'}</span></td><td>${escapeHtml(dateTime(d.last_seen))}</td><td><div class="history-actions"><button class="tiny quiet" data-history="${d.id}">Historial</button><button class="tiny quiet" data-edit="${d.id}">Editar</button><button class="tiny quiet" data-ptr="${d.id}" title="Consultar DNS inverso bajo demanda">DNS PTR</button><button class="tiny ${d.trusted?'quiet':'primary'}" data-trust="${d.id}" data-next="${!d.trusted}">${d.trusted?'Revocar confianza':'Marcar conocido'}</button></div></td></tr>`).join('');
+    tbody.innerHTML=state.devices.map(d=>`<tr><td><div class="device-name">${escapeHtml(d.display_name||d.ip_address||'Dispositivo')}</div><div class="device-meta">IP principal: ${escapeHtml(d.ip_address)} · visto ${escapeHtml(dateTime(d.first_seen))}</div>${d.asset?'<div class="device-asset" data-asset-label>Ficha lógica: <strong>'+escapeHtml(d.asset.display_name)+'</strong> · asociación manual</div>':'<div class="device-meta" data-asset-label>Sin ficha lógica asignada</div>'}${localAddresses.has(d.ip_address)?'<div class="device-meta">IP local de esta computadora según la última lectura</div>':''}<details><summary>${(d.addresses||[]).length||1} dirección(es) observada(s)</summary><div>${(d.addresses||[]).map(a=>`<div class="device-meta">${escapeHtml(a.ip_address)} · última: ${escapeHtml(dateTime(a.last_seen))} · ${escapeHtml(a.source||'origen desconocido')}</div>`).join('')}</div></details></td><td><code>${escapeHtml(d.mac_address)}</code><div class="device-meta" title="${escapeHtml(d.manufacturer_source||'No se configuró una base OUI local')}${d.manufacturer_checked_at?' · consultada: '+escapeHtml(dateTime(d.manufacturer_checked_at)):''}">${escapeHtml(d.manufacturer||'Fabricante sin identificar')}${d.mac_locally_administered?'<div class="device-meta identity-caution" role="note"><span class="pill warn">Identificador variable</span> MAC administrada localmente: puede ser aleatoria o virtual y cambiar entre redes o sesiones. No confirma por sí sola que dos observaciones pertenezcan al mismo equipo físico.</div>':''}</div></td><td>${escapeHtml(d.interface||'—')}${['awdl0','llw0'].includes(String(d.interface||'').toLowerCase())?'<div class="device-meta">Interfaz Apple de enlace local (virtual)</div>':''}</td><td><span class="pill ${d.trusted?'good':'warn'}">${d.trusted?'✓ De confianza':'! Pendiente'}</span></td><td>${escapeHtml(dateTime(d.last_seen))}</td><td><div class="history-actions"><button class="tiny quiet" data-history="${d.id}">Historial</button><button class="tiny quiet" data-edit="${d.id}">Editar</button><button class="tiny quiet" data-asset="${d.id}">${d.asset?'Cambiar ficha':'Agrupar'}</button><button class="tiny quiet" data-ptr="${d.id}" title="Consultar DNS inverso bajo demanda">DNS PTR</button><button class="tiny ${d.trusted?'quiet':'primary'}" data-trust="${d.id}" data-next="${!d.trusted}">${d.trusted?'Revocar confianza':'Marcar conocido'}</button></div></td></tr>`).join('');
     tbody.querySelectorAll('[data-ptr]').forEach(button=>button.addEventListener('click',async()=>{
       const deviceId=button.dataset.ptr;button.disabled=true;const originalText=button.textContent;button.textContent='Consultando…';
       try{const result=await api('/api/devices/'+deviceId+'/dns-reverse');toast('DNS PTR · '+result.ip+' → '+result.hostname+' · '+(result.cache_hit?'resultado en caché':'consulta nueva')+' · nombre DNS no verificado');}
@@ -132,6 +168,7 @@
       finally{button.disabled=false;}
     }));
     tbody.querySelectorAll('[data-edit]').forEach(button=>button.addEventListener('click',()=>{const device=state.devices.find(item=>item.id===Number(button.dataset.edit));if(!device)return;$('editDialog').dataset.deviceId=device.id;$('editName').value=device.display_name||'';$('editNotes').value=device.notes||'';$('editDialog').showModal();}));
+    tbody.querySelectorAll('[data-asset]').forEach(button=>button.addEventListener('click',()=>openAssetDialog(button.dataset.asset)));
   }
   function renderEvents() {
     const box=$('eventsList');
@@ -212,6 +249,46 @@
   $('closeHistory').addEventListener('click',()=>$('historyDialog').close());
   $('cancelEdit').addEventListener('click',()=>$('editDialog').close());
   $('editForm').addEventListener('submit',async(event)=>{event.preventDefault();const dialog=$('editDialog');const id=dialog.dataset.deviceId;try{await api(`/api/devices/${id}`,{method:'PATCH',body:JSON.stringify({display_name:$('editName').value,notes:$('editNotes').value})});dialog.close();toast('Ficha del dispositivo actualizada.');await refresh();}catch(e){toast(e.message);}});
+  $('cancelAsset').addEventListener('click',()=>$('assetDialog').close());
+  $('assetSelect').addEventListener('change',updateAssetCreateFields);
+  $('assetForm').addEventListener('submit',async(event)=>{
+    event.preventDefault();
+    const dialog=$('assetDialog');
+    const deviceId=Number(dialog.dataset.deviceId);
+    const selection=$('assetSelect').value;
+    const device=state.devices.find(item=>item.id===deviceId);
+    const reason=$('assetReason').value.trim();
+    if(!device){toast('No se encontró el registro del inventario.');return;}
+    if(selection==='__new__'){
+      const displayName=$('assetNewName').value.trim();
+      if(!displayName){toast('Escribí un nombre para la nueva ficha lógica.');$('assetNewName').focus();return;}
+      if(reason.length<8){toast('Explicá el motivo de la asociación con al menos 8 caracteres.');$('assetReason').focus();return;}
+      try{
+        await api('/api/assets',{method:'POST',body:JSON.stringify({
+          display_name:displayName,
+          notes:$('assetNewNotes').value,
+          device_id:deviceId,
+          reason
+        })});
+        dialog.close();
+        toast('Ficha lógica creada y asociada. La asociación quedó registrada como manual.');
+        await refresh();
+      }catch(error){toast('No se pudo crear la ficha lógica: '+error.message);}
+      return;
+    }
+    const currentId=device.asset?.id||'';
+    if(selection===currentId){dialog.close();return;}
+    if(reason.length<8){toast('Explicá el motivo del cambio con al menos 8 caracteres.');$('assetReason').focus();return;}
+    try{
+      await api('/api/devices/'+deviceId+'/asset',{method:'PUT',body:JSON.stringify({
+        asset_id:selection||null,
+        reason
+      })});
+      dialog.close();
+      toast(selection?'Asociación manual actualizada.':'La asociación manual se retiró y quedó en el historial.');
+      await refresh();
+    }catch(error){toast('No se pudo actualizar la asociación: '+error.message);}
+  });
   $('refreshBtn').addEventListener('click',refresh);
   $('searchInput').addEventListener('input',()=>{window.clearTimeout(refresh.searchTimer);refresh.searchTimer=window.setTimeout(refresh,180);});
   $('diagBtn').addEventListener('click',async()=>{if(!window.confirm('El diagnóstico consultará DNS para example.com y enviará ping al router (si se detecta) y a 1.1.1.1. Estas pruebas generan tráfico de salida. ¿Querés continuar?'))return;const button=$('diagBtn');button.disabled=true;button.textContent='Comprobando…';$('diagnosticsBox').innerHTML='<div class="empty">Ejecutando comprobaciones…</div>';try{const result=await api('/api/diagnostics',{method:'POST'});const a=result.assessment;const summary='<div class="check diagnosis-summary"><div class="check-top"><strong>'+escapeHtml(a.title)+'</strong><span class="pill '+(a.status==='ok'?'good':'warn')+'">'+(a.status==='ok'?'Buen resultado':'Revisar')+'</span></div><div class="check-detail">'+escapeHtml(a.summary)+'</div>'+((a.next_steps||[]).length?'<ol class="diagnosis-steps">'+a.next_steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+'</ol>':'')+'</div>';$('diagnosticsBox').innerHTML=`<div class="diagnostics">${summary}${result.checks.map(c=>`<div class="check"><div class="check-top"><span>${escapeHtml(c.name)}</span><span class="pill ${c.status==='ok'?'good':c.status==='error'||c.status==='warning'||c.status==='timeout'?'warn':'info'}">${c.status==='ok'?'Correcto':c.status==='warning'?'Revisar':c.status==='timeout'?'Tiempo agotado':c.status==='error'?'Error de ejecución':'Omitido'}</span></div><div class="check-detail">${escapeHtml(c.detail)}</div>${c.error_code?'<div class="check-detail"><strong>'+escapeHtml(c.error_code)+'</strong> · '+(c.should_log?(c.logged?'Falla local registrada en netsentinel-errors.jsonl.':'No se pudo guardar el registro local; revisá permisos y espacio en disco.'):'No se registra como fallo interno: es un resultado de entorno/red o una prueba sin respuesta.')+'</div>':''}</div>`).join('')}<div class="check-detail">${escapeHtml(result.notice)}${result.request_id?' Referencia: '+escapeHtml(result.request_id)+'.':''}</div></div>`;}catch(e){$('diagnosticsBox').innerHTML=`<div class="empty">${escapeHtml(e.message)}</div>`;}finally{button.disabled=false;button.textContent='◉ Diagnóstico';}});

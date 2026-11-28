@@ -18,6 +18,27 @@ class DeviceUpdate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class AssetCreate(BaseModel):
+    """Ficha lógica local, separada de los identificadores técnicos observados."""
+
+    display_name: str = Field(min_length=1, max_length=120)
+    notes: str = Field(default="", max_length=2000)
+    device_id: int | None = Field(default=None, ge=1)
+    reason: str | None = Field(default=None, min_length=8, max_length=280)
+
+
+class AssetUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class DeviceAssetAssignment(BaseModel):
+    """La razón queda en el historial local y no equivale a verificación externa."""
+
+    asset_id: str | None = Field(default=None, min_length=36, max_length=36)
+    reason: str = Field(min_length=8, max_length=280)
+
+
 class EventUpdate(BaseModel):
     """Campos permitidos al actualizar el estado de un evento."""
 
@@ -37,6 +58,75 @@ def summary() -> dict:
 @router.get("/api/devices")
 def devices(q: str = Query(default="", max_length=160)) -> list[dict]:
     return database.list_devices(query=q)
+
+
+@router.get("/api/assets")
+def assets() -> list[dict]:
+    """Lista fichas lógicas y asociaciones manuales vigentes."""
+    return database.list_assets()
+
+
+@router.post("/api/assets", status_code=201)
+def create_asset(body: AssetCreate) -> dict:
+    if (body.device_id is None) != (body.reason is None):
+        raise HTTPException(
+            status_code=422,
+            detail="Para crear y asociar una ficha en una sola operación, enviá device_id y reason juntos.",
+        )
+    try:
+        asset = database.create_asset(
+            body.display_name,
+            body.notes,
+            device_id=body.device_id,
+            reason=body.reason,
+        )
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=422 if isinstance(exc, ValueError) else 404, detail=str(exc)) from exc
+    return asset
+
+
+@router.patch("/api/assets/{asset_id}")
+def update_asset(asset_id: str, body: AssetUpdate) -> dict:
+    try:
+        asset = database.update_asset(
+            asset_id,
+            display_name=body.display_name,
+            notes=body.notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if asset is None:
+        raise HTTPException(status_code=404, detail="No se encontró la ficha lógica.")
+    return asset
+
+
+@router.get("/api/devices/{device_id}/asset")
+def device_asset(device_id: int) -> dict:
+    try:
+        return {"device_id": device_id, "asset": database.get_device_asset(device_id)}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/api/devices/{device_id}/asset")
+def assign_device_asset(device_id: int, body: DeviceAssetAssignment) -> dict:
+    try:
+        return {
+            "device_id": device_id,
+            "asset": database.set_device_asset(device_id, body.asset_id, body.reason),
+        }
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/api/devices/{device_id}/asset-history")
+def device_asset_history(device_id: int) -> list[dict]:
+    try:
+        return database.list_device_asset_history(device_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/api/events")

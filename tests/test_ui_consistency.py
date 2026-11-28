@@ -172,6 +172,25 @@ def test_inventory_explains_observed_mac_is_not_verified_physical_identity():
     assert ".identity-caution{white-space:normal;max-width:280px;line-height:1.5}" in css
 
 
+def test_inventory_exposes_manual_logical_asset_grouping_without_claiming_verification():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    script = (STATIC / "index.js").read_text(encoding="utf-8")
+
+    assert 'id="assetDialog"' in html
+    assert 'id="assetSelect"' in html
+    assert 'id="assetReason"' in html
+    assert 'id="assetReason" maxlength="280" placeholder=' in html
+    assert 'id="assetReason" maxlength="280" minlength="8" required' not in html
+    assert "Explicá el motivo de la asociación con al menos 8 caracteres." in script
+    assert "if(selection===currentId){dialog.close();return;}" in script
+    assert 'id="assetNewName"' in html
+    assert "No verifica una identidad física ni fusiona su historial de MAC o IP." in html
+    assert 'data-asset-label' in script
+    assert "asociación manual" in script
+    assert "api('/api/assets')" in script
+    assert "api('/api/devices/'+deviceId+'/asset'" in script
+
+
 def test_inventory_dashboard_uses_available_width_and_stacks_on_narrow_screens():
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     css = (STATIC / "styles.css").read_text(encoding="utf-8")

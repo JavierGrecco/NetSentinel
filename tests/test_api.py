@@ -36,7 +36,7 @@ def test_api_health_and_dashboard(monkeypatch, tmp_path):
         assert "MAC únicas vistas; no equivale a equipos físicos únicos." in page.text
         assert client.get("/api/devices").json() == []
         assert client.get("/api/scans").json() == []
-        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v4"
+        assert client.get("/api/export/data.json").json()["format"] == "netsentinel-data-export-v5"
 
 
 def test_request_validation_errors_do_not_echo_collector_token(monkeypatch, tmp_path, caplog):
@@ -840,3 +840,89 @@ def test_topology_api_returns_evidence_and_preserves_missing_scan_errors(monkeyp
     assert edge["sources"] == ["fixture-topology"]
     assert missing.status_code == 404
     assert missing.json()["detail"] == "No se encontró la lectura solicitada."
+
+
+
+def test_logical_asset_api_supports_explicit_grouping_and_history(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETSENTINEL_DATA_DIR", str(tmp_path))
+    database.initialize()
+    database.record_scan([
+        Neighbor("192.168.61.10", "02:00:00:00:61:10", "fixture0"),
+        Neighbor("192.168.61.11", "AA:BB:CC:61:00:11", "fixture0"),
+    ])
+    devices = {item["mac_address"]: item for item in database.list_devices()}
+    first = devices["02:00:00:00:61:10"]
+    second = devices["AA:BB:CC:61:00:11"]
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        no_reason = client.post(
+            "/api/assets",
+            json={"display_name": "No debe crearse", "device_id": first["id"]},
+        )
+        created = client.post(
+            "/api/assets",
+            json={
+                "display_name": "Equipo compartido",
+                "notes": "Ficha local manual.",
+                "device_id": first["id"],
+                "reason": "Etiqueta física revisada por el operador.",
+            },
+        )
+        assert no_reason.status_code == 422
+        assert created.status_code == 201
+        asset_id = created.json()["id"]
+
+        linked = client.put(
+            f"/api/devices/{second['id']}/asset",
+            json={
+                "asset_id": asset_id,
+                "reason": "Coincidencia confirmada por serie visible.",
+            },
+        )
+        assert linked.status_code == 200
+        assert linked.json()["asset"]["id"] == asset_id
+
+        listed_devices = client.get("/api/devices").json()
+        by_id = {item["id"]: item for item in listed_devices}
+        assert by_id[first["id"]]["asset"]["id"] == asset_id
+        assert by_id[second["id"]]["asset"]["id"] == asset_id
+
+        listed_assets = client.get("/api/assets")
+        assert listed_assets.status_code == 200
+        assert listed_assets.json()[0]["device_count"] == 2
+
+        renamed = client.patch(
+            f"/api/assets/{asset_id}",
+            json={"display_name": "Equipo familiar"},
+        )
+        assert renamed.status_code == 200
+        assert renamed.json()["display_name"] == "Equipo familiar"
+
+        unlinked = client.put(
+            f"/api/devices/{second['id']}/asset",
+            json={
+                "asset_id": None,
+                "reason": "La revisión posterior descartó la asociación.",
+            },
+        )
+        assert unlinked.status_code == 200
+        assert unlinked.json()["asset"] is None
+
+        history = client.get(f"/api/devices/{second['id']}/asset-history")
+        assert history.status_code == 200
+        assert len(history.json()) == 1
+        assert history.json()[0]["unlinked_at"] is not None
+        assert history.json()[0]["unlinked_reason"] == "La revisión posterior descartó la asociación."
+
+        current = client.get(f"/api/devices/{second['id']}/asset")
+        assert current.status_code == 200
+        assert current.json()["asset"] is None
+        missing_device = client.put(
+            "/api/devices/999999/asset",
+            json={"asset_id": None, "reason": "Prueba de registro no existente."},
+        )
+        assert missing_device.status_code == 404
+        payload = client.get("/api/export/data.json").json()
+        assert payload["format"] == "netsentinel-data-export-v5"
+        assert len(payload["assets"]) == 1
+        assert len(payload["asset_device_links"]) == 2

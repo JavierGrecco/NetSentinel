@@ -287,3 +287,8 @@
 @media(max-width:560px){.scan-history-pagination{align-items:stretch}.scan-history-pagination button{width:100%}}
 
 .identity-caution{white-space:normal;max-width:280px;line-height:1.5}
+
+.device-asset{margin-top:5px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;color:var(--muted);font-size:10px;line-height:1.45;white-space:normal;max-width:320px}
+.device-asset strong{color:var(--text)}
+.asset-explanation,.asset-current-note{color:var(--muted);font-size:12px;line-height:1.55;margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.asset-create-fields[hidden]{display:none}
