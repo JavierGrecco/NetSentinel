@@ -400,34 +400,21 @@ def _inventory_asset_grouping_failures(page) -> list[str]:
             "Fixture sintética para validar la asociación manual de inventario."
         )
         page.locator("#assetForm button[type='submit']").click()
-        page.wait_for_function(
-            "document.querySelector('#assetDialog') && !document.querySelector('#assetDialog').open",
-            timeout=5000,
-        )
-        page.wait_for_function(
-            """(id) => {
-                const row = document.querySelector('tr:has(button[data-asset="' + id + '"])');
-                return row && row.querySelector('[data-asset-label]')?.textContent.includes('Grupo lógico de prueba');
-            }""",
-            arg=device_id,
-            timeout=5000,
-        )
+        page.locator("#assetDialog").wait_for(state="hidden", timeout=5000)
 
         row = page.locator(f'tr:has(button[data-asset="{device_id}"])')
+        row.locator("[data-asset-label]").filter(
+            has_text="Grupo lógico de prueba"
+        ).wait_for(state="visible", timeout=5000)
         row.locator("button[data-asset]").click()
         page.locator("#assetSelect").select_option("")
         page.locator("#assetReason").fill(
             "Fixture sintética: retirar el vínculo después de validar el flujo."
         )
         page.locator("#assetForm button[type='submit']").click()
-        page.wait_for_function(
-            """(id) => {
-                const row = document.querySelector('tr:has(button[data-asset="' + id + '"])');
-                return row && row.querySelector('[data-asset-label]')?.textContent.includes('Sin ficha lógica asignada');
-            }""",
-            arg=device_id,
-            timeout=5000,
-        )
+        row.locator("[data-asset-label]").filter(
+            has_text="Sin ficha lógica asignada"
+        ).wait_for(state="visible", timeout=5000)
     except Exception as exc:
         failures.append(f"el recorrido de fichas lógicas no terminó correctamente: {exc}")
     return failures
