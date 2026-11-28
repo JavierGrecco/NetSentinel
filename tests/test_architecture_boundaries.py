@@ -585,7 +585,7 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         inventory_topology.router.routes,
     )
     paths = {route.path for routes in route_groups for route in routes}
-    assert {
+    expected_paths = {
         "/api/health",
         "/api/summary",
         "/api/devices",
@@ -607,9 +607,45 @@ def test_inventory_endpoints_belong_to_inventory_router() -> None:
         "/api/export/devices.csv",
         "/api/export/backup.sqlite3",
         "/api/export/data.json",
-    } <= paths
-    assert sum(len(routes) for routes in route_groups) == 23
-    assert len(paths) == 23
+    }
+    assert paths == expected_paths
+
+    # Algunas versiones de FastAPI guardan GET/POST o GET/PUT del mismo path
+    # como rutas separadas y otras las exponen en un único objeto con varios métodos.
+    methods = {
+        (route.path, method)
+        for routes in route_groups
+        for route in routes
+        for method in (getattr(route, "methods", None) or set())
+    }
+    expected_methods = {
+        ("/api/health", "GET"),
+        ("/api/summary", "GET"),
+        ("/api/devices", "GET"),
+        ("/api/assets", "GET"),
+        ("/api/assets", "POST"),
+        ("/api/assets/{asset_id}", "PATCH"),
+        ("/api/devices/{device_id}/asset", "GET"),
+        ("/api/devices/{device_id}/asset", "PUT"),
+        ("/api/devices/{device_id}/asset-history", "GET"),
+        ("/api/events", "GET"),
+        ("/api/scans", "GET"),
+        ("/api/scans/{scan_id}/observations", "GET"),
+        ("/api/scans/compare", "GET"),
+        ("/api/devices/{device_id}/history", "GET"),
+        ("/api/devices/{device_id}/addresses", "GET"),
+        ("/api/scan", "POST"),
+        ("/api/devices/{device_id}/dns-reverse", "GET"),
+        ("/api/devices/{device_id}", "PATCH"),
+        ("/api/events/{event_id}", "PATCH"),
+        ("/api/export/devices.csv", "GET"),
+        ("/api/export/backup.sqlite3", "GET"),
+        ("/api/export/data.json", "GET"),
+        ("/api/scans/{scan_id}/topology", "GET"),
+    }
+    assert methods == expected_methods
+
+
 def test_inventory_router_has_only_declared_internal_dependencies() -> None:
     """El router no obtiene acceso implícito a otros dominios."""
     root = Path(__file__).resolve().parents[1]
